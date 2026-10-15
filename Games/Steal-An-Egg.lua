@@ -1319,6 +1319,19 @@ RuntimeState.StealEngine = (function()
 		IndexPriority = false,
 		TargetLocked = nil,
 	}
+	Engine.AutoCarry = { Carrying = false, CarryUid = nil, CarryAreaId = nil, LastFinishedAt = 0 }
+	Engine.UpdateAutoCarry = function(data)
+		local carrying = type(data) == "table" and data.IsCarrying == true
+		local state = Engine.AutoCarry
+		if state.Carrying and not carrying then
+			state.LastFinishedAt = os.clock()
+		end
+		if carrying and type(data.Uid) == "string" then
+			state.CarryUid = data.Uid
+			state.CarryAreaId = data.AreaId
+		end
+		state.Carrying = carrying
+	end
 	Engine.Guard = {
 		Enabled = false,
 		Busy = false,
@@ -1840,6 +1853,7 @@ RuntimeState.StealEngine = (function()
 	end
 	Engine.SyncCarrying = SyncCarrying
 	local function OnCarryChanged(data)
+		Engine.UpdateAutoCarry(data)
 		if type(data) ~= "table" then
 			return
 		end
@@ -2850,14 +2864,18 @@ local function RefreshStealState()
 	RuntimeState.IsExecuting = false
 	RuntimeState.StealCancel = RuntimeState.StealCancel + 1
 	local active = IsStealActive()
+	local Engine = RuntimeState.StealEngine
 	if active then
 		if ForceAntiTreadmill then
 			pcall(ForceAntiTreadmill)
 		end
-		pcall(PerformHumanoidSwap)
+		if not FarmConfig.Defense_InstantSteal and Engine and Engine.MaintainAutoShield then
+			pcall(Engine.MaintainAutoShield)
+		else
+			pcall(PerformHumanoidSwap)
+		end
 		pcall(EnableDesyncGodmode)
 	end
-	local Engine = RuntimeState.StealEngine
 	if Engine then
 		if Engine.AutoCycle then
 			Engine.StopAutoHop(Engine.AutoCycle)
@@ -5267,6 +5285,186 @@ local GetScrambleTradeStatusFn = nil
 		end
 		return result == true
 	end
+	Engine.AutoShield = { Links = {}, Character = nil, Original = nil, Clone = nil, Clock = 0 }
+	Engine.AutoShieldWanted = function()
+		return not Engine.AutoShieldDisposed and not FarmConfig.Defense_InstantSteal
+			and (FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll or FarmConfig.AutoStealSelected) == true
+	end
+	Engine.AutoShieldReady = function()
+		local shield = Engine.AutoShield
+		local character = LocalPlayer.Character
+		return character ~= nil and shield.Character == character
+			and shield.Clone ~= nil and shield.Clone.Parent == character
+			and shield.Original ~= nil and shield.Original.Parent == nil
+			and character:FindFirstChildOfClass("Humanoid") == shield.Clone
+	end
+	Engine.AutoShieldClearLinks = function()
+		for _, link in ipairs(Engine.AutoShield.Links) do
+			pcall(function()
+				link:Disconnect()
+			end)
+		end
+		table.clear(Engine.AutoShield.Links)
+	end
+	Engine.ReleaseAutoShield = function(restore)
+		local shield = Engine.AutoShield
+		Engine.AutoShieldClearLinks()
+		if restore and shield.Character == LocalPlayer.Character
+			and shield.Clone ~= nil and RuntimeState.SwapClone == shield.Clone then
+			RestoreCharacter()
+		end
+		shield.Character, shield.Original, shield.Clone = nil, nil, nil
+		shield.Clock = 0
+	end
+	Engine.MaintainAutoShield = function()
+		if not Engine.AutoShieldWanted() then
+			return false
+		end
+		local character = LocalPlayer.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not humanoid or humanoid.Health <= 0 then
+			return false
+		end
+		if Engine.AutoShieldReady() then
+			return true
+		end
+		local root = Engine.Root()
+		if LocalPlayer:GetAttribute("InScrambleArena") == true or (root and root.Position.Y < -200) then
+			return false
+		end
+		if not Engine.IsGrounded(humanoid) then
+			return false
+		end
+		Engine.AutoShieldClearLinks()
+		if RuntimeState.SwapClone == humanoid and RuntimeState.OriginalHumanoid then
+			RestoreCharacter()
+			humanoid = character:FindFirstChildOfClass("Humanoid")
+			if not humanoid or humanoid.Health <= 0 or not Engine.IsGrounded(humanoid) then
+				return false
+			end
+		end
+		for _, link in ipairs(RuntimeState.SwapLinks or {}) do
+			pcall(function()
+				link:Disconnect()
+			end)
+		end
+		if RuntimeState.SwapLinks then
+			table.clear(RuntimeState.SwapLinks)
+		end
+		local shield = Engine.AutoShield
+		local clone = humanoid:Clone()
+		if not clone then
+			return false
+		end
+		local ok, err = pcall(function()
+			humanoid.Parent = nil
+			clone.Parent = character
+			if Workspace.CurrentCamera then
+				Workspace.CurrentCamera.CameraSubject = clone
+			end
+			N3Restore.RepointControls(clone)
+			N3Restore.RestartAnimate(character)
+		end)
+		if not ok then
+			pcall(function()
+				humanoid.Parent = character
+				clone:Destroy()
+			end)
+			warn("[N3 HUB] Auto steal shield: " .. tostring(err))
+			return false
+		end
+		shield.Character, shield.Original, shield.Clone = character, humanoid, clone
+		RuntimeState.OriginalHumanoid, RuntimeState.SwapClone = humanoid, clone
+		local animator = humanoid:FindFirstChildOfClass("Animator")
+		local cloneAnimator = clone:FindFirstChildOfClass("Animator")
+		if animator and cloneAnimator then
+			table.insert(shield.Links, animator.AnimationPlayed:Connect(function(track)
+				if not track.Animation or clone.Parent ~= character then
+					return
+				end
+				local loaded, copy = pcall(cloneAnimator.LoadAnimation, cloneAnimator, track.Animation)
+				if not loaded or not copy then
+					return
+				end
+				pcall(function()
+					copy.Priority, copy.Looped = track.Priority, track.Looped
+					copy:Play(0.05, math.max(track.WeightTarget, 0.01), track.Speed)
+				end)
+				local stopped
+				stopped = track.Stopped:Connect(function()
+					stopped:Disconnect()
+					local index = table.find(shield.Links, stopped)
+					if index then
+						table.remove(shield.Links, index)
+					end
+					pcall(copy.Stop, copy, 0.1)
+				end)
+				table.insert(shield.Links, stopped)
+			end))
+		end
+		table.insert(shield.Links, clone.Died:Connect(function()
+			if shield.Clone ~= clone then
+				return
+			end
+			Engine.AutoShieldClearLinks()
+			shield.Clone, shield.Original, shield.Character = nil, nil, nil
+			if RuntimeState.SwapClone == clone then
+				RuntimeState.SwapClone, RuntimeState.OriginalHumanoid = nil, nil
+			end
+			if LocalPlayer.Character == character and humanoid.Parent == nil then
+				humanoid.Parent = character
+				if Workspace.CurrentCamera then
+					Workspace.CurrentCamera.CameraSubject = humanoid
+				end
+				N3Restore.RepointControls(humanoid)
+			end
+			pcall(clone.Destroy, clone)
+			humanoid.Health = 0
+		end))
+		return Engine.AutoShieldReady()
+	end
+	Engine.AutoShieldHeartbeat = RunService.Heartbeat:Connect(function(dt)
+		local shield = Engine.AutoShield
+		if not Engine.AutoShieldWanted() then
+			if shield.Clone then
+				Engine.ReleaseAutoShield(not FarmConfig.Defense_InstantSteal)
+			end
+			return
+		end
+		shield.Clock = shield.Clock + dt
+		local interval = Engine.AutoShieldReady() and 3 or 0.25
+		if shield.Clock >= interval then
+			shield.Clock = 0
+			local ok, err = pcall(Engine.MaintainAutoShield)
+			if not ok then
+				warn("[N3 HUB] Auto steal shield: " .. tostring(err))
+			end
+		end
+	end)
+	Engine.AutoShieldCharacterAdded = LocalPlayer.CharacterAdded:Connect(function(character)
+		Engine.ReleaseAutoShield(false)
+		Engine.AutoCarry.Carrying = false
+		Engine.AutoCarry.CarryUid, Engine.AutoCarry.CarryAreaId = nil, nil
+		task.spawn(function()
+			character:WaitForChild("Humanoid", 10)
+			task.wait(1)
+			if LocalPlayer.Character == character and Engine.AutoShieldWanted() then
+				pcall(Engine.MaintainAutoShield)
+			end
+		end)
+	end)
+	pcall(function()
+		LibraryLoader:OnUnload(function()
+			Engine.AutoShieldDisposed = true
+			Engine.AutoShieldHeartbeat:Disconnect()
+			Engine.AutoShieldCharacterAdded:Disconnect()
+			if Engine.AutoCycle then
+				Engine.StopAutoHop(Engine.AutoCycle)
+				Engine.AutoStopMotion(Engine.AutoCycle)
+			end
+			Engine.ReleaseAutoShield(not FarmConfig.Defense_InstantSteal)
+		end)
+	end)
 	Engine.AutoStatus = "Idle"
 	Engine.AutoLastDeliveredAt = 0
 	Engine.AutoCycle = nil
@@ -5274,11 +5472,8 @@ local GetScrambleTradeStatusFn = nil
 		return math.clamp(tonumber(FarmConfig.AutoTweenSpeed) or 400, 100, 1000)
 	end
 	Engine.AutoHeld = function(uid)
-		if uid == nil then
-			return Engine.State.Carrying or IsActivelyCarryingEgg()
-		end
-		return IsActivelyCarryingEgg(uid)
-			or (Engine.State.CarryUid == uid and Engine.State.Carrying)
+		local state = Engine.AutoCarry
+		return state.Carrying and (uid == nil or state.CarryUid == uid)
 	end
 	Engine.AutoValid = function(cycle)
 		return Engine.AutoCycle == cycle
@@ -5286,6 +5481,8 @@ local GetScrambleTradeStatusFn = nil
 			and RuntimeState.StealCancel == cycle.Cancel
 			and LocalPlayer.Character == cycle.Character
 			and not FarmConfig.Defense_InstantSteal
+			and Engine.AutoShieldReady()
+			and cycle.Humanoid == Engine.AutoShield.Clone
 			and not Engine.IsNight()
 			and not Engine.WallSealed()
 			and cycle.Character.Parent ~= nil
@@ -5448,8 +5645,8 @@ local GetScrambleTradeStatusFn = nil
 			pcall(EggStateModule.DropFieldEgg, "PlayerRequest")
 		end
 		local elapsed = 0
-		while Engine.AutoValid(cycle) and elapsed < 1.5 do
-			if not Engine.State.Carrying and not IsActivelyCarryingEgg() then
+		while Engine.AutoValid(cycle) and elapsed < 1 do
+			if not Engine.AutoHeld() then
 				return true
 			end
 			elapsed = elapsed + RunService.Heartbeat:Wait()
@@ -5463,13 +5660,10 @@ local GetScrambleTradeStatusFn = nil
 				return true
 			end
 			if Engine.AutoHeld(egg.Uid) then
-				Engine.State.Carrying = true
-				Engine.State.CarryUid = egg.Uid
-				Engine.State.CarryAreaId = egg.AreaId
 				Engine.State.GrabFails = 0
 				return true
 			end
-			if Engine.State.Carrying and Engine.State.CarryUid and Engine.State.CarryUid ~= egg.Uid then
+			if Engine.AutoCarry.Carrying and Engine.AutoCarry.CarryUid and Engine.AutoCarry.CarryUid ~= egg.Uid then
 				return false
 			end
 			if elapsed - lastAttempt >= 0.1 then
@@ -5545,7 +5739,7 @@ local GetScrambleTradeStatusFn = nil
 		Engine.AutoStatus = "Waiting for guard hit"
 		local elapsed, lostAt = 0, nil
 		while not hop.Landed and Engine.AutoValid(cycle) and elapsed < 20 do
-			if not Engine.State.Carrying and not IsActivelyCarryingEgg() then
+			if not Engine.AutoHeld() then
 				lostAt = lostAt or elapsed
 				if elapsed - lostAt > 1 then
 					break
@@ -5576,7 +5770,7 @@ local GetScrambleTradeStatusFn = nil
 		if Engine.AutoHeld(target.Uid) then
 			return true
 		end
-		if (Engine.State.Carrying or IsActivelyCarryingEgg()) and not Engine.AutoDrop(cycle) then
+		if Engine.AutoHeld() and not Engine.AutoDrop(cycle) then
 			return false
 		end
 		return Engine.AutoValid(cycle)
@@ -5828,6 +6022,11 @@ local GetScrambleTradeStatusFn = nil
 		if Engine.AutoCycle or Engine.AutoRequestOwner or Engine.Cancelled(sessionId) then
 			return false
 		end
+		local ready, shielded = pcall(Engine.MaintainAutoShield)
+		if not ready or not shielded then
+			Engine.AutoStatus = "Waiting for grounded humanoid shield"
+			return false
+		end
 		local character = LocalPlayer.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if not humanoid or humanoid.Health <= 0 or not Engine.ClaimMovement("steal") then
@@ -5842,7 +6041,7 @@ local GetScrambleTradeStatusFn = nil
 		Engine.AutoStatus = "Finding target"
 		local ok, delivered = pcall(function()
 			if recovering then
-				return Engine.DeliverAutoEgg(cycle, Engine.State.CarryUid)
+				return Engine.DeliverAutoEgg(cycle, Engine.AutoCarry.CarryUid)
 			end
 			pcall(UnequipAllTools)
 			local candidates = Engine.CollectCandidates()
@@ -5876,7 +6075,7 @@ local GetScrambleTradeStatusFn = nil
 					if not Engine.AutoValid(cycle) or Engine.IsRagdolled() then
 						return false
 					end
-					if (Engine.State.Carrying or IsActivelyCarryingEgg()) and not Engine.AutoDrop(cycle) then
+					if Engine.AutoHeld() and not Engine.AutoDrop(cycle) then
 						return false
 					end
 				end
@@ -14523,12 +14722,17 @@ function Tasks.StealLoop()
 				local CurrentSession = RuntimeState.SessionId
 				ApplyAntiRagdoll(Character)
 				EnableDesyncGodmode()
-				pcall(SyncHumanoidSwap)
+				if FarmConfig.Defense_InstantSteal then
+					pcall(SyncHumanoidSwap)
+				end
 				local DeliverTries = 0
 				while DeliverTries < 6 do
-					local CarryingNow = IsActivelyCarryingEgg()
-						or Engine.State.Carrying
-						or (GetEquippedEggTool() ~= nil)
+					local CarryingNow
+					if FarmConfig.Defense_InstantSteal then
+						CarryingNow = IsActivelyCarryingEgg() or Engine.State.Carrying or (GetEquippedEggTool() ~= nil)
+					else
+						CarryingNow = Engine.AutoHeld()
+					end
 					if not CarryingNow or RootPart.Position.X <= SafeBaseLineX then
 						break
 					end
@@ -14541,7 +14745,13 @@ function Tasks.StealLoop()
 					DeliverTries = DeliverTries + 1
 					task.wait(0.35)
 				end
-				if not (IsActivelyCarryingEgg() or (GetEquippedEggTool() ~= nil)) then
+				local canStart
+				if FarmConfig.Defense_InstantSteal then
+					canStart = not (IsActivelyCarryingEgg() or (GetEquippedEggTool() ~= nil))
+				else
+					canStart = not Engine.AutoHeld()
+				end
+				if canStart then
 					pcall(function()
 						Engine.RunStealCycle(CurrentSession)
 					end)
@@ -15027,6 +15237,14 @@ end
 RunService.Stepped:Connect(Tasks.MovementStepped)
 function Tasks.OnCharacterAdded(NewCharacter)
 	task.wait(0.6)
+	if LocalPlayer.Character ~= NewCharacter then
+		return
+	end
+	local Engine = RuntimeState.StealEngine
+	if Engine and Engine.AutoShieldWanted() then
+		pcall(Engine.MaintainAutoShield)
+		return
+	end
 	PerformHumanoidSwap()
 	EnableDesyncGodmode()
 	ApplyAntiRagdoll(NewCharacter)
@@ -15611,6 +15829,11 @@ do
 end
 function Tasks.InitialCharacterSetup()
 	task.wait(0.5)
+	local Engine = RuntimeState.StealEngine
+	if Engine and Engine.AutoShieldWanted() then
+		pcall(Engine.MaintainAutoShield)
+		return
+	end
 	pcall(RestoreCharacter)
 	pcall(UnequipAllTools)
 end
