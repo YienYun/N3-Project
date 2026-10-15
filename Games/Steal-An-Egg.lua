@@ -1340,8 +1340,6 @@ RuntimeState.StealEngine = (function()
 		Enabled = false,
 		Busy = false,
 		BusySince = 0,
-		HitArms = 0,
-		HitArmedAt = 0,
 		Active = false,
 		StealActive = false,
 		Indep = false,
@@ -1357,8 +1355,6 @@ RuntimeState.StealEngine = (function()
 		if not state then
 			Engine.Guard.Busy = false
 			Engine.Guard.Active = false
-			Engine.Guard.HitArms = 0
-			Engine.Guard.HitArmedAt = 0
 			pcall(function()
 				Engine.EndDisguise()
 			end)
@@ -2486,9 +2482,9 @@ RuntimeState.StealEngine = (function()
 		end
 		return ok
 	end
-	Engine.FlyToPosition = function(targetPos, sessionId, stopDist, maxTime)
+	Engine.FlyToPosition = function(targetPos, sessionId, stopDist, maxTime, speedLimit)
 		local carry = Engine.Carry
-		local pace = math.min(Engine.Pace(), math.max(FarmConfig.TweenSpeed or 400, 16))
+		local pace = math.min(Engine.Pace(), math.max(speedLimit or FarmConfig.TweenSpeed or 400, 16))
 		if carry.LockCamera then
 			local cam = workspace.CurrentCamera
 			if cam then
@@ -2745,27 +2741,23 @@ RuntimeState.StealEngine = (function()
 		guard.Busy = false
 	end
 	Engine.RunGuardDodge = RunGuardDodge
-	local function HitCooldownActive()
-		if Engine.Guard.HitArms <= 0 then
-			return false
-		end
-		if 25 < os.clock() - (Engine.Guard.HitArmedAt or 0) then
-			Engine.Guard.HitArms = 0
-			return false
-		end
-		return true
-	end
 	Engine.TriggerGuardDodge = function(force)
-        -- A scripted guard hit owns the ragdoll window, even for forced dodges.
-        if Engine.AutoCycle and HitCooldownActive() then return end
+		-- In a normal cycle, Sena's distance policy owns optional guard protection.
+		-- If that source module is unavailable, keep N3's existing dodge fallback.
+		local cycle = Engine.AutoCycle
+		if
+			cycle
+			and cycle.GuardPolicy
+			and cycle.GuardPolicy.ResolveHitDistance == cycle.GuardDistanceHook
+			and Engine.Guard.Enabled
+		then
+			return
+		end
 		local guard = Engine.Guard
 		if not guard.Enabled or guard.Active then
 			return
 		end
 		if Engine.Carry.LineDrop then
-			return
-		end
-		if not force and HitCooldownActive() then
 			return
 		end
 		guard.Active = true
@@ -2781,9 +2773,6 @@ RuntimeState.StealEngine = (function()
 	RunService.Heartbeat:Connect(function(dt)
 		if Engine.Disposed or (Engine.AutoCycle and not Engine.Guard.Enabled) then
 			return
-		end
-		if Engine.Guard.HitArms > 0 and os.clock() - Engine.Guard.HitArmedAt > 25 then
-			Engine.Guard.HitArms = 0
 		end
 		local rag = tonumber(LocalPlayer:GetAttribute("RagdollEndTime")) or 0
 		if rag > lastRagdoll then
@@ -5279,315 +5268,150 @@ local GetScrambleTradeStatusFn = nil
 		end
 		return result == true
 	end
-	Engine.AutoShield = { Links = {}, Character = nil, Original = nil, Clone = nil, Clock = 0 }
-	Engine.AutoShieldWanted = function()
-		return not Engine.AutoShieldDisposed
-			and not FarmConfig.Defense_InstantSteal
-			and (FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll or FarmConfig.AutoStealSelected) == true
-	end
-	Engine.AutoShieldReady = function()
-		local shield = Engine.AutoShield
-		local character = LocalPlayer.Character
-		return character ~= nil
-			and shield.Character == character
-			and shield.Clone ~= nil
-			and shield.Clone.Parent == character
-			and shield.Original ~= nil
-			and shield.Original.Parent == nil
-			and character:FindFirstChildOfClass("Humanoid") == shield.Clone
-	end
-	Engine.AutoShieldClearLinks = function()
-		for _, link in ipairs(Engine.AutoShield.Links) do
-			pcall(function()
-				link:Disconnect()
-			end)
-		end
-		table.clear(Engine.AutoShield.Links)
-	end
-	Engine.ReleaseAutoShield = function(restore)
-		if Engine.ReleaseShieldHealth then
-			Engine.ReleaseShieldHealth()
-		end
-		local shield = Engine.AutoShield
-		Engine.AutoShieldClearLinks()
-		if
-			restore
-			and shield.Character == LocalPlayer.Character
-			and shield.Clone ~= nil
-			and RuntimeState.SwapClone == shield.Clone
-		then
-			RestoreCharacter()
-		end
-		shield.Character, shield.Original, shield.Clone = nil, nil, nil
-		shield.Clock = 0
-	end
+	-- Persistent normal-mode swap uses N3's existing character/control helpers.
+	-- Sena health preparation is scoped here; it is not an Anti Guard toggle.
 	do
-		-- Chili Humanoid Swap body, with N3 control/animation and restore bindings.
-		local localPlayer, workspace = LocalPlayer, Workspace
-		local shield = Engine.AutoShield
-		-- Chili installs its health/state keeper before cloning the humanoid.
-		-- Keep the same preparation, scoped to normal mode (ragdoll stays enabled).
-		local healthHumanoid, healthSnapshot, healing = nil, nil, false
-		local healthLinks = {}
-		Engine.ReleaseShieldHealth = function()
-			for _, link in ipairs(healthLinks) do
-				link:Disconnect()
+		local disposed, characterConnection, heartbeat = false, nil, nil
+		local healthHumanoid, healthSaved, healthConnection, healing, elapsed = nil, nil, nil, false, 0
+		Engine.AutoShieldWanted = function()
+			return not disposed
+				and not FarmConfig.Defense_InstantSteal
+				and (FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll or FarmConfig.AutoStealSelected) == true
+		end
+		Engine.AutoShieldReady = function()
+			local character = LocalPlayer.Character
+			local clone, original = RuntimeState.SwapClone, RuntimeState.OriginalHumanoid
+			return character ~= nil
+				and clone ~= nil
+				and clone.Parent == character
+				and original ~= nil
+				and original.Parent == nil
+				and character:FindFirstChildOfClass("Humanoid") == clone
+		end
+		local function ReleaseHealth()
+			if healthConnection then
+				healthConnection:Disconnect()
+				healthConnection = nil
 			end
-			table.clear(healthLinks)
-			local humanoid, saved = healthHumanoid, healthSnapshot
-			healthHumanoid, healthSnapshot = nil, nil
-			Engine.ShieldHealthActive = false
-			if humanoid and humanoid.Parent and saved then
+			if healthHumanoid and healthHumanoid.Parent and healthSaved then
 				pcall(function()
-					humanoid.BreakJointsOnDeath = saved.BreakJointsOnDeath
-					humanoid.RequiresNeck = saved.RequiresNeck
-					humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, saved.DeadEnabled)
+					healthHumanoid.BreakJointsOnDeath = healthSaved.BreakJointsOnDeath
+					healthHumanoid.RequiresNeck = healthSaved.RequiresNeck
+					for state, enabled in pairs(healthSaved.States) do
+						healthHumanoid:SetStateEnabled(state, enabled)
+					end
 				end)
 			end
+			healthHumanoid, healthSaved = nil, nil
 		end
-		local function ProtectHumanoid(humanoid)
-			return pcall(function()
-				humanoid.BreakJointsOnDeath = false
-				humanoid.RequiresNeck = false
-				humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-			end)
-		end
-		local function RestoreShieldHealth(humanoid)
-			if
-				not Engine.AutoShieldWanted()
-				or humanoid ~= healthHumanoid
-				or not humanoid
-				or not humanoid.Parent
-				or healing
-			then
-				return
-			end
-			local maximum = humanoid.MaxHealth
-			if maximum <= 0 or maximum == math.huge or humanoid.Health >= maximum then
-				return
-			end
-			healing = true
-			pcall(function()
-				humanoid.Health = maximum
-			end)
-			healing = false
-		end
-		Engine.MaintainShieldHealth = function()
+		local function MaintainHealth()
 			if not Engine.AutoShieldWanted() then
-				Engine.ReleaseShieldHealth()
+				ReleaseHealth()
 				return
 			end
-			local character = localPlayer.Character
+			local character = LocalPlayer.Character
 			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if humanoid ~= healthHumanoid then
-				Engine.ReleaseShieldHealth()
-				if not humanoid then
-					return
-				end
+			if not humanoid then
+				return
+			end
+			if healthHumanoid ~= humanoid then
+				ReleaseHealth()
 				healthHumanoid = humanoid
-				healthSnapshot = {
-					BreakJointsOnDeath = humanoid.BreakJointsOnDeath,
-					RequiresNeck = humanoid.RequiresNeck,
-					DeadEnabled = humanoid:GetStateEnabled(Enum.HumanoidStateType.Dead),
-				}
-				if not ProtectHumanoid(humanoid) then
-					Engine.ReleaseShieldHealth()
-					return
+				healthSaved =
+					{ BreakJointsOnDeath = humanoid.BreakJointsOnDeath, RequiresNeck = humanoid.RequiresNeck, States = {} }
+				for _, state in ipairs({
+					Enum.HumanoidStateType.Dead,
+					Enum.HumanoidStateType.FallingDown,
+					Enum.HumanoidStateType.Ragdoll,
+				}) do
+					healthSaved.States[state] = humanoid:GetStateEnabled(state)
+					humanoid:SetStateEnabled(state, false)
 				end
-				Engine.ShieldHealthActive = true
-				healthLinks[#healthLinks + 1] = humanoid.HealthChanged:Connect(function()
-					RestoreShieldHealth(humanoid)
-				end)
-				healthLinks[#healthLinks + 1] = humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(function()
-					RestoreShieldHealth(humanoid)
-				end)
-				healthLinks[#healthLinks + 1] = humanoid.StateChanged:Connect(function(_, state)
-					if state == Enum.HumanoidStateType.Dead and Engine.AutoShieldWanted() then
-						ProtectHumanoid(humanoid)
-						RestoreShieldHealth(humanoid)
-					end
-				end)
-			else
-				if humanoid then
-					ProtectHumanoid(humanoid)
-				end
-			end
-			RestoreShieldHealth(humanoid)
-		end
-		local ShieldHelpers = { Grounded = Engine.IsGrounded }
-		local RepointControls, RestartAnimate = N3Restore.RepointControls, N3Restore.RestartAnimate
-		local ClearSwapLinks = Engine.AutoShieldClearLinks
-		local function SyncSwapState()
-			RuntimeState.OriginalHumanoid, RuntimeState.SwapClone = shield.Original, shield.Clone
-		end
-		-- Humanoid Swap follows the tracked Chili reference; bindings are named for N3.
-		local function CreateShieldSwap()
-			local character = localPlayer.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if not humanoid or humanoid.Health <= 0 then
-				return
-			end
-
-			if shield.Clone and shield.Clone.Parent == character then
-				return
-			end
-
-			if not ShieldHelpers.Grounded(humanoid) then
-				return
-			end
-			local clone = humanoid:Clone()
-			humanoid.Parent = nil
-			clone.Parent = character
-			workspace.CurrentCamera.CameraSubject = clone
-			RepointControls(clone)
-			RestartAnimate(character)
-			local swapState = shield
-			shield.Original = humanoid
-			swapState.Clone = clone
-			SyncSwapState()
-			local animator = humanoid:FindFirstChildOfClass("Animator")
-			local animator2 = clone:FindFirstChildOfClass("Animator")
-
-			if animator and animator2 then
-				table.insert(
-					shield.Links,
-					animator.AnimationPlayed:Connect(function(sourceTrack)
-						local animation = sourceTrack.Animation
-						if not animation or clone.Parent == nil then
-							return
-						end
-
-						local ok, result = pcall(function()
-							return animator2:LoadAnimation(animation)
-						end)
-
-						local animationCopy = result
-						if not ok or not animationCopy then
-							return
-						end
-
+				humanoid.BreakJointsOnDeath, humanoid.RequiresNeck = false, false
+				healthConnection = humanoid.HealthChanged:Connect(function()
+					if humanoid.Health <= 0 and not healing and Engine.AutoShieldWanted() then
+						healing = true
 						pcall(function()
-							animationCopy.Priority = sourceTrack.Priority
-							animationCopy.Looped = sourceTrack.Looped
-							local speed = sourceTrack.Speed
-							animationCopy:Play(0.05, math.max(sourceTrack.WeightTarget, 0.01), speed)
+							humanoid.Health = math.max(humanoid.MaxHealth, 100)
 						end)
-
-						local connection3 = nil
-
-						connection3 = sourceTrack.Stopped:Connect(function()
-							connection3:Disconnect()
-
-							pcall(function()
-								animationCopy:Stop(0.1)
-							end)
-						end)
-					end)
-				)
-			end
-
-			table.insert(
-				shield.Links,
-				clone.Died:Connect(function()
-					ClearSwapLinks()
-					local swapState = shield
-					shield.Original = nil
-					swapState.Clone = nil
-					local character2 = localPlayer.Character
-
-					if character2 and humanoid.Parent == nil then
-						humanoid.Parent = character2
-						workspace.CurrentCamera.CameraSubject = humanoid
-						RepointControls(humanoid)
-						SyncSwapState()
+						healing = false
 					end
-
-					pcall(function()
-						clone:Destroy()
-					end)
-
-					humanoid.Health = 0
 				end)
-			)
+			end
+			if humanoid.Health <= 0 and not healing then
+				healing = true
+				pcall(function()
+					humanoid.Health = math.max(humanoid.MaxHealth, 100)
+				end)
+				healing = false
+			end
+			if humanoid:GetState() == Enum.HumanoidStateType.Dead then
+				humanoid:ChangeState(Enum.HumanoidStateType.Running)
+			end
 		end
-
-		-- End Humanoid Swap.
+		Engine.ReleaseAutoShield = function(restore)
+			ReleaseHealth()
+			if restore and Engine.AutoShieldReady() then
+				RestoreCharacter()
+			end
+		end
 		Engine.MaintainAutoShield = function()
 			if not Engine.AutoShieldWanted() then
 				return false
 			end
-			Engine.MaintainShieldHealth()
-			local character = localPlayer.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if not humanoid or humanoid.Health <= 0 then
+			if LocalPlayer:GetAttribute("InScrambleArena") == true then
 				return false
 			end
 			local root = Engine.Root()
-			if LocalPlayer:GetAttribute("InScrambleArena") == true or (root and root.Position.Y < -200) then
+			if root and root.Position.Y < -200 then
 				return false
 			end
-			if not Engine.AutoShieldReady() and RuntimeState.SwapClone == humanoid and RuntimeState.OriginalHumanoid then
-				RestoreCharacter()
+			-- Apply the health keeper to the N3 clone, not the detached original.
+			if not Engine.AutoShieldReady() then
+				PerformHumanoidSwap()
 			end
-			CreateShieldSwap()
-			Engine.MaintainShieldHealth()
-			shield.Character = character
+			if not Engine.AutoShieldReady() then
+				return false
+			end
+			MaintainHealth()
 			return Engine.AutoShieldReady()
 		end
-	end
-	local healthClock = 0
-	Engine.AutoShieldHeartbeat = RunService.Heartbeat:Connect(function(dt)
-		local shield = Engine.AutoShield
-		if not Engine.AutoShieldWanted() then
-			if Engine.ShieldHealthActive then
-				Engine.ReleaseShieldHealth()
+		heartbeat = RunService.Heartbeat:Connect(function(dt)
+			elapsed = elapsed + dt
+			if not Engine.AutoShieldWanted() then
+				if healthHumanoid then
+					Engine.ReleaseAutoShield(not FarmConfig.Defense_InstantSteal)
+				end
+				return
 			end
-			if shield.Clone then
-				Engine.ReleaseAutoShield(not FarmConfig.Defense_InstantSteal)
+			if elapsed < 0.1 then
+				return
 			end
-			return
-		end
-		healthClock = healthClock + dt
-		if healthClock >= 0.5 then
-			healthClock = 0
-			pcall(Engine.MaintainShieldHealth)
-		end
-		shield.Clock = shield.Clock + dt
-		local interval = Engine.AutoShieldReady() and 3 or 0.25
-		if shield.Clock >= interval then
-			shield.Clock = 0
-			local ok, err = pcall(Engine.MaintainAutoShield)
+			elapsed = 0
+			local ok, failure = pcall(Engine.MaintainAutoShield)
 			if not ok then
-				warn("[N3 HUB] Auto steal shield: " .. tostring(err))
-			end
-		end
-	end)
-	Engine.AutoShieldCharacterAdded = LocalPlayer.CharacterAdded:Connect(function(character)
-		Engine.ReleaseAutoShield(false)
-		Engine.AutoCarry.Carrying = false
-		Engine.AutoCarry.CarryUid, Engine.AutoCarry.CarryAreaId = nil, nil
-		if Engine.CancelAutoSteal then
-			Engine.CancelAutoSteal()
-		end
-		task.spawn(function()
-			character:WaitForChild("Humanoid", 10)
-			task.wait(1)
-			if LocalPlayer.Character == character and Engine.AutoShieldWanted() then
-				pcall(Engine.MaintainAutoShield)
+				warn("[N3 HUB] Normal character preparation: " .. tostring(failure))
 			end
 		end)
-	end)
-	pcall(function()
-		LibraryLoader:OnUnload(function()
-			Engine.AutoShieldDisposed = true
-			Engine.AutoShieldHeartbeat:Disconnect()
-			Engine.AutoShieldCharacterAdded:Disconnect()
+		characterConnection = LocalPlayer.CharacterAdded:Connect(function()
+			ReleaseHealth()
+			Engine.AutoCarry.Carrying, Engine.AutoCarry.CarryUid, Engine.AutoCarry.CarryAreaId = false, nil, nil
 			if Engine.CancelAutoSteal then
 				Engine.CancelAutoSteal()
 			end
-			Engine.ReleaseAutoShield(not FarmConfig.Defense_InstantSteal)
 		end)
-	end)
+		pcall(function()
+			LibraryLoader:OnUnload(function()
+				disposed = true
+				heartbeat:Disconnect()
+				characterConnection:Disconnect()
+				if Engine.CancelAutoSteal then
+					Engine.CancelAutoSteal()
+				end
+				Engine.ReleaseAutoShield(not FarmConfig.Defense_InstantSteal)
+			end)
+		end)
+	end
 	Engine.AutoTrace = {}
 	Engine.RecordAutoTrace = function(event, uid)
 		if not Engine.AutoCycle then
@@ -5623,2316 +5447,1218 @@ local GetScrambleTradeStatusFn = nil
 				.. table.concat(Engine.AutoTrace, "\n")
 		)
 	end
-	-- Normal Auto Steal: readable Chili-derived controller, isolated from Instant/Line Drop.
-	-- Source: Games/Source/Chili-SourceV1.lua, blob 8d7fa550e7ffd84b7979d2cdb24acad005d85590.
-	-- Reference is tracked in this branch; see Games/AGENTS.md for the update contract.
+	-- Normal Auto Steal: SenaV2 Fly lifecycle, with N3's egg approach.
+	-- Reference: Games/Source/StealAnEgg/SenaV2.lua (t46); see docs/auto-steal.md.
 	do
-		local localPlayer, workspace, networking = LocalPlayer, Workspace, NetFolder
-		local cleanups, disposed = {}, false
-		local function RegisterCleanup(callback)
-			table.insert(cleanups, callback)
-		end
-		local LoadModule = function(modulePath)
-			local ok, result = pcall(function()
-				return require(modulePath())
-			end)
-			if not ok then
-				result = ok
-			end
-			return result or nil
-		end
-		local GameModules = {
-			EggState = EggStateModule,
-			AreaEggCycle = AreaEggCycleModule,
-			AreaEggResetWall = AreaEggResetWallModule,
-			AreaEggResetCycle = LoadModule(function()
-				return ReplicatedStorage.Data.AreaEggResetCycle
-			end),
-		}
-		local Normal = {
-			Steal = Engine.AutoCarry,
-			Movement = Engine.Movement,
-			AntiGuard = Engine.Guard,
-			Root = Engine.Root,
-			IsNight = Engine.IsNight,
-			WallSealed = Engine.WallSealed,
-			ClaimMovement = Engine.ClaimMovement,
-			ReleaseMovement = Engine.ReleaseMovement,
-			Plot = function()
-				return select(1, GetPlayerPlot())
-			end,
-			Belt = function()
-				return Tasks.AutoStealBelt and Tasks.AutoStealBelt()
-			end,
-			Toggle = function()
-				return not disposed and not FarmConfig.Defense_InstantSteal and IsStealActive() == true
-			end,
-			StopWalking = function()
-				local character = localPlayer.Character
-				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-				local root = Engine.Root()
-				if humanoid and root then
-					pcall(function()
-						humanoid:MoveTo(root.Position)
-						humanoid:Move(Vector3.zero, false)
-					end)
-				end
-			end,
+		local disposed, workerRunning, generation = false, false, 0
+		local connections, records, skippedEggs, carryTimeouts = {}, {}, {}, {}
+		local retryUid, resetBlocked, gateOpenAt = nil, false, 0
+		local nextTick, wakePending = 0, true
+		local safePosition = Vector3.new(544.76, 71.5, -416.48)
+		local deliveryDrop = CFrame.new(616.749, 71.667, -395.585)
+		local areaEggStates, slotIdentity, ragdollJoints, guardChasePolicy
+		pcall(function()
+			areaEggStates = require(ReplicatedStorage.Shared.Types.AreaEggs).States
+		end)
+		pcall(function()
+			slotIdentity = require(ReplicatedStorage.Shared.Util.AreaEggSlotIdentity)
+		end)
+		pcall(function()
+			ragdollJoints = require(ReplicatedStorage.Shared.Modules.RagdollJoints)
+		end)
+		pcall(function()
+			guardChasePolicy = require(ReplicatedStorage.Shared.Modules.GuardAreas.GuardChasePolicy)
+		end)
+		local states = areaEggStates or { Slot = "Slot", Dropped = "Dropped", Carried = "Carried", Claimed = "Claimed" }
+		local statsService = game:GetService("Stats")
+		local treadmill = {
+			Snapshot = FindRemote("RF/Treadmill/AskRenderSnapshot", "AskRenderSnapshot"),
+			Wear = FindRemote("RF/Treadmill/AskWearStill", "AskWearStill"),
+			Doff = FindRemote("RF/Treadmill/AskDoff", "AskDoff"),
 		}
 		Engine.AutoStatus, Engine.AutoTargetText = "Idle", "None"
 		Engine.AutoSpeed = function()
 			return math.clamp(tonumber(FarmConfig.AutoTweenSpeed) or 400, 100, 1000)
 		end
-		local travelSpeed, flightHeight, pickupSpeed = Engine.AutoSpeed(), 27.4, Engine.AutoSpeed()
-		local cycleGeneration, pickupBackoffSeconds = 0, 20
-		local targetText, stageText, workerRunning, activeTargetUid = "None", "Idle", false, nil
-		local pickupBackoff = {}
-		local function IsCycleCancelled(cycleToken)
-			local cycle = Engine.AutoCycle
-			return cycleToken ~= cycleGeneration
-				or not Normal.Toggle()
-				or (
-					cycle ~= nil
-					and (
-						cycle.Session ~= RuntimeState.SessionId
-						or cycle.Cancel ~= RuntimeState.StealCancel
-						or cycle.Character ~= localPlayer.Character
-					)
-				)
+		local function Enabled()
+			return not disposed and not FarmConfig.Defense_InstantSteal and IsStealActive() == true
 		end
-		local Scheduler
-
-		do
-			local schedulerGap = 0.35
-			local travelSpeed = 5
-			local jobs = {}
-			local wakePending = true
-
-			Scheduler = {
-				Add = function(run)
-					local job = { Run = run, Gap = schedulerGap, Idle = travelSpeed, Repeat = false, Hold = 0 }
-					table.insert(jobs, job)
-					return job
-				end,
-				Wake = function()
-					wakePending = true
-				end,
-				Backoff = function(job, seconds)
-					if job then
-						job.Hold = tonumber(seconds) or 6
-					end
-				end,
-			}
-
-			local connection = RunService.Heartbeat:Connect(function(dt)
-				local woken = wakePending
-				wakePending = false
-
-				for _, job in ipairs(jobs) do
-					job.Gap = job.Gap + dt
-					job.Idle = job.Idle + dt
-
-					if 0 < job.Hold then
-						job.Hold = job.Hold - dt
-					elseif job.Gap >= schedulerGap and (woken or job.Repeat or job.Idle >= travelSpeed) then
-						job.Gap = 0
-						job.Idle = 0
-						local ok, result = pcall(job.Run, job)
-						ok = ok and result == true
-						job.Repeat = ok
-					end
-				end
-			end)
-
-			RegisterCleanup(function()
-				connection:Disconnect()
-			end)
-		end
-
-		Normal.WallOpenDelay = function()
-			local areaEggResetCycle = GameModules.AreaEggResetCycle
-			if type(areaEggResetCycle) ~= "table" then
-				return 5
-			end
-			local countdownDelay = tonumber(areaEggResetCycle.WallCountdownDelayAfterDayStartsSeconds) or 2
-			local countdownSeconds = tonumber(areaEggResetCycle.WallCountdownSeconds) or 3
-			return countdownDelay + countdownSeconds
-		end
-
-		do
-			local savedBeltParts = {}
-			local beltHolds = 0
-
-			local function CollectBeltParts()
-				local plot = Normal.Plot()
-				if not plot then
-					return {}
-				end
-				local parts = {}
-
-				for _, partName in ipairs({ "TreadmillBottom", "TreadmillUpgrade" }) do
-					local plotPart = plot:FindFirstChild(partName)
-
-					if plotPart then
-						if plotPart:IsA("BasePart") then
-							table.insert(parts, plotPart)
-						else
-							for _, descendant in ipairs(plotPart:GetDescendants()) do
-								if descendant:IsA("BasePart") then
-									table.insert(parts, descendant)
-								end
-							end
-						end
-					end
-				end
-
-				local clientTreadmillRenders = workspace:FindFirstChild("__ClientTreadmillRenders")
-				clientTreadmillRenders = clientTreadmillRenders
-					and clientTreadmillRenders:FindFirstChild("TreadmillRender_" .. plot.Name)
-
-				if clientTreadmillRenders then
-					for _, descendant in ipairs(clientTreadmillRenders:GetDescendants()) do
-						if descendant:IsA("BasePart") then
-							table.insert(parts, descendant)
-						end
-					end
-				end
-
-				return parts
-			end
-
-			local function HideBeltParts()
-				for _, part in ipairs(CollectBeltParts()) do
-					if not savedBeltParts[part] then
-						savedBeltParts[part] = {
-							CFrame = part.CFrame,
-							CanTouch = part.CanTouch,
-							CanCollide = part.CanCollide,
-							Transparency = part.Transparency,
-						}
-
-						pcall(function()
-							part.CanTouch = false
-							part.CanCollide = false
-							part.Transparency = 1
-							part.CFrame = part.CFrame - Vector3.new(0, 120, 0)
-						end)
-					end
-				end
-			end
-
-			local function RestoreBeltParts()
-				for k, saved in pairs(savedBeltParts) do
-					if k and k.Parent then
-						pcall(function()
-							k.CFrame = saved.CFrame
-							k.CanTouch = saved.CanTouch
-							k.CanCollide = saved.CanCollide
-							k.Transparency = saved.Transparency
-						end)
-					end
-				end
-
-				table.clear(savedBeltParts)
-			end
-
-			Normal.HoldBelt = function()
-				beltHolds = beltHolds + 1
-				HideBeltParts()
-			end
-
-			Normal.ReleaseBelt = function()
-				beltHolds = math.max(0, beltHolds - 1)
-
-				if beltHolds == 0 then
-					RestoreBeltParts()
-				end
-			end
-
-			Normal.BeltHeld = function()
-				return beltHolds > 0
-			end
-
-			Normal.RefreshBeltHide = function()
-				if beltHolds > 0 then
-					HideBeltParts()
-				end
-			end
-
-			RegisterCleanup(function()
-				beltHolds = 0
-				RestoreBeltParts()
-			end)
-
-			Normal.LeaveBelt = function()
-				local rfTreadmillAskDoff = networking:FindFirstChild("RF/Treadmill/AskDoff")
-
-				if rfTreadmillAskDoff and rfTreadmillAskDoff:IsA("RemoteFunction") then
-					pcall(rfTreadmillAskDoff.InvokeServer, rfTreadmillAskDoff)
-				end
-			end
-
-			Normal.Treadmill = { Riding = false }
-
-			Normal.ResetBelt = function()
-				beltHolds = 0
-				RestoreBeltParts()
-			end
-
-			Normal.OnBelt = function()
-				local belt = Normal.Belt()
-				if not belt or savedBeltParts[belt] then
-					return false
-				end
-				local root = Normal.Root()
-				if not root then
-					return false
-				end
-				local relativePosition = belt.CFrame:PointToObjectSpace(root.Position)
-				local halfWidth = belt.Size.X / 2 + 2
-				local insideWidth = math.abs(relativePosition.X) <= halfWidth
-				local insideBelt
-
-				if insideWidth then
-					local halfDepth = belt.Size.Z / 2 + 2
-					insideBelt = math.abs(relativePosition.Z) <= halfDepth
-				else
-					insideBelt = insideWidth
-				end
-
-				insideBelt = insideBelt and relativePosition.Y >= -2
-				insideBelt = insideBelt and relativePosition.Y <= belt.Size.Y / 2 + 8
-				return insideBelt
+		local function Connect(signal, callback)
+			if signal and type(signal.Connect) == "function" then
+				connections[#connections + 1] = signal:Connect(callback)
 			end
 		end
-
-		Normal.ExitBelt = function()
-			Normal.Treadmill.Riding = false
-			Normal.LeaveBelt()
-			local character = localPlayer.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-
-			if humanoid then
-				pcall(function()
-					humanoid.Jump = true
-					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-				end)
+		local function ReadEgg(uid)
+			if EggStateModule and type(EggStateModule.ReadFieldEgg) == "function" then
+				-- A nil live read must not be replaced with an old carried record.
+				return EggStateModule.ReadFieldEgg(uid)
 			end
-
-			task.wait(0.35)
+			return records[uid]
+		end
+		local function Available(record)
+			return type(record) == "table" and (record.State == states.Slot or record.State == states.Dropped)
+		end
+		local function CarriedByMe(uid)
+			local record = ReadEgg(uid)
+			return record ~= nil and record.State == states.Carried and record.CarrierUserId == LocalPlayer.UserId
+		end
+		local function BankRecordGone(uid)
+			local record = ReadEgg(uid)
+			return record == nil or record.State == states.Claimed
+		end
+		local function ReplaceSnapshot(snapshot)
+			table.clear(records)
+			for key, record in pairs(type(snapshot) == "table" and (snapshot.Records or snapshot) or {}) do
+				if type(record) == "table" then
+					records[record.Uid or key] = record
+				end
+			end
+			wakePending = true
+		end
+		if EggStateModule and EggStateModule.ReadFieldEggs then
+			local ok, snapshot = pcall(EggStateModule.ReadFieldEggs)
+			if ok then
+				ReplaceSnapshot(snapshot)
+			end
+		end
+		local function Current(cycle)
+			return Enabled()
+				and Engine.AutoCycle == cycle
+				and generation == cycle.Generation
+				and RuntimeState.SessionId == cycle.Session
+				and RuntimeState.StealCancel == cycle.Cancel
+				and LocalPlayer.Character == cycle.Character
+				and cycle.Root.Parent == cycle.Character
+				and (not cycle.ReturnDeadline or os.clock() < cycle.ReturnDeadline)
+		end
+		local function WallOpen()
+			if resetBlocked or os.clock() < gateOpenAt or Engine.WallSealed() or Engine.IsNight() then
+				return false
+			end
+			local world = Workspace:FindFirstChild("World") or Workspace:FindFirstChild("__OBJECTS")
+			local areas = world and world:FindFirstChild("Areas")
+			local wall = areas and areas:FindFirstChild("WallStartCollision")
+			return not (wall and wall:IsA("BasePart") and wall.CanCollide)
+		end
+		local function SetStatus(cycle, text)
+			if not cycle or Engine.AutoCycle == cycle then
+				Engine.AutoStatus = text
+			end
+		end
+		local function FeetOffset(cycle)
+			local humanoid, root = cycle.Humanoid, cycle.Root
+			return root.Size.Y * 0.5
+				+ (humanoid.RigType == Enum.HumanoidRigType.R15 and math.max(humanoid.HipHeight, 0.5) or 2)
+		end
+		local function EggDestination(cycle, record)
+			local bottom = record and (record.BottomCFrame or record.BoundsCFrame)
+			return typeof(bottom) == "CFrame" and CFrame.new(bottom.Position + Vector3.new(0, FeetOffset(cycle) + 0.15, 0))
+				or nil
+		end
+		local function GroundY(cycle, x, z)
+			local exclusions = { cycle.Character }
+			if cycle.HoverPad then
+				exclusions[#exclusions + 1] = cycle.HoverPad
+			end
+			local params = RaycastParams.new()
+			params.FilterType, params.IgnoreWater = Enum.RaycastFilterType.Exclude, true
+			for _ = 1, 10 do
+				params.FilterDescendantsInstances = exclusions
+				local hit =
+					Workspace:Raycast(Vector3.new(x, cycle.Root.Position.Y + 60, z), Vector3.new(0, -300, 0), params)
+				if not hit then
+					return nil
+				end
+				if hit.Instance.CanCollide then
+					return hit.Position.Y
+				end
+				exclusions[#exclusions + 1] = hit.Instance
+			end
+			return nil
+		end
+		local function SafeDestination(cycle)
+			local ground = GroundY(cycle, safePosition.X, safePosition.Z)
+			return CFrame.new(safePosition.X, ground and ground + 3.2 or safePosition.Y, safePosition.Z)
+				* cycle.Root.CFrame.Rotation
+		end
+		local function InSafeArea(cycle)
+			local delta = cycle.Root.Position - safePosition
+			return Vector2.new(delta.X, delta.Z).Magnitude <= 30 and math.abs(delta.Y) <= 18
+		end
+		local function SyncHoverPad(cycle, position)
+			if not cycle.HoverPad then
+				local pad = Instance.new("Part")
+				pad.Name = "__N3SenaHoverPad"
+				pad.Anchored, pad.CanCollide, pad.CanQuery, pad.CanTouch = true, true, true, false
+				pad.CastShadow, pad.Transparency, pad.Size = false, 1, Vector3.new(8, 1, 8)
+				cycle.HoverPad = pad
+				pad.Parent = Workspace
+			end
+			cycle.HoverPad.CFrame = CFrame.new(position.X, position.Y - FeetOffset(cycle) - 0.55, position.Z)
 		end
 
-		Normal.Treadmill = setmetatable({}, {
-			__index = function(_, key)
-				if key == "Riding" then
-					return RuntimeState.OnTreadmill
-				end
-			end,
-			__newindex = function(_, key, value)
-				if key == "Riding" then
-					RuntimeState.OnTreadmill = value
-				end
-			end,
-		})
-
-		local GetFieldPause
-
-		do
-			local scheduledWakeups = {}
-
-			local function WakeAtServerTime(serverTime)
-				if type(serverTime) ~= "number" or scheduledWakeups[serverTime] then
+		-- Sena v801/v826/v831: cached client-character baseline discovery/update.
+		-- N3 keeps a detached original humanoid; the game state can still refer to it.
+		local baselineSearch = { Busy = false, NextAt = 0, Misses = 0 }
+		local sampleNames = {
+			"LastObservedSample",
+			"LastSample",
+			"LastGoodSample",
+			"LastGameplayTrustedSample",
+			"LastValidatedSample",
+			"LastValidatedGroundedSample",
+			"LastConfirmedGroundSample",
+			"CandidateGroundedSample",
+		}
+		local function MatchesBaseline(state, cycle)
+			return type(state) == "table"
+				and rawget(state, "Player") == LocalPlayer
+				and rawget(state, "Character") == cycle.Character
+				and rawget(state, "RootPart") == cycle.Root
+				and (rawget(state, "Humanoid") == cycle.Humanoid or (cycle.OriginalHumanoid ~= nil and rawget(
+					state,
+					"Humanoid"
+				) == cycle.OriginalHumanoid))
+				and type(rawget(state, "SampleHistory")) == "table"
+				and type(rawget(state, "Evidence")) == "table"
+		end
+		local function FindBaseline(cycle)
+			local found
+			local function Search(value, depth, seen)
+				if found or type(value) ~= "table" or depth > 3 or seen[value] then
 					return
 				end
-				scheduledWakeups[serverTime] = true
-
-				task.delay(math.max(0, serverTime - workspace:GetServerTimeNow()) + 0.05, function()
-					scheduledWakeups[serverTime] = nil
-					Scheduler.Wake()
-				end)
-			end
-
-			local wallPauseUntil = 0
-
-			GetFieldPause = function()
-				local areaEggCycle = GameModules.AreaEggCycle
-				if type(areaEggCycle) ~= "table" then
-					return nil
-				end
-
-				local ok, result, result2, result3, result4 = pcall(function()
-					local serverTimeNow = workspace:GetServerTimeNow()
-					local nextResetTime = areaEggCycle.NextResetTime
-					return serverTimeNow,
-						areaEggCycle.IsNightPhase(serverTimeNow),
-						areaEggCycle.NextNightTime(serverTimeNow),
-						nextResetTime(serverTimeNow)
-				end)
-
-				if not ok or type(result4) ~= "number" then
-					return nil
-				end
-
-				if result2 == true then
-					wallPauseUntil = result4 + Normal.WallOpenDelay()
-					WakeAtServerTime(wallPauseUntil)
-					return wallPauseUntil, "night", result
-				end
-
-				if Normal.WallSealed() then
-					WakeAtServerTime(result + 0.3)
-					return math.max(wallPauseUntil, result), "wall", result
-				end
-
-				if type(result3) == "number" and result3 > result then
-					WakeAtServerTime(result3)
-				end
-
-				return nil
-			end
-		end
-
-		do
-			local areaEggResetWall = GameModules.AreaEggResetWall
-			local changed = type(areaEggResetWall) == "table" and areaEggResetWall.Changed or nil
-
-			if changed and type(changed.Connect) == "function" then
-				local ok, result = pcall(function()
-					return changed:Connect(function()
-						Scheduler.Wake()
-					end)
-				end)
-
-				ok = ok and result
-
-				if ok then
-					RegisterCleanup(function()
-						pcall(function()
-							result:Disconnect()
-						end)
-					end)
-				end
-			end
-		end
-
-		local fieldResetGrace
-		fieldResetGrace = 8
-		local nightEggUids
-		nightEggUids = nil
-		local freshFieldUntil
-		freshFieldUntil = 0
-		local RememberNightEggs, IsWaitingForFreshField
-
-		local function CollectFieldUids(excludeStarter)
-			local uids = {}
-			local str3 = "FirstAreaEgg_" .. tostring(localPlayer.UserId)
-			local eggState = GameModules.EggState
-
-			if type(eggState) == "table" and type(eggState.ReadFieldEggs) == "function" then
-				task.spawn(function()
-					local ok, result = pcall(eggState.ReadFieldEggs)
-
-					if ok and type(result) == "table" and type(result.Records) == "table" then
-						for _, record in pairs(result.Records) do
-							local include = type(record) == "table" and type(record.Uid) == "string"
-
-							if include then
-								local isExcludedStarter = excludeStarter
-
-								if excludeStarter then
-									isExcludedStarter = string.sub(record.Uid, 1, #str3) == str3
-								end
-
-								include = not isExcludedStarter
-							end
-
-							if include then
-								uids[record.Uid] = true
-							end
-						end
-					end
-				end)
-			end
-
-			return uids
-		end
-
-		RememberNightEggs = function()
-			local alreadyRemembered = nightEggUids
-
-			if nightEggUids then
-				alreadyRemembered = freshFieldUntil == math.huge
-			end
-
-			if alreadyRemembered then
-				return
-			end
-			nightEggUids = CollectFieldUids(true)
-			freshFieldUntil = math.huge
-			table.clear(pickupBackoff)
-			activeTargetUid = nil
-		end
-
-		IsWaitingForFreshField = function()
-			if not nightEggUids then
-				return false
-			end
-
-			if freshFieldUntil <= os.clock() then
-				nightEggUids = nil
-				return false
-			end
-			local currentUids = CollectFieldUids()
-			if next(currentUids) == nil then
-				return true
-			end
-			local hasOldEggs = false
-			local hasNewEggs = false
-
-			for k in pairs(currentUids) do
-				if nightEggUids[k] then
-					hasOldEggs = true
-				else
-					hasNewEggs = true
-				end
-			end
-
-			if not hasOldEggs then
-				nightEggUids = nil
-				return false
-			end
-			return not hasNewEggs
-		end
-
-		-- Candidate adapter: unfiltered starters; filtered targets may include
-		-- another player's carried egg. No N3 tombstones or strict UID gate.
-		local function SelectCandidates(unfiltered, includeCarried)
-			local result = {}
-			local rows = unfiltered and CollectRawFieldEggs(true) or CollectCandidates(includeCarried == true, true)
-			for _, row in ipairs(rows) do
-				local raw = unfiltered and row or row.Raw
-				local uid = raw and raw.Uid
-				local state = raw and raw.State
-				local cf = raw and (raw.BottomCFrame or raw.BoundsCFrame)
-				local ownCarry = Normal.Steal.Carrying and uid == Normal.Steal.CarryUid
-				local eligible = state == "Slot"
-					or state == "Dropped"
-					or (not unfiltered and includeCarried == true and state == "Carried" and not ownCarry)
-				if
-					uid
-					and eligible
-					and typeof(cf) == "CFrame"
-					and (pickupBackoff[uid] or 0) <= os.clock()
-					and not (nightEggUids and nightEggUids[uid])
-				then
-					table.insert(result, {
-						Uid = uid,
-						State = state,
-						CFrame = cf,
-						AreaId = tostring(raw.AreaId),
-						Category = tostring(raw.AssetCategory or row.Category or "Egg"),
-						Scale = tonumber(raw.AssetScale) or 1,
-						Value = row.Income or 0,
-					})
-				end
-			end
-			return result
-		end
-
-		-- Normal movement, pickup, guard route and delivery (Chili-derived).
-		local displacementTolerance = 6
-		local carrySignalWait = 0.6
-		local guardHitTimeout = 20
-		local guardDistanceBias = 90
-		local standingTimeout = 6
-		local guardApproachDistance = 3
-		local nearbyTargetDistance = 20
-		local maxRecoveryAttempts = 3
-		local droppedRecoveryTimeout = 30
-		local priorityTravelSeconds = 3
-
-		local function DriveRootVelocity(root, destination, speed, dt, progress)
-			local offset = destination - root.Position
-			local distance = offset.Magnitude
-			local stepTime = math.max(dt, 1 / 240)
-			local velocity = distance > 0.01 and offset.Unit * math.min(speed, distance / stepTime) or Vector3.zero
-			if distance > 2 then
-				if not progress.mark then
-					progress.mark, progress.clock = distance, 0
-				end
-				progress.clock = progress.clock + dt
-				if progress.clock >= 0.4 then
-					if progress.mark - distance < speed * 0.1 then
-						pcall(function()
-							root.CFrame = root.CFrame + offset.Unit * math.min(distance, speed * stepTime)
-						end)
-					end
-					progress.mark, progress.clock = distance, 0
-				end
-			else
-				progress.mark = nil
-			end
-			pcall(function()
-				root.AssemblyLinearVelocity = velocity + Vector3.new(0, workspace.Gravity * stepTime * 0.5, 0)
-				root.AssemblyAngularVelocity = Vector3.zero
-			end)
-			return distance <= 0.5
-		end
-
-		local StopRootVelocity = Engine.StopVelocity
-		local holdDestination, holdLink = nil, nil
-		local function StopPositionHold()
-			holdDestination = nil
-			if holdLink then
-				holdLink:Disconnect()
-				holdLink = nil
-			end
-		end
-		local function IsGuardRagdollActive()
-			local endsAt = tonumber(localPlayer:GetAttribute("RagdollEndTime"))
-			return endsAt ~= nil and endsAt > workspace:GetServerTimeNow()
-		end
-		local function HoldPosition(destination)
-			holdDestination = destination
-			if holdLink or not destination then
-				return
-			end
-			local progress = {}
-			holdLink = RunService.PreSimulation:Connect(function(dt)
-				if not holdDestination or IsGuardRagdollActive() or Normal.AntiGuard.Busy then
+				seen[value] = true
+				if MatchesBaseline(value, cycle) then
+					found = value
 					return
 				end
-				local root = Normal.Root()
-				if root then
-					DriveRootVelocity(root, holdDestination, pickupSpeed, dt, progress)
-				end
-			end)
-		end
-		local function StopNormalMotion()
-			StopPositionHold()
-			local cycle = Engine.AutoCycle
-			if cycle then
-				if cycle.CancelMotion then
-					cycle.CancelMotion()
-				end
-				for _, hit in ipairs(cycle.GuardHits or {}) do
-					hit.Stop()
-				end
-				cycle.GuardHits = nil
-			end
-			StopRootVelocity()
-			local character = localPlayer.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				humanoid.PlatformStand = false
-			end
-		end
-		RegisterCleanup(StopPositionHold)
-
-		local PromptBelongsToEgg, FindSlotCarryPrompt
-
-		do
-			local slotConflictMargin = 1.5
-
-			local function HorizontalDistance(first, second)
-				local x = second.X
-				return (Vector3.new(first.X, 0, first.Z) - Vector3.new(x, 0, second.Z)).Magnitude
-			end
-
-			local function GetModelPosition(model)
-				local ok, result = pcall(function()
-					return model:GetPivot().Position
-				end)
-
-				if not ok then
-					result = ok
-				end
-
-				local position = result or nil
-				return position
-			end
-
-			PromptBelongsToEgg = function(promptPart, eggUid, eggPosition)
-				local targetDistance = HorizontalDistance(promptPart.Position, eggPosition)
-				local areaEggSlotsClient = workspace:FindFirstChild("AreaEggSlotsClient")
-				if not areaEggSlotsClient then
-					return true
-				end
-
-				for _, child in ipairs(areaEggSlotsClient:GetChildren()) do
-					if child:IsA("Model") and child.Name ~= eggUid then
-						local closerSlot = GetModelPosition(child)
-						closerSlot = closerSlot
-							and HorizontalDistance(closerSlot, promptPart.Position) + slotConflictMargin
-								< targetDistance
-						if closerSlot then
-							return false
-						end
-						continue
-					end
-				end
-
-				return true
-			end
-
-			FindSlotCarryPrompt = function(eggUid, eggPosition, radius)
-				local closestDistance = radius or 14
-				local prompt = nil
-				local promptPart
-
-				for _, child in ipairs(workspace:GetChildren()) do
-					if child.Name == "SmartPromptPart" and child:IsA("BasePart") then
-						local carryAreaEgg = child:FindFirstChild("CarryAreaEgg")
-
-						if carryAreaEgg and carryAreaEgg:IsA("ProximityPrompt") then
-							local distance = HorizontalDistance(child.Position, eggPosition)
-
-							if distance < closestDistance then
-								closestDistance = distance
-								prompt = carryAreaEgg
-								promptPart = child
-							end
-						end
-					end
-				end
-
-				if not prompt or not promptPart then
-					return nil
-				end
-
-				if type(eggUid) == "string" and not PromptBelongsToEgg(promptPart, eggUid, eggPosition) then
-					return nil
-				end
-				return prompt, promptPart
-			end
-		end
-
-		local RequestNativeCarry
-
-		RequestNativeCarry = function(eggUid)
-			local eggState = GameModules.EggState
-
-			if type(eggUid) == "string" and type(eggState) == "table" and type(eggState.CarryFieldEgg) == "function" then
-				pcall(eggState.CarryFieldEgg, eggUid)
-			end
-		end
-
-		local ValidateCarriedEgg
-
-		do
-			local function GetCarryUid()
-				local carryUid = Normal.Steal.CarryUid
-				local hasUid = type(carryUid) == "string"
-
-				if not hasUid then
-					carryUid = hasUid
-				end
-
-				local uid = carryUid or nil
-				return uid
-			end
-
-			local function CarryUidMatches(expectedUid)
-				local carryUid = GetCarryUid()
-				if not carryUid or type(expectedUid) ~= "string" then
-					return true
-				end
-				return carryUid == expectedUid
-			end
-
-			local function CarryMatchesFilters(carryUid)
-				if type(carryUid) ~= "string" then
-					return false
-				end
-				local candidates = SelectCandidates(false, true)
-				if #candidates == 0 then
-					return true
-				end
-
-				for _, candidate in ipairs(candidates) do
-					if candidate.Uid == carryUid then
-						return true
-					end
-				end
-
-				return false
-			end
-
-			local function DropWrongEgg(cycleToken)
-				local eggState = GameModules.EggState
-
-				if type(eggState) == "table" and type(eggState.DropFieldEgg) == "function" then
-					pcall(eggState.DropFieldEgg, "PlayerRequest")
-				end
-
-				local elapsed = 0
-
-				while Normal.Steal.Carrying and elapsed < 1 and not IsCycleCancelled(cycleToken) do
-					elapsed = elapsed + RunService.Heartbeat:Wait()
-				end
-			end
-
-			ValidateCarriedEgg = function(expectedUid, cycleToken)
-				local elapsed = 0
-
-				while not Normal.Steal.Carrying and elapsed < carrySignalWait and not IsCycleCancelled(cycleToken) do
-					elapsed = elapsed + RunService.Heartbeat:Wait()
-				end
-
-				if not Normal.Steal.Carrying then
-					stageText = "The egg never reached the hand"
-					return false
-				end
-
-				if CarryUidMatches(expectedUid) then
-					return true
-				end
-
-				if CarryMatchesFilters((GetCarryUid())) then
-					stageText = "Holding another egg that still matches, delivering it"
-					return true
-				end
-				stageText = "Wrong egg in hand, dropping it"
-				DropWrongEgg(cycleToken)
-				return false
-			end
-		end
-
-		local TryPromptPickup
-
-		TryPromptPickup = function(egg, cycleToken)
-			local eggState = GameModules.EggState
-			local position = typeof(egg.CFrame) == "CFrame" and egg.CFrame.Position or nil
-			if not position then
-				return false
-			end
-			local elapsed = 0
-			local huge = math.huge
-			local missingPromptCount = 0
-
-			while elapsed < 1.5 do
-				if IsCycleCancelled(cycleToken) then
-					return false
-				end
-
-				if Normal.Steal.Carrying then
-					return true
-				end
-
-				if 0.06 <= huge then
-					local prompt = FindSlotCarryPrompt(egg.Uid, position)
-
-					if prompt then
-						pcall(function()
-							prompt.HoldDuration = 0
-						end)
-
-						missingPromptCount = 0
-
-						if typeof(fireproximityprompt) == "function" then
-							pcall(fireproximityprompt, prompt)
-							missingPromptCount = 0
-						end
-					else
-						missingPromptCount = missingPromptCount + 1
-						if 4 <= missingPromptCount then
-							return false
-						end
-
-						if type(eggState) == "table" and type(eggState.CarryFieldEgg) == "function" then
-							pcall(eggState.CarryFieldEgg, egg.Uid)
-						end
-					end
-
-					huge = 0
-				end
-
-				local result = RunService.Heartbeat:Wait()
-				elapsed = elapsed + result
-				huge = huge + result
-			end
-
-			return Normal.Steal.Carrying == true
-		end
-
-		local AwaitCarrySnapshot, FindNearestCandidate
-
-		do
-			local RagdollModule = LoadModule(function()
-				return ReplicatedStorage.Shared.Modules.Ragdoll
-			end)
-
-			local function IsCharacterRagdolled()
-				local character = localPlayer.Character
-
-				if type(RagdollModule) == "table" and type(RagdollModule.IsRagdolled) == "function" then
-					local ok, result = pcall(RagdollModule.IsRagdolled, character)
-					ok = ok and result == true
-					if ok then
-						return true
-					end
-				end
-
-				local num = tonumber(localPlayer:GetAttribute("RagdollEndTime"))
-				num = num and num > workspace:GetServerTimeNow()
-				if num then
-					return true
-				end
-				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-
-				if humanoid then
-					local state = humanoid:GetState()
-					local ragdolled = state == Enum.HumanoidStateType.Physics
-						or state == Enum.HumanoidStateType.Ragdoll
-						or state == Enum.HumanoidStateType.FallingDown
-					return ragdolled
-				end
-
-				return false
-			end
-
-			AwaitCarrySnapshot = function(eggUid, cycleToken)
-				if Normal.Steal.Carrying then
-					return true
-				end
-				local rfEggWorldAskFieldEggSnapshot = networking:FindFirstChild("RF/EggWorld/AskFieldEggSnapshot")
-				if not rfEggWorldAskFieldEggSnapshot or not rfEggWorldAskFieldEggSnapshot:IsA("RemoteFunction") then
-					return false
-				end
-				local elapsed = 0
-
-				while elapsed < 1 do
-					if IsCycleCancelled(cycleToken) or Normal.Steal.Carrying then
-						return Normal.Steal.Carrying == true
-					end
-					local ok, result = pcall(rfEggWorldAskFieldEggSnapshot.InvokeServer, rfEggWorldAskFieldEggSnapshot)
-					ok = ok and type(result) == "table"
-					ok = ok and result.Records
-					local records = ok or nil
-
-					if type(records) == "table" then
-						local available = false
-
-						for _, record in pairs(records) do
-							local matchesUid = type(record) == "table" and record.Uid == eggUid
-							local pickupAvailable
-
-							if matchesUid then
-								pickupAvailable = record.State == "Slot" or record.State == "Dropped"
-							else
-								pickupAvailable = matchesUid
-							end
-
-							if pickupAvailable then
-								available = true
-								break
-							else
-								available = false
-							end
-						end
-
-						if not available then
-							return Normal.Steal.Carrying == true
-						end
-					end
-
-					elapsed = elapsed + task.wait(0.3)
-				end
-
-				return Normal.Steal.Carrying == true
-			end
-
-			local function DistanceToCandidate(egg)
-				local root = Normal.Root()
-				local position = typeof(egg.CFrame) == "CFrame" and egg.CFrame.Position or nil
-				if not root or not position then
-					return math.huge
-				end
-				return (root.Position - position).Magnitude
-			end
-
-			FindNearestCandidate = function(candidates)
-				local huge = math.huge
-				local nearest = nil
-
-				for _, candidate in ipairs(candidates) do
-					local distance = DistanceToCandidate(candidate)
-
-					if distance < huge then
-						huge = distance
-						nearest = candidate
-					end
-				end
-
-				return nearest, huge
-			end
-
-			local function MoveToPosition(
-				destination,
-				cycleToken,
-				requireCarry,
-				speedOverride,
-				abortOnDisplacement,
-				abortReason
-			)
-				StopPositionHold()
-				if not Normal.Root() then
-					return false
-				end
-				local character = localPlayer.Character
-				local progress, previousPosition = {}, nil
-				local finished, reason, elapsed = nil, nil, 0
-				local cycle = Engine.AutoCycle
-				local link = RunService.PreSimulation:Connect(function(dt)
-					if finished ~= nil then
-						return
-					end
-					if IsCycleCancelled(cycleToken) then
-						finished = false
-						return
-					end
-					if Normal.AntiGuard.Busy then
-						return
-					end
-					elapsed = elapsed + dt
-					if requireCarry and not Normal.Steal.Carrying then
-						finished, reason = false, "dropped"
-						return
-					end
-					local interruption = abortReason and abortReason()
-					if interruption then
-						finished, reason = false, interruption
-						return
-					end
-					local root = Normal.Root()
-					if not root or elapsed >= 25 or localPlayer.Character ~= character then
-						finished, reason = false, "respawned"
-						return
-					end
-					local speed = speedOverride or travelSpeed
-					if
-						abortOnDisplacement
-						and previousPosition
-						and (root.Position - previousPosition).Magnitude > displacementTolerance + speed * dt
-					then
-						finished, reason = false, "displaced"
-						return
-					end
-					if DriveRootVelocity(root, destination, speed, dt, progress) then
-						finished = true
-					end
-					previousPosition = root.Position
-				end)
-				local function CancelMotion()
-					finished = false
-					link:Disconnect()
-				end
-				if cycle then
-					cycle.CancelMotion = CancelMotion
-				end
-				while finished == nil do
-					RunService.Heartbeat:Wait()
-				end
-				link:Disconnect()
-				if cycle and cycle.CancelMotion == CancelMotion then
-					cycle.CancelMotion = nil
-				end
-				if finished then
-					HoldPosition(destination)
-				else
-					StopRootVelocity()
-				end
-				return finished, reason
-			end
-
-			local GetHomePosition = Engine.GetBaseSafeSpot
-			Normal.StealHome, Normal.InsideBase = GetHomePosition, Engine.InsideBase
-
-			local function PivotCharacterAndStop(destination)
-				if Normal.AntiGuard.Busy then
-					return false
-				end
-				local character = localPlayer.Character
-				local root = Normal.Root()
-				if not character or not root then
-					return false
-				end
-				local rotation = root.CFrame.Rotation
-				local destinationCFrame = CFrame.new(destination) * rotation
-
-				pcall(function()
-					character:PivotTo(destinationCFrame)
-				end)
-
-				if 3 < (root.Position - destination).Magnitude then
-					pcall(function()
-						root.CFrame = destinationCFrame
-					end)
-				end
-
-				for _, descendant in ipairs(character:GetDescendants()) do
-					if descendant:IsA("BasePart") then
-						pcall(function()
-							descendant.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-							descendant.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-						end)
-					end
-				end
-
-				return true
-			end
-
-			local function RepairRagdollBody(destination)
-				if Normal.AntiGuard.Busy then
-					return
-				end
-				local character = localPlayer.Character
-				local root = Normal.Root()
-				if not character or not root or not destination then
-					return
-				end
-
-				if 6 < (root.Position - destination).Magnitude then
-					PivotCharacterAndStop(destination)
-					return
-				end
-
-				for _, descendant in ipairs(character:GetDescendants()) do
-					if
-						descendant:IsA("BasePart")
-						and descendant ~= root
-						and (descendant.Position - root.Position).Magnitude > 12
-					then
-						pcall(function()
-							descendant.CFrame = root.CFrame
-							descendant.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-						end)
-					end
-				end
-			end
-
-			local function WaitUntilStanding(cycleToken, destination)
-				local elapsed = 0
-
-				while true do
-					if not (elapsed < standingTimeout) then
-						return not IsCycleCancelled(cycleToken)
-					else
-						if IsCycleCancelled(cycleToken) then
-							break
-						end
-						local character = localPlayer.Character
-						local ragdolled = IsCharacterRagdolled()
-						local needsRecovery
-
-						if not ragdolled and character then
-							for _, descendant in ipairs(character:GetDescendants()) do
-								if
-									descendant:IsA("Constraint")
-									and string.find(descendant.Name, "RagdollConstraint", 1, true)
-								then
-									ragdolled = true
-									break
-								end
-							end
-
-							needsRecovery = ragdolled
-						else
-							needsRecovery = ragdolled
-						end
-
-						if not needsRecovery then
-							return not IsCycleCancelled(cycleToken)
-						end
-						RepairRagdollBody(destination)
-						elapsed = elapsed + RunService.Heartbeat:Wait()
-					end
-				end
-
-				return false
-			end
-
-			local function FindCandidateGuard(egg)
-				return egg and Engine.FindGuard(egg.AreaId) or nil
-			end
-			local function IsCandidateGuardSleeping(egg)
-				return egg ~= nil and Engine.GuardSleeping(egg.AreaId)
-			end
-
-			local function GetGuardApproach(egg)
-				local guard = FindCandidateGuard(egg)
-				local position = typeof(egg.CFrame) == "CFrame" and egg.CFrame.Position or nil
-				if not guard or not position then
-					return nil, nil
-				end
-
-				local ok, result = pcall(function()
-					return guard:GetPivot().Position
-				end)
-
-				if not ok then
-					return nil, nil
-				end
-				local vector = Vector3.new(position.X - result.X, 0, position.Z - result.Z)
-				if vector.Magnitude < 0.1 then
-					return nil, nil
-				end
-				local approach = result + vector.Unit * guardApproachDistance
-				return Vector3.new(approach.X, position.Y + 3, approach.Z), result
-			end
-
-			local function ArmGuardHit(cycleToken, destination)
-				Engine.RecordAutoTrace("guard-armed", Normal.Steal.CarryUid)
-				local hit = { Landed = false, Destination = destination }
-				local antiGuard = Normal.AntiGuard
-				antiGuard.HitArms = antiGuard.HitArms + 1
-				Normal.AntiGuard.HitArmedAt = os.clock()
-
-				hit.Link = localPlayer:GetAttributeChangedSignal("RagdollEndTime"):Connect(function()
-					if hit.Landed or IsCycleCancelled(cycleToken) then
-						return
-					end
-					local num = tonumber(localPlayer:GetAttribute("RagdollEndTime"))
-					if not num or num <= workspace:GetServerTimeNow() then
-						return
-					end
-					local root = Normal.Root()
-					if not root then
-						return
-					end
-					hit.Landed = true
-					Engine.RecordAutoTrace("guard-hit", Normal.Steal.CarryUid)
-					StopPositionHold()
-
-					pcall(function()
-						root.CFrame = CFrame.new(hit.Destination)
-						root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-					end)
-				end)
-
-				hit.Stop = function()
-					if hit.Link then
-						hit.Link:Disconnect()
-						hit.Link = nil
-						Normal.AntiGuard.HitArms = math.max(0, Normal.AntiGuard.HitArms - 1)
-					end
-				end
-
-				local cycle = Engine.AutoCycle
-				if cycle then
-					cycle.GuardHits = cycle.GuardHits or {}
-					table.insert(cycle.GuardHits, hit)
-				end
-				return hit
-			end
-
-			local function WaitForGuardHit(cycleToken, hit, updateHit)
-				local character = localPlayer.Character
-				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-				if humanoid then
-					humanoid.PlatformStand = false
-				end
-				local elapsed, lostCarryAt = 0, nil
-				while not hit.Landed and elapsed < guardHitTimeout and not IsCycleCancelled(cycleToken) do
-					if updateHit then
-						updateHit(hit)
-					end
-					if not Normal.Steal.Carrying then
-						lostCarryAt = lostCarryAt or elapsed
-						if elapsed - lostCarryAt > 1 then
-							break
-						end
-					end
-					elapsed = elapsed + RunService.Heartbeat:Wait()
-				end
-				hit.Stop()
-				return hit.Landed
-			end
-
-			local function TrySettledPickup(egg, cycleToken, timeout, repairPosition)
-				local position = typeof(egg.CFrame) == "CFrame" and egg.CFrame.Position or nil
-				if not position then
-					return false
-				end
-				local elapsed = 0
-				local huge = math.huge
-
-				while elapsed < timeout do
-					if IsCycleCancelled(cycleToken) then
-						return false
-					end
-
-					if Normal.Steal.Carrying then
-						return true
-					end
-
-					if 0.1 <= huge then
-						local prompt = FindSlotCarryPrompt(egg.Uid, position)
-
-						if prompt then
-							pcall(function()
-								prompt.HoldDuration = 0
-							end)
-
-							if typeof(fireproximityprompt) == "function" then
-								pcall(fireproximityprompt, prompt)
-							end
-						else
-							RequestNativeCarry(egg.Uid)
-						end
-
-						huge = 0
-					end
-
-					if repairPosition then
-						RepairRagdollBody(repairPosition)
-					end
-
-					local result = RunService.Heartbeat:Wait()
-					elapsed = elapsed + result
-					huge = huge + result
-				end
-
-				return Normal.Steal.Carrying == true
-			end
-
-			local function TakeEggOnGuardRoute(egg, cycleToken, afterGuardHit, nextEgg)
-				Engine.RecordAutoTrace(afterGuardHit and "target-pickup" or "starter-pickup", egg and egg.Uid)
-				if not egg then
-					return false
-				end
-				local position = typeof(egg.CFrame) == "CFrame" and egg.CFrame.Position or nil
-				if not position then
-					return false
-				end
-				local pickupPosition = position + Vector3.new(0, 3, 0)
-				local character = localPlayer.Character
-				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-
-				if humanoid and character:FindFirstChildWhichIsA("Tool") then
-					pcall(function()
-						humanoid:UnequipTools()
-					end)
-				end
-
-				if afterGuardHit then
-					HoldPosition(pickupPosition, true)
-					stageText = "Waiting to stand up"
-					if not WaitUntilStanding(cycleToken, pickupPosition) then
-						return false
-					end
-				else
-					stageText = "Jumping to the egg"
-					local root = Normal.Root()
-
-					if root and (pickupPosition - root.Position).Magnitude <= guardDistanceBias then
-						pcall(function()
-							local rotation = root.CFrame.Rotation
-							root.CFrame = CFrame.new(pickupPosition) * rotation
-							root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-							root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-						end)
-					elseif not MoveToPosition(pickupPosition, cycleToken, nil, pickupSpeed) then
-						return false
-					end
-				end
-
-				if IsCycleCancelled(cycleToken) then
-					return false
-				end
-				local hasNextEgg = nextEgg and typeof(nextEgg.CFrame) == "CFrame"
-				local hit = nil
-
-				if hasNextEgg then
-					hit = ArmGuardHit(cycleToken, nextEgg.CFrame.Position + Vector3.new(0, 3, 0))
-				end
-
-				local str3 = "FirstAreaEgg_" .. tostring(localPlayer.UserId)
-				local personalSlot = type(egg.Uid) == "string"
-						and string.sub(egg.Uid, 1, #str3) == str3
-						and string.match(egg.Uid, "_([%w ]+:Slot_%d+)$")
-					or nil
-				nextEgg = nextEgg and personalSlot
-				local pickedUp = false
-
-				if nextEgg then
-					local eggState = GameModules.EggState
-					local canUseNativeCarry = type(eggState) == "table" and type(eggState.CarryFieldEgg) == "function"
-					pickedUp = false
-
-					if canUseNativeCarry then
-						stageText = "Taking the starter egg"
-
-						task.spawn(function()
-							pcall(eggState.CarryFieldEgg, egg.Uid, personalSlot)
-						end)
-
-						local elapsed = 0
-
-						while not Normal.Steal.Carrying and elapsed < 0.8 do
-							if IsCycleCancelled(cycleToken) then
-								return false
-							end
-							elapsed = elapsed + RunService.Heartbeat:Wait()
-						end
-
-						pickedUp = Normal.Steal.Carrying == true
-					end
-				end
-
-				if not pickedUp then
-					stageText = "Taking the egg"
-					pickedUp = TryPromptPickup(egg, cycleToken)
-
-					if not pickedUp and not IsCycleCancelled(cycleToken) then
-						MoveToPosition(pickupPosition, cycleToken, nil, pickupSpeed)
-						pickedUp = TryPromptPickup(egg, cycleToken)
-					end
-				end
-
-				if not pickedUp and not AwaitCarrySnapshot(egg.Uid, cycleToken) then
-					if hit then
-						hit.Stop()
-					end
-
-					pickupBackoff[egg.Uid] = os.clock() + pickupBackoffSeconds
-					stageText = "That egg would not come free"
-					return false
-				end
-
-				if hit then
-					local reGuardPatrolForestStrike = networking:FindFirstChild("RE/GuardPatrol/ForestStrike")
-					local guard = FindCandidateGuard(egg) or FindCandidateGuard({ AreaId = "Forest" })
-					local humanoidRootPart = guard and guard:FindFirstChild("HumanoidRootPart")
-
-					if reGuardPatrolForestStrike and reGuardPatrolForestStrike:IsA("RemoteEvent") and humanoidRootPart then
-						stageText = "Calling the guard strike"
-
-						pcall(function()
-							reGuardPatrolForestStrike:FireServer({
-								EggUid = egg.Uid,
-								GuardCFrame = humanoidRootPart.CFrame,
-							})
-						end)
-					end
-				end
-
-				Normal.Steal.LastFinishedAt = os.clock()
-				return true, hit
-			end
-
-			local function FindDroppedCarryPrompt(eggPosition, radius, eggUid)
-				local prompt = nil
-				local promptPart = nil
-
-				for _, child in ipairs(workspace:GetChildren()) do
-					if child.Name == "SmartPromptPart" and child:IsA("BasePart") then
-						local carryAreaEgg = child:FindFirstChild("CarryAreaEgg")
-
-						if carryAreaEgg and carryAreaEgg:IsA("ProximityPrompt") then
-							local magnitude = (child.Position - eggPosition).Magnitude
-
-							if magnitude < radius then
-								radius = magnitude
-								prompt = carryAreaEgg
-								promptPart = child
-							end
-						end
-					end
-				end
-
-				if
-					prompt
-					and promptPart
-					and type(eggUid) == "string"
-					and not PromptBelongsToEgg(promptPart, eggUid, eggPosition)
-				then
-					return nil
-				end
-				return prompt, promptPart
-			end
-
-			local function FindWorldEggPosition(eggUid)
-				local areaEggSlotsClient = workspace:FindFirstChild("AreaEggSlotsClient")
-				local eggModel = workspace:FindFirstChild(eggUid)
-					or areaEggSlotsClient and areaEggSlotsClient:FindFirstChild(eggUid)
-				if not eggModel then
-					return nil
-				end
-
-				local ok, result = pcall(function()
-					return eggModel:GetPivot().Position
-				end)
-
-				if not ok then
-					result = ok
-				end
-
-				local position = result or nil
-				return position
-			end
-
-			local function FindSnapshotEggPosition(eggUid)
-				local rfEggWorldAskFieldEggSnapshot = networking:FindFirstChild("RF/EggWorld/AskFieldEggSnapshot")
-				if not rfEggWorldAskFieldEggSnapshot or not rfEggWorldAskFieldEggSnapshot:IsA("RemoteFunction") then
-					return nil
-				end
-				local ok, result = pcall(rfEggWorldAskFieldEggSnapshot.InvokeServer, rfEggWorldAskFieldEggSnapshot)
-				local records = ok and type(result) == "table" and result.Records or nil
-				if type(records) ~= "table" then
-					return nil
-				end
-
-				for _, record in pairs(records) do
-					if type(record) == "table" and record.Uid == eggUid and typeof(record.BottomCFrame) == "CFrame" then
-						return record.BottomCFrame.Position
-					end
-				end
-
-				return nil
-			end
-
-			local function IsEggWeldedToAnotherPlayer(eggUid)
-				local eggModel = workspace:FindFirstChild(eggUid)
-				if not eggModel then
-					return false
-				end
-
-				for _, descendant in ipairs(eggModel:GetDescendants()) do
-					if
-						descendant:IsA("JointInstance")
-						or descendant:IsA("WeldConstraint")
-						or descendant:IsA("RigidConstraint")
-					then
-						local ok, result, result2 = pcall(function()
-							return descendant.Part0, descendant.Part1
-						end)
-
-						if ok then
-							for _, part in ipairs({ result, result2 }) do
-								if typeof(part) == "Instance" and not part:IsDescendantOf(eggModel) then
-									local model = part:FindFirstAncestorOfClass("Model")
-									if
-										model
-										and model ~= localPlayer.Character
-										and Players:GetPlayerFromCharacter(model)
-									then
-										return true
-									end
-									continue
-								end
-							end
-						end
-					end
-				end
-
-				return false
-			end
-
-			local function RecoverDroppedEgg(cycleToken, eggUid)
-				local carryUid = eggUid or Normal.Steal.CarryUid
-				if type(carryUid) ~= "string" then
-					return false
-				end
-				StopPositionHold()
-				stageText = "Following the egg"
-				local followPosition, previousEggPosition, previousSampleAt = nil, nil, nil
-				local eggVelocity = Vector3.zero
-				local link = RunService.PreSimulation:Connect(function(dt)
-					local root = Normal.Root()
-					if not root or not followPosition or Normal.Steal.Carrying or IsCycleCancelled(cycleToken) then
-						return
-					end
-					if Normal.AntiGuard.Busy then
-						return
-					end
-					if IsGuardRagdollActive() then
-						if (root.Position - followPosition).Magnitude > 2 then
-							PivotCharacterAndStop(followPosition)
-						end
-						return
-					end
-					local stepTime = math.max(dt, 1 / 240)
-					local velocity = eggVelocity + (followPosition - root.Position) / math.max(0.08, stepTime)
-					local limit = pickupSpeed + eggVelocity.Magnitude
-					if velocity.Magnitude > limit then
-						velocity = velocity.Unit * limit
-					end
-					pcall(function()
-						root.AssemblyLinearVelocity = velocity + Vector3.new(0, workspace.Gravity * stepTime * 0.5, 0)
-						root.AssemblyAngularVelocity = Vector3.zero
-					end)
-				end)
-				local elapsed, snapshotElapsed, ownershipElapsed, promptElapsed = 0, math.huge, 0, math.huge
-				local missingPromptCount = 0
-				while elapsed < droppedRecoveryTimeout and not IsCycleCancelled(cycleToken) do
-					if Normal.Steal.Carrying then
+				local count = 0
+				for _, child in pairs(value) do
+					count = count + 1
+					if count > 128 then
 						break
 					end
-					local root = Normal.Root()
-					if not root then
-						break
+					if type(child) == "table" then
+						Search(child, depth + 1, seen)
 					end
-					local position = FindWorldEggPosition(carryUid)
-					if not position and snapshotElapsed >= 0.5 then
-						position = FindSnapshotEggPosition(carryUid)
-						if position then
-							snapshotElapsed = 0
-						end
+				end
+			end
+			if
+				type(getcallbackvalue) == "function"
+				and type(debug) == "table"
+				and type(debug.getupvalue) == "function"
+				and type(debug.getinfo) == "function"
+			then
+				pcall(function()
+					local packages = ReplicatedStorage:FindFirstChild("Packages")
+					local module = packages and packages:FindFirstChild("Signal")
+					local signal = module and require(module)
+					local invoked = signal and signal.Invoked("ClientCharacter: GetDebugSnapshot")
+					local callback = invoked and getcallbackvalue(invoked, "OnInvoke")
+					if type(callback) ~= "function" then
+						return
 					end
-					if position then
-						local now = os.clock()
-						if previousEggPosition and previousSampleAt and now > previousSampleAt then
-							local sampleVelocity = (position - previousEggPosition)
-								/ math.max(now - previousSampleAt, 1 / 240)
-							if sampleVelocity.Magnitude < 3000 then
-								eggVelocity = eggVelocity:Lerp(sampleVelocity, 0.3)
-							end
-						end
-						followPosition = position + Vector3.new(0, 3, 0)
-						previousEggPosition, previousSampleAt = position, now
-					end
-					if ownershipElapsed >= 0.4 then
-						ownershipElapsed = 0
-						if IsEggWeldedToAnotherPlayer(carryUid) then
-							stageText = "Another player took the egg"
+					for index = 1, debug.getinfo(callback).nups or 0 do
+						Search(debug.getupvalue(callback, index), 0, {})
+						if found then
 							break
 						end
 					end
-					if
-						not Normal.AntiGuard.Busy
-						and followPosition
-						and (followPosition - root.Position).Magnitude <= nearbyTargetDistance
-						and promptElapsed >= 0.1
-					then
-						local prompt = FindDroppedCarryPrompt(followPosition - Vector3.new(0, 3, 0), 6, carryUid)
-						promptElapsed = 0
-						if prompt then
-							missingPromptCount = 0
-							pcall(function()
-								prompt.HoldDuration = 0
-							end)
-							if typeof(fireproximityprompt) == "function" then
-								pcall(fireproximityprompt, prompt)
-							end
-						else
-							missingPromptCount = missingPromptCount + 1
-							if missingPromptCount >= 20 then
-								break
-							end
-						end
-					end
-					local dt = RunService.Heartbeat:Wait()
-					elapsed, snapshotElapsed = elapsed + dt, snapshotElapsed + dt
-					ownershipElapsed, promptElapsed = ownershipElapsed + dt, promptElapsed + dt
-				end
-				link:Disconnect()
-				StopRootVelocity()
-				return Normal.Steal.Carrying == true
+				end)
 			end
-
-			local function AcquireNearbyEgg(egg, cycleToken)
-				Engine.RecordAutoTrace("nearby-pickup", egg.Uid)
-				local position = typeof(egg.CFrame) == "CFrame" and egg.CFrame.Position or nil
-				if not position then
-					return false
-				end
-
-				if Normal.InsideBase() and not Normal.InsideBase(position) then
-					local home = GetHomePosition()
-
-					if home then
-						stageText = "Leaving the base through the safe zone"
-						if not MoveToPosition(home + Vector3.new(0, 3, 0), cycleToken, nil, pickupSpeed) then
-							return false
+			if not found and type(getgc) == "function" then
+				local ok, values = pcall(getgc, true)
+				if ok and type(values) == "table" then
+					for _, value in ipairs(values) do
+						if MatchesBaseline(value, cycle) then
+							found = value
+							break
 						end
 					end
 				end
-
-				stageText = "Flying to the egg"
-				if not MoveToPosition(position + Vector3.new(0, 3, 0), cycleToken, nil, pickupSpeed) then
-					return false
-				end
-				stageText = "Taking the egg"
-				local pickedUp = TrySettledPickup(egg, cycleToken, 0.6, nil)
-
-				if not pickedUp and not IsCycleCancelled(cycleToken) then
-					pickedUp = TryPromptPickup(egg, cycleToken)
-				end
-
-				if not pickedUp and not AwaitCarrySnapshot(egg.Uid, cycleToken) then
-					pickupBackoff[egg.Uid] = os.clock() + pickupBackoffSeconds
-					return false
-				end
-				Normal.Steal.LastFinishedAt = os.clock()
-				return true
 			end
-
-			local freedPriority = { Uid = nil, Freed = nil, Token = nil }
-
-			local function FindPursuingGuard()
-				local world = workspace:FindFirstChild("World") or workspace:FindFirstChild("__OBJECTS")
-				world = world and world:FindFirstChild("Areas")
-				local guardAreas = world and world:FindFirstChild("GuardAreas")
-				local root = Normal.Root()
-				if not guardAreas or not root then
-					return nil
-				end
-				local str3 = tostring(localPlayer.UserId)
-				local carryAreaId = Normal.Steal.CarryAreaId
-						and FindCandidateGuard({ AreaId = tostring(Normal.Steal.CarryAreaId) })
-					or nil
-				local huge = math.huge
-				local nearestGuard = nil
-
-				for _, child in ipairs(guardAreas:GetChildren()) do
-					local guard = child:FindFirstChild("Guard")
-
-					if guard then
-						if
-							tostring(guard:GetAttribute("TargetPlayer")) == str3
-							or tostring(guard:GetAttribute("WakeTargetPlayer")) == str3
-						then
-							return guard
-						end
-
-						local ok, result = pcall(function()
-							return guard:GetPivot().Position
-						end)
-
-						if ok then
-							local magnitude = (result - root.Position).Magnitude
-
-							if magnitude < huge then
-								nearestGuard = guard
-								huge = magnitude
-							end
-						end
-					end
-				end
-
-				carryAreaId = carryAreaId or nearestGuard
-				return carryAreaId
-			end
-
-			local function RideGuardToDroppedEgg(cycleToken, eggUid, position)
-				local guard = FindPursuingGuard()
-				if not guard then
-					return false
-				end
-				local hit = ArmGuardHit(cycleToken, position + Vector3.new(0, 3, 0))
-				local elapsed = 0
-
-				while true do
-					if not hit.Landed and elapsed < guardHitTimeout and not IsCycleCancelled(cycleToken) then
-						local ok, result = pcall(function()
-							return guard:GetPivot().Position
-						end)
-
-						local root = Normal.Root()
-
-						if not (not ok or not root) then
-							if guardApproachDistance + 5 < (result - root.Position).Magnitude then
-								local vector = Vector3.new(root.Position.X - result.X, 0, root.Position.Z - result.Z)
-								local vector2 = vector.Magnitude > 0.1 and vector.Unit * guardApproachDistance
-									or Vector3.new(0, 0, 0)
-								local approach = result + vector2
-
-								MoveToPosition(
-									Vector3.new(approach.X, result.Y + 3, approach.Z),
-									cycleToken,
-									nil,
-									pickupSpeed,
-									true,
-									function()
-										if hit.Landed then
-											return "hit"
-										end
-										return nil
-									end
-								)
-							end
-
-							elapsed = elapsed + RunService.Heartbeat:Wait()
-							continue
-						end
-					end
-
-					break
-				end
-
-				hit.Stop()
-				if not hit.Landed then
-					return false
-				end
-				return RecoverDroppedEgg(cycleToken, eggUid)
-			end
-
-			local function DeliverCarriedEgg(cycleToken)
-				local guardWait = 0
-
-				while Normal.AntiGuard.Busy and guardWait < 4 and not IsCycleCancelled(cycleToken) do
-					stageText = "Anti Guard is slipping past the guard"
-					guardWait = guardWait + RunService.Heartbeat:Wait()
-				end
-
-				local carryWait = 0
-
-				while not Normal.Steal.Carrying and carryWait < carrySignalWait and not IsCycleCancelled(cycleToken) do
-					stageText = "Checking the egg in hand"
-					carryWait = carryWait + RunService.Heartbeat:Wait()
-				end
-
-				if not Normal.Steal.Carrying then
-					stageText = "The egg is gone, staying to look for it"
-					if not RecoverDroppedEgg(cycleToken) then
-						stageText = "The egg is gone"
-						return false
-					end
-				end
-
-				local home = GetHomePosition()
-				local root = Normal.Root()
-				if not home or not root then
-					return false
-				end
-				local cruiseY = math.max(root.Position.Y, home.Y) + flightHeight
-
-				local function CheckFreedPriorityEgg()
-					if freedPriority.Uid and freedPriority.Freed and Normal.Steal.Carrying then
-						return "priority"
-					end
-					return nil
-				end
-
-				local requireCarry = true
-				local recoveryAttempts = 0
-
-				while true do
-					local movingRoot = Normal.Root()
-
-					if not movingRoot then
-						return false
-					else
-						stageText = "Flying home"
-						local position = movingRoot.Position
-						local legCruiseY = math.max(cruiseY, position.Y)
-						local arrived, interruption = MoveToPosition(
-							Vector3.new(
-								position.X + (home.X - position.X) * 0.25,
-								position.Y + (legCruiseY - position.Y) * 0.7,
-								position.Z + (home.Z - position.Z) * 0.25
-							),
-							cycleToken,
-							requireCarry,
-							nil,
-							nil,
-							CheckFreedPriorityEgg
-						)
-
-						if arrived then
-							local crossed, crossReason = MoveToPosition(
-								Vector3.new(home.X, legCruiseY, home.Z),
-								cycleToken,
-								requireCarry,
-								nil,
-								nil,
-								CheckFreedPriorityEgg
+			return found
+		end
+		local function UpdateBaseline(cycle, travelVelocity)
+			local state = baselineSearch.Found
+			if not MatchesBaseline(state, cycle) then
+				if not baselineSearch.Busy and os.clock() >= baselineSearch.NextAt then
+					baselineSearch.Busy = true
+					task.spawn(function()
+						task.wait()
+						local ok, found = pcall(FindBaseline, cycle)
+						if Current(cycle) then
+							baselineSearch.Found = ok and found or nil
+							Engine.RecordAutoTrace(
+								found and "movement-baseline-ready" or "movement-baseline-not-found",
+								cycle.Target.Uid
 							)
-							arrived = crossed
-							interruption = crossReason
+							baselineSearch.Misses = found and 0 or baselineSearch.Misses + 1
+							baselineSearch.NextAt = os.clock() + (found and 0.2 or baselineSearch.Misses >= 5 and 10 or 1)
 						end
-
-						local landed
-
-						if arrived then
-							local descended, descendReason =
-								MoveToPosition(home, cycleToken, requireCarry, nil, nil, CheckFreedPriorityEgg)
-							interruption = descendReason
-							landed = descended
-						else
-							landed = arrived
-						end
-
-						if landed then
-							local character = localPlayer.Character
-							character = character and character:FindFirstChildOfClass("Humanoid")
-
-							if character then
-								character.PlatformStand = false
-							end
-
-							task.wait(0.2)
-							if IsCycleCancelled(cycleToken) then
-								return false
-							end
-							if not Normal.Steal.Carrying then
-								stageText = "Arrived without the egg"
-								return false
-							end
-							local eggState = GameModules.EggState
-
-							if type(eggState) == "table" and type(eggState.DropFieldEgg) == "function" then
-								Engine.RecordAutoTrace("home-drop", Normal.Steal.CarryUid)
-								pcall(eggState.DropFieldEgg, "PlayerRequest")
-							end
-
-							return true
-						end
-
-						if interruption == "priority" then
-							local uid = freedPriority.Uid
-							local freed = freedPriority.Freed
-							local priorityState = freedPriority
-							freedPriority.Uid = nil
-							priorityState.Freed = nil
-							local currentRoot = Normal.Root()
-							if not currentRoot or not uid or not freed then
-								return false
-							end
-
-							if (freed - currentRoot.Position).Magnitude <= pickupSpeed * priorityTravelSeconds then
-								stageText = "Best egg fell nearby, swapping eggs"
-								local eggState = GameModules.EggState
-
-								if type(eggState) == "table" and type(eggState.DropFieldEgg) == "function" then
-									pcall(eggState.DropFieldEgg, "PlayerRequest")
-								end
-
-								local dropWait = 0
-
-								while Normal.Steal.Carrying and dropWait < 1 do
-									dropWait = dropWait + RunService.Heartbeat:Wait()
-								end
-
-								if not RecoverDroppedEgg(cycleToken, uid) then
-									return false
-								end
-							else
-								stageText = "Best egg fell far away, riding a guard hit to it"
-								if not RideGuardToDroppedEgg(cycleToken, uid, freed) then
-									return false
-								end
-							end
-
-							local recoveredRoot = Normal.Root()
-							requireCarry = true
-							recoveryAttempts = 0
-
-							if recoveredRoot then
-								cruiseY = math.max(recoveredRoot.Position.Y, home.Y) + flightHeight
-								requireCarry = true
-								recoveryAttempts = 0
-							end
-
-							continue
-						end
-
-						if interruption == "dropped" and recoveryAttempts < maxRecoveryAttempts then
-							recoveryAttempts = recoveryAttempts + 1
-							if not RecoverDroppedEgg(cycleToken) then
-								return false
-							end
-							continue
-						end
-
-						break
-					end
-				end
-
-				return false
-			end
-
-			local function FormatEggValue(value)
-				local amount = tonumber(value) or 0
-				local suffixes = { "", "K", "M", "B", "T", "Qa", "Qi" }
-				local suffixIndex = 1
-
-				while math.abs(amount) >= 1000 and suffixIndex < #suffixes do
-					amount = amount / 1000
-					suffixIndex = suffixIndex + 1
-				end
-
-				local format = string.format
-				local str3 = suffixIndex == 1 and "%.0f%s" or "%.2f%s"
-				return format(str3, amount, suffixes[suffixIndex])
-			end
-
-			local function DescribeCandidate(egg)
-				if not egg then
-					return "None"
-				end
-				local format = string.format
-				local str3 = tostring(egg.Category)
-				local scale = tonumber(egg.Scale) or 0
-				local stringify = tostring
-				local areaId = egg.AreaId
-				local str4 =
-					format("%s  %.2fx  |  value %s  |  %s", str3, scale, FormatEggValue(egg.Value), stringify(areaId))
-
-				if egg.State == "Dropped" then
-					str4 = str4 .. "  |  dropped"
-				elseif egg.State == "Carried" then
-					str4 = str4 .. "  |  carried by a player"
-				end
-
-				return str4
-			end
-
-			local beltHeld = false
-
-			local function RunNormalCycle()
-				local cycleToken = cycleGeneration
-				local carry = Normal.Steal
-				carry.Active, carry.Carrying = true, carry.Carrying == true
-				if not carry.Carrying then
-					carry.CarryUid = nil
-				end
-				local targetEgg, watchedEgg
-				for _, candidate in ipairs(SelectCandidates(false, true)) do
-					if candidate.State == "Carried" then
-						watchedEgg = watchedEgg or candidate
-					else
-						targetEgg = candidate
-						break
-					end
-				end
-				activeTargetUid = targetEgg and targetEgg.Uid or nil
-				carry.Wanted = targetEgg ~= nil
-				targetText = DescribeCandidate(targetEgg)
-				if watchedEgg then
-					targetText = targetText .. "  |  watching " .. tostring(watchedEgg.Category)
-				end
-				if not targetEgg then
-					carry.Active = false
-					stageText = watchedEgg and "Best egg is carried, waiting for it" or "No egg matches"
-					return false
-				end
-				if not Normal.ClaimMovement("steal") then
-					carry.Active, stageText = false, "Waiting for Auto Place"
-					return false
-				end
-				if Normal.Treadmill.Riding or Normal.OnBelt() then
-					Normal.ExitBelt()
-				end
-				beltHeld = true
-				Normal.HoldBelt()
-				local function FinishCycle(status)
-					carry.Active, carry.LastFinishedAt = false, os.clock()
-					stageText = status
-					return true
-				end
-				local function TakeAndDeliverNearby(stage)
-					stageText = stage
-					local acquired = AcquireNearbyEgg(targetEgg, cycleToken)
-					if not acquired then
-						return FinishCycle("That egg would not come free")
-					end
-					if not ValidateCarriedEgg(targetEgg.Uid, cycleToken) then
-						return FinishCycle(stageText)
-					end
-					return FinishCycle(DeliverCarriedEgg(cycleToken) and "Delivered" or "Run ended")
-				end
-				local root = Normal.Root()
-				local targetPosition = targetEgg.CFrame.Position
-				if
-					root
-					and (
-						(targetPosition - root.Position).Magnitude <= nearbyTargetDistance
-						or localPlayer:GetAttribute("AreaId") == targetEgg.AreaId
-					)
-				then
-					return TakeAndDeliverNearby("Target is right here, taking it")
-				end
-				local starters, preferredStarters = SelectCandidates(true), {}
-				local personalPrefix = "FirstAreaEgg_" .. tostring(localPlayer.UserId)
-				for _, candidate in ipairs(starters) do
-					if
-						IsCandidateGuardSleeping(candidate)
-						or (
-							type(candidate.Uid) == "string"
-							and string.sub(candidate.Uid, 1, #personalPrefix) == personalPrefix
-						)
-					then
-						table.insert(preferredStarters, candidate)
-					end
-				end
-				if #preferredStarters > 0 then
-					starters = preferredStarters
-				end
-				local starter, starterDistance = FindNearestCandidate(starters)
-				if not starter then
-					carry.Active, stageText = false, "No egg matches"
-					return false
-				end
-				if starter.Uid == targetEgg.Uid then
-					return TakeAndDeliverNearby("Target is the closest egg, taking it")
-				end
-				local _, guardPosition = GetGuardApproach(starter)
-				local chosenStarter = starter
-				if guardPosition and root then
-					local bestDistance = math.huge
-					for _, candidate in ipairs(starters) do
-						local position = typeof(candidate.CFrame) == "CFrame" and candidate.CFrame.Position or nil
-						if candidate.Uid ~= targetEgg.Uid and candidate.AreaId == starter.AreaId and position then
-							local distance = (position - root.Position).Magnitude
-							if (position - guardPosition).Magnitude > guardDistanceBias then
-								distance = distance + guardDistanceBias
-							end
-							if distance < bestDistance then
-								bestDistance, chosenStarter = distance, candidate
-							end
-						end
-					end
-				end
-				stageText = string.format("Sleeping guard egg %d studs away", math.floor(starterDistance + 0.5))
-				local route = { targetEgg }
-				local acquired, hit = TakeEggOnGuardRoute(chosenStarter, cycleToken, false, route[1])
-				if not acquired then
-					carry.Active = false
-					return false
-				end
-				local freedUid, expectedUid, routeIndex = nil, targetEgg.Uid, 0
-				while hit and not IsCycleCancelled(cycleToken) do
-					stageText = "Holding for the guard hit"
-					local landed = WaitForGuardHit(cycleToken, hit, function(activeHit)
-						if not freedUid and freedPriority.Uid and freedPriority.Freed then
-							freedUid = freedPriority.Uid
-							activeHit.Destination = freedPriority.Freed + Vector3.new(0, 3, 0)
-							freedPriority.Uid, freedPriority.Freed = nil, nil
-							stageText = "Best egg fell, jumping to it instead"
-						end
+						baselineSearch.Busy = false
 					end)
-					if not landed then
-						break
-					end
-					routeIndex = routeIndex + 1
-					if freedUid then
-						expectedUid = freedUid
-						RecoverDroppedEgg(cycleToken, freedUid)
-						break
-					end
-					local leg = route[routeIndex]
-					acquired, hit = TakeEggOnGuardRoute(leg, cycleToken, true, route[routeIndex + 1])
-					if not acquired then
-						break
-					end
-					if leg and type(leg.Uid) == "string" then
-						expectedUid = leg.Uid
-					end
 				end
-				if not ValidateCarriedEgg(expectedUid, cycleToken) then
-					return FinishCycle(stageText)
-				end
-				return FinishCycle(DeliverCarriedEgg(cycleToken) and "Delivered" or "Run ended")
+				return
 			end
-
-			local eggState = GameModules.EggState
-
-			if type(eggState) == "table" then
-				for _, signalName in ipairs({
-					"FieldRefreshed",
-					"FieldShifted",
-					"FieldGone",
-					"SnapshotRefreshed",
-				}) do
-					local signal = eggState[signalName]
-
-					if type(signal) == "table" and type(signal.Connect) == "function" then
-						local ok, result = pcall(signal.Connect, signal, function()
-							Scheduler.Wake()
-						end)
-
-						ok = ok and result
-
-						if ok then
-							RegisterCleanup(function()
-								pcall(function()
-									result:Disconnect()
-								end)
-							end)
-						end
-					end
+			local speed = math.clamp(Engine.AutoSpeed() * 1.35, 200, 1350)
+			local frame = cycle.Root.CFrame
+			local function UpdateSample(sample)
+				if type(sample) ~= "table" then
+					return
+				end
+				rawset(sample, "WalkSpeed", speed)
+				rawset(sample, "CFrame", frame)
+				rawset(sample, "Position", frame.Position)
+				rawset(sample, "LinearVelocity", travelVelocity or Vector3.zero)
+				rawset(sample, "AngularVelocity", Vector3.zero)
+			end
+			for _, key in ipairs(sampleNames) do
+				UpdateSample(rawget(state, key))
+			end
+			for _, sample in pairs(rawget(state, "SampleHistory") or {}) do
+				UpdateSample(sample)
+			end
+			for _, sample in pairs(rawget(state, "SafeGroundCheckpoints") or {}) do
+				UpdateSample(sample)
+			end
+			local evidence = rawget(state, "Evidence")
+			if type(evidence) == "table" then
+				evidence.Speed, evidence.Teleport, evidence.Flight = 0, 0, 0
+			end
+			local impulse = rawget(state, "ImpulseContext")
+			if type(impulse) == "table" then
+				impulse.MaxHorizontalSpeed = math.max(tonumber(impulse.MaxHorizontalSpeed) or 0, speed)
+				impulse.OriginPosition = frame.Position
+				local duration = math.max((tonumber(impulse.ExpiresAt) or 0) - (tonumber(impulse.StartedAt) or 0), 0.15)
+				impulse.MaxHorizontalDistance =
+					math.max(tonumber(impulse.MaxHorizontalDistance) or 0, impulse.MaxHorizontalSpeed * duration + 48)
+				UpdateSample(impulse.PreMovementSafeSample)
+			end
+			if rawget(state, "CorrectionContext") == nil then
+				rawset(state, "FirstSuspiciousAt", nil)
+				if rawget(state, "ThreatLevel") == "Observing" then
+					rawset(state, "ThreatLevel", "Trusted")
 				end
 			end
-
-			-- End normal route; a single scheduler owns the cycle.
-			Scheduler.Add(function()
-				Engine.AutoStatus, Engine.AutoTargetText = stageText, targetText
-				Engine.CurrentTarget = activeTargetUid
-				if not Normal.Toggle() then
-					if workerRunning and Normal.Steal.Active then
-						Engine.CancelAutoSteal()
+		end
+		local function StartProtection(cycle)
+			-- Sena's hunting/Fly policy, gated by the user's existing Anti Guard toggle.
+			-- There is no primer phase and no forced guard hit in normal mode.
+			if guardChasePolicy and type(guardChasePolicy.ResolveHitDistance) == "function" then
+				local original = guardChasePolicy.ResolveHitDistance
+				cycle.GuardPolicy, cycle.SavedGuardDistance = guardChasePolicy, original
+				cycle.GuardDistanceHook = function(...)
+					if Current(cycle) and Engine.Guard.Enabled then
+						return -math.huge
 					end
-					return false
+					return original(...)
 				end
-				local pauseUntil, pauseReason, serverNow = GetFieldPause()
-				local reason = pauseReason
-
-				if pauseUntil then
-					if reason == "night" then
-						RememberNightEggs()
-					end
-
-					Normal.Movement.StealFirst = true
-					Normal.Steal.Wanted = false
-
-					if workerRunning then
-						cycleGeneration = cycleGeneration + 1
-						Normal.Steal.Active = false
-						StopNormalMotion()
-						Normal.StopWalking()
-					end
-
-					local remaining = math.max(0, math.ceil(pauseUntil - serverNow))
-
-					if reason == "wall" then
-						stageText = string.format("Field wall up, %ds", remaining)
-					else
-						stageText = string.format("Night, going again in %ds", remaining)
-					end
-
-					return false
+				guardChasePolicy.ResolveHitDistance = cycle.GuardDistanceHook
+			end
+			cycle.SavedKillIgnore = cycle.Root:GetAttribute("KillPartIgnore")
+			cycle.Root:SetAttribute("KillPartIgnore", true)
+			cycle.Protection = RunService.PreSimulation:Connect(function()
+				if not Current(cycle) or Engine.Guard.Busy then
+					return
 				end
-
-				local nightJustEnded = nightEggUids
-
-				if nightEggUids then
-					nightJustEnded = freshFieldUntil == math.huge
+				if cycle.ArrivalHold then
+					SyncHoverPad(cycle, cycle.ArrivalHold.Position)
+					cycle.Root.CFrame = cycle.ArrivalHold
+					cycle.Root.AssemblyLinearVelocity, cycle.Root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+				elseif cycle.UseHoverPad then
+					SyncHoverPad(cycle, cycle.Root.Position)
 				end
-
-				if nightJustEnded then
-					freshFieldUntil = os.clock() + fieldResetGrace
-				end
-
-				if workerRunning then
-					return true
-				end
-
-				if IsWaitingForFreshField() then
-					stageText = "Night over, waiting for the field to reset"
-					Scheduler.Wake()
-					return false
-				end
-
-				local stealFirst = Normal.Movement.StealFirst
-				local owner = Normal.Movement.Owner
-
-				if
-					Normal.Movement.PlaceWanted and not stealFirst
-					or owner ~= nil and owner ~= "steal" and owner ~= "treadmill" and owner ~= "scramble"
-				then
-					stageText = "Waiting for Auto Place"
-
-					if stealFirst then
-						Scheduler.Wake()
-					end
-
-					return true
-				end
-
-				-- N3's other automations must finish before this source worker owns movement.
-				if RuntimeState.IsExecuting or Engine.Guard.Active or Engine.Guard.Busy then
-					return true
-				end
-				local character = localPlayer.Character
-				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-				if not humanoid or humanoid.Health <= 0 or not Normal.Root() then
-					return false
-				end
-				if not Engine.AutoShieldReady() then
-					pcall(Engine.MaintainAutoShield)
-					stageText = "Waiting for Humanoid Swap"
-					return true
-				end
-				travelSpeed, pickupSpeed = Engine.AutoSpeed(), Engine.AutoSpeed()
-				Engine.StopHold()
-				Normal.Movement.StealFirst = false
-				workerRunning = true
-				Engine.AutoCycle = {
-					Session = RuntimeState.SessionId,
-					Cancel = RuntimeState.StealCancel,
-					Character = character,
-					Humanoid = humanoid,
-				}
-				RuntimeState.IsExecuting = true
-				Engine.Guard.StealActive = true
-
-				task.spawn(function()
-					local ok, failure = pcall(RunNormalCycle)
-					StopNormalMotion()
-					Normal.Steal.Active = false
-
-					if beltHeld then
-						beltHeld = false
-						Normal.ReleaseBelt()
-					end
-
-					if not ok then
-						Normal.Steal.Active = false
-						stageText = "Auto steal error"
-						warn("[N3 HUB] Chili Auto Steal: " .. tostring(failure))
-					end
-
-					activeTargetUid = nil
-					freedPriority.Uid, freedPriority.Freed, freedPriority.Token = nil, nil, nil
-
-					if stageText == "Delivered" and not Normal.IsNight() then
-						Normal.Movement.StealFirst = true
-					end
-
-					Normal.ReleaseMovement("steal")
-					-- This serial means Chili's delivery routine returned true; it is
-					-- only a post-place trigger, never a server-acceptance verdict.
-					if stageText == "Delivered" then
-						Engine.AutoDeliverySerial = Engine.AutoDeliverySerial + 1
-					end
-					Engine.AutoStatus, Engine.AutoTargetText = stageText, targetText
-					Engine.CurrentTarget = nil
-					Engine.RecordAutoTrace("cycle-finished: " .. stageText, Normal.Steal.CarryUid)
-					Engine.AutoCycle = nil
-					Engine.Guard.StealActive = false
-					RuntimeState.IsExecuting = false
-					workerRunning = false
-					Scheduler.Wake()
-				end)
-
-				return false
+				UpdateBaseline(cycle, cycle.TravelVelocity)
 			end)
 		end
-
-		Engine.AutoWake = Scheduler.Wake
-		Engine.UpdateAutoStealSpeed = function()
-			travelSpeed, pickupSpeed = Engine.AutoSpeed(), Engine.AutoSpeed()
+		local function StopMotion(cycle)
+			cycle.ArrivalHold, cycle.TravelVelocity, cycle.UseHoverPad = nil, nil, false
+			if cycle.Root.Parent then
+				cycle.Root.AssemblyLinearVelocity, cycle.Root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+			end
+			if cycle.Humanoid.Parent then
+				cycle.Humanoid:MoveTo(cycle.Root.Position)
+				cycle.Humanoid:Move(Vector3.zero, false)
+			end
 		end
-		Engine.CancelAutoSteal = function()
-			cycleGeneration = cycleGeneration + 1
-			table.clear(pickupBackoff)
-			Normal.Steal.Active, Normal.Steal.Wanted = false, false
-			Normal.Movement.StealFirst = false
-			StopNormalMotion()
-			Normal.StopWalking()
-			Scheduler.Wake()
+		local function CleanupCycle(cycle)
+			if cycle.GuardPolicy and cycle.GuardPolicy.ResolveHitDistance == cycle.GuardDistanceHook then
+				cycle.GuardPolicy.ResolveHitDistance = cycle.SavedGuardDistance
+			end
+			if cycle.Protection then
+				cycle.Protection:Disconnect()
+				cycle.Protection = nil
+			end
+			if Engine.AutoCycle == cycle then
+				StopMotion(cycle)
+				Engine.StopHold()
+				Engine.StopVelocity()
+				cycle.Root:SetAttribute("KillPartIgnore", cycle.SavedKillIgnore)
+				if cycle.Humanoid.Parent then
+					cycle.Humanoid.AutoRotate = cycle.SavedAutoRotate
+				end
+				if cycle.SavedCamera and Workspace.CurrentCamera == cycle.SavedCamera.Camera then
+					cycle.SavedCamera.Camera.CameraType = cycle.SavedCamera.Type
+				end
+			end
+			if cycle.HoverPad then
+				cycle.HoverPad:Destroy()
+				cycle.HoverPad = nil
+			end
 		end
-		-- Public entry points only wake the single source scheduler. The old
-		-- normal worker never owns movement or delivers an egg independently.
-		Engine.RunAutoStealCycle = function()
-			Scheduler.Wake()
+		local function WaitForGuard(cycle)
+			while Current(cycle) and Engine.Guard.Busy do
+				RunService.Heartbeat:Wait()
+			end
+			return Current(cycle)
+		end
+		-- N3 RunPace/FlyToPosition owns the outward path; no Sena approach tween.
+		local function ApproachEgg(cycle, record)
+			local bottom = record and (record.BottomCFrame or record.BoundsCFrame)
+			if typeof(bottom) ~= "CFrame" or not WaitForGuard(cycle) or not WallOpen() then
+				return false
+			end
+			cycle.ArrivalHold, cycle.UseHoverPad = nil, false
+			if cycle.HoverPad then
+				cycle.HoverPad:Destroy()
+				cycle.HoverPad = nil
+			end
+			SetStatus(cycle, "Heading to target egg")
+			if Engine.InsideBase() and not Engine.InsideBase(bottom.Position) then
+				local gate = Tasks.GetTrackStartPosition()
+				cycle.Character:PivotTo(CFrame.new(gate) * cycle.Root.CFrame.Rotation)
+				Engine.StopVelocity()
+			end
+			cycle.ApproachActive = true
+			local arrived = Engine.FlyToPosition(
+				bottom.Position,
+				cycle.Session,
+				Engine.Carry.ApproachStop,
+				math.clamp(
+					(cycle.Root.Position - bottom.Position).Magnitude
+							/ math.max(math.min(Engine.Pace(), Engine.AutoSpeed()), 16)
+							* 2
+						+ 8,
+					30,
+					120
+				),
+				Engine.AutoSpeed()
+			)
+			cycle.ApproachActive = false
+			if not Current(cycle) or not arrived then
+				return false
+			end
+			Engine.StopHold()
+			local destination = EggDestination(cycle, ReadEgg(record.Uid) or record)
+			if not destination then
+				return false
+			end
+			cycle.ArrivalHold, cycle.UseHoverPad = destination, true
+			SyncHoverPad(cycle, destination.Position)
+			cycle.Root.CFrame = destination
+			Engine.RecordAutoTrace("egg-arrival", record.Uid)
+			return true
+		end
+		-- Sena _glideRoot is used only for delivery/recovery, never the egg approach.
+		local function Glide(cycle, destination, abort)
+			if not Current(cycle) then
+				return false
+			end
+			cycle.ArrivalHold, cycle.UseHoverPad = nil, true
+			cycle.Humanoid.AutoRotate = false
+			local deadline = os.clock()
+				+ math.clamp((destination.Position - cycle.Root.Position).Magnitude / 5000 * 1.6 + 6, 15, 120)
+			while Current(cycle) and os.clock() < deadline do
+				if abort and abort() then
+					return false
+				end
+				if not WaitForGuard(cycle) then
+					return false
+				end
+				local position = cycle.Root.Position
+				local delta = destination.Position - position
+				if delta.Magnitude <= 1 then
+					cycle.Root.CFrame = destination
+					cycle.Root.AssemblyLinearVelocity, cycle.Root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+					SyncHoverPad(cycle, destination.Position)
+					cycle.TravelVelocity = Vector3.zero
+					UpdateBaseline(cycle, Vector3.zero)
+					return true
+				end
+				local dt = math.clamp(RunService.Heartbeat:Wait(), 1 / 240, 0.15)
+				if not Current(cycle) then
+					return false
+				end
+				if Engine.Guard.Busy then
+					continue
+				end
+				local nextPosition = position + delta.Unit * math.min(5000 * dt, delta.Magnitude)
+				if dt >= 1 / 30 then
+					local ground = GroundY(cycle, nextPosition.X, nextPosition.Z)
+					if ground then
+						nextPosition = Vector3.new(
+							nextPosition.X,
+							math.max(nextPosition.Y, ground + FeetOffset(cycle)),
+							nextPosition.Z
+						)
+					end
+				end
+				cycle.Root.CFrame = CFrame.lookAt(nextPosition, nextPosition + delta.Unit)
+				cycle.Root.AssemblyLinearVelocity, cycle.Root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+				SyncHoverPad(cycle, nextPosition)
+				cycle.TravelVelocity = Vector3.zero
+				UpdateBaseline(cycle, Vector3.zero)
+			end
 			return false
 		end
-		RegisterCleanup(function()
-			Engine.CancelAutoSteal()
-			Normal.ReleaseMovement("steal")
-			Engine.AutoCycle = nil
-			Engine.Guard.StealActive = false
+		-- Readable Sena _walkLeg/_walkTo: natural MoveTo, measured braking, no
+		-- tween/teleport across the final deposit boundary.
+		local function WalkToSafe(cycle, abort)
+			if not Current(cycle) then
+				return false
+			end
+			cycle.ArrivalHold, cycle.UseHoverPad = nil, true
+			cycle.Humanoid.AutoRotate = true
+			local destination = SafeDestination(cycle).Position
+			local delta = destination - cycle.Root.Position
+			local deadline = os.clock()
+				+ math.clamp(
+					Vector2.new(delta.X, delta.Z).Magnitude / math.max(cycle.Humanoid.WalkSpeed, 1) * 2 + 8,
+					12,
+					90
+				)
+			local lastSpeed, lastAt
+			while Current(cycle) and os.clock() < deadline do
+				if abort and abort() then
+					break
+				end
+				if not WaitForGuard(cycle) then
+					return false
+				end
+				local position, velocity = cycle.Root.Position, cycle.Root.AssemblyLinearVelocity
+				local flat = Vector3.new(destination.X - position.X, 0, destination.Z - position.Z)
+				local distance = flat.Magnitude
+				local horizontalSpeed = Vector2.new(velocity.X, velocity.Z).Magnitude
+				if distance <= 4 and horizontalSpeed <= 20 then
+					cycle.Humanoid:MoveTo(position)
+					return true
+				end
+				local towardSpeed = distance > 0.001 and math.max(velocity.X * flat.X + velocity.Z * flat.Z, 0) / distance
+					or horizontalSpeed
+				local now, goal = os.clock(), position
+				if distance <= towardSpeed * towardSpeed / (2 * (cycle.BrakeDecel or 420)) + towardSpeed * 0.06 then
+					if lastSpeed and lastAt < now and horizontalSpeed > 20 then
+						local measured = (lastSpeed - horizontalSpeed) / (now - lastAt)
+						if measured > 20 and measured < 5000 then
+							cycle.BrakeDecel = (cycle.BrakeDecel or 420) * 0.8 + measured * 0.93 * 0.2
+						end
+					end
+					lastSpeed, lastAt = horizontalSpeed, now
+				else
+					lastSpeed = nil
+					local stride = math.max(cycle.Humanoid.WalkSpeed * 0.5, 12)
+					goal = distance <= stride and Vector3.new(destination.X, position.Y, destination.Z)
+						or position + flat.Unit * stride
+				end
+				cycle.Humanoid:MoveTo(goal)
+				RunService.Heartbeat:Wait()
+			end
+			if Current(cycle) then
+				cycle.Humanoid:MoveTo(cycle.Root.Position)
+			end
+			return false
+		end
+		-- One outstanding remote per lane; cancellation invalidates the response.
+		local function StartCarryRequest(cycle, uid, withSlotKey)
+			if cycle.CarryRequest then
+				return
+			end
+			local carryAttempt = {}
+			cycle.CarryRequest = carryAttempt
+			task.spawn(function()
+				if not Current(cycle) then
+					return
+				end
+				local ok, accepted, rejection = pcall(function()
+					local payload = { Uid = uid }
+					if withSlotKey and slotIdentity and slotIdentity.LooksLikeFirstAreaUid(uid) then
+						local record = ReadEgg(uid) or cycle.Target.Raw or cycle.Target
+						payload.FirstAreaSlotKey = slotIdentity.SlotKey(record.AreaId, record.NestId)
+					end
+					return Remotes.RemoteCarryEgg:InvokeServer(payload)
+				end)
+				if Current(cycle) and cycle.CarryRequest == carryAttempt then
+					cycle.CarryRequest = nil
+					if not ok or accepted ~= true then
+						cycle.LastCarryReject = tostring(not ok and accepted or rejection or "Carry refused")
+					else
+						cycle.LastCarryReject = nil
+					end
+				end
+			end)
+		end
+		local function CarryTimeoutSeconds(record)
+			local area = string.lower(tostring(record.AreaId or ""))
+			local settle, minimum = 8, 3.5
+			if area:find("enchanted") then
+				settle, minimum = 18, 12
+			elseif area:find("light") or area:find("dark") then
+				settle, minimum = 16, 10
+			elseif area:find("titan") then
+				settle, minimum = 10, 8
+			end
+			return math.max(5, math.max(settle, minimum) + 3)
+		end
+		local function RequestTargetCarry(cycle, record)
+			if not Current(cycle) then
+				return false
+			end
+			local uid, deadline = record.Uid, nil
+			cycle.Humanoid:UnequipTools()
+			while Current(cycle) do
+				if CarriedByMe(uid) then
+					carryTimeouts[uid], retryUid = nil, nil
+					cycle.ArrivalHold = nil
+					Engine.RecordAutoTrace("carry-record-confirmed", uid)
+					return true
+				end
+				if deadline and os.clock() >= deadline then
+					local failures = (carryTimeouts[uid] or 0) + 1
+					if failures >= 2 then
+						carryTimeouts[uid], retryUid, skippedEggs[uid] = nil, nil, os.clock() + 45
+					else
+						carryTimeouts[uid], retryUid = failures, uid
+					end
+					SetStatus(
+						cycle,
+						cycle.LastCarryReject and "Carry refused: " .. cycle.LastCarryReject or "Carry timeout — retrying"
+					)
+					cycle.ArrivalHold = nil
+					Glide(cycle, SafeDestination(cycle))
+					return false
+				end
+				if not WallOpen() then
+					SetStatus(cycle, "Wall closed before carry")
+					return false
+				end
+				local live = ReadEgg(uid)
+				if not Available(live) then
+					SetStatus(cycle, "Target no longer available")
+					return false
+				end
+				local destination = EggDestination(cycle, live)
+				if not destination then
+					return false
+				end
+				if (cycle.Root.Position - destination.Position).Magnitude > 10 then
+					cycle.ArrivalHold = nil
+					if not ApproachEgg(cycle, live) then
+						return false
+					end
+				end
+				if not WaitForGuard(cycle) then
+					return false
+				end
+				if not cycle.CarryRequest then
+					cycle.Root.AssemblyLinearVelocity, cycle.Root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+					local ping = 0
+					pcall(function()
+						ping = statsService.Network.ServerStats.Ping:GetValue()
+					end)
+					task.wait(math.max(0.3, ping * 2.5 / 1000))
+					if not Current(cycle) then
+						return false
+					end
+					StartCarryRequest(cycle, uid, true)
+					deadline = deadline or os.clock() + CarryTimeoutSeconds(record)
+				end
+				SetStatus(
+					cycle,
+					cycle.LastCarryReject and "Waiting for carry · " .. cycle.LastCarryReject
+						or "Waiting for carry confirmation"
+				)
+				task.wait(0.25)
+			end
+			return false
+		end
+		local function RegrabBurst(cycle, uid, duration)
+			local deadline = os.clock() + duration
+			cycle.ArrivalHold = nil
+			while Current(cycle) and os.clock() < deadline do
+				if CarriedByMe(uid) then
+					return true
+				end
+				local record = ReadEgg(uid)
+				if not Available(record) or not WaitForGuard(cycle) then
+					return false
+				end
+				if ragdollJoints and ragdollJoints.Release then
+					pcall(ragdollJoints.Release, cycle.Character)
+				end
+				cycle.Humanoid.PlatformStand, cycle.Humanoid.Sit = false, false
+				if cycle.Humanoid:GetState() ~= Enum.HumanoidStateType.Running then
+					cycle.Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+				end
+				local destination = EggDestination(cycle, record)
+				if not destination then
+					return false
+				end
+				cycle.Root.CFrame = destination
+				cycle.Root.AssemblyLinearVelocity, cycle.Root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+				SyncHoverPad(cycle, destination.Position)
+				StartCarryRequest(cycle, uid, false)
+				if not cycle.NativeCarryBusy and EggStateModule and EggStateModule.CarryFieldEgg then
+					cycle.NativeCarryBusy = true
+					task.spawn(function()
+						if Current(cycle) then
+							pcall(EggStateModule.CarryFieldEgg, uid)
+						end
+						cycle.NativeCarryBusy = false
+					end)
+				end
+				local slots = Workspace:FindFirstChild("AreaEggSlotsClient")
+				local model = slots and slots:FindFirstChild(tostring(uid))
+				local prompt = model
+					and (
+						model:FindFirstChild("CarryAreaEgg", true) or model:FindFirstChildWhichIsA("ProximityPrompt", true)
+					)
+				if prompt and prompt.Enabled then
+					Engine.FirePrompt(prompt)
+				end
+				task.wait(0.06)
+			end
+			return Current(cycle) and CarriedByMe(uid)
+		end
+		local function InvokeTreadmill(cycle, remote)
+			if not remote or not Current(cycle) or cycle.TreadmillBusy then
+				return nil
+			end
+			cycle.TreadmillBusy = true
+			local done, result = false, nil
+			task.spawn(function()
+				if not Current(cycle) then
+					cycle.TreadmillBusy = false
+					done = true
+					return
+				end
+				local ok, response = pcall(function()
+					return remote:InvokeServer()
+				end)
+				if ok then
+					result = response
+				end
+				cycle.TreadmillBusy, done = false, true
+			end)
+			local deadline = os.clock() + 2
+			while Current(cycle) and not done and os.clock() < deadline do
+				task.wait(0.02)
+			end
+			return Current(cycle) and done and result or nil
+		end
+		local function TreadmillReset(cycle)
+			-- Sena _treadmillResetInner fallback, only after the first re-grab fails.
+			local plot = select(1, GetPlayerPlot())
+			local belt = plot and plot:FindFirstChild("TreadmillBottom")
+			if
+				not belt
+				or not belt:IsA("BasePart")
+				or not treadmill.Wear
+				or not treadmill.Doff
+				or not treadmill.Snapshot
+			then
+				return false
+			end
+			local destination = belt.CFrame * CFrame.new(0, belt.Size.Y * 0.5 + FeetOffset(cycle) + 0.05, 0)
+			if not Glide(cycle, destination) then
+				return false
+			end
+			local worn, left = false, false
+			local deadline = os.clock() + 0.7
+			while Current(cycle) and os.clock() < deadline do
+				InvokeTreadmill(cycle, treadmill.Wear)
+				task.wait(0.08)
+				local snapshot = InvokeTreadmill(cycle, treadmill.Snapshot)
+				if type(snapshot) == "table" and table.find(snapshot, LocalPlayer.UserId) then
+					worn = true
+					break
+				end
+			end
+			if worn and Current(cycle) then
+				task.wait(0.25)
+			end
+			deadline = os.clock() + 0.7
+			while Current(cycle) and os.clock() < deadline do
+				InvokeTreadmill(cycle, treadmill.Doff)
+				task.wait(0.08)
+				local snapshot = InvokeTreadmill(cycle, treadmill.Snapshot)
+				if type(snapshot) == "table" and not table.find(snapshot, LocalPlayer.UserId) then
+					left = true
+					break
+				end
+			end
+			return worn and left
+		end
+		local function DeliverSenaEgg(cycle, uid)
+			cycle.ArrivalHold = nil
+			local deadline = os.clock() + 2.5
+			while Current(cycle) and not CarriedByMe(uid) and not BankRecordGone(uid) and os.clock() < deadline do
+				task.wait(0.1)
+			end
+			if not Current(cycle) then
+				return false
+			end
+			if CarriedByMe(uid) then
+				SetStatus(cycle, "Bringing egg home")
+				cycle.DeliveryDropUid = uid
+				Glide(cycle, deliveryDrop, function()
+					return not CarriedByMe(uid)
+				end)
+				local dropped = false
+				for _ = 1, 3 do
+					if not Current(cycle) or not CarriedByMe(uid) then
+						break
+					end
+					Glide(cycle, deliveryDrop, function()
+						return not CarriedByMe(uid)
+					end)
+					if not Current(cycle) then
+						return false
+					end
+					if CarriedByMe(uid) then
+						task.wait(0.15)
+						if not Current(cycle) then
+							return false
+						end
+						if CarriedByMe(uid) then
+							Engine.RecordAutoTrace("delivery-drop-request", uid)
+							pcall(EggStateModule.DropFieldEgg, "PlayerRequest")
+						end
+						local waitUntil = os.clock() + 0.45
+						while Current(cycle) and CarriedByMe(uid) and os.clock() < waitUntil do
+							RunService.Heartbeat:Wait()
+						end
+					end
+					local record = ReadEgg(uid)
+					if record and record.State == states.Dropped then
+						dropped = true
+						break
+					end
+					if not CarriedByMe(uid) then
+						break
+					end
+				end
+				if not Current(cycle) then
+					return false
+				end
+				if not dropped then
+					cycle.DeliveryDropUid = nil
+					SetStatus(cycle, "Drop failed — retrying")
+					return false
+				end
+				local droppedPosition
+				deadline = os.clock() + 3
+				while Current(cycle) and os.clock() < deadline do
+					local record = ReadEgg(uid)
+					if record and record.State == states.Dropped then
+						local bottom = record.BottomCFrame or record.BoundsCFrame
+						droppedPosition = bottom and bottom.Position
+						if droppedPosition then
+							break
+						end
+					elseif record and record.State ~= states.Carried then
+						break
+					end
+					task.wait(0.1)
+				end
+				cycle.DeliveryDropUid = nil
+				if not Current(cycle) then
+					return false
+				end
+				Glide(cycle, SafeDestination(cycle))
+				if not Current(cycle) then
+					return false
+				end
+				local regrabDestination = droppedPosition and CFrame.new(droppedPosition + Vector3.new(0, 3.2, 0))
+					or deliveryDrop
+				Glide(cycle, regrabDestination, function()
+					return CarriedByMe(uid)
+				end)
+				if not Current(cycle) then
+					return false
+				end
+				local grabbed = RegrabBurst(cycle, uid, 0.5)
+				if not grabbed and not CarriedByMe(uid) and Current(cycle) then
+					Glide(cycle, SafeDestination(cycle))
+					if not Current(cycle) then
+						return false
+					end
+					TreadmillReset(cycle)
+					if not Current(cycle) then
+						return false
+					end
+					Glide(cycle, SafeDestination(cycle))
+					if not Current(cycle) then
+						return false
+					end
+					Glide(cycle, regrabDestination, function()
+						return CarriedByMe(uid)
+					end)
+					if not Current(cycle) then
+						return false
+					end
+					grabbed = RegrabBurst(cycle, uid, 0.6)
+				end
+				if not grabbed and not CarriedByMe(uid) then
+					SetStatus(cycle, "Re-grab failed — retrying")
+					return BankRecordGone(uid) and InSafeArea(cycle)
+				end
+			end
+			if not Current(cycle) then
+				return false
+			end
+			if CarriedByMe(uid) then
+				SetStatus(cycle, "Walking egg into safe area")
+				WalkToSafe(cycle, function()
+					return not CarriedByMe(uid)
+				end)
+			end
+			SetStatus(cycle, "Waiting for deposit")
+			deadline = os.clock() + 8
+			while Current(cycle) and not BankRecordGone(uid) and os.clock() < deadline do
+				if not InSafeArea(cycle) then
+					WalkToSafe(cycle, function()
+						return BankRecordGone(uid)
+					end)
+				end
+				task.wait(0.1)
+			end
+			local deposited = Current(cycle) and BankRecordGone(uid) and InSafeArea(cycle)
+			SetStatus(cycle, deposited and "Checking deposit" or "Bank not confirmed — retrying")
+			return deposited
+		end
+		local function RecoverDroppedCarry(cycle, uid)
+			SetStatus(cycle, "Re-stealing dropped egg")
+			local deadline = os.clock() + 5
+			local record
+			while Current(cycle) and os.clock() < deadline do
+				if CarriedByMe(uid) then
+					return true
+				end
+				record = ReadEgg(uid)
+				if Available(record) then
+					break
+				end
+				task.wait(0.03)
+			end
+			if not Current(cycle) or not Available(record) or not WallOpen() then
+				return false
+			end
+			if RegrabBurst(cycle, uid, 3.5) then
+				return true
+			end
+			if not Current(cycle) then
+				return false
+			end
+			-- The source teleports here; egg travel remains N3-owned in this port.
+			if not ApproachEgg(cycle, record) then
+				return false
+			end
+			return RequestTargetCarry(cycle, record)
+		end
+		local function ChooseTarget()
+			local now = os.clock()
+			local captureUid = Workspace:GetAttribute("Event_CaptureTheEggUid")
+			for uid, untilAt in pairs(skippedEggs) do
+				if untilAt <= now then
+					skippedEggs[uid] = nil
+				end
+			end
+			local candidates = Engine.CollectCandidates(false, true)
+			for _, candidate in ipairs(candidates) do
+				local record = ReadEgg(candidate.Uid) or candidate.Raw
+				if Available(record) and candidate.Uid ~= captureUid and not skippedEggs[candidate.Uid] then
+					if not retryUid or candidate.Uid == retryUid then
+						return candidate
+					end
+				end
+			end
+			if retryUid then
+				retryUid = nil
+				for _, candidate in ipairs(candidates) do
+					if
+						Available(ReadEgg(candidate.Uid) or candidate.Raw)
+						and candidate.Uid ~= captureUid
+						and not skippedEggs[candidate.Uid]
+					then
+						return candidate
+					end
+				end
+			end
+			return nil
+		end
+		local function RunSenaCycle(cycle)
+			if not Current(cycle) then
+				return false
+			end
+			if cycle.Target.IdleReturn then
+				StartProtection(cycle)
+				SetStatus(cycle, "No matching eggs — returning to safe area")
+				Glide(cycle, SafeDestination(cycle))
+				return
+			end
+			local target, uid = cycle.Target, cycle.Target.Uid
+			Engine.CurrentTarget, RuntimeState.currentTargetModel = uid, target.PhysicalModel
+			Engine.AutoTargetText = tostring(target.Category or target.AssetCategory or "Egg")
+				.. " · "
+				.. tostring(target.AreaId or "?")
+			Engine.RecordAutoTrace("cycle-start", uid)
+			StartProtection(cycle)
+			if RuntimeState.OnTreadmill or cycle.Root.Anchored then
+				SetStatus(cycle, "Leaving treadmill")
+				if Tasks.ExitTreadmill then
+					pcall(Tasks.ExitTreadmill)
+				end
+				local deadline = os.clock() + 8
+				while Current(cycle) and cycle.Root.Anchored and os.clock() < deadline do
+					InvokeTreadmill(cycle, treadmill.Doff)
+					task.wait(0.3)
+					if os.clock() + 7 >= deadline then
+						cycle.Root.Anchored = false
+					end
+				end
+			end
+			if not Current(cycle) then
+				return
+			end
+			if not CarriedByMe(uid) then
+				local record = ReadEgg(uid) or target.Raw
+				if not Available(record) or not ApproachEgg(cycle, record) or not RequestTargetCarry(cycle, record) then
+					return
+				end
+			end
+			-- Sena's watchdog bounds an unchanged carried-target run at 60 seconds.
+			-- Apply it after N3's independently bounded approach, not across its path.
+			cycle.ReturnDeadline = os.clock() + 60
+			while Current(cycle) do
+				if DeliverSenaEgg(cycle, uid) then
+					-- Sena _reportStolen checks the live field again after 1.5 seconds.
+					task.wait(1.5)
+					if not Current(cycle) then
+						return
+					end
+					local record = ReadEgg(uid)
+					if Available(record) or (record and record.State == states.Carried) then
+						SetStatus(cycle, "Delivery failed — retrying")
+						Engine.RecordAutoTrace("deposit-recheck-failed", uid)
+						return
+					end
+					Engine.AutoDeliverySerial = Engine.AutoDeliverySerial + 1
+					Engine.RecordAutoTrace("deposit-recheck-complete", uid)
+					SetStatus(cycle, "Delivered")
+					return
+				end
+				if not Current(cycle) or not WallOpen() then
+					return
+				end
+				if CarriedByMe(uid) then
+					task.wait(0.35)
+				elseif not RecoverDroppedCarry(cycle, uid) then
+					return
+				end
+			end
+		end
+		local function Tick()
+			if workerRunning then
+				return
+			end
+			if not Enabled() then
+				Engine.AutoStatus = "Idle"
+				return
+			end
+			if RuntimeState.IsExecuting or Engine.Guard.Active or Engine.Guard.Busy or Engine.Movement.PlaceWanted then
+				return
+			end
+			if Engine.AutoDeliverySerial > Engine.AutoHandledDeliverySerial then
+				return
+			end
+			local root = Engine.Root()
+			local character = LocalPlayer.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if not root or not humanoid or humanoid.Health <= 0 then
+				return
+			end
+			if not Engine.AutoShieldReady() then
+				pcall(Engine.MaintainAutoShield)
+				Engine.AutoStatus = "Waiting for Humanoid Swap"
+				return
+			end
+			local target
+			-- Sena schedules delivery before choosing a new field egg.
+			for uid, record in pairs(records) do
+				if record.State == states.Carried and record.CarrierUserId == LocalPlayer.UserId and CarriedByMe(uid) then
+					if uid == Workspace:GetAttribute("Event_CaptureTheEggUid") then
+						Engine.AutoStatus = "Event egg held — normal steal waiting"
+						return
+					end
+					target = { Uid = uid, Raw = record, AreaId = record.AreaId, Category = record.AssetCategory }
+					break
+				end
+			end
+			if not target and not WallOpen() then
+				Engine.AutoStatus = "Waiting for reset wall"
+				return
+			end
+			target = target or ChooseTarget()
+			if not target then
+				Engine.AutoStatus, Engine.AutoTargetText = "No matching eggs", "None"
+				local offset = root.Position - safePosition
+				if
+					root.Position.X < Engine.GetSeparationX() + 3
+					or (Vector2.new(offset.X, offset.Z).Magnitude <= 30 and math.abs(offset.Y) <= 18)
+				then
+					return
+				end
+				target = { IdleReturn = true }
+			end
+			if not Engine.ClaimMovement("steal") then
+				Engine.AutoStatus = "Waiting for movement"
+				return
+			end
+			Engine.StopHold()
+			local camera = Workspace.CurrentCamera
+			local cycle = {
+				Generation = generation,
+				Session = RuntimeState.SessionId,
+				Cancel = RuntimeState.StealCancel,
+				Character = character,
+				Humanoid = humanoid,
+				OriginalHumanoid = RuntimeState.OriginalHumanoid,
+				Root = root,
+				Target = target,
+				SavedAutoRotate = humanoid.AutoRotate,
+				SavedCamera = camera and { Camera = camera, Type = camera.CameraType },
+			}
+			workerRunning, RuntimeState.IsExecuting, Engine.Guard.StealActive = true, true, true
+			Engine.Movement.StealFirst, Engine.AutoCycle = false, cycle
+			task.spawn(function()
+				local ok, failure = pcall(RunSenaCycle, cycle)
+				local cleaned, cleanupFailure = pcall(CleanupCycle, cycle)
+				if not ok then
+					warn("[N3 HUB] Sena Auto Steal: " .. tostring(failure))
+					SetStatus(cycle, "Auto steal error")
+				end
+				if not cleaned then
+					warn("[N3 HUB] Sena cleanup: " .. tostring(cleanupFailure))
+				end
+				if Engine.AutoCycle == cycle then
+					Engine.RecordAutoTrace("cycle-finished: " .. Engine.AutoStatus, target.Uid)
+					Engine.AutoCycle, Engine.CurrentTarget, RuntimeState.currentTargetModel = nil, nil, nil
+					RuntimeState.IsExecuting, Engine.Guard.StealActive = false, false
+					Engine.ReleaseMovement("steal")
+				end
+				workerRunning, wakePending = false, true
+				nextTick = os.clock() + 0.35
+			end)
+		end
+		Engine.AutoWake = function()
+			wakePending = true
+		end
+		Engine.UpdateAutoStealSpeed = Engine.AutoWake
+		Engine.CancelAutoSteal = function()
+			generation = generation + 1
+			local cycle = Engine.AutoCycle
+			if cycle then
+				RuntimeState.StealCancel = RuntimeState.StealCancel + 1
+				pcall(CleanupCycle, cycle)
+				cycle.Cancelled = true
+				-- Keep ownership while N3's approach unwinds its own camera/velocity
+				-- cleanup. Other stages release immediately; late async responses
+				-- cannot move or clean up a newer automation.
+				if Engine.AutoCycle == cycle and not cycle.ApproachActive then
+					Engine.RecordAutoTrace("cycle-cancelled", cycle.Target.Uid)
+					Engine.AutoCycle, Engine.CurrentTarget, RuntimeState.currentTargetModel = nil, nil, nil
+					RuntimeState.IsExecuting, Engine.Guard.StealActive = false, false
+					Engine.ReleaseMovement("steal")
+				end
+			end
+			retryUid = nil
+			table.clear(carryTimeouts)
+			table.clear(skippedEggs)
+			wakePending = true
+		end
+		Engine.RunAutoStealCycle = function()
+			wakePending = true
+			return false
+		end
+		if EggStateModule then
+			Connect(EggStateModule.FieldRefreshed, ReplaceSnapshot)
+			Connect(EggStateModule.FieldShifted, function(record)
+				if type(record) == "table" and record.Uid then
+					records[record.Uid] = record
+					wakePending = true
+				end
+			end)
+			Connect(EggStateModule.FieldGone, function(uid)
+				records[uid] = nil
+				wakePending = true
+			end)
+			local function CloseGate()
+				resetBlocked, gateOpenAt = true, math.huge
+				Engine.CancelAutoSteal()
+				Engine.AutoStatus = "Waiting for reset wall"
+			end
+			Connect(EggStateModule.ResetCountdown, CloseGate)
+			Connect(EggStateModule.ResetFade, CloseGate)
+		end
+		if AreaEggResetWallModule then
+			Connect(AreaEggResetWallModule.Changed, function(sealed)
+				resetBlocked = sealed == true
+				gateOpenAt = os.clock() + (sealed and 0 or 0.2)
+				if sealed and Engine.AutoCycle then
+					Engine.CancelAutoSteal()
+				end
+				wakePending = true
+			end)
+		end
+		Connect(RunService.Heartbeat, function()
+			if disposed then
+				return
+			end
+			local cycle = Engine.AutoCycle
+			if cycle and not Current(cycle) then
+				if cycle.ReturnDeadline and os.clock() >= cycle.ReturnDeadline then
+					SetStatus(cycle, "Return timed out — retrying")
+					Engine.RecordAutoTrace("return-watchdog-timeout", cycle.Target.Uid)
+				end
+				if not cycle.Cancelled then
+					cycle.Cancelled = true
+					Engine.CancelAutoSteal()
+				end
+				return
+			end
+			if os.clock() < nextTick then
+				return
+			end
+			if not wakePending and workerRunning then
+				return
+			end
+			wakePending, nextTick = false, os.clock() + 0.35
+			local ok, failure = pcall(Tick)
+			if not ok then
+				Engine.AutoStatus = "Scheduler error"
+				warn("[N3 HUB] Sena scheduler: " .. tostring(failure))
+			end
 		end)
 		pcall(function()
 			LibraryLoader:OnUnload(function()
 				disposed = true
-				for index = #cleanups, 1, -1 do
-					pcall(cleanups[index])
+				Engine.CancelAutoSteal()
+				for _, connection in ipairs(connections) do
+					connection:Disconnect()
 				end
-				RuntimeState.IsExecuting = false
+				baselineSearch.Found = nil
 			end)
 		end)
 	end
@@ -13048,7 +11774,7 @@ function Tasks.BuildMainInterface()
 		Max = 1000,
 		Default = 400,
 		Rounding = 0,
-		Tooltip = "Auto steal approach and delivery speed (studs/s). Does not change Instant Steal.",
+		Tooltip = "Normal approach speed cap (N3 pace). Does not change Instant Steal or Sena deposit movement.",
 		Callback = function(Value)
 			FarmConfig.AutoTweenSpeed = math.clamp(tonumber(Value) or 400, 100, 1000)
             local Engine = RuntimeState.StealEngine
@@ -16474,7 +15200,7 @@ function DrScramble.IsInsideArena()
 end
 function Tasks.NormalStealPostDelivery()
     local Engine = RuntimeState.StealEngine
-    if not Engine or RuntimeState.IsExecuting or Engine.AutoCycle or Engine.AutoCarry.Carrying
+    if not Engine or RuntimeState.IsExecuting or Engine.AutoCycle
         or not IsStealActive() or DrScramble.IsInsideArena() then return end
     local count = Engine.AutoDeliverySerial - Engine.AutoHandledDeliverySerial
     if count <= 0 or not Engine.ClaimMovement("place") then return end

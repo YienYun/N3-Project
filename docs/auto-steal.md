@@ -1,86 +1,109 @@
-# Normal Auto Steal: reference and integration
+# Normal Auto Steal: Sena lifecycle + N3 egg approach
 
-## Version and current acceptance status
+## Reference and scope
 
-The branch includes the original `Games/Source/Chili-SourceV1.lua` imported from
-main `21647779fd113cbeb4bdc737da2d62ff3bedc510` (Git blob
-`8d7fa550e7ffd84b7979d2cdb24acad005d85590`). Main was merged into this branch;
-main itself was not modified. A subsequent main update (`a2fb701`) adding
-`Games/Source/StealAnEgg/SenaV2.lua` was also merged. That file is retained as a
-separate reference; its method was not silently mixed into the Chili controller.
-Fetch and review main again before subsequent
-changes, rather than reusing a scratch source cache.
+Active reference: `Games/Source/StealAnEgg/SenaV2.lua`, imported from main
+`a2fb701f970e3f542da1000feed19304cc6024ab`, Git blob
+`a36898ee403cacf3aa9742bfb9f9270f867cb765`.
 
-The user reported server rollback on `406d76b`, including the literal port.
-**The exact server rejection cause remains unverified.** The present revision
-corrects integration/lifecycle issues and readability; static checks cannot
-establish that the server now accepts delivery. The user live-tests the script.
+The user retired the old Chili V1 integration. Its source file and normal
+controller, starter/guard-hit stages, scheduler and duplicate humanoid-swap
+implementation have been removed. Other games are outside this change.
+Future event-source work is not included.
 
-## Mapping (original names are reference coordinates, not runtime identifiers)
+This is a readable, scoped adaptation of Sena's normal `t46` Fly lifecycle,
+**not** execution of the 31,520-line source or a claim of literal equivalence.
+The later player-steal, admin and capture/event controllers are not imported.
 
-| Runtime component | Reference component |
+## Source-to-runtime mapping
+
+Line numbers below refer to the unchanged Sena reference.
+
+| Sena reference | N3 integration |
 | --- | --- |
-| `MaintainShieldHealth`, `CreateShieldSwap` | Global health keeper before shield; shield `fn12` |
-| `SelectCandidates` | `fn18`, adapted for N3 filters and priorities |
-| `DriveRootVelocity`, `HoldPosition`, `MoveToPosition` | `fn19`, `fn23`, `fn34` |
-| `FindSlotCarryPrompt`, `ValidateCarriedEgg`, `TryPromptPickup` | `fn26`, `fn28`, `fn29` |
-| `ArmGuardHit`, `WaitForGuardHit`, `TakeEggOnGuardRoute` | `fn42`, `fn43`, `fn45` |
-| `RecoverDroppedEgg`, `AcquireNearbyEgg`, `RideGuardToDroppedEgg` | `fn50`, `fn51`, `fn53` |
-| `DeliverCarriedEgg`, `RunNormalCycle` | `fn54`, `fn57` |
-| Normal scheduler | Source scheduler, wake listeners and single worker finalizer |
-| Optional guard arbitration | Source Anti Guard carry transition and hit-arm exclusion |
+| `_chooseTarget` / `isSkippedEgg`, 6105–6414 | `ChooseTarget` uses N3 `CollectCandidates(false, true)` for existing filters, Index/Scramble priorities and sorting. It accepts Slot/Dropped records, excludes the capture-event UID and respects timed skips. |
+| Fly branch of `_schedule`, 11281–11639; `_startPrimerTargetHunt`, 6833–7077 | `Tick` / `RunSenaCycle`: one target, no starter egg and no armed guard-hit wait. Already-carried local eggs go to delivery before selecting another egg. |
+| `_installGuardHitDistanceBoost`, 6442 | Normal hunting's `ResolveHitDistance = -math.huge` policy is scoped to the cycle and **gated by the existing Anti Guard toggle**. No priming-distance boost is imported. Restore the original function on cancellation/finish/unload. If unavailable, retain N3's optional dodge fallback. |
+| `v730`, 4099; `_requestCarry`, 9594–9801 | `StartCarryRequest` / `RequestTargetCarry`: stop velocity, ping-based wait, source payload `{Uid, FirstAreaSlotKey?}`, poll live own-Carried records, preserve rejection text and re-approach when displaced. A successful remote return alone is not carry confirmation. |
+| `_resolveSettleSeconds`, 6804–6832 | Source default hold level 5 gives carry confirmation budgets 11s normally, 21s Enchanted, 19s Light/Dark, 13s Titan. These are request budgets, not a mandatory sleep at every egg. |
+| `_recoverCarryConfirmationTimeout`, 9506–9593 | Return to the source safe point after timeout. Prefer the same eligible UID for the first retry; skip 45s after a second timeout. N3 filters still apply to retries. |
+| `_returnToSafe` Fly branch, 10780; `_instantReturn`, 10127–10577 | `DeliverSenaEgg`: glide to source drop point, attempt drop up to 3 times (0.15s pre-drop / 0.45s confirmation), read dropped position, visit safe point, re-approach and re-grab. |
+| `_regrabBurst`, 9402–9505 | `RegrabBurst`: source ragdoll release, egg placement, direct/native carry lanes and the egg's own proximity prompt, sampled every 0.06s. Main re-grab lasts 0.5s; fallback 0.6s. |
+| `_treadmillResetInner`, 9975–10126 | `TreadmillReset` only after first re-grab failure: local plot TreadmillBottom, AskWearStill/AskDoff and render-snapshot checks, then repeat the safe-point/re-grab path. |
+| `_walkTo` / `_walkLeg`, 7810–8154 | `WalkToSafe`: natural Humanoid MoveTo and measured braking for the final deposit boundary. No final-boundary tween or manual forced claim. |
+| `_reStealDroppedEgg`, 9303–9401 | `RecoverDroppedCarry` owns unexpected dropped-egg recovery within the same worker, rather than starting a competing background picker. |
+| `_instantReturn` final wait; `_reportStolen`, 11026–11077 | Wait for source Claimed/missing-field condition, then read the field again after 1.5s before releasing a post-place serial. Slot, Dropped **or any remaining Carried record** fails the recheck. Missing field data is still not an independent server-acceptance proof. |
+| `_startWatchdog`, 11078–11173 | Bound the carried-target return at 60s. N3's separately bounded approach is not charged against that return budget. |
+| `_finish` / `_schedule`, 11244 onward | A single scheduler polls/wakes at 0.35s, waits for movement/Auto Place/priority ownership, and releases all cycle resources before starting the next worker. No-target field idle returns use the same worker. |
 
-The route retains the source's nearest/sleeping/personal starter preference,
-Forest strike payload, armed ragdoll teleport, standing/body recovery, prompt
-pickup with native fallback, carry validation and staged home delivery. A nearby
-or same-area target can be acquired directly; Forest is not unconditionally
-forced. Normal speed stays independent (400 default, 100–1000 control), while
-the original N3 speed setting remains 600.
+## Movement and character dependencies
 
-## Integration corrections and cleanup
+- **Egg approach stays N3:** `FlyToPosition -> RunPace`, including its existing
+  pace, climb arc, velocity/CFrame style, camera behavior, guard-busy yield and
+  plot-exit reposition. This helper was also checked against the initial
+  `67d91fd` version. `RunPace` itself is unchanged from `7081554`.
+- `FlyToPosition` has one optional fifth argument for the separate normal speed
+  cap. Old four-argument Instant callers retain their previous behavior.
+- Normal slider remains **100–1000, default 400**, separate from the Instant
+  `TweenSpeed = 600`. It caps N3 approach pace; it does not turn N3's original
+  pace into an unrestricted speed. Sena's return glides remain **5000**, and
+  the final walk uses Humanoid WalkSpeed. The tooltip states that distinction.
+- Reuse existing N3 `PerformHumanoidSwap` / `RestoreCharacter` and control/
+  animation bindings for the requested persistent normal-mode swap. Do not
+  retain a second imported swap body.
+- Sena `v769` health/state preparation is scoped to the normal N3 clone and
+  restored on release. The keeper restores zero health rather than healing
+  every partial hit. Health preparation does not change the Anti Guard toggle.
+- Sena `v801/v826/v831` baseline discovery/update is retained with semantic
+  names, a cached result and source backoff (1s misses, then 10s after 5 misses).
+  N3's detached original humanoid is also accepted when the game's character
+  state still references it. No new Disable Monitor setting or module-wide
+  monitor shutdown is added.
+- Arrival holds/hover pad/baseline updates are cycle-scoped. Egg approach uses
+  N3 without that pad; delivery/re-grab uses the source support geometry.
+  A normal worker yields when an optional N3 guard dodge is already busy.
+- The cosmetic Sena treadmill decoy/camera hiding and popup suppression are
+  intentionally omitted. N3's existing optional Anti Trap remains user-owned,
+  rather than importing Sena's always-on trap purge. N3 retains its camera, UI
+  and other automations.
+- The capture-event egg is excluded from normal selection, as in Sena. If one
+  is already carried, normal stealing yields rather than banking/dropping it.
 
-- Runtime functions, parameters, shared state and relevant locals now have
-  semantic names. Lexically scoped renames were checked against Luau AST binding
-  targets before later logic edits; a shadowed local was not renamed by regex.
-- Normal cycles no longer call `SetAntiGuard(false)`. Only the user's UI callback
-  changes that preference. Native guard-hit windows exclude independent dodges,
-  and movement/holds pause while an optional dodge owns movement. Line Drop
-  continues to suppress dodges, but no longer overwrites the toggle.
-- Include the source's health/death-state preparation before cloning. The prior
-  literal movement port omitted this dependency. Here it is scoped to normal
-  shield lifetime, including subscriptions, 0.5s maintenance and restoration.
-  This is a source-parity correction, **not an established rollback diagnosis**.
-- One worker finalizer now clears motion and hit arms on success, false returns,
-  exceptions and cancellation. Cancelled starter pickup must not leave a live
-  ragdoll listener or an old position hold for a later cycle. Cancellation can
-  release a movement coroutine even while optional guard movement is busy.
-- Flatten the repeated dropped-egg branches into one sampling, ownership,
-  prompt and heartbeat loop. Retain the reference's 30s budget, 0.5s snapshot
-  interval, 0.4s ownership interval, 0.1s prompt interval and 20 missing prompts.
-- Remove the never-selected CFrame movement/hold branches (the original predicates
-  return true on both paths), unused queue/UI-label scaffolding and unused normal
-  flight/GodMode adapters. Normal movement uses one PreSimulation connection.
-- Share home/base/guard helpers rather than maintaining second copies. Preserve
-  source home offsets at full precision. Slot and dropped prompts intentionally
-  retain different distance geometry; they are not interchangeable duplicates.
-- Shared carry requests call the native module **or** the raw fallback, not both.
-  Fix two pre-existing references that captured nonexistent globals: the legacy
-  movement carry retry and the later-defined treadmill exit helper.
-- Normal recovery is not run concurrently by the optional guard's old recovery
-  loop. Normal post-place waits until raw field carry has ended. A cancellation
-  during home settle must not send a drop from the obsolete cycle.
+## Ownership, reporting and boundaries
 
-Raw `AutoCarry` is the module signal used by the normal route. Legacy guard
-signal/weld carry state and Instant/Line Drop helpers remain separate on purpose.
-Likewise, normal swap preparation and Instant's existing swap policy are not
-silently combined. Removing these distinct states would change behavior, not
-merely deduplicate code.
+- Generation + session + cancel counter + character/root identity invalidate
+  old work. Carry/treadmill remote lanes are single-flight per cycle; late
+  responses cannot advance a cancelled cycle. An already-sent server request
+  cannot be recalled by local cancellation.
+- No next normal worker starts until the old worker unwinds. Cancellation
+  releases resources immediately; ownership waits for N3 approach cleanup to
+  unwind, or releases immediately in other stages. Late responses cannot move a
+  newer automation. Temporary pad, simulation connection, guard policy, hold,
+  camera state and movement owner
+  are released on finish, failure, cancellation, respawn and unload.
+- An already-carried ordinary egg is delivered rather than force-dropped when
+  filters change. New selections/retries still honor N3 filters.
+- A second live field read gates the **post-place trigger**, not a universal
+  server-success verdict. No unrelated verdict timestamp, inventory UID
+  equality gate, tombstone or local field-record rewrite is used.
+- Post-place waits for cycle ownership, not a possibly stale CarryChanged
+  boolean after the source has completed its field/deposit recheck.
+- The bounded 16-row real-event trace remains available when the actual game
+  sends a delivery-failed alert. That alert is logged, not assumed UID-matched.
+- Instant/Line Drop delivery/run blocks, candidate filtering/sorting, the
+  existing N3 swap helper, Library and production loader are preserved.
 
-## Actual live failure trace
+## Validation status
 
-A bounded local ring stores at most 16 real pickup, guard-arm/hit, carry and home
-Drop events, with UID, position, velocity, shield and guard state. It prints only
-when the game's real `delivery failed` alert arrives. There is no telemetry or
-per-frame console spam. If rejection persists, the console trace is evidence
-for the next investigation—not a fabricated simulation or acceptance verdict.
-The legacy verdict listener is not used to certify a normal delivery.
+- Whole game file compiled with native Luau 0.742 and luau-web (not executed).
+- `python tools/check_steal_source.py` checks source hash, removed integration,
+  single-worker anchors, optional guard preference and preserved code blocks.
+- Native analysis still reports baseline Roblox/executor globals and type
+  inference diagnostics without Roblox definitions; this is not a clean typecheck.
+- **No live Roblox/server or FPS result is available for this revision.**
+  Compilation/static review do not prove successful delivery or no rollback.
+
+Live checks for the user: repeat normal cycles with existing filters/priority;
+Anti Guard OFF and ON; pickup refusal/timeout; unexpected carry drop; toggle
+OFF during travel/return; respawn; night/reset; Auto Place; then verify the
+separate Instant/Line Drop path. Capture/event automation is outside this port.
