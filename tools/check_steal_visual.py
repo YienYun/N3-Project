@@ -17,7 +17,7 @@ assert hashlib.sha1(blob).hexdigest() == "a36898ee403cacf3aa9742bfb9f9270f867cb7
 # Eight gameplay blocks remain unchanged (check_race_source.py); the entire live race
 # is also fingerprinted (check_treadmill_lab_source.py). Presentation additions strip.
 normalized = strip_builtin_visual(runtime)
-assert hashlib.sha256(normalized.encode()).hexdigest() == "75edbbcf572609134429e29479241b1b03bc2ebd7030fe3da8b802376d7f98fa", (
+assert hashlib.sha256(normalized.encode()).hexdigest() == "32cbf2ce074c04bef0de172211c513bb287e09b859bb3f3e2910262037cb94cc", (
     "Gameplay outside the reviewed visual additions changed; review before updating this baseline"
 )
 assert not (ROOT / "Games/Steal-An-Egg-V2.lua").exists(), "Retire the standalone tester"

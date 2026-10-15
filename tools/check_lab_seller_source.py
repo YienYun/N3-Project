@@ -16,11 +16,14 @@ seller = runtime[first:last]
 # Exhaustive scope proof: undo only this feature's three insertion sites, then
 # compare the entire visual-normalized runtime with the reviewed 6dc1423 baseline.
 ordinary_guard = '\t\t\t\tand not (DrScramble.IsLabRewardEgg and DrScramble.IsLabRewardEgg(egg))\n'
-new_ui = ('\tTasks.LabTabbox = EventTab:AddRightTabbox("Scramble Lab")\n'
-          '\tlocal ScrambleEggGroup = Tasks.LabTabbox:AddTab("Lab Trade", "flask-conical")\n'
+new_ui = ('\tTasks.LabTabbox = EventTab:AddRightGroupbox("Scramble Lab", "flask-conical"):AddTabbox({ Name = "Lab Tabs" })\n'
+          '\tlocal ScrambleEggGroup = Tasks.LabTabbox:AddTab("Lab Trade", "arrow-left-right")\n'
           '\tDrScramble.BuildLabSellerUI(Tasks.LabTabbox:AddTab("Lab Sell", "badge-dollar-sign"))')
 old_ui = '\tlocal ScrambleEggGroup = EventTab:AddRightGroupbox("Scramble Egg", "flask-conical")'
 assert runtime.count(ordinary_guard) == runtime.count(new_ui) == 1
+# Like Webhook Custom: one icon-bearing group contains its own two-tab tabbox.
+assert 'Tasks.LabTabbox = EventTab:AddRightTabbox(' not in runtime
+assert runtime.count('AddRightGroupbox("Scramble Lab", "flask-conical")') == 1
 previous = (runtime[:first] + runtime[last:]).replace(ordinary_guard, '').replace(new_ui, old_ui)
 assert hashlib.sha256(strip_builtin_visual(previous).encode()).hexdigest() == (
     '0d5a4e4e8211efd0456d200812e9c1425ee922b96b855f966a8de6ec9e2ce218'

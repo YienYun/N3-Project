@@ -18,9 +18,12 @@ It never sends pet asset UIDs in `Assets`.
 
 ## UI and defaults
 
-**Event → Scramble Lab tabbox → Lab Trade / Lab Sell** replaces the old single
+**Event → Scramble Lab group → nested Lab Trade / Lab Sell tabs** replaces the old single
 Scramble Egg group. Existing trade/reward controls stay on Lab Trade. Only the
 new seller appears on Lab Sell; it is not mixed into Pets' ordinary egg seller.
+The outer group has a flask icon, with arrow-left-right for Lab Trade and
+badge-dollar-sign for Lab Sell. The tabbox is a child of the group, matching
+Webhook Custom; it is not a standalone tabbox on the Event column.
 
 - Auto Sell Lab Egg: OFF.
 - Rule: Rarity And Value.

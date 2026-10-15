@@ -110,7 +110,9 @@ Read this before changing `Steal-An-Egg.lua`.
 
 - Current integration proceeds one feature at a time. Do not call the entire
   Chili audit implemented. See `../docs/lab-egg-seller.md` for scope/live checks.
-- Keep Event → Lab Trade / Lab Sell separation. Ordinary seller must exclude
+- Keep one Scramble Lab group with a flask icon, containing a nested tabbox
+  for Lab Trade / Lab Sell with distinct icons, like Webhook Custom. Do not
+  replace the outer group with a standalone tabbox. Ordinary seller must exclude
   known reward EggSkins even when the dedicated Lab seller is OFF.
 - Source mapping uses banner EggSkin and Pets AssetId; no egg-name heuristics.
 - Preserve safe OFF/rarity-Off/value-0 defaults, independent filters, raw UIDs,
