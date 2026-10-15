@@ -11,10 +11,12 @@ blob = b"blob " + str(len(reference)).encode() + b"\0" + reference
 assert hashlib.sha1(blob).hexdigest() == "a36898ee403cacf3aa9742bfb9f9270f867cb765", "Sena reference changed"
 
 # Reviewed race policy/144 cap plus scoped treadmill/Lab repairs (treadmill-lab.md).
+# Separate Lab seller is reviewed by check_lab_seller_source.py, which reverses
+# exactly its three insertion sites to reproduce the full 6dc1423 baseline.
 # Eight gameplay blocks remain unchanged (check_race_source.py); the entire live race
 # is also fingerprinted (check_treadmill_lab_source.py). Presentation additions strip.
 normalized = strip_builtin_visual(runtime)
-assert hashlib.sha256(normalized.encode()).hexdigest() == "0d5a4e4e8211efd0456d200812e9c1425ee922b96b855f966a8de6ec9e2ce218", (
+assert hashlib.sha256(normalized.encode()).hexdigest() == "e0b79003d95b19925e197b9ab66dede6e262faf9552d07d422de494936150a53", (
     "Gameplay outside the reviewed visual additions changed; review before updating this baseline"
 )
 assert not (ROOT / "Games/Steal-An-Egg-V2.lua").exists(), "Retire the standalone tester"
@@ -68,6 +70,6 @@ assert 'Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual()' in runtime
 assert 'character:FindFirstChild("HumanoidRootPart")' in visual
 assert 'character:FindFirstChildOfClass("Humanoid")' in visual
 print('PASS: exact Sena reference; no standalone tester; optional visual toggle defaults OFF and supports normal/Instant.')
-print('PASS: removing only reviewed presentation additions reproduces the reviewed race-priority + treadmill/Lab gameplay baseline.')
+print('PASS: removing only reviewed presentation additions reproduces the reviewed race-priority + treadmill/Lab + separate Lab seller gameplay baseline.')
 print('PASS: reuse, reversible visibility/camera, cancellation/unload and no visual remote or real-root movement.')
 print('Static checks only: normal V2 was user-confirmed live; the promoted Instant integration still needs live testing.')

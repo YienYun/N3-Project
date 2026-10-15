@@ -105,3 +105,17 @@ Read this before changing `Steal-An-Egg.lua`.
   per-slot UI readiness, and independent **free-only** Auto Reroll.
 - Do not replace N3's swap or add automatic grounding-error respawns. A sent RPC
   cannot be recalled; cancellation/compile checks aren't proof of server behavior.
+
+## Separate Lab reward seller
+
+- Current integration proceeds one feature at a time. Do not call the entire
+  Chili audit implemented. See `../docs/lab-egg-seller.md` for scope/live checks.
+- Keep Event → Lab Trade / Lab Sell separation. Ordinary seller must exclude
+  known reward EggSkins even when the dedicated Lab seller is OFF.
+- Source mapping uses banner EggSkin and Pets AssetId; no egg-name heuristics.
+- Preserve safe OFF/rarity-Off/value-0 defaults, independent filters, raw UIDs,
+  placed/held/reserved/mutation/pet exclusions and truthful request status.
+- Seller shares LabState.ActionBusy with trade/reroll/reveal and respects race.
+  Revalidate per max-50 batch and cancel unsent work on settings/unload.
+- Run `tools/check_lab_seller_source.py` with the existing three static checkers
+  and compile the entire runtime. Its reverse-delta hash protects all prior code.

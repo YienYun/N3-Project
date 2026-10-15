@@ -7705,6 +7705,7 @@ local function GetSellableEggs()
 				cleanCat ~= ""
 				and not string.find(cleanCat, "rift")
 				and not blacklist[cleanCat]
+				and not (DrScramble.IsLabRewardEgg and DrScramble.IsLabRewardEgg(egg))
 				and not ShouldHoldBackScrambleEgg(cat, uidStr)
 			then
 				local hasMut = Tasks.HasAnyMutation(egg.Mutations, egg.BaseMutation)
@@ -7757,6 +7758,249 @@ local function ExecuteSellSelection(petUids, eggUids)
 		end
 	end
 end
+-- BEGIN SCRAMBLE LAB SELLER
+-- Chili V2 6594-6798: identify Lab rewards by banner EggSkin, not egg names.
+-- Separate from ordinary eggs; inventory-only, with the existing Lab action lock.
+do
+	local seller = {
+		Skins = {}, PetOptions = {}, PetCategories = {}, Busy = false,
+		Generation = 0, NextAt = 0, Disposed = false, Status = "Off", StatusAt = 0,
+	}
+	DrScramble.LabSeller = seller
+	FarmConfig.LabSell_Auto = false
+	FarmConfig.LabSell_Rule = "Rarity And Value"
+	FarmConfig.LabSell_MaxRarity = 0
+	FarmConfig.LabSell_IncomeLimit = 0
+	FarmConfig.LabSell_KeepMutated = true
+	FarmConfig.LabSell_KeepPets = {}
+	for _, banner in pairs((ScrambleTradeInData and ScrambleTradeInData.Banners) or {}) do
+		if type(banner) == "table" and banner.EggSkin ~= nil then
+			seller.Skins[tostring(banner.EggSkin)] = true
+			for _, pet in pairs(type(banner.Pets) == "table" and banner.Pets or {}) do
+				if type(pet) == "table" and pet.AssetId ~= nil then
+					local category = tostring(pet.AssetId)
+					local asset = AssetsModule and AssetsModule.Directory and AssetsModule.Directory[category]
+					local label = tostring(type(asset) == "table" and asset.DisplayName or category) .. " [" .. category .. "]"
+					if not seller.PetCategories[label] then
+						seller.PetCategories[label] = category
+						table.insert(seller.PetOptions, label)
+					end
+				end
+			end
+		end
+	end
+	table.sort(seller.PetOptions)
+	function DrScramble.IsLabRewardEgg(egg)
+		return type(egg) == "table" and egg.EggSkin ~= nil
+			and seller.Skins[tostring(egg.EggSkin)] == true
+	end
+	local function isMutated(egg)
+		local function meaningful(value)
+			local name = string.lower(tostring(value or ""))
+			return name ~= "" and name ~= "none" and name ~= "normal" and name ~= "false"
+		end
+		if meaningful(egg.BaseMutation) or meaningful(egg.Mutation) then return true end
+		if type(egg.Mutations) == "string" then
+			for name in egg.Mutations:gmatch("[^,]+") do
+				if meaningful(name:match("^%s*(.-)%s*$")) then return true end
+			end
+		elseif type(egg.Mutations) == "table" then
+			for key, value in pairs(egg.Mutations) do
+				if type(value) == "table" then
+					local name = value.Id or value.Name or value.Label
+					if name == nil or meaningful(name) then return true end
+				elseif type(value) == "boolean" or type(value) == "number" then
+					if value ~= false and value ~= 0 and type(key) == "string" and meaningful(key) then return true end
+				elseif meaningful(value) then return true end
+			end
+		end
+		return false
+	end
+	function DrScramble.CollectSellableLabEggs()
+		local result, price = {}, 0
+		if seller.Disposed then return result, price end
+		SetElevated8()
+		if GetScrambleTradeStatusFn then GetScrambleTradeStatusFn() end
+		local ok, eggs = pcall(function()
+			return EggStateModule and EggStateModule.ReadOwnerEggs(LocalPlayer.UserId)
+		end)
+		if not ok or type(eggs) ~= "table" then return result, price end
+		local character = LocalPlayer.Character
+		local tool = character and character:FindFirstChildWhichIsA("Tool")
+		local heldUid = tool and (tool:GetAttribute("UID") or tool:GetAttribute("EggUid"))
+		for uid, egg in pairs(eggs) do
+			if not DrScramble.IsLabRewardEgg(egg) or egg.Placement ~= nil
+				or tostring(uid) == tostring(heldUid) or RuntimeState.ScrambleReserved[tostring(uid)] then continue end
+			local category = tostring(egg.AssetCategory or egg.Category or "")
+			if FarmConfig.LabSell_KeepPets[category]
+				or ShouldHoldBackScrambleEgg(category, uid)
+				or (FarmConfig.LabSell_KeepMutated and isMutated(egg)) then continue end
+			local asset = AssetsModule and AssetsModule.Directory and AssetsModule.Directory[category]
+			-- Unknown metadata must not silently become a disposable Common egg.
+			if type(asset) ~= "table" then continue end
+			local rarity = asset.Rarity
+			local tier = type(rarity) == "table" and tonumber(rarity.RarityNumber or rarity.Rank)
+				or RarityTierMap[string.lower(tostring(rarity or ""))]
+			local income = CalculateEggIncome(egg)
+			local rarityPass = tier ~= nil and tier > 0 and tier <= FarmConfig.LabSell_MaxRarity
+			local valuePass = FarmConfig.LabSell_IncomeLimit > 0 and income >= 0
+				and income < FarmConfig.LabSell_IncomeLimit
+			local rule = FarmConfig.LabSell_Rule
+			local matches = (rule == "Rarity Only" and rarityPass)
+				or (rule == "Value Only" and valuePass)
+				or (rule == "Rarity And Value" and rarityPass and valuePass)
+				or (rule == "Rarity Or Value" and (rarityPass or valuePass))
+			if matches then
+				table.insert(result, uid) -- Keep the server's original UID type.
+				price += Tasks.GetOfficialPrice(egg, income)
+			end
+		end
+		return result, price
+	end
+	local function actionAllowed()
+		return not seller.Disposed and not LibraryLoader.Unloaded
+			and not RaceOwnsCharacter()
+			and not (Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal())
+	end
+	function DrScramble.LabSellSettingsChanged()
+		seller.Generation += 1
+		seller.NextAt = math.max(seller.NextAt, os.clock() + 3)
+	end
+	function DrScramble.RunLabSell(manual)
+		local lab = Tasks.LabState
+		if seller.Disposed or LibraryLoader.Unloaded or (not manual and not FarmConfig.LabSell_Auto) then return end
+		if seller.Busy or lab.ActionBusy or lab.FetchBusy then
+			seller.Status = "Waiting for the current Lab action"
+			return
+		end
+		if not actionAllowed() then seller.Status = "Paused for Race Rally"; return end
+		if os.clock() < seller.NextAt then return end
+		if next(seller.Skins) == nil then seller.Status = "Lab banner catalog unavailable; no sale"; return end
+		seller.Busy, lab.ActionBusy = true, true
+		seller.NextAt = os.clock() + 3
+		local generation, revision = seller.Generation, lab.Revision
+		local function cancelled()
+			return generation ~= seller.Generation or revision ~= lab.Revision or not actionAllowed()
+				or (not manual and not FarmConfig.LabSell_Auto)
+		end
+		local ok, message = pcall(function()
+			local remote = Remotes.RemoteSellSelection
+			if not remote or not remote:IsA("RemoteEvent") then return "Sell remote unavailable" end
+			local selected = DrScramble.CollectSellableLabEggs()
+			if cancelled() then return "Paused / settings changed" end
+			if #selected == 0 then return "No matching Lab eggs" end
+			local submitted = 0
+			for offset = 1, #selected, 50 do
+				if cancelled() then break end
+				-- Re-read placement, equipped UID, filters and recipe reservations per batch.
+				local fresh = {}
+				for _, uid in ipairs(DrScramble.CollectSellableLabEggs()) do fresh[tostring(uid)] = true end
+				if cancelled() then break end
+				local batch = {}
+				for index = offset, math.min(offset + 49, #selected) do
+					local uid = selected[index]
+					if fresh[tostring(uid)] then table.insert(batch, uid) end
+				end
+				if #batch > 0 then
+					SetElevated8()
+					if cancelled() then break end
+					remote:FireServer({ Assets = {}, Eggs = batch })
+					submitted += #batch
+				end
+				if offset + 50 <= #selected then task.wait(0.2) end
+			end
+			return string.format("Requested %d Lab eggs; awaiting inventory update", submitted)
+		end)
+		-- No alternate movement worker, respawn, farm-toggle writes or pet sale.
+		seller.Busy, lab.ActionBusy = false, false
+		seller.Status = ok and message or "Sell request failed; retry after cooldown"
+		seller.StatusAt = os.clock()
+	end
+	function DrScramble.BuildLabSellerUI(group)
+		group:AddLabel("Only Dr Scramble reward eggs. Ordinary eggs use Pets > Sell Eggs.", true)
+		seller.Preview = group:AddLabel("Lab egg matches: 0", true)
+		seller.StatusLabel = group:AddLabel("Off", true)
+		group:AddToggle("Toggle_LabSell_Auto", {
+			Text = "Auto Sell Lab Eggs", Default = false,
+			Tooltip = "Inventory only; skips placed, equipped and recipe-reserved eggs.",
+			Callback = function(value)
+				FarmConfig.LabSell_Auto = value == true
+				DrScramble.LabSellSettingsChanged()
+			end,
+		})
+		group:AddButton({ Text = "Sell Matching Lab Eggs Now", DoubleClick = true, Func = function()
+			task.spawn(DrScramble.RunLabSell, true)
+		end })
+		group:AddDropdown("Dropdown_LabSell_Rule", {
+			Text = "Sell Rule", Values = SellRuleOptions, Default = "Rarity And Value", AllowNull = false,
+			Callback = function(value)
+				FarmConfig.LabSell_Rule = value
+				DrScramble.LabSellSettingsChanged()
+			end,
+		})
+		local rarities = { "Off" }
+		for _, label in ipairs(RarityNumberedList) do table.insert(rarities, label) end
+		group:AddDropdown("Dropdown_LabSell_MaxRarity", {
+			Text = "Max Rarity (Off = no rarity matches)", Values = rarities, Default = "Off", AllowNull = false,
+			Callback = function(value)
+				FarmConfig.LabSell_MaxRarity = tonumber(tostring(value):match("^(%d+)")) or 0
+				DrScramble.LabSellSettingsChanged()
+			end,
+		})
+		group:AddInput("Input_LabSell_IncomeLimit", {
+			Text = "Income Below ($/s; 0 = disabled)", Default = "0", Numeric = true, Finished = true,
+			Callback = function(value)
+				local number = tonumber(value) or 0
+				FarmConfig.LabSell_IncomeLimit = (number == number and number < math.huge) and math.max(0, number) or 0
+				DrScramble.LabSellSettingsChanged()
+			end,
+		})
+		group:AddToggle("Toggle_LabSell_KeepMutated", {
+			Text = "Keep Mutated Lab Eggs", Default = true,
+			Callback = function(value)
+				FarmConfig.LabSell_KeepMutated = value == true
+				DrScramble.LabSellSettingsChanged()
+			end,
+		})
+		if #seller.PetOptions > 0 then
+			group:AddDropdown("Dropdown_LabSell_KeepPets", {
+				Text = "Keep Lab Pets (Never Sell)", Values = seller.PetOptions,
+				Multi = true, Default = {}, AllowNull = true, Searchable = true,
+				Callback = function(value)
+					local selected, kept = ParseMultiDropdownSelection(value), {}
+					for label, category in pairs(seller.PetCategories) do
+						if selected[string.lower(label)] then kept[category] = true end
+					end
+					FarmConfig.LabSell_KeepPets = kept
+					DrScramble.LabSellSettingsChanged()
+				end,
+			})
+		end
+		group:AddLabel("Safe defaults: rarity Off + value 0 match nothing. Sell Now needs a double click.", true)
+		if seller.Started then return end
+		seller.Started = true
+		task.spawn(function()
+			while not seller.Disposed and not LibraryLoader.Unloaded do
+				local ok, eggs, price = pcall(DrScramble.CollectSellableLabEggs)
+				if seller.Disposed or LibraryLoader.Unloaded then break end
+				if ok then
+					seller.Preview:SetText(string.format("Lab egg matches: %d | estimated sale: $%.0f", #eggs, price))
+				else seller.Preview:SetText("Lab inventory unavailable; no sale requested") end
+				if FarmConfig.LabSell_Auto then
+					DrScramble.RunLabSell(false)
+				elseif os.clock() - seller.StatusAt > 6 then seller.Status = "Off (Sell Now remains available)" end
+				if not seller.Disposed and not LibraryLoader.Unloaded then seller.StatusLabel:SetText(seller.Status) end
+				task.wait(2)
+			end
+		end)
+	end
+	LibraryLoader:OnUnload(function()
+		seller.Disposed = true
+		seller.Generation += 1
+	end)
+end
+-- END SCRAMBLE LAB SELLER
+
 -- Chili V2 belt discovery: the plot's physical bottom precedes client decoration.
 function Tasks.ScanTreadmillInPlot(plot)
 	if not plot then return nil end
@@ -13383,7 +13627,9 @@ function Tasks.BuildMainInterface()
 			FarmConfig.Race_ShopItems = ParseMultiDropdownSelection(v)
 		end,
 	})
-	local ScrambleEggGroup = EventTab:AddRightGroupbox("Scramble Egg", "flask-conical")
+	Tasks.LabTabbox = EventTab:AddRightTabbox("Scramble Lab")
+	local ScrambleEggGroup = Tasks.LabTabbox:AddTab("Lab Trade", "flask-conical")
+	DrScramble.BuildLabSellerUI(Tasks.LabTabbox:AddTab("Lab Sell", "badge-dollar-sign"))
 	local ScrambleLabUI = {
 		Trade = ScrambleEggGroup:AddLabel('<font color="#D946EF"><b>Trade-In:</b></font> 0/3\n1. -\n2. -\n3. -', true),
 	}
