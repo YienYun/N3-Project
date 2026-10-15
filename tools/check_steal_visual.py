@@ -10,14 +10,14 @@ reference = (ROOT / "Games/Source/StealAnEgg/SenaV2.lua").read_bytes()
 blob = b"blob " + str(len(reference)).encode() + b"\0" + reference
 assert hashlib.sha1(blob).hexdigest() == "a36898ee403cacf3aa9742bfb9f9270f867cb765", "Sena reference changed"
 
-# c89e8a0's production game, before promoting the user-tested presentation.
-# Only the marked presentation bodies and explicit legacy camera predicates strip.
+# Reviewed race-first policy revision: eight independent protected gameplay
+# blocks remain unchanged (check_race_source.py). Presentation additions strip.
 normalized = strip_builtin_visual(runtime)
-assert hashlib.sha256(normalized.encode()).hexdigest() == "5a4350a7207136682561076b298c2c4f4cad0b7ecbe83ae781ca7cd074c86651", (
+assert hashlib.sha256(normalized.encode()).hexdigest() == "611aa5dfdb913934ae82d1fd71254bbabea570f2d4bdd29adc67ad2d88be418b", (
     "Gameplay outside the reviewed visual additions changed; review before updating this baseline"
 )
 assert not (ROOT / "Games/Steal-An-Egg-V2.lua").exists(), "Retire the standalone tester"
-for retired in ("SafeZoneVisualV2", "V2 Test", "Toggle_Farm_SafeZoneVisual", "BEGIN V2"):
+for retired in ("SafeZoneVisualV2", "V2 Test", "BEGIN V2"):
     assert retired not in runtime, f"Test-only setting remains: {retired}"
 assert runtime.count('-- BEGIN BUILTIN STEAL VISUAL') == 1
 assert runtime.count('-- BEGIN BUILTIN VISUAL DISGUISE GUARD') == 1
@@ -53,12 +53,20 @@ assert 'local claimMovement = Engine.ClaimMovement' in visual
 assert 'local accepted = claimMovement(owner, ...)' in visual
 assert 'if accepted and owner == "steal" then' in visual
 assert 'Engine.StartSafeZoneVisual()' in visual
-assert 'FarmConfig.' not in visual, "The built-in visual must not have an opt-in or mode exclusion"
+assert 'and FarmConfig.SafeZoneVisual == true' in visual
+assert 'FarmConfig.Defense_InstantSteal' not in visual, "Visual must support both modes"
+assert runtime.count('"Toggle_Farm_SafeZoneVisual"') == 1
+assert 'SafeZoneVisual = false' in runtime
+ui = runtime[runtime.index('-- BEGIN BUILTIN VISUAL UI'):runtime.index('-- END BUILTIN VISUAL UI')]
+assert 'Default = false' in ui
+assert 'FarmConfig.SafeZoneVisual = State == true' in ui
+assert 'engine.StopSafeZoneVisual()' in ui and 'engine.StartSafeZoneVisual()' in ui
+assert 'CancelAutoSteal' not in ui, 'Changing the visual must not cancel steal'
 assert 'Engine.Carry.LineDrop' not in visual
 assert 'Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual()' in runtime
 assert 'character:FindFirstChild("HumanoidRootPart")' in visual
 assert 'character:FindFirstChildOfClass("Humanoid")' in visual
-print('PASS: exact Sena reference; no standalone tester or visual toggle; one shared normal/Instant visual controller.')
-print('PASS: removing only reviewed presentation additions reproduces the complete pre-promotion gameplay baseline.')
+print('PASS: exact Sena reference; no standalone tester; optional visual toggle defaults OFF and supports normal/Instant.')
+print('PASS: removing only reviewed presentation additions reproduces the reviewed race-priority gameplay baseline.')
 print('PASS: reuse, reversible visibility/camera, cancellation/unload and no visual remote or real-root movement.')
 print('Static checks only: normal V2 was user-confirmed live; the promoted Instant integration still needs live testing.')

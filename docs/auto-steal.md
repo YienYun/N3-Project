@@ -63,7 +63,8 @@ Line numbers below refer to the unchanged Sena reference.
   N3 without that pad; delivery/re-grab uses the source support geometry.
   A normal worker yields when an optional N3 guard dodge is already busy.
 - Sena-style safe-zone decoy/camera hiding and reversible popup suppression are
-  now built into normal **and Instant/Line Drop** stealing, without a new toggle.
+  available for normal **and Instant/Line Drop** via optional **Safe Zone Visual**
+  (default OFF).
   The user confirmed the normal test version works and feels lighter on their
   phone; its shared Instant integration still needs live validation. See
   `auto-steal-visual.md` for lifecycle, source mapping and scoped camera changes.
@@ -109,3 +110,13 @@ Live checks for the user: repeat normal cycles with existing filters/priority;
 Anti Guard OFF and ON; pickup refusal/timeout; unexpected carry drop; toggle
 OFF during travel/return; respawn; night/reset; Auto Place; then verify the
 separate Instant/Line Drop path. Capture/event automation is outside this port.
+
+## Race-first scheduling update
+
+With Auto Race enabled, an eligible open/unraced join window pauses normal and
+Instant steal **logic**, not their saved toggles. The old worker unwinds before
+race movement starts; after leave/return releases race ownership, the existing
+farm scheduler resumes. This changes arbitration only, not Sena/N3 pickup,
+approach, drop/re-grab or deposit logic. See `race-rally.md` for the exact gates
+and live transition test. An ineligible/closed/completed window does not keep
+egg farming paused solely because Auto Race remains enabled.

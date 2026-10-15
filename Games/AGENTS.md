@@ -56,7 +56,8 @@ Read this before changing `Steal-An-Egg.lua`.
 ## Built-in safe-zone steal visual
 
 - The user approved the standalone visual experiment live and requested promotion.
-  There is no separate V2 game file, test title, visual toggle or config opt-in.
+  There is no separate V2 game file or test title. The newer user request makes
+  **Safe Zone Visual** optional, default OFF, for normal and Instant/Line Drop.
 - One shared visual starts on accepted `ClaimMovement("steal")`, covering normal,
   Instant/Line Drop and already-carried retry lanes. Reuse the decoy across cycles.
 - Preserve the actual normal/Instant movement, pickup and deposit workflows.
@@ -68,3 +69,16 @@ Read this before changing `Steal-An-Egg.lua`.
   gameplay boundaries can still be compared with the pre-promotion version.
 - See `../docs/auto-steal-visual.md`. Normal's test was user-confirmed; do not claim
   the new Instant integration has been live-tested or benchmarked by the agent.
+
+## Race-first farm arbitration
+
+- New user instruction overrides Chili's egg-first HigherFirst policy: eligible
+  open/unraced Auto Race pauses egg logic while leaving every farm toggle/filter ON.
+- Keep N3/Sena steal intact. Use cancellation and wait for normal/Instant/guard
+  cleanup before race ownership; never clear shared IsExecuting from race code.
+- Do not let current egg carry/candidates or task-rank of eggs starve the race.
+  Keep unrelated event ownership rules. After race return, wake the native farm
+  scheduler; closed/ineligible/completed windows permit farming.
+- Instant interrupted iterations must not trigger failure resets or post-place.
+- Run visual/race static checkers and compile; the new transitions need user live
+  validation. See `../docs/race-rally.md` for source ranges and deliberate changes.

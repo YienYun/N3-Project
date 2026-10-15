@@ -218,6 +218,9 @@ local FarmConfig = {
 	StealSettleWait = 6.5,
 	TweenSpeed = 600,
 	AutoTweenSpeed = 400,
+	-- BEGIN BUILTIN VISUAL CONFIG
+	SafeZoneVisual = false,
+	-- END BUILTIN VISUAL CONFIG
 	AntiTreadmill = false,
 	AutoEquipBestPet = false,
 	AutoStealAll = false,
@@ -6697,6 +6700,7 @@ local GetScrambleTradeStatusFn = nil
 			local owner = Engine.Movement.Owner
 			return not LibraryLoader.Unloaded
 				and not Engine.Disposed
+				and FarmConfig.SafeZoneVisual == true
 				and IsStealActive() == true
 				and not RaceOwnsCharacter()
 				and (owner == nil or owner == "steal")
@@ -12012,7 +12016,10 @@ function Tasks.BuildMainInterface()
 			task.wait(0.5)
 			pcall(function()
 				local status = "Idle"
-				if RuntimeState.OnTreadmill then
+				if Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal()
+					and (FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll or FarmConfig.AutoStealSelected) then
+					status = "Paused for Auto Race"
+				elseif RuntimeState.OnTreadmill then
 					status = "Training on Treadmill"
 				elseif RuntimeState.IsExecuting or (IsStealActive() and not FarmConfig.Defense_InstantSteal) then
 					local Engine = RuntimeState.StealEngine
@@ -12051,6 +12058,24 @@ function Tasks.BuildMainInterface()
 			RefreshStealState()
 		end,
 	})
+	-- BEGIN BUILTIN VISUAL UI
+	FarmEggGroup:AddToggle("Toggle_Farm_SafeZoneVisual", {
+		Text = "Safe Zone Visual",
+		Default = false,
+		Tooltip = "Optional local dummy view for normal and Instant steal. Useful for low-end devices. Does not change movement.",
+		Callback = function(State)
+			FarmConfig.SafeZoneVisual = State == true
+			local engine = RuntimeState.StealEngine
+			if engine then
+				if not State then
+					engine.StopSafeZoneVisual()
+				elseif engine.Movement.Owner == "steal" then
+					engine.StartSafeZoneVisual()
+				end
+			end
+		end,
+	})
+	-- END BUILTIN VISUAL UI
 	FarmEggGroup:AddSlider("Slider_Farm_TweenSpeed", {
 		Text = "Tween Speed",
 		Min = 100,
@@ -15589,6 +15614,9 @@ function Tasks.StealLoop()
 				end
 				local DeliverTries = 0
 				while DeliverTries < 6 do
+					if Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal() then
+						break
+					end
 					local CarryingNow = IsActivelyCarryingEgg() or Engine.State.Carrying or (GetEquippedEggTool() ~= nil)
 					if not CarryingNow or RootPart.Position.X <= SafeBaseLineX then
 						break
@@ -15607,6 +15635,14 @@ function Tasks.StealLoop()
 					pcall(function()
 						Engine.RunStealCycle(CurrentSession)
 					end)
+				end
+				if Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal() then
+					Engine.Guard.StealActive = false
+					Engine.StopHold()
+					Engine.ReleaseMovement("steal")
+					RuntimeState.IsExecuting = false -- This Instant worker has now unwound.
+					task.wait(0.1)
+					continue
 				end
 				local finishedAt = Engine.State.LastFinishedAt
 				local idleFor = (finishedAt and finishedAt > 0) and (os.clock() - finishedAt) or math.huge
@@ -16305,66 +16341,25 @@ do
 		race.Eligible, race.Requirement = not ok or eligible ~= false, ok and tonumber(requirement) or nil
 		return race.Eligible, race.Requirement
 	end
-	local function CandidateRank(candidate)
-		return Tasks.PriorityRank(
-			candidate.IsScramble and "StealLab" or candidate.IsIndex and "StealIndex" or "StealFilter"
-		)
-	end
 	local function HigherPriorityRaceTask()
-		-- Chili's HigherFirst: finish an active steal/carry; otherwise inspect actual wanted eggs,
-		-- not just an enabled toggle (which would starve the event indefinitely).
-		if os.clock() < (race.PriorityCheckAt or 0) then
-			return race.HigherFirst
-		end
-		race.PriorityCheckAt, race.HigherFirst = os.clock() + 0.25, nil
-		local state = engine and engine.State
+		-- Chili HigherFirst (50069-50208), adapted: Auto Race always outranks eggs.
+		-- Keep unrelated exclusive-event arbitration, never scan/finish eggs first.
 		if
-			not race.RagdollTravel
-			and ((engine and engine.AutoCycle) or RuntimeState.IsExecuting or (state and state.Carrying))
-		then
-			race.HigherFirst = "Auto Steal"
-		elseif
-			engine
-			and engine.CollectCandidates
-			and not engine.IsNight()
-			and not engine.WallSealed()
-			and (FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll or FarmConfig.AutoStealSelected)
-		then
-			local rank = Tasks.PriorityRank("Race")
-			for _, candidate in ipairs(engine.CollectCandidates(false, true)) do
-				local record = candidate.Raw
-				if
-					CandidateRank(candidate) < rank
-					and candidate.Uid ~= Workspace:GetAttribute("Event_CaptureTheEggUid")
-					and (not record or not record.CarrierUserId or tonumber(record.CarrierUserId) == 0)
-					and (not record or record.State == nil or record.State == "Slot" or record.State == "Dropped")
-				then
-					race.HigherFirst = "Auto Steal"
-					break
-				end
-			end
-		end
-		-- Keep extension points for N3 event controllers without importing unrelated Chili features.
-		if
-			not race.HigherFirst
-			and Tasks.ShootingStarState
+			Tasks.ShootingStarState
 			and Tasks.ShootingStarState.Wanted
 			and Tasks.PriorityRank("Star") < Tasks.PriorityRank("Race")
 		then
-			race.HigherFirst = "Shooting Star"
+			return "Shooting Star"
 		end
-		if not race.HigherFirst and engine and engine.Movement and (engine.Movement.CaptureUntil or 0) > os.clock() then
-			race.HigherFirst = "Capture The Egg"
+		if engine and (engine.Movement.CaptureUntil or 0) > os.clock() then
+			return "Capture The Egg"
 		end
-		return race.HigherFirst
+		return nil
 	end
 	local nativePriorityStealYield = Tasks.PriorityStealYield
 	Tasks.PriorityStealYield = function()
 		if Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal() then
 			return true
-		end
-		if FarmConfig.Race_AutoRace == true and RaceJoinOpen() and HigherPriorityRaceTask() ~= nil then
-			return false
 		end
 		return nativePriorityStealYield()
 	end
@@ -16372,14 +16367,10 @@ do
 		if race.Disposed then
 			return false
 		end
-		if InRaceNow() or race.Travelling or (engine and engine.Movement.Owner == "race") then
+		if race.Resetting or InRaceNow() or race.Travelling or (engine and engine.Movement.Owner == "race") then
 			return true
 		end
-		return FarmConfig.Race_AutoRace == true
-			and RaceJoinOpen()
-			and not RacedThisWindow()
-			and RaceEligible()
-			and HigherPriorityRaceTask() == nil
+		return FarmConfig.Race_AutoRace == true and RaceJoinOpen() and not RacedThisWindow() and RaceEligible()
 	end
 	Tasks.RacePriority = function()
 		return not race.Disposed
@@ -16458,6 +16449,28 @@ do
 			end
 		end
 	end
+	local function UpdateRaceStealPause()
+		local paused = Tasks.RaceShouldYieldSteal()
+		if paused == (race.StealPaused == true) then
+			return
+		end
+		race.StealPaused = paused
+		if not engine then
+			return
+		end
+		if paused then
+			-- Invalidate N3/Instant motion; the old worker keeps ownership until cleanup.
+			RuntimeState.StealCancel = RuntimeState.StealCancel + 1
+			engine.CancelAutoSteal()
+			engine.Guard.StealActive, engine.Guard.Busy = false, false
+			-- Guard.Active stays owned by the dodge worker until its final rig restore.
+			engine.StopHold()
+			engine.EndDisguise()
+			engine.AutoStatus = "Paused for Auto Race"
+		elseif engine.AutoWake then
+			engine.AutoWake() -- Existing enabled normal/Instant schedulers resume, no toggle writes.
+		end
+	end
 	local function ClaimRaceMovement()
 		if not engine then
 			SetRaceAction("Waiting for movement engine")
@@ -16473,6 +16486,13 @@ do
 			return true
 		end
 		local owner = engine.Movement.Owner
+		if owner == "steal" then
+			engine.ReleaseMovement("steal")
+			if engine.ClaimMovement("race") then
+				PrepareRaceCharacter()
+				return true
+			end
+		end
 		local keys = {
 			steal = "StealFilter",
 			place = "Place",
@@ -17514,6 +17534,15 @@ do
 		end
 	end
 	local function TickRaceRally()
+		UpdateRaceStealPause()
+		if
+			race.StealPaused
+			and engine
+			and (engine.AutoCycle or RuntimeState.IsExecuting or engine.Guard.Active or engine.Guard.Busy)
+		then
+			SetRaceAction("Race priority, waiting for the current worker to release movement")
+			return
+		end
 		if race.Resetting then
 			StopRaceDrive()
 			return
@@ -17651,10 +17680,6 @@ do
 			ReleaseRaceMovement()
 		end
 		local joinEnds = Workspace:GetAttribute("RaceRallyJoinEndsAt")
-		if race.OpenWindow ~= joinEnds then
-			race.OpenWindow, race.OpenSeen = joinEnds, os.clock()
-		end
-		local openFor = type(joinEnds) == "number" and os.clock() - race.OpenSeen or 0
 		local alreadyRaced = RacedThisWindow()
 		if enabled and race.ReturnFailed and not race.Travelling then
 			race.ReturnFailed = nil
@@ -17678,8 +17703,6 @@ do
 			SetRaceAction("Raced this window, waiting for the next Racing Event")
 		elseif higher then
 			SetRaceAction("Race open, " .. higher .. " goes first (Task Priority)")
-		elseif enabled and RaceJoinOpen() and not race.Travelling and openFor < 3 then
-			SetRaceAction(string.format("Race open, checking for filter eggs first (%ds)", math.ceil(3 - openFor)))
 		elseif enabled and RaceJoinOpen() then
 			local hitbox, root = GetRacePortal(), RaceRoot()
 			if hitbox and root and race.Travelling then
@@ -17774,8 +17797,9 @@ do
 					ReleaseRaceMovement()
 				end
 			end
+			UpdateRaceStealPause()
 		end
-		race.NextTick, race.PriorityCheckAt = 0, 0
+		race.NextTick = 0
 	end
 	-- Keep the working Sena lifecycle intact. Only arbitrate shared movement/rig ownership.
 	if engine then
@@ -17791,7 +17815,7 @@ do
 			return nativeClaimMovement(owner)
 		end
 		engine.TriggerGuardDodge = function(force)
-			if Tasks.RaceHoldsCharacter() then
+			if Tasks.RaceShouldYieldSteal() then
 				return
 			end
 			return nativeGuardDodge(force)
@@ -17811,7 +17835,7 @@ do
 				if attribute == "RaceId" and LocalPlayer:GetAttribute(attribute) == nil then
 					race.RagdollResumeAt = os.clock() + 20
 				end
-				race.NextTick, race.PriorityCheckAt = 0, 0
+				race.NextTick = 0
 			end)
 		)
 	end

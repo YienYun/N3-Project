@@ -3,7 +3,7 @@ import re
 
 
 def strip_builtin_visual(runtime):
-    for label in ("STEAL VISUAL", "VISUAL DISGUISE GUARD"):
+    for label in ("STEAL VISUAL", "VISUAL DISGUISE GUARD", "VISUAL CONFIG", "VISUAL UI"):
         pattern = re.compile(
             r"^[\t ]*-- BEGIN BUILTIN " + label + r"\n.*?"
             r"^[\t ]*-- END BUILTIN " + label + r"\n",

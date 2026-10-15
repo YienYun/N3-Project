@@ -22,7 +22,7 @@ Source line numbers refer to the unchanged reference, not the runtime.
 | 49717–49879: network-aware join delay, flag/save window, area/queue/heat detection | `RaceJoinDelay`, `RacedThisWindow`, `InRaceArea`, `EnteredRace`, `InRaceNow` |
 | 49880–49923: finish signal, bounded reset | attribute connections, `RequestRaceReset` |
 | 49924–50067: path drive, reprojection, speed reduction, power-ups | `StopRaceDrive`, `CurrentRaceSpeed`, `ReduceRaceSpeed`, `StartRaceDrive` |
-| 50069–50208: higher-priority wanted work | `HigherPriorityRaceTask`, native priority adapter |
+| 50069–50208: higher-priority wanted work | `HigherPriorityRaceTask`, adapted race-first egg pause/resume (see below) |
 | 50209–50319: portal back-off/crossing and movement acquisition | `PassThroughRacePortal`, `ClaimRaceMovement` |
 | 50320–50524: treadmill exit, eligibility, portal reset/retry | `ExitRaceTreadmill`, `RaceEligible`, `ResetRaceCharacter`, `RetryRacePortalAfterReset` |
 | 50525–50596: off-mount recovery | `NudgeRaceMount` (one-second observation, five-second cooldown, max three nudges) |
@@ -48,10 +48,12 @@ Lap/win success comes from game attributes/save, not local path distance.
 - One sequential 0.25-second race tick uses N3 config/UI instead of Chili's worker
   registry. Travel has a single owner, cancellation revision, character identity,
   guarded callbacks and cleanup; errors appear in the status and throttled warnings.
-- Existing N3 movement ownership and priority ranking are reused. Higher-first
-  looks at active carry/work and actual filtered candidates, rather than starving
-  the race because a higher-ranked toggle is merely enabled. There is still a
-  three-second egg inspection interval when a join window is first seen.
+- Existing N3 movement ownership is reused. **User override of Chili HigherFirst:**
+  Auto Race outranks normal/Instant egg farming while its eligible join window is
+  open and not yet raced, or while queue/heat/travel/reset/return owns the rig.
+  Active egg cycles and egg candidates no longer postpone the race; the initial
+  three-second egg-inspection delay is removed. Unrelated star/capture extension
+  priorities stay intact, rather than importing any additional event controller.
 - Normal Sena code, health/swap implementation, filters, approach, Instant and
   Line Drop gameplay remains unchanged apart from the separately documented
   built-in safe-zone visual/camera gates. Race-only adapters temporarily yield
@@ -81,6 +83,45 @@ Lap/win success comes from game attributes/save, not local path distance.
   auto equip ON, Best Owned selected. Speed/power-up, racer and shop-item controls
   are nested under their respective toggles. Only Status and Tokens/Wins/Racer
   are displayed; the heat/phase/effective-speed diagnostic row was removed.
+
+## Race-first egg pause/resume
+
+The Chili reference's `HigherFirst` (50069–50208) can finish active carry/steal or
+prioritize filtered eggs by rank. Its `Wanted` / ownership transitions and release
+wake-up (50597–50905) were reread. Per the user's newer instruction, N3 deliberately
+**does not** copy the egg-first policy. The successful N3/Sena steal engine stays.
+
+- `RaceShouldYieldSteal` is true for active race/travel/reset ownership, or for
+  Auto Race ON + open join window + eligible + not raced this window. Outside
+  that window, when ineligible, or after race return releases ownership, normal
+  farming can continue even while the Auto Race toggle stays ON.
+- One pause transition increments the cancellation revision and calls existing
+  `CancelAutoSteal`; it stops holds/guard visuals without changing any Auto Steal,
+  Instant, filter, Anti Guard or other user preference. The guard worker retains
+  its Active flag until its final rig restoration finishes.
+- `IsStealActive` already routes both normal and Instant through priority yield.
+  New steal movement and new guard dodges are blocked immediately. The race tick
+  waits for the old cycle, Instant worker and guard worker to release their actual
+  execution/ownership state before taking the character. It does not fake those
+  workers' completion by clearing shared IsExecuting from the race controller.
+- Instant's outer carried-egg retry stops on pause. After its cycle unwinds, that
+  worker releases its own execution/movement and skips failure recovery/Auto Place
+  for the interrupted iteration. No new egg picker or replacement delivery is added.
+- A stale `steal` owner/carry boolean cannot starve the race after the worker has
+  stopped. Other live owners retain existing priority/cleanup rules.
+- On race release, the pause transition wakes the existing normal scheduler;
+  Instant's existing poll loop also resumes. No farm toggle is switched off/on.
+  The original farm status row shows **Paused for Auto Race** while appropriate.
+- Safe Zone Visual is independent: optional, OFF by default, for normal/Instant.
+  Race preemption releases the dummy/camera even when that option remains ON;
+  the next accepted farm cycle reattaches after race return.
+
+Live check: farm with Auto Race ON, wait for an eligible join window, observe
+pause → worker cleanup → portal/queue → heat/laps/finish → leave/return → resumed
+farm. Farm toggles/filters must remain unchanged. Repeat with normal/Instant,
+visual ON/OFF, an already-carried egg, Auto Race OFF during travel, and a completed
+or ineligible window. These transition changes have static/compile checks only,
+not a newly verified Roblox/live race result.
 
 ## Validation and limits
 

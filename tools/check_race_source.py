@@ -56,7 +56,7 @@ for name in (
     "TickRaceRally", "StartRaceDrive", "StopRaceDrive", "NudgeRaceMount",
     "RacedThisWindow", "RaceEligible", "EnteredRace", "InRaceNow", "HigherPriorityRaceTask",
     "StepRaceTravel", "GlideRaceTravel", "RagdollRaceTravel", "PassThroughRacePortal",
-    "RetryRacePortalAfterReset", "RequestRaceReset", "ReturnFromRace",
+    "RetryRacePortalAfterReset", "RequestRaceReset", "ReturnFromRace", "UpdateRaceStealPause",
     "UpdateOwnedRaceRacers", "ClaimAndBuyRaceRewards", "DisposeRaceRally",
 ):
     assert len(re.findall(r"local function " + name + r"\(", race)) == 1, name
@@ -101,6 +101,34 @@ for field in ("Status", "Tokens", "Wins", "Racer"):
     assert "St." + field in race_ui, f"Race display field missing: {field}"
 assert runtime.count('"Slider_Race_Speed"') == 1
 assert runtime.count('"Toggle_Race_AutoRace"') == 1
+
+# User override of Chili HigherFirst: race availability pauses egg logic, never toggles.
+yield_start = race.index('Tasks.RaceShouldYieldSteal = function()')
+yield_gate = race[yield_start:race.index('Tasks.RacePriority = function()', yield_start)]
+for requirement in ('race.Disposed', 'race.Resetting', 'InRaceNow()', 'race.Travelling',
+                    'FarmConfig.Race_AutoRace == true', 'RaceJoinOpen()', 'not RacedThisWindow()', 'RaceEligible()'):
+    assert requirement in yield_gate, requirement
+assert 'HigherPriorityRaceTask' not in yield_gate and 'AutoCycle' not in yield_gate
+higher = race[race.index('local function HigherPriorityRaceTask()'):race.index('local nativePriorityStealYield')]
+assert 'CollectCandidates' not in higher and 'engine.AutoCycle' not in higher
+assert 'state.Carrying' not in higher and 'return "Auto Steal"' not in higher
+pause = race[race.index('local function UpdateRaceStealPause()'):race.index('local function ClaimRaceMovement()')]
+for contract in ('race.StealPaused = paused', 'engine.CancelAutoSteal()', 'engine.AutoWake()',
+                 'RuntimeState.StealCancel = RuntimeState.StealCancel + 1'):
+    assert contract in pause, contract
+assert not re.search(r'RuntimeState.IsExecuting\s*=(?!=)', pause)
+assert not re.search(r'engine.Guard.Active\s*=(?!=)', pause), 'Dodge worker must finish its own rig cleanup'
+assert not re.search(r'FarmConfig\.(?:AutoSteal\w*|StealAllMode)\s*=(?!=)', race)
+assert not re.search(r'(?:TogStealAll|TogStealSelected|InstToggle)\s*:\s*SetValue\(', race), 'Race must not rewrite farm UI toggles'
+claim = race[race.index('local function ClaimRaceMovement()'):race.index('local function ExitRaceTreadmill()')]
+assert claim.index('engine.AutoCycle or RuntimeState.IsExecuting') < claim.index('if owner == "steal" then')
+assert 'engine.ReleaseMovement("steal")' in claim
+assert 'checking for filter eggs first' not in race
+loop = runtime[runtime.index('function Tasks.StealLoop()'):runtime.index('task.spawn(Tasks.StealLoop)')]
+assert loop.index('Engine.ReleaseMovement("steal")') < loop.index('local finishedAt =')
+assert 'This Instant worker has now unwound' in loop
+assert 'Paused for Auto Race' in runtime
 print("PASS: Chili V2 reference, race source contracts, single controller, semantic names, UI and cancellation boundaries.")
 print("PASS: 8 pre-existing gameplay blocks are byte-identical after excluding reviewed presentation additions.")
 print("Static checks only: no Roblox execution, simulation, server-win or FPS claim.")
+print('PASS: race-first pause/resume, no farm toggle writes, no egg/carry starvation and Instant cleanup boundary.')
