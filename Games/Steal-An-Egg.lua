@@ -1888,6 +1888,11 @@ RuntimeState.StealEngine = (function()
 	end
 	Engine.OnCarryChanged = OnCarryChanged
 	Engine.BeginDisguise = function(offset)
+		-- BEGIN BUILTIN VISUAL DISGUISE GUARD
+		if Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual() then
+			return -- The safe-zone dummy already owns presentation, not dodge movement.
+		end
+		-- END BUILTIN VISUAL DISGUISE GUARD
 		if Engine.Guard.Disguise then
 			return
 		end
@@ -2297,7 +2302,7 @@ RuntimeState.StealEngine = (function()
 		if isCarry and carryReact > 0 then
 			task.wait(carryReact * 0.1)
 		end
-		local lockCam = Engine.Carry.LockCamera == true
+		local lockCam = Engine.Carry.LockCamera == true and not (Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual())
 		local camSaved = nil
 		local function FreezeRunCam()
 			local cam = workspace.CurrentCamera
@@ -2488,7 +2493,7 @@ RuntimeState.StealEngine = (function()
 	Engine.FlyToPosition = function(targetPos, sessionId, stopDist, maxTime, speedLimit)
 		local carry = Engine.Carry
 		local pace = math.min(Engine.Pace(), math.max(speedLimit or FarmConfig.TweenSpeed or 400, 16))
-		if carry.LockCamera then
+		if carry.LockCamera and not (Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual()) then
 			local cam = workspace.CurrentCamera
 			if cam then
 				pcall(function()
@@ -4756,7 +4761,7 @@ local GetScrambleTradeStatusFn = nil
 				Engine.PickupDroppedEgg(Engine.State.CarryUid)
 				nextQuickRegrabAt = os.clock() + quickRegrab
 			end
-			if carry.LockCamera then
+			if carry.LockCamera and not (Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual()) then
 				local cam = workspace.CurrentCamera
 				if cam then
 					pcall(function()
@@ -4874,7 +4879,7 @@ local GetScrambleTradeStatusFn = nil
 		local cam = workspace.CurrentCamera
 		local camSaved = nil
 		local function FreezeCam()
-			if not carry.LockCamera or camSaved or not cam then
+			if not carry.LockCamera or (Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual()) or camSaved or not cam then
 				return
 			end
 			camSaved = { Type = cam.CameraType, CFrame = cam.CFrame }
@@ -6680,6 +6685,263 @@ local GetScrambleTradeStatusFn = nil
 			end)
 		end)
 	end
+	-- BEGIN BUILTIN STEAL VISUAL
+	-- Sena t46._showTreadmillDecoy / _hideTreadmillDecoy (7275-7455).
+	-- Presentation only: never move the real rig or change carry/deposit remotes.
+	do
+		local visual, retryAt = nil, 0
+		local bindName = "N3SafeZoneVisual_" .. tostring(math.random(1000000, 9999999))
+		local safeFrame = CFrame.new(544.76, 71.5, -416.48)
+
+		local function VisualWanted()
+			local owner = Engine.Movement.Owner
+			return not LibraryLoader.Unloaded
+				and not Engine.Disposed
+				and IsStealActive() == true
+				and not RaceOwnsCharacter()
+				and (owner == nil or owner == "steal")
+		end
+
+		Engine.IsSafeZoneVisual = function()
+			return visual ~= nil
+		end
+
+		Engine.StopSafeZoneVisual = function()
+			local state = visual
+			if not state then
+				return
+			end
+			visual = nil
+			RunService:UnbindFromRenderStep(bindName)
+			for _, connection in ipairs(state.Connections) do
+				connection:Disconnect()
+			end
+			for instance, saved in pairs(state.Hidden) do
+				pcall(function()
+					instance[saved.Property] = saved.Value
+				end)
+			end
+			local character = LocalPlayer.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			for camera, saved in pairs(state.Cameras) do
+				pcall(function()
+					-- Do not replace a camera subject acquired by another system.
+					if camera.CameraSubject == state.Humanoid then
+						camera.CameraSubject = humanoid or saved.Subject
+						if camera.CameraType == Enum.CameraType.Custom then
+							camera.CameraType = saved.Type
+						end
+					end
+				end)
+			end
+			state.Decoy:Destroy()
+		end
+
+		local function HideVisual(state, instance)
+			if not instance:IsDescendantOf(state.Character) then
+				return
+			end
+			local property, hidden
+			if instance:IsA("BasePart") then
+				property, hidden = "LocalTransparencyModifier", 1
+			elseif instance:IsA("Trail") or instance:IsA("Beam") or instance:IsA("ParticleEmitter") then
+				property, hidden = "Enabled", false
+			end
+			if property then
+				if not state.Hidden[instance] then
+					state.Hidden[instance] = { Property = property, Value = instance[property], Hidden = hidden }
+				end
+				instance[property] = hidden
+			end
+		end
+
+		local function HideStealPopup(state, instance)
+			-- Same named popups as Sena, but reversible instead of Destroy().
+			if instance:IsA("GuiObject") and (instance.Name == "SpeedGainPopup" or instance.Name == "PlusOne") then
+				if not state.Hidden[instance] then
+					state.Hidden[instance] = { Property = "Visible", Value = instance.Visible, Hidden = false }
+				end
+				instance.Visible = false
+			end
+		end
+
+		local function UpdateVisual()
+			local state = visual
+			if not state then
+				return
+			end
+			if
+				not VisualWanted()
+				or LocalPlayer.Character ~= state.Character
+				or state.Root.Parent ~= state.Character
+				or state.Character:FindFirstChildOfClass("Humanoid") ~= state.RealHumanoid
+				or state.RealHumanoid.Health <= 0
+				or not state.Decoy.Parent
+				or not state.Humanoid.Parent
+			then
+				Engine.StopSafeZoneVisual()
+				return
+			end
+			-- Cached descendants only; no workspace/GUI traversal or clones per frame.
+			for instance, saved in pairs(state.Hidden) do
+				if not instance.Parent then
+					state.Hidden[instance] = nil
+				elseif instance[saved.Property] ~= saved.Hidden then
+					instance[saved.Property] = saved.Hidden
+				end
+			end
+			local camera = Workspace.CurrentCamera
+			if camera then
+				if not state.Cameras[camera] then
+					state.Cameras[camera] = { Subject = camera.CameraSubject, Type = camera.CameraType }
+				end
+				if camera.CameraType ~= Enum.CameraType.Custom then
+					camera.CameraType = Enum.CameraType.Custom
+				end
+				if camera.CameraSubject ~= state.Humanoid then
+					camera.CameraSubject = state.Humanoid
+				end
+			end
+		end
+
+		local function CreateVisual(cycle)
+			local character = cycle.Character
+			local archivable = character.Archivable
+			character.Archivable = true
+			local ok, decoy = pcall(character.Clone, character)
+			character.Archivable = archivable
+			if not ok or not decoy then
+				return false
+			end
+			-- Assign ownership before setup so a failed setup can be fully cleaned.
+			local state = {
+				Character = character,
+				Root = cycle.Root,
+				RealHumanoid = cycle.Humanoid,
+				Decoy = decoy,
+				Connections = {},
+				Hidden = setmetatable({}, { __mode = "k" }),
+				Cameras = setmetatable({}, { __mode = "k" }),
+			}
+			visual = state
+			decoy.Name = "__N3SafeZoneVisual"
+			for _, instance in ipairs(decoy:GetDescendants()) do
+				if
+					instance:IsA("LuaSourceContainer")
+					or instance:IsA("Sound")
+					or instance:IsA("BillboardGui")
+					or instance:IsA("SurfaceGui")
+					or instance:IsA("Trail")
+					or instance:IsA("Beam")
+					or instance:IsA("ParticleEmitter")
+					or instance:IsA("ProximityPrompt")
+					or instance:IsA("Tool")
+					or instance:IsA("Constraint")
+					or instance:IsA("BodyMover")
+				then
+					instance:Destroy()
+				elseif instance:IsA("JointInstance") or instance:IsA("WeldConstraint") then
+					local part0, part1 = instance.Part0, instance.Part1
+					if (part0 and not part0:IsDescendantOf(decoy)) or (part1 and not part1:IsDescendantOf(decoy)) then
+						instance:Destroy()
+					end
+				elseif instance:IsA("BasePart") then
+					instance.LocalTransparencyModifier = 0
+					instance.Anchored = true
+					instance.CanCollide, instance.CanTouch, instance.CanQuery = false, false, false
+				end
+			end
+			local humanoid = decoy:FindFirstChildOfClass("Humanoid")
+			local root = decoy:FindFirstChild("HumanoidRootPart")
+			if not humanoid or not root then
+				Engine.StopSafeZoneVisual()
+				return false
+			end
+			state.Humanoid = humanoid
+			humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+			humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+			decoy:PivotTo(safeFrame * cycle.Root.CFrame.Rotation)
+			decoy.Parent = Workspace
+			for _, instance in ipairs(character:GetDescendants()) do
+				HideVisual(state, instance)
+			end
+			state.Connections[#state.Connections + 1] = character.DescendantAdded:Connect(function(instance)
+				if visual == state then
+					HideVisual(state, instance)
+				end
+			end)
+			state.Connections[#state.Connections + 1] = cycle.Humanoid.Died:Connect(Engine.StopSafeZoneVisual)
+			local gui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+			if gui then
+				for _, instance in ipairs(gui:GetDescendants()) do
+					HideStealPopup(state, instance)
+				end
+				state.Connections[#state.Connections + 1] = gui.DescendantAdded:Connect(function(instance)
+					if visual == state then
+						HideStealPopup(state, instance)
+					end
+				end)
+			end
+			-- Before Roblox's camera: retain mouse orbit/zoom instead of freezing CFrame.
+			RunService:BindToRenderStep(bindName, Enum.RenderPriority.Camera.Value - 1, UpdateVisual)
+			UpdateVisual()
+			return true
+		end
+
+		Engine.StartSafeZoneVisual = function(cycle)
+			-- Normal and Instant share this presentation; neither gets a new worker.
+			if not cycle then
+				local character = LocalPlayer.Character
+				cycle = character
+						and {
+							Character = character,
+							Root = character:FindFirstChild("HumanoidRootPart"),
+							Humanoid = character:FindFirstChildOfClass("Humanoid"),
+						}
+					or nil
+			end
+			if not cycle or not cycle.Root or not cycle.Humanoid or cycle.Humanoid.Health <= 0 then
+				return false
+			end
+			if not VisualWanted() or Engine.Guard.Disguise then
+				return false
+			end
+			if visual and visual.Character == cycle.Character and visual.RealHumanoid == cycle.Humanoid then
+				return true -- Reuse across normal/Instant cycles, including return/re-grab.
+			end
+			Engine.StopSafeZoneVisual()
+			if os.clock() < retryAt then
+				return false
+			end
+			local ok, result = pcall(CreateVisual, cycle)
+			if not ok or not result then
+				retryAt = os.clock() + 5
+				Engine.StopSafeZoneVisual()
+				warn("[N3 HUB] Safe-zone visual unavailable; steal continues: " .. tostring(result))
+				return false
+			end
+			retryAt = 0
+			return true
+		end
+
+		-- All accepted steal movement (normal, Instant and carried-egg retry) enters here.
+		local claimMovement = Engine.ClaimMovement
+		Engine.ClaimMovement = function(owner, ...)
+			local accepted = claimMovement(owner, ...)
+			if accepted and owner == "steal" then
+				Engine.StartSafeZoneVisual()
+			end
+			return accepted
+		end
+
+		local cancelNormalSteal = Engine.CancelAutoSteal
+		Engine.CancelAutoSteal = function(...)
+			Engine.StopSafeZoneVisual()
+			return cancelNormalSteal(...)
+		end
+		LibraryLoader:OnUnload(Engine.StopSafeZoneVisual)
+	end
+	-- END BUILTIN STEAL VISUAL
 	local DeliverEggToBase
 	Engine.DeliverEggToBaseSafe = function(sessionId)
 		local prev = Engine.Carry.LineDrop
@@ -6719,7 +6981,7 @@ local GetScrambleTradeStatusFn = nil
 			task.wait(tonumber(carry.CarryReact) * 0.1)
 		end
 		local camSaved = nil
-		if carry.LockCamera then
+		if carry.LockCamera and not (Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual()) then
 			local cam = workspace.CurrentCamera
 			if cam then
 				camSaved = { Type = cam.CameraType, CFrame = cam.CFrame }
@@ -6933,7 +7195,7 @@ local GetScrambleTradeStatusFn = nil
 				Engine.State.BlockList[target.Uid] = os.clock() + Engine.Carry.BlockSeconds
 				return
 			end
-			if Engine.Carry.LockCamera then
+			if Engine.Carry.LockCamera and not (Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual()) then
 				local cam = workspace.CurrentCamera
 				if cam then
 					pcall(function()
@@ -6946,14 +7208,14 @@ local GetScrambleTradeStatusFn = nil
 			if not got then
 				Engine.State.BlockList[target.Uid] = os.clock() + Engine.Carry.BlockSeconds
 				local cam = workspace.CurrentCamera
-				if cam and Engine.Carry.LockCamera then
+				if cam and Engine.Carry.LockCamera and not (Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual()) then
 					pcall(function()
 						cam.CameraType = Enum.CameraType.Custom
 					end)
 				end
 				return
 			end
-			if Engine.Carry.LockCamera then
+			if Engine.Carry.LockCamera and not (Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual()) then
 				local cam = workspace.CurrentCamera
 				if cam then
 					pcall(function()

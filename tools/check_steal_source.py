@@ -6,13 +6,14 @@ Instant/Line Drop, N3 movement, swap and filter boundaries against source.
 from pathlib import Path
 import hashlib
 import re
+from steal_visual_scope import strip_builtin_visual
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 GAME = "Games/Steal-An-Egg.lua"
 BASELINE = "70815545b65678915dc76d538cb2ce20c604f6f1"
 REFERENCE_BLOB = "a36898ee403cacf3aa9742bfb9f9270f867cb765"
-runtime = (ROOT / GAME).read_text()
+runtime = strip_builtin_visual((ROOT / GAME).read_text())
 reference = (ROOT / "Games/Source/StealAnEgg/SenaV2.lua").read_bytes()
 blob = hashlib.sha1(b"blob " + str(len(reference)).encode() + b"\0" + reference).hexdigest()
 assert blob == REFERENCE_BLOB, "Sena reference changed: review source and update docs/baseline intentionally"

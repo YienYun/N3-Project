@@ -39,9 +39,9 @@ Line numbers below refer to the unchanged Sena reference.
 ## Movement and character dependencies
 
 - **Egg approach stays N3:** `FlyToPosition -> RunPace`, including its existing
-  pace, climb arc, velocity/CFrame style, camera behavior, guard-busy yield and
+  pace, climb arc, velocity/CFrame style, guard-busy yield and
   plot-exit reposition. This helper was also checked against the initial
-  `67d91fd` version. `RunPace` itself is unchanged from `7081554`.
+  `67d91fd` version. `RunPace` movement is unchanged; its old camera freeze yields only while the built-in decoy is active.
 - `FlyToPosition` has one optional fifth argument for the separate normal speed
   cap. Old four-argument Instant callers retain their previous behavior.
 - Normal slider remains **100–1000, default 400**, separate from the Instant
@@ -62,10 +62,12 @@ Line numbers below refer to the unchanged Sena reference.
 - Arrival holds/hover pad/baseline updates are cycle-scoped. Egg approach uses
   N3 without that pad; delivery/re-grab uses the source support geometry.
   A normal worker yields when an optional N3 guard dodge is already busy.
-- The cosmetic Sena treadmill decoy/camera hiding and popup suppression are
-  intentionally omitted. N3's existing optional Anti Trap remains user-owned,
-  rather than importing Sena's always-on trap purge. N3 retains its camera, UI
-  and other automations.
+- Sena-style safe-zone decoy/camera hiding and reversible popup suppression are
+  now built into normal **and Instant/Line Drop** stealing, without a new toggle.
+  The user confirmed the normal test version works and feels lighter on their
+  phone; its shared Instant integration still needs live validation. See
+  `auto-steal-visual.md` for lifecycle, source mapping and scoped camera changes.
+  Existing optional Anti Trap remains user-owned; no always-on trap purge is imported.
 - The capture-event egg is excluded from normal selection, as in Sena. If one
   is already carried, normal stealing yields rather than banking/dropping it.
 

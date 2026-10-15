@@ -6,9 +6,10 @@ Intentional future changes to those protected blocks require a separate review.
 from pathlib import Path
 import hashlib
 import re
+from steal_visual_scope import strip_builtin_visual
 
 ROOT = Path(__file__).resolve().parents[1]
-runtime = (ROOT / "Games/Steal-An-Egg.lua").read_text()
+runtime = strip_builtin_visual((ROOT / "Games/Steal-An-Egg.lua").read_text())
 reference = ROOT / "Games/Source/StealAnEgg/ChiliSourceV2.lua"
 assert hashlib.sha256(reference.read_bytes()).hexdigest() == "0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d", "Chili V2 reference changed"
 
@@ -101,5 +102,5 @@ for field in ("Status", "Tokens", "Wins", "Racer"):
 assert runtime.count('"Slider_Race_Speed"') == 1
 assert runtime.count('"Toggle_Race_AutoRace"') == 1
 print("PASS: Chili V2 reference, race source contracts, single controller, semantic names, UI and cancellation boundaries.")
-print("PASS: 8 pre-existing Sena/N3 swap, filters, approach, normal, Instant and Line Drop blocks are byte-identical.")
+print("PASS: 8 pre-existing gameplay blocks are byte-identical after excluding reviewed presentation additions.")
 print("Static checks only: no Roblox execution, simulation, server-win or FPS claim.")

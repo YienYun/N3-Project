@@ -52,3 +52,19 @@ Read this before changing `Steal-An-Egg.lua`.
 - Never install a second race worker or copy decompiler names into the runtime.
 - Run `python tools/check_race_source.py` and compile the complete game file.
   This checker protects pre-race Sena/Instant/swap/filter/movement fingerprints.
+
+## Built-in safe-zone steal visual
+
+- The user approved the standalone visual experiment live and requested promotion.
+  There is no separate V2 game file, test title, visual toggle or config opt-in.
+- One shared visual starts on accepted `ClaimMovement("steal")`, covering normal,
+  Instant/Line Drop and already-carried retry lanes. Reuse the decoy across cycles.
+- Preserve the actual normal/Instant movement, pickup and deposit workflows.
+  Only old camera freezing and cosmetic guard disguise yield to the decoy.
+- Do not compete with race/other movement owners; restore cached presentation,
+  camera and connections on cancellation/death/character change/unload.
+- Run `python tools/check_steal_visual.py` and the race checker, then compile.
+  The shared normalizer removes only reviewed visual bodies/camera predicates so
+  gameplay boundaries can still be compared with the pre-promotion version.
+- See `../docs/auto-steal-visual.md`. Normal's test was user-confirmed; do not claim
+  the new Instant integration has been live-tested or benchmarked by the agent.

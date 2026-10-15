@@ -53,7 +53,8 @@ Lap/win success comes from game attributes/save, not local path distance.
   the race because a higher-ranked toggle is merely enabled. There is still a
   three-second egg inspection interval when a join window is first seen.
 - Normal Sena code, health/swap implementation, filters, approach, Instant and
-  Line Drop bodies remain byte-identical. Race-only adapters temporarily yield
+  Line Drop gameplay remains unchanged apart from the separately documented
+  built-in safe-zone visual/camera gates. Race-only adapters temporarily yield
   their shared movement/health preparation; no Anti Guard preference is changed.
 - N3 recovery, movement override, trap/ragdoll, night and character-recovery
   callbacks yield while race owns the rig. In particular they no longer clear a
@@ -78,8 +79,8 @@ Lap/win success comes from game attributes/save, not local path distance.
   values over 160 are clamped, not silently allowed at 300/400.
 - Source feature defaults are preserved: Auto Race/Claim/Buy OFF, power-ups and
   auto equip ON, Best Owned selected. Speed/power-up, racer and shop-item controls
-  are nested under their respective toggles. Status includes heat, phase and
-  effective (possibly reduced) speed for live diagnosis.
+  are nested under their respective toggles. Only Status and Tokens/Wins/Racer
+  are displayed; the heat/phase/effective-speed diagnostic row was removed.
 
 ## Validation and limits
 
