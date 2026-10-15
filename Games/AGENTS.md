@@ -194,10 +194,11 @@ Read this before changing `Steal-An-Egg.lua`.
   excluded; Wisp fusion can consume mutated unfavorited pets, as documented.
 - Keep pending consumption across OFF/ON; no blind ambiguous BeginFuse retry.
   Never clear shared IsExecuting or touch a newer character/owner in cleanup.
-- User rejected Wisp's immediate NPC/plot TP in live testing. Use shared quest-only
-  continuous tween approach, then six-stud arrival; no destination TP. This is an
-  explicit replacement for source RagdollTravel/pivot fallback, not a claim Chili
-  uses only tween. Keep daylight, race/generation gates and N3 egg movement intact.
+- User rejected BOTH premature TP (4d2db61) and custom world tween (47e1483,
+  repeated death). They want Chili's actual logic, not an interpretation of the
+  word tween. Follow Wisp k() 41964–42056: >1200 RagdollTravel, >40 source pivot
+  fallback, short MoveTo. Never route Wisp through general FlyTo/Approach again.
+  Read ../docs/quest-ragdoll-transport.md and the whole dependency 5414–5567.
 - Run `tools/check_wisp_source.py`, all seven prior checkers and full production
   Luau compile. Exactly seven insertion sites reverse byte-for-byte to 3748a3e;
   historical checks strip Wisp first without replacing any prior expected hashes.
@@ -222,7 +223,9 @@ Read this before changing `Steal-An-Egg.lua`.
   quest transit below: tween to entrance, actual prompt/attribute entry, vertical
   rise to hint.Y+18, horizontal flight to hint+18, END flight and naturally fall.
   Source-speed-60 flight for mushrooms, Jitterbug and SecretRoomExit; separate
-  ExitTrigger flight/short walk to leave. No destination TP or reset fallback.
+  ExitTrigger flight/short walk to leave. TreeTrip's actual >500 RagdollTravel,
+  >60 flight, >30 local prompt pivot and late exit pivot/retry are now restored;
+  do not omit the shared dependency or mislabel source pivots as tween.
 - Scope native inventory/fusion actions and normal/Instant activity through the
   existing adapters; preserve preferences and restore only owned adapters.
   Late cleanup requires the same living actor/root/humanoid and `banjo` owner,
@@ -242,12 +245,19 @@ Read this before changing `Steal-An-Egg.lua`.
   PlatformStand flight (40119–40175), Banjo velocity/ghost/EndFlight helpers
   (14990–15210), and full TreeTrip entry/exit (72155–72421). See current Banjo doc.
 - One shared lease-scoped helper runs inside existing quest workers; never add a
-  new swap or movement worker. It owns temporary heartbeat/stepped connections
+  new swap or movement worker. The actual RagdollTravel dependency takes a nearby
+  field egg, calls its real guard strike, observes RagdollEndTime, drops the egg
+  and holds the destination during that window. Never replace it with world tween. It owns temporary heartbeat/stepped connections
   only while flying, restoring captured state only on the same owned actor.
 - The two tiny MobilityRecoveryHeartbeat / DefenseHeartbeat guards apply ONLY
-  during owned active quest flight, so native recovery cannot dismantle it.
+  during owned active quest flight/ragdoll, so native recovery cannot dismantle it.
   User toggles remain unchanged; source race/normal/Instant bodies stay protected.
 - `tools/quest_transit_scope.py` reverses exactly the helper, Wisp travel replacement
   and those two guards before existing Banjo/Wisp normalization. Never change old
   expected hashes to hide unrelated changes. Run `check_quest_transit_source.py`
   with all nine prior checkers and full compilation. No live success/FPS claim.
+
+- Latest user rejection: 47e1483's Wisp tween killed them repeatedly. See the
+  source-transport doc; retain the actual >1200 / >40 caller order and complete
+  source carry/guard/window dependency. N3 recovery/RigSync gating is lifecycle
+  integration, not permission to invent a travel path. No live success claim.

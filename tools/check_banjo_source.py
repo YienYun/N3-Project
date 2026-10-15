@@ -37,7 +37,7 @@ for contract in (
     'generation ~= state.Generation', 'LocalPlayer.Character == character', 'engine.Movement.Owner == "banjo"',
     'and not raceWanted()', 'character:GetAttribute("InvisApplied")', 'local higher = higherTask()',
     'return higher or not safe()', 'requestedGeneration ~= state.Generation', 'Tasks.PriorityCanRun("Essence")', 'GetNightAndWallStatus().ShouldRetreat',
-    'transit:Approach(position + Vector3.new(0, 3, -12)', 'transit:FlyTo(leapRoute, 120',
+    'local approach = position + Vector3.new(0, 3, -12)', 'transit:FlyTo(leapRoute, 120',
     'transit:FlyTo(stance, 60', 'engine.SetVelocity(root, Vector3.zero)',
     'prompt:InputHoldBegin()', 'pcall(prompt.InputHoldEnd, prompt)', 'prompt.MaxActivationDistance',
     'state.ClaimPending = "Claiming Cricket\'s Banjo", true', 'if ok and reply == false then state.ClaimPending = false end',
@@ -51,7 +51,8 @@ assert s.count('"Toggle_Banjo_Auto"') == 1
 assert s.count(QUEST_TABS) == 1
 assert 'Tasks.BuildBanjoUI(questTabs)' in QUEST_TABS
 assert re.findall(r'Text = "([^"]+)"', n) == ['Auto Banjo Cricket']
-assert 'RunPace(' not in n and 'FlyToPosition(' not in n and 'RagdollTravel(' not in n
+assert 'RunPace(' not in n and 'FlyToPosition(' not in n
+assert 'transit:RagdollTravel(' in n, 'TreeTrip must retain the source long-distance dependency'
 assert 'CanCollide =' not in n and 'PlatformStand =' not in n and ':ChangeState(' not in n
 for pattern in (r'FarmConfig\.(?!Banjo_Auto\b)\w+\s*=(?!=)', r'RuntimeState\.\w+\s*=(?!=)'):
     assert not re.search(pattern, n), f'Banjo forces unrelated settings/runtime flags: {pattern}'

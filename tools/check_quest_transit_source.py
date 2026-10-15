@@ -35,13 +35,16 @@ assert q.count('RunService.Heartbeat:Connect(') == 1
 assert q.count('RunService.Stepped:Connect(') == 1
 assert 'task.spawn(' not in q and 'Instance.new(' not in q, 'No new movement worker or swap/flight rig'
 for scope in (q, w, b):
-    assert ':PivotTo(' not in scope, 'No destination teleport in quest transport'
     assert ':BreakJoints(' not in scope and '.Health = 0' not in scope, 'No automatic quest reset'
 assert 'Tasks.NewQuestTransit("wisp", character, humanoid, root' in w
-assert 'transit:Approach(position' in w and 'humanoid:MoveTo(position)' in w
+assert 'transit:Approach(' not in w, 'Wisp must use its own source transport, not the general FlyTo route'
+assert 'transit:RagdollTravel(' in w and 'humanoid:MoveTo(position)' in w
+assert w.index('Magnitude > 1200') < w.index('transit:RagdollTravel(') < w.index('Magnitude > 40') < w.index('character:PivotTo(') < w.index('humanoid:MoveTo(position)')
 assert 'Tasks.NewQuestTransit("banjo", character, humanoid, root' in b
 assert 'and (finishing or (enabled() and generation == state.Generation))' in b
-assert 'transit:Approach(position + Vector3.new(0, 3, -12)' in b
+assert 'local approach = position + Vector3.new(0, 3, -12)' in b
+entry = b[b.index('local function enterTree()'):b.index('local function enterRoom()')]
+assert entry.index('Magnitude > 500') < entry.index('transit:RagdollTravel(') < entry.index('Magnitude > 60') < entry.index('transit:Approach(') < entry.index('Magnitude > 30') < entry.index('character:PivotTo(')
 assert 'local above = position + Vector3.new(0, 18, 0)' in b
 rise = b.index('local leapRoute = { Vector3.new(root.Position.X, above.Y, root.Position.Z), above }')
 cross = b.index('transit:FlyTo(leapRoute, 120')
@@ -57,7 +60,27 @@ for method, label in [('MobilityRecoveryHeartbeat', 'MOBILITY GUARD'), ('Defense
     function = s[s.index('function Tasks.' + method + '()'):]
     assert function.startswith('function Tasks.' + method + '()\n\t-- BEGIN QUEST TRANSIT ' + label)
     assert 'if Tasks.QuestTransitOwnsActor and Tasks.QuestTransitOwnsActor() then return end' in function[:350]
-print('PASS: exact historical boundaries; shared, lease-scoped Wisp/Banjo transport and only two native recovery guards.')
-print('PASS: dt-scaled tween approach, source velocity room legs, rise/cross/release/fall sequence; no destination TP/reset.')
+r = q[q.index('function transit:RagdollTravel('):q.index('function transit:Settle(')]
+for contract in (
+    'selectTravelEgg(root.Position, {})', 'RE/GuardPatrol/ForestStrike',
+    'self.Active, self.Ragdoll, active = true, true, self', 'Tasks.ResumeRaceRigSync()',
+    'states[state] = humanoid:GetStateEnabled(state)', 'humanoid:SetStateEnabled(state, true)',
+    'for _ = 1, 3 do', 'elapsed < 2.5', 'candidate.At + Vector3.new(0, 3, 0)',
+    'pcall(EggStateModule.CarryFieldEgg, candidate.Uid, candidate.Slot)',
+    'elapsed > 0.4', '"closer"', 'excluded[candidate.Uid] = true',
+    'GetAttributeChangedSignal("RagdollEndTime")', 'landed = snap(destination)',
+    'strike:FireServer({ EggUid = taken.Uid, GuardCFrame = taken.Guard.CFrame })',
+    'os.clock() + 3', 'dropTaken()', '"PlayerRequest"',
+    'while (tonumber(LocalPlayer:GetAttribute("RagdollEndTime")) or 0) > Workspace:GetServerTimeNow()',
+    'not self.Ragdoll or not self.Owns()', 'dropSent = true', 'if held and self.Owns() then',
+    'RunService.Heartbeat:Wait()', 'if released then return end', 'self.RagdollStop()',
+):
+    assert contract in r, f'Missing actual Chili RagdollTravel dependency: {contract}'
+assert r.index('strikeConnection = LocalPlayer:GetAttributeChangedSignal') < r.index('strike:FireServer(')
+assert r.index('strike:FireServer(') < r.index('while not landed') < r.index('if not landed then return false')
+assert 'self:Approach(' not in r and 'self:FlyTo(' not in r, 'RagdollTravel is not free flight or a tween alias'
+assert 'return visible or nearest' in q and 'record.CarrierUserId' in q
+print('PASS: exact historical boundaries; shared, lease-scoped Wisp/Banjo transport and only the two existing quest recovery guards.')
+print('PASS: source Wisp >1200 ragdoll / >40 fallback, TreeTrip >500 ragdoll / >60 flight / >30 fallback, and aerial room route.')
 print('PASS: connections/temporary collision/platform cleanup, current actor checks and race-first cancellation.')
 print('Static source evidence only. The previous live failure is not invalidated; corrected routes still need user testing.')

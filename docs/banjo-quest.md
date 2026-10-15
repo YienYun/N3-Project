@@ -3,7 +3,9 @@
 **Live report:** the user rejected build `4d2db61`: Banjo did not work, direct TP
 was unwanted, and interior travel went into water / repeatedly returned to the
 start. The former walk/pathfinding + Lift adaptation is withdrawn, not treated
-as successful because it compiled. The repair below still requires live testing.
+as successful because it compiled. Build `47e1483` was also rejected: its custom Wisp tween repeatedly killed the
+user. [The actual RagdollTravel dependency](quest-ragdoll-transport.md) is now
+ported; neither previous build is live-confirmed. This correction needs live testing.
 
 UI remains **Home → Quests → Wisp / Banjo**, one collapsible/icon group and one
 nested tabbox. Banjo has a music icon, one default-OFF toggle and one status row.
@@ -56,41 +58,36 @@ needed. Banjo's room flight (14990–15210) instead uses a **dt-capped physical
 velocity**, temporary collision suppression, PlatformStand/Freefall and explicit
 EndFlight (40119–40175). Both dependencies matter; ordinary MoveTo is not a port.
 
-## Repair and remaining intentional differences
+## Current transport correction and remaining differences
 
-- Wisp NPC/plot travel and Banjo tree approach share one **quest-only** transport
-  helper, called inside the existing worker / exclusive wisp or banjo lease.
-  Outside approaches use source-style continuous CFrame tween legs at 120;
-  separation-line routing maps StealHome to N3's existing GetBaseSafeSpot.
-  **No destination PivotTo, automatic death/reset, imported swap, or second worker.**
-- User explicitly requested tween rather than TP. Wisp's original source actually
-  has a long-distance RagdollTravel path and a >40-stud pivot fallback; the new
-  continuous approach intentionally replaces those. TreeTrip's raw entry/exit TP
-  fallbacks are also omitted. This is not claimed to be a byte-identical port.
-- Secret Leap now follows the source's rise → cross → end flight → natural fall
-  sequence. Flight stays active across intermediate waypoints, including while
-  the worker is checking priority; it is not released after the vertical leg. Mushroom/NPC/room-exit legs use source-style velocity at 60. Final
-  prompt/exit walking is short only; ground pathfinding and Lift are removed.
-- Scoped flight connections preserve/restore captured collision and PlatformStand
-  only for the same living character/humanoid/root and current lease, respecting
-  user Noclip. They disconnect on completion, failure, OFF, race preemption,
-  respawn or unload. No actor writes after a newer owner/actor takes over.
-- Two tiny native recovery guards are necessary: MobilityRecoveryHeartbeat and
-  DefenseHeartbeat must not undo PlatformStand/velocity while this helper owns
-  active quest flight. Outside those flights their original behavior remains.
-  Normal/Instant, visual, race, seller, mutation, hatch and fusion logic is retained.
-- Race still goes first; native priority order and all user preferences remain.
-  Only idle jobs may start. OFF stops note/claim work and allows bounded exit
-  cleanup only before actor/race takeover. A sent request cannot be recalled.
-- Notes are validated indices 1–5; Playback/Wrong/Reset invalidate old sequences,
-  including during travel/cooldown. Ack serials must be newer than the swing.
-  The cooldown is checked before Aim to keep Aim/Activate adjacent in N3.
-- **Done requires Save.BanjoCricket.Claimed**, not just a true request reply or
-  local arrival. Unknown claim outcomes stay pending across OFF/ON; explicit
-  server false permits retry. An unresolved request may require manual NPC/save
-  checking or rejoining rather than duplicate reward requests.
-- Exit remains best effort; an unconfirmed passage is reported in status, not
-  represented as a successful exit. No raw outside TP is used to conceal failure.
+- **Wisp does not call general FlyTo.** Its source caller uses >1200
+  RagdollTravel, then >40 pivot fallback, then short MoveTo. The custom Wisp
+  continuous tween was an incorrect substitution and is removed. Read the
+  [complete source dependency mapping](quest-ragdoll-transport.md).
+- TreeTrip now uses >500 RagdollTravel (up to two attempts) → settle → >60 FlyTo
+  → local prompt loop with >30 pivot fallback. The source exit pivot and final
+  ExitTrigger retry are restored. Earlier removal of these source fallbacks
+  based on interpreting the user's word 'tween' was incorrect.
+- RagdollTravel actually takes an eligible nearby field egg, calls its guard
+  strike, waits for the real RagdollEndTime signal, drops the temporary egg, and
+  holds the destination during the real ragdoll window. It is not a tween alias.
+  No invented guard payload or manually-set ragdoll signal.
+- The shared helper still runs within existing quest workers and native leases.
+  No second swap/worker or race-controller rewrite. N3-owned RigSync and captured
+  humanoid state restoration replace Chili's armed-hit recovery exemption;
+  recovery is suppressed only during owned flight/ragdoll. User flags stay unchanged.
+- The existing raised FlyTo legs remain for TreeTrip's source flight branch,
+  not Wisp's NPC travel. Secret Leap keeps one uninterrupted rise/cross flight
+  until hint +18, then releases flight for the natural fall. Room legs remain
+  source-speed-60 velocity motion, actual server notes and bat activations.
+- N3 actor/generation/owner/race cancellation remains stricter than source
+  cleanup. Temporary state and signal connections restore only under the same
+  actor/owner; a sent RPC cannot be recalled. No arbitrary health-zero reset.
+- Done still requires **Save.BanjoCricket.Claimed**, not a local route return or
+  true reply alone. Unknown dispatches stay pending across OFF/ON; explicit false
+  permits retry. This conservative policy differs from Chili's reply shortcut.
+- Progression, egg/guard strike, both exit passages and absence of death still
+  need actual in-game verification. Prior user failures remain recorded.
 
 ## Validation
 
