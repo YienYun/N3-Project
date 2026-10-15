@@ -190,6 +190,8 @@ Remotes.RemoteFuseBegin = NetFolder:FindFirstChild("RF/Fusery/BeginFuse")
 Remotes.RemoteFuseFinish = NetFolder:FindFirstChild("RF/Fusery/FinishReveal")
 	or FindRemote("RF/Fusery/FinishReveal", "FinishReveal")
 Remotes.RemoteFuseEject = NetFolder:FindFirstChild("RF/Fusery/EjectPet") or FindRemote("RF/Fusery/EjectPet", "EjectPet")
+Remotes.RemoteTreadmillWear = FindRemote("RF/Treadmill/AskWearStill", "AskWearStill")
+Remotes.RemoteTreadmillSpeedGained = FindRemote("RE/Treadmill/SpeedGained", "SpeedGained")
 Remotes.RemoteTreadmillDoff = FindRemote("RF/Treadmill/AskDoff", "AskDoff")
 Remotes.RemoteTreadmillUpgrade = FindRemote("RF/Treadmill/AskTierRaise", "Treadmills: RequestUpgrade", "AskTierRaise")
 Remotes.RemoteTrailPurchase = FindRemote("RF/Trailwear/AskPurchase", "Trailwear: RequestPurchase", "AskPurchase")
@@ -3015,30 +3017,49 @@ local function ResolveGameAsset(rawCat)
 end
 local CachedScrambleState = {}
 local CachedScrambleReqs = {}
-local LastScrambleReqFetch = 0
+local GetScrambleTradeStatusFn = nil
+local LastScrambleReqFetch = -math.huge
+Tasks.LabState = { FetchBusy = false, ActionBusy = false, Revision = 0, NextActionAt = 0, StateAt = -math.huge }
+function Tasks.InvalidateLabState()
+	Tasks.LabState.Revision += 1
+	Tasks.LabState.StateAt = -math.huge
+	CachedScrambleState = {}
+	CachedScrambleReqs = {}
+	LastScrambleReqFetch = -math.huge
+	table.clear(RuntimeState.ScrambleWanted)
+	table.clear(RuntimeState.ScrambleReserved)
+end
 local function RefreshScrambleState(forceRefresh)
-	local now = os.clock()
-	if not forceRefresh and next(CachedScrambleState) ~= nil and (now - LastScrambleReqFetch) < 10.0 then
+	local lab, now = Tasks.LabState, os.clock()
+	-- Even a forced UI refresh respects the network throttle/single flight.
+	if LibraryLoader.Unloaded or lab.FetchBusy or (now - LastScrambleReqFetch) < 1 then
 		return CachedScrambleState
 	end
 	if not Remotes.RemoteScrambleTradeState then
 		return CachedScrambleState
 	end
+	lab.FetchBusy = true
+	LastScrambleReqFetch = now
+	local revision = lab.Revision
 	local ok, state = pcall(function()
 		return Remotes.RemoteScrambleTradeState:InvokeServer()
 	end)
+	lab.FetchBusy = false
+	if LibraryLoader.Unloaded or revision ~= lab.Revision then
+		return CachedScrambleState
+	end
 	if ok and type(state) == "table" then
 		CachedScrambleState = state
-		if type(state.Requirements) == "table" and #state.Requirements > 0 then
-			CachedScrambleReqs = state.Requirements
-		end
-		LastScrambleReqFetch = now
-		if state.PendingReward and Remotes.RemoteScrambleFinishReveal then
-			pcall(function()
-				Remotes.RemoteScrambleFinishReveal:InvokeServer()
-			end)
-		end
+		-- An empty/locked recipe must erase the previous banner's requirements.
+		CachedScrambleReqs = type(state.Requirements) == "table" and state.Requirements or {}
+		lab.StateAt = os.clock()
+		table.clear(RuntimeState.ScrambleWanted)
+		table.clear(RuntimeState.ScrambleReserved)
+		if GetScrambleTradeStatusFn then pcall(GetScrambleTradeStatusFn) end
+	else
+		lab.StateAt = -math.huge
 	end
+	-- Fetching for the UI never trades, rerolls or claims a reveal.
 	return CachedScrambleState
 end
 local function GetScrambleState()
@@ -3119,7 +3140,8 @@ local function ShouldHoldBackScrambleEgg(rawCategory, rawUid)
 	if not FarmConfig.ScrambleHoldBack then
 		return false
 	end
-	if not (FarmConfig.AutoScrambleSubmit or FarmConfig.AutoScrambleSteal) then
+	if not (FarmConfig.AutoScrambleSubmit or FarmConfig.AutoScrambleSteal)
+		or not DrScramble.LabBannerAllowed(GetScrambleState()) then
 		return false
 	end
 	if rawUid and RuntimeState.ScrambleReserved[tostring(rawUid)] then
@@ -3176,9 +3198,7 @@ end
 pcall(function()
 	if Remotes.RemoteScrambleBannerRotated and Remotes.RemoteScrambleBannerRotated:IsA("RemoteEvent") then
 		Remotes.RemoteScrambleBannerRotated.OnClientEvent:Connect(function()
-			CachedScrambleState = {}
-			CachedScrambleReqs = {}
-			LastScrambleReqFetch = 0
+			Tasks.InvalidateLabState()
 		end)
 	end
 end)
@@ -3653,6 +3673,7 @@ local function CountPlayerHeldEggs(): number
 	return Total
 end
 function Tasks.ExecuteDepositEggs(OnlySelected: boolean)
+	if GetScrambleTradeStatusFn then pcall(GetScrambleTradeStatusFn) end
 	local Plot, PetArea = GetPlayerPlot()
 	if not PetArea or not Remotes.RemotePlaceEgg then
 		return 0
@@ -3687,7 +3708,7 @@ function Tasks.ExecuteDepositEggs(OnlySelected: boolean)
 			for UidKey, Rec in pairs(MyRecords) do
 				if Rec.Placement and Rec.Placement.LocalCFrame then
 					table.insert(ExistingPositions, (PetArea.CFrame * Rec.Placement.LocalCFrame).Position)
-				else
+				elseif not ShouldHoldBackScrambleEgg(Rec.AssetCategory or Rec.Category, UidKey) then
 					local RandCF = GenerateSafePenPosition(PetArea, ExistingPositions)
 					if RandCF then
 						local LocalCF = PetArea.CFrame:ToObjectSpace(RandCF)
@@ -4088,7 +4109,6 @@ function Tasks.SetupInstanInteract()
 	end)
 	InstanInteractActive = Bound ~= nil
 end
-local GetScrambleTradeStatusFn = nil
 (function()
 	local Engine = RuntimeState.StealEngine
 	local RawCache = {}
@@ -4239,20 +4259,11 @@ local GetScrambleTradeStatusFn = nil
 		return 0
 	end
 	local function IsScrambleTarget(cat, reqs)
-		if not reqs or #reqs == 0 then
-			return false
-		end
-		local clean = string.lower(tostring(cat)):gsub("%s*egg%s*", ""):gsub("%s", "")
-		if clean == "" then
-			return false
-		end
-		for _, w in ipairs(reqs) do
-			local cw = string.lower(tostring(w)):gsub("%s*egg%s*", ""):gsub("%s", "")
-			if clean == cw then
-				return true
-			end
-		end
-		return false
+		return FarmConfig.AutoScrambleSteal == true
+			and #reqs > 0
+			and GetScrambleState().Unlocked == true
+			and DrScramble.LabBannerAllowed(GetScrambleState())
+			and RuntimeState.ScrambleWanted[ScrambleCleanName(cat)] == true
 	end
 	function Tasks.IsEggUnsafe(pos, rec)
 		if pos.X < SafeBaseLineX + 5 then
@@ -7664,6 +7675,7 @@ local function GetSellablePets()
 	return matchedUids, totalPrice
 end
 local function GetSellableEggs()
+	if GetScrambleTradeStatusFn then pcall(GetScrambleTradeStatusFn) end
 	SetElevated8()
 	local rawEggs = nil
 	pcall(function()
@@ -7745,43 +7757,21 @@ local function ExecuteSellSelection(petUids, eggUids)
 		end
 	end
 end
-function Tasks.ScanTreadmillInPlot(PlotInstance: Instance)
-	if not PlotInstance then
-		return nil
+-- Chili V2 belt discovery: the plot's physical bottom precedes client decoration.
+function Tasks.ScanTreadmillInPlot(plot)
+	if not plot then return nil end
+	local bottom = plot:FindFirstChild("TreadmillBottom", true)
+	if bottom and bottom:IsA("BasePart") then return bottom end
+	local renders = Workspace:FindFirstChild("__ClientTreadmillRenders")
+	local render = renders and renders:FindFirstChild("TreadmillRender_" .. plot.Name)
+	if render then
+		local pad = render:FindFirstChild("BoundingBoxPart", true)
+			or (render:IsA("Model") and render.PrimaryPart)
+			or render:FindFirstChildWhichIsA("BasePart", true)
+		if pad and pad:IsA("BasePart") then return pad end
 	end
-	local ClientRenders = Workspace:FindFirstChild("__ClientTreadmillRenders")
-	if ClientRenders then
-		local MyRender = ClientRenders:FindFirstChild("TreadmillRender_" .. PlotInstance.Name)
-		if MyRender then
-			local Pad = MyRender:FindFirstChild("Belt", true)
-				or MyRender:FindFirstChild("RunArea", true)
-				or MyRender:FindFirstChild("Pad", true)
-				or MyRender:FindFirstChild("Root", true)
-				or MyRender:FindFirstChild("BoundingBoxPart", true)
-				or MyRender:FindFirstChildWhichIsA("BasePart", true)
-			if Pad then
-				return Pad
-			end
-		end
-	end
-	local Bottom = PlotInstance:FindFirstChild("TreadmillBottom", true)
-	if Bottom and Bottom:IsA("BasePart") then
-		return Bottom
-	end
-	local Upgrade = PlotInstance:FindFirstChild("TreadmillUpgrade", true)
-	if Upgrade then
-		for _, Name in ipairs({ "TreadmillBottom", "Belt", "RunArea", "Platform", "Pad", "Floor", "Base", "Root" }) do
-			local Part = Upgrade:FindFirstChild(Name, true)
-			if Part and Part:IsA("BasePart") then
-				return Part
-			end
-		end
-		local AnyBase = Upgrade:FindFirstChildWhichIsA("BasePart", true)
-		if AnyBase then
-			return AnyBase
-		end
-	end
-	return nil
+	local upgrade = plot:FindFirstChild("TreadmillUpgrade", true)
+	return upgrade and upgrade:FindFirstChildWhichIsA("BasePart", true) or nil
 end
 local GetTreadmillPart
 do
@@ -7815,170 +7805,194 @@ do
 		return FoundPad
 	end
 end
+Tasks.TreadmillState = { Busy = false, Exiting = false, Generation = 0, LastGainAt = -math.huge, NextCheck = 0 }
 local function IsPlayerRunningOnTreadmill(): boolean
-	local Character = LocalPlayer.Character
-	local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
-	if not RootPart then
-		return false
-	end
-	local Pad = GetTreadmillPart()
-	if not Pad then
-		return false
-	end
-	local HorizDist = (Vector2.new(RootPart.Position.X, RootPart.Position.Z) - Vector2.new(
-		Pad.Position.X,
-		Pad.Position.Z
-	)).Magnitude
-	local VertDist = math.abs(RootPart.Position.Y - Pad.Position.Y)
-	if HorizDist <= 3.5 and VertDist <= 4 then
-		return true
-	end
-	return false
+	local character = LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local pad = GetTreadmillPart()
+	if not root or not pad then return false end
+	local position = pad.CFrame:PointToObjectSpace(root.Position)
+	return math.abs(position.X) <= pad.Size.X / 2 + 2
+		and math.abs(position.Z) <= pad.Size.Z / 2 + 2
+		and position.Y >= -2 and position.Y <= pad.Size.Y / 2 + 8
 end
 Tasks.AutoStealBelt = GetTreadmillPart
-local function ExitTreadmill()
-	RuntimeState.OnTreadmill = false
-	local Character = LocalPlayer.Character
-	local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
-	local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
-	if Remotes.RemoteTreadmillDoff then
-		task.spawn(function()
-			pcall(function()
-				Remotes.RemoteTreadmillDoff:InvokeServer()
-			end)
-		end)
-	end
-	pcall(function()
-		local Pgui = LocalPlayer:FindFirstChild("PlayerGui")
-		if Pgui then
-			for _, Gui in ipairs(Pgui:GetChildren()) do
-				if Gui:IsA("ScreenGui") and Gui.Enabled then
-					for _, Btn in ipairs(Gui:GetDescendants()) do
-						if (Btn:IsA("TextButton") or Btn:IsA("ImageButton")) and Btn.Visible then
-							local Txt = string.lower(Btn:IsA("TextButton") and Btn.Text or Btn.Name)
-							if
-								string.find(Txt, "get out")
-								or string.find(Txt, "doff")
-								or string.find(Txt, "exit")
-								or string.find(Txt, "leave")
-							then
-								if typeof(firesignal) == "function" and Btn.Activated then
-									firesignal(Btn.Activated)
-								elseif typeof(firebutton1click) == "function" then
-									firebutton1click(Btn)
-								end
-								break
-							end
-						end
-					end
-				end
-			end
-			local AnimGui = Pgui:FindFirstChild("SpeedGainAnimation")
-			if AnimGui then
-				AnimGui:Destroy()
-			end
+function Tasks.TreadmillMayRun()
+	local engine = RuntimeState.StealEngine
+	if LibraryLoader.Unloaded or not FarmConfig.AutoTreadmill or RaceOwnsCharacter()
+		or (Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal())
+		or LocalPlayer:GetAttribute("InScrambleArena") == true
+		or RuntimeState.IsExecuting or not engine or engine.AutoCycle
+		or (engine.Guard and (engine.Guard.Active or engine.Guard.Busy))
+		or (engine.Movement and engine.Movement.PlaceWanted)
+		or (Tasks.PriorityStealYield and Tasks.PriorityStealYield()) then return false end
+	local owner = engine.Movement.Owner
+	if owner ~= nil and owner ~= "treadmill" then return false end
+	local state = engine.State
+	if state and (state.Carrying or state.SignalCarrying or state.WeldCarrying) then return false end
+	local character = LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root or root.Position.Y < -200 then return false end
+	-- Enabled farm toggles alone don't mean a steal is actually in progress.
+	-- Reuse the native filtered candidates, never a second egg picker.
+	if IsStealActive() and engine.CollectCandidates then
+		local belt = Tasks.TreadmillState
+		if os.clock() >= (belt.CandidateCheckAt or 0) then
+			belt.CandidateCheckAt = os.clock() + 0.3
+			local candidates = engine.CollectCandidates(false, not FarmConfig.Defense_InstantSteal)
+			belt.HasCandidates = candidates and #candidates > 0
 		end
-	end)
-	if Humanoid then
-		pcall(function()
-			for _, Track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
-				local Anim = Track.Animation
-				local AnimId = Anim and Anim.AnimationId or ""
-				local TrackName = string.lower(Track.Name or "")
-				if
-					string.find(AnimId, "10921259953")
-					or string.find(TrackName, "treadmill")
-					or string.find(TrackName, "run")
-				then
-					Track:Stop(0)
-				end
-			end
-			Humanoid.PlatformStand = false
-			Humanoid.Sit = false
-			Humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
-			Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-			Humanoid:ChangeState(Enum.HumanoidStateType.Running)
-		end)
+		if belt.HasCandidates then return false end
 	end
-	if RootPart then
-		RootPart.AssemblyLinearVelocity = Vector3.zero
-		RootPart.AssemblyAngularVelocity = Vector3.zero
+	return true
+end
+local function ExitTreadmill()
+	local state = Tasks.TreadmillState
+	state.Generation += 1
+	local wasRiding = RuntimeState.OnTreadmill or IsPlayerRunningOnTreadmill()
+	RuntimeState.OnTreadmill = false
+	state.LastGainAt, state.NextCheck = -math.huge, 0
+	-- Never click arbitrary Leave/Exit buttons or alter another owner's humanoid.
+	if not wasRiding or state.Exiting or LibraryLoader.Unloaded
+		or LocalPlayer:GetAttribute("RaceId") ~= nil
+		or LocalPlayer:GetAttribute("RaceRallyQueued") == true then return end
+	state.Exiting = true
+	local generation = state.Generation
+	local waitUntil = os.clock() + 1
+	while state.WearBusy and os.clock() < waitUntil do task.wait(0.05) end
+	if state.WearBusy or generation ~= state.Generation or LibraryLoader.Unloaded
+		or LocalPlayer:GetAttribute("RaceId") ~= nil
+		or LocalPlayer:GetAttribute("RaceRallyQueued") == true then
+		state.Exiting = false
+		return
+	end
+	local character = LocalPlayer.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local done = false
+	task.spawn(function()
+		if generation == state.Generation and not LibraryLoader.Unloaded
+			and LocalPlayer.Character == character
+			and LocalPlayer:GetAttribute("RaceId") == nil
+			and LocalPlayer:GetAttribute("RaceRallyQueued") ~= true then
+			pcall(function()
+				if Remotes.RemoteTreadmillDoff then Remotes.RemoteTreadmillDoff:InvokeServer() end
+			end)
+		end
+		done, state.Exiting = true, false
+	end)
+	local deadline = os.clock() + 0.35
+	while not done and os.clock() < deadline do task.wait(0.05) end
+	if not done then return end
+	local engine = RuntimeState.StealEngine
+	local owner = engine and engine.Movement.Owner
+	if generation == state.Generation and LocalPlayer.Character == character and humanoid and not RaceOwnsCharacter()
+		and (owner == nil or owner == "treadmill") and IsPlayerRunningOnTreadmill() then
+		humanoid.Jump = true
 	end
 end
 Tasks.ExitTreadmill = ExitTreadmill
 local function MountTreadmill()
-	if RaceOwnsCharacter() then return false end
-	if IsPlayerRunningOnTreadmill() then
+	local state, engine = Tasks.TreadmillState, RuntimeState.StealEngine
+	if state.Busy or state.Exiting or os.clock() < (state.NextAttemptAt or 0)
+		or not Tasks.TreadmillMayRun() then return false end
+	local onBelt = IsPlayerRunningOnTreadmill()
+	if onBelt and os.clock() - state.LastGainAt < 6 then
 		RuntimeState.OnTreadmill = true
 		return true
 	end
-	local Pad = GetTreadmillPart()
-	local Character = LocalPlayer.Character
-	local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
-	local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
-	if not Pad or not RootPart or not Humanoid then
-		return false
+	if RuntimeState.OnTreadmill and onBelt and os.clock() < state.NextCheck then return true end
+	local character = LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local pad = GetTreadmillPart()
+	if not pad or not root or not humanoid or humanoid.Health <= 0
+		or not Remotes.RemoteTreadmillWear or not engine.ClaimMovement("treadmill") then return false end
+	state.Busy = true
+	state.Generation += 1
+	local generation = state.Generation
+	local function cancelled()
+		return generation ~= state.Generation or LocalPlayer.Character ~= character
+			or not root.Parent or not pad.Parent or humanoid.Health <= 0
+			or engine.Movement.Owner ~= "treadmill" or not Tasks.TreadmillMayRun()
 	end
-	RootPart.CanTouch = true
-	Pad.CanTouch = true
-	Pad.CanCollide = true
-	local TargetPos = Pad.Position
-	if Pad.Name == "BoundingBoxPart" then
-		TargetPos = Pad.Position - Vector3.new(0, (Pad.Size.Y / 2) - 1.2, 0)
-	else
-		TargetPos = Pad.Position + Vector3.new(0, 1.2, 0)
-	end
-	local Distance = (RootPart.Position - TargetPos).Magnitude
-	if Distance > 5 then
-		local FlySpeed = math.max(250, FarmConfig.TweenSpeed or 600)
-		local Timeout = os.clock() + 6.0
-		Humanoid.AutoRotate = false
-		while (RootPart.Position - TargetPos).Magnitude > 3.0 and (os.clock() < Timeout) do
-			local DeltaTime = RunService.Heartbeat:Wait()
-			if RaceOwnsCharacter() then return false end
-			local CurrentPos = RootPart.Position
-			local Delta = (TargetPos - CurrentPos)
-			local Step = Delta.Unit * math.min(Delta.Magnitude, FlySpeed * DeltaTime)
-			local NextPos = CurrentPos + Step
-			RootPart.CFrame =
-				CFrame.lookAt(NextPos, NextPos + (Delta.Magnitude > 0.05 and Delta.Unit or RootPart.CFrame.LookVector))
-			RootPart.AssemblyLinearVelocity = Vector3.zero
-			RootPart.AssemblyAngularVelocity = Vector3.zero
-			Humanoid.PlatformStand = false
-			Humanoid.Sit = false
-			Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+	local ok, riding = pcall(function()
+		local target = pad.Position + Vector3.new(0, pad.Size.Y / 2 + 2, 0)
+		local deadline = os.clock() + 6
+		while (root.Position - target).Magnitude > 3 do
+			local dt = RunService.Heartbeat:Wait()
+			if cancelled() or os.clock() >= deadline then return false end
+			local delta = target - root.Position
+			if delta.Magnitude <= 3 then break end
+			local speed = math.max(250, tonumber(FarmConfig.TweenSpeed) or 600)
+			root.CFrame = CFrame.new(root.Position + delta.Unit * math.min(delta.Magnitude, speed * dt))
+			root.AssemblyLinearVelocity, root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
 		end
-		Humanoid.AutoRotate = true
-	end
-	if RaceOwnsCharacter() then return false end
-	RootPart.CFrame = CFrame.new(TargetPos)
-	RootPart.AssemblyLinearVelocity = Vector3.zero
-	RootPart.AssemblyAngularVelocity = Vector3.zero
-	Humanoid.PlatformStand = false
-	Humanoid.Sit = false
-	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
-	Humanoid:ChangeState(Enum.HumanoidStateType.Running)
-	task.wait(0.05)
-	if typeof(firetouchinterest) == "function" then
-		firetouchinterest(RootPart, Pad, 0)
-		task.wait(0.02)
-		firetouchinterest(RootPart, Pad, 1)
-	end
-	for _, Prompt in ipairs(Pad:GetDescendants()) do
-		if Prompt:IsA("ProximityPrompt") and typeof(fireproximityprompt) == "function" then
-			fireproximityprompt(Prompt)
+		if cancelled() then return false end
+		-- Let the existing humanoid settle. Don't install a second swap or force
+		-- AutoRotate/PlatformStand/collision settings that a new owner would inherit.
+		local groundedBy = os.clock() + 1.5
+		while not engine.IsGrounded(humanoid) and os.clock() < groundedBy do
+			task.wait(0.1)
+			if cancelled() then return false end
 		end
-	end
-	if Pad.Parent then
-		for _, Prompt in ipairs(Pad.Parent:GetDescendants()) do
-			if Prompt:IsA("ProximityPrompt") and typeof(fireproximityprompt) == "function" then
-				fireproximityprompt(Prompt)
-			end
-		end
-	end
-	RuntimeState.OnTreadmill = true
-	return true
+		if cancelled() then return false end
+		state.WearBusy = true
+		local accepted, result, reason = pcall(function()
+			return Remotes.RemoteTreadmillWear:InvokeServer()
+		end)
+		state.WearBusy = false
+		if cancelled() then return false end
+		state.NextCheck = os.clock() + 5
+		state.LastError = accepted and tostring(reason or "") or tostring(result)
+		return accepted and (result ~= false or tostring(reason) == "Already using treadmill"
+			or (tostring(reason) == "Not grounded" and os.clock() - state.LastGainAt < 6
+				and IsPlayerRunningOnTreadmill()))
+	end)
+	local checked, current = pcall(function()
+		return not cancelled() and IsPlayerRunningOnTreadmill()
+	end)
+	RuntimeState.OnTreadmill = ok and riding == true and checked and current == true
+	engine.ReleaseMovement("treadmill")
+	state.Busy = false
+	state.NextAttemptAt = os.clock() + (RuntimeState.OnTreadmill and 0 or 1.5)
+	return RuntimeState.OnTreadmill
 end
+-- Preserve the native movement picker. A sent Wear request cannot be recalled;
+-- don't hand the character to a new task until that in-flight RPC has unwound.
+do
+	local engine = RuntimeState.StealEngine
+	if engine then
+		local nativeClaim = engine.ClaimMovement
+		engine.ClaimMovement = function(owner, ...)
+			if not LibraryLoader.Unloaded and owner ~= "treadmill" and Tasks.TreadmillState.WearBusy then
+				Tasks.TreadmillState.Generation += 1
+				return false
+			end
+			-- Normal steal also claims movement for its no-target return home.
+			-- Let idle training stand; real filtered eggs/carry still preempt it.
+			if owner == "steal" and (Tasks.TreadmillState.Busy or RuntimeState.OnTreadmill)
+				and Tasks.TreadmillMayRun() then return false end
+			return nativeClaim(owner, ...)
+		end
+	end
+end
+Tasks.TreadmillState.CharacterConnection = LocalPlayer.CharacterAdded:Connect(function()
+	local state = Tasks.TreadmillState
+	state.Generation += 1
+	state.LastGainAt, state.NextCheck, state.NextAttemptAt = -math.huge, 0, 0
+	RuntimeState.OnTreadmill = false
+end)
+if Remotes.RemoteTreadmillSpeedGained and Remotes.RemoteTreadmillSpeedGained:IsA("RemoteEvent") then
+	Tasks.TreadmillState.GainConnection = Remotes.RemoteTreadmillSpeedGained.OnClientEvent:Connect(function()
+		Tasks.TreadmillState.LastGainAt = os.clock()
+	end)
+end
+LibraryLoader:OnUnload(function()
+	Tasks.TreadmillState.Generation += 1
+	RuntimeState.OnTreadmill = false
+	if Tasks.TreadmillState.GainConnection then Tasks.TreadmillState.GainConnection:Disconnect() end
+	Tasks.TreadmillState.CharacterConnection:Disconnect()
+end)
 local function ApplyTreadmillShield(blockTreadmill: boolean)
 	pcall(function()
 		local allowQueryAndTouch = not blockTreadmill
@@ -8015,46 +8029,26 @@ local function ApplyTreadmillShield(blockTreadmill: boolean)
 	end)
 end
 function Tasks.ExecuteUpgradeTreadmill()
-	local Plot = select(1, GetPlayerPlot())
-	if not Plot then
-		return
-	end
-	local UpgradeModel = Plot:FindFirstChild("TreadmillUpgrade", true)
-	if not UpgradeModel then
-		return
-	end
-	if Remotes.RemoteTreadmillUpgrade then
-		pcall(function()
-			Remotes.RemoteTreadmillUpgrade:InvokeServer()
-		end)
-	end
-	local Character = LocalPlayer.Character
-	local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
-	pcall(function()
-		for _, Desc in ipairs(UpgradeModel:GetDescendants()) do
-			if Desc:IsA("ProximityPrompt") and Desc.Enabled and typeof(fireproximityprompt) == "function" then
-				fireproximityprompt(Desc, 0)
-				fireproximityprompt(Desc)
-			end
-			if Desc:IsA("GuiButton") and Desc.Visible then
-				local Txt = string.lower((Desc:IsA("TextButton") and Desc.Text) or Desc.Name)
-				if not string.find(Txt, "robux") and (string.find(Txt, "%$") or string.find(Txt, "upgrade")) then
-					if typeof(firesignal) == "function" and Desc.Activated then
-						firesignal(Desc.Activated)
-					elseif typeof(firebutton1click) == "function" then
-						firebutton1click(Desc)
-					end
-				end
-			end
-			if Desc:IsA("BasePart") and string.find(Desc.Name, "Pad") and RootPart then
-				if (RootPart.Position - Desc.Position).Magnitude < 12 and typeof(firetouchinterest) == "function" then
-					firetouchinterest(RootPart, Desc, 0)
-					task.wait(0.02)
-					firetouchinterest(RootPart, Desc, 1)
-				end
-			end
-		end
+	local state = Tasks.TreadmillState
+	if LibraryLoader.Unloaded or not FarmConfig.AutoUpgradeTreadmill or state.UpgradeBusy
+		or os.clock() < (state.NextUpgradeAt or 0) or not Remotes.RemoteTreadmillUpgrade then return false end
+	state.UpgradeBusy = true
+	state.NextUpgradeAt = os.clock() + 3
+	local ok, upgraded = pcall(function()
+		local save = SaveModule and ((SaveModule.Get and SaveModule.Get()) or (SaveModule.Peek and SaveModule.Peek()))
+		local data = ReplicatedStorage:FindFirstChild("Data")
+		local module = data and data:FindFirstChild("Treadmills")
+		local treadmills = module and require(module)
+		if not save or type(treadmills) ~= "table" or type(treadmills.GetByUpgradeLevel) ~= "function" then return false end
+		local tier = treadmills.GetByUpgradeLevel((tonumber(save.TreadmillUpgradeLevel) or 0) + 1)
+		if type(tier) ~= "table" or type(tier._id) ~= "string" then return false end
+		local cash, price = tonumber(save.Money) or 0, tonumber(tier.Price) or math.huge
+		if cash - math.max(0, tonumber(FarmConfig.CashReserve) or 0) < price
+			or not FarmConfig.AutoUpgradeTreadmill or LibraryLoader.Unloaded then return false end
+		return Remotes.RemoteTreadmillUpgrade:InvokeServer(tier._id) ~= false
 	end)
+	state.UpgradeBusy = false
+	return ok and upgraded == true
 end
 function Tasks.ExecuteUpgradePlot()
 	local Plot = select(1, GetPlayerPlot())
@@ -8174,126 +8168,137 @@ local function ClaimIndexRewards(IncludeLimited: boolean)
 	end
 end
 GetScrambleTradeStatusFn = function()
-	local state = GetScrambleState()
-	local reqs = (type(state.Requirements) == "table" and state.Requirements) or CachedScrambleReqs
-	if type(reqs) ~= "table" or #reqs < 1 then
-		return {}, {}, {}, false
-	end
-	local ok, data = pcall(function()
-		return SaveModule.Peek()
+	local state, reqs = GetScrambleState(), GetScrambleRequirements()
+	local wanted, summary, picks, reserved, slots = {}, {}, {}, {}, {}
+	RuntimeState.ScrambleWanted, RuntimeState.ScrambleReserved = wanted, reserved
+	Tasks.LabState.SlotPicks = slots
+	if state.Unlocked ~= true or not DrScramble.LabBannerAllowed(state)
+		or state.PendingReward or #reqs == 0 then return wanted, summary, picks, false end
+	local ok, save = pcall(function()
+		return SaveModule and ((SaveModule.Get and SaveModule.Get()) or (SaveModule.Peek and SaveModule.Peek()))
 	end)
-	local inv = (ok and data and type(data.EggInventory) == "table") and data.EggInventory or {}
-	local byCat = {}
-	for uid, rec in pairs(inv) do
-		if type(rec) == "table" and rec.Placement == nil then
-			local key = ScrambleCleanName(rec.AssetCategory or rec.Category or "")
-			if key ~= "" then
-				byCat[key] = byCat[key] or {}
-				table.insert(byCat[key], tostring(uid))
-			end
+	if not ok or type(save) ~= "table" or type(save.EggInventory) ~= "table" then
+		return wanted, summary, picks, false
+	end
+	local placed = {}
+	if EggStateModule and type(EggStateModule.ReadOwnerEggs) == "function" then
+		local readOk, eggs = pcall(EggStateModule.ReadOwnerEggs, LocalPlayer.UserId)
+		if not readOk or type(eggs) ~= "table" then return wanted, summary, picks, false end
+		for uid, record in pairs(eggs) do
+			if type(record) == "table" and record.Placement ~= nil then placed[tostring(uid)] = true end
 		end
 	end
-	local wantedMap, summaryList, picks = {}, {}, {}
-	local ready = true
-	for i, need in ipairs(reqs) do
-		local key = ScrambleCleanName(need)
-		local list = byCat[key]
-		local have = list and #list or 0
-		local uid = have > 0 and list[1] or nil
-		if uid then
-			table.insert(picks, uid)
-			RuntimeState.ScrambleReserved[uid] = true
+	local byCategory = {}
+	for uid, record in pairs(save.EggInventory) do
+		if type(record) == "table" and record.Placement == nil and not placed[tostring(uid)] then
+			local key = ScrambleCleanName(record.AssetCategory or record.Category)
+			byCategory[key] = byCategory[key] or {}
+			table.insert(byCategory[key], {
+				Uid = uid, Scale = tonumber(record.AssetScale) or 0,
+				Mutated = (record.BaseMutation ~= nil and record.BaseMutation ~= "Normal")
+					or (type(record.Mutations) == "table" and next(record.Mutations) ~= nil),
+			})
+		end
+	end
+	for _, eggs in pairs(byCategory) do
+		table.sort(eggs, function(a, b)
+			if a.Mutated ~= b.Mutated then return not a.Mutated end
+			if a.Scale ~= b.Scale then return a.Scale < b.Scale end
+			return tostring(a.Uid) < tostring(b.Uid)
+		end)
+	end
+	local used, counts, totals, ready = {}, {}, {}, true
+	for _, category in ipairs(reqs) do
+		local key = ScrambleCleanName(category)
+		totals[key] = (totals[key] or 0) + 1
+	end
+	for slot, category in ipairs(reqs) do
+		local key, selected = ScrambleCleanName(category), nil
+		for _, egg in ipairs(byCategory[key] or {}) do
+			if not used[tostring(egg.Uid)] then selected = egg; break end
+		end
+		if selected then
+			used[tostring(selected.Uid)] = true
+			slots[slot] = selected.Uid
+			table.insert(picks, selected.Uid) -- Preserve the server's original UID type.
+			if FarmConfig.AutoScrambleSubmit or FarmConfig.AutoScrambleSteal then reserved[tostring(selected.Uid)] = true end
 		else
 			ready = false
-			wantedMap[key] = tostring(need)
+			if FarmConfig.AutoScrambleSteal then wanted[key] = true end
 		end
-		table.insert(summaryList, string.format("%s (%d/%d)", tostring(need), have, math.min(i, SCRAMBLE_TRADE_SLOTS)))
+		counts[key] = (counts[key] or 0) + (selected and 1 or 0)
+		table.insert(summary, string.format("%s (%d/%d)", tostring(category), counts[key], totals[key]))
 	end
-	RuntimeState.ScrambleWanted = wantedMap
-	return wantedMap, summaryList, picks, ready
+	return wanted, summary, picks, ready
+end
+function DrScramble.LabActionAllowed()
+	-- Like Chili, this operates on owned inventory, not the character/field carry.
+	-- A busy egg farm must not starve a ready recipe; race still has user priority.
+	return not LibraryLoader.Unloaded and not RaceOwnsCharacter()
+		and not (Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal())
+end
+function DrScramble.RunLabAction(kind)
+	local lab = Tasks.LabState
+	local function enabled()
+		return (kind == "trade" and FarmConfig.AutoScrambleSubmit)
+			or (kind == "reroll" and FarmConfig.Scramble_AutoReroll)
+	end
+	if lab.FetchBusy or lab.ActionBusy or os.clock() < lab.NextActionAt or not enabled()
+		or not DrScramble.LabActionAllowed() then return false end
+	lab.ActionBusy = true
+	lab.NextActionAt = os.clock() + 1
+	local revision = lab.Revision
+	local function cancelled()
+		return revision ~= lab.Revision or not enabled() or not DrScramble.LabActionAllowed()
+	end
+	local ok, changed = pcall(function()
+		local state = RefreshScrambleState(true)
+		if cancelled() or state.Unlocked ~= true or os.clock() - lab.StateAt > 5 then return false end
+		local remote, picks
+		-- A previously accepted reward belongs to us even if its banner is filtered.
+		if state.PendingReward then
+			remote = Remotes.RemoteScrambleFinishReveal
+		elseif not DrScramble.LabBannerAllowed(state) then
+			GetScrambleTradeStatusFn() -- Clear reservations/targets for a disallowed banner.
+			return false
+		else
+			local _, _, selection, ready = GetScrambleTradeStatusFn()
+			if kind == "reroll" then
+				if ready or (tonumber(state.FreeRefreshesRemaining) or 0) <= 0 then return false end
+				remote = Remotes.RemoteScrambleRefresh
+			else
+				if not ready or #selection ~= #GetScrambleRequirements() or #selection < SCRAMBLE_TRADE_SLOTS then return false end
+				remote, picks = Remotes.RemoteScrambleTradeIn, selection
+			end
+		end
+		if not remote or cancelled() then return false end
+		local accepted, result, extra = pcall(function()
+			if picks then return remote:InvokeServer(picks) end
+			return remote:InvokeServer()
+		end)
+		if accepted and result ~= false then
+			-- Never send a follow-up reveal from this task after OFF/race takeover.
+			-- The next enabled action reads PendingReward from a fresh state instead.
+			if picks and type(extra) == "table" then
+				local category = extra.AssetCategory or extra.Category or extra.Name
+				if type(category) == "string" and category ~= "" then RuntimeState.ScrambleLabCategory = category end
+			end
+			Tasks.InvalidateLabState()
+			return true
+		end
+		lab.LastError = tostring(accepted and extra or result)
+		return false
+	end)
+	lab.ActionBusy = false
+	lab.NextActionAt = os.clock() + 1
+	if not ok then lab.LastError = tostring(changed) end
+	return ok and changed == true
 end
 function DrScramble.AutoRerollLab()
-	if not FarmConfig.Scramble_AutoReroll or not Remotes.RemoteScrambleRefresh then
-		return false
-	end
-	local state = GetScrambleState()
-	if type(state) ~= "table" or state.Unlocked ~= true then
-		return false
-	end
-	if not DrScramble.LabBannerAllowed(state) then
-		return false
-	end
-	if (tonumber(state.FreeRefreshesRemaining) or 0) <= 0 then
-		return false
-	end
-	if #GetScrambleRequirements() > 0 then
-		local _, _, _, ready = GetScrambleTradeStatusFn()
-		if ready then
-			return false
-		end
-	end
-	local ok, res = pcall(function()
-		return Remotes.RemoteScrambleRefresh:InvokeServer()
-	end)
-	if ok and res ~= false then
-		CachedScrambleState = {}
-		LastScrambleReqFetch = 0
-		pcall(RefreshScrambleState, true)
-		return true
-	end
-	return false
+	return DrScramble.RunLabAction("reroll")
 end
 local function ExecuteScrambleTradeIn()
-	if not Remotes.RemoteScrambleTradeIn then
-		return false
-	end
-	local state = GetScrambleState()
-	if type(state) == "table" and not DrScramble.LabBannerAllowed(state) then
-		return false
-	end
-	local reqs = (type(state.Requirements) == "table" and state.Requirements) or CachedScrambleReqs
-	if type(reqs) ~= "table" or #reqs < SCRAMBLE_TRADE_SLOTS then
-		return false
-	end
-	local _, _, picks, ready = GetScrambleTradeStatusFn()
-	if not ready or #picks < SCRAMBLE_TRADE_SLOTS then
-		return false
-	end
-	local EngineNow = RuntimeState.StealEngine
-	local carryingNow = EngineNow
-		and EngineNow.State
-		and (EngineNow.State.Carrying or EngineNow.State.SignalCarrying or EngineNow.State.WeldCarrying)
-	if not carryingNow then
-		pcall(UnequipAllTools)
-		task.wait(0.1)
-	end
-	local ok, res, extra = pcall(function()
-		return Remotes.RemoteScrambleTradeIn:InvokeServer(picks)
-	end)
-	if ok and res == true then
-		local labCat = nil
-		if type(extra) == "table" then
-			labCat = extra.AssetCategory or extra.Category or extra.Name
-		end
-		if type(labCat) == "string" and labCat ~= "" then
-			RuntimeState.ScrambleLabCategory = labCat
-		end
-		CachedScrambleState = {}
-		LastScrambleReqFetch = 0
-		table.clear(RuntimeState.ScrambleReserved)
-		task.wait(0.8)
-		if Remotes.RemoteScrambleFinishReveal then
-			pcall(function()
-				Remotes.RemoteScrambleFinishReveal:InvokeServer()
-			end)
-		end
-		RefreshScrambleState(true)
-		return true
-	end
-	if not ok then
-	else
-	end
-	return false
+	return DrScramble.RunLabAction("trade")
 end
 function Tasks.GetScrambleOverview()
 	local state = GetScrambleState()
@@ -8319,7 +8324,8 @@ function Tasks.GetScrambleOverview()
 		FreeRefreshes = tonumber(state.FreeRefreshesRemaining) or 0,
 		PityCount = tonumber(state.PityCount) or 0,
 		PityThreshold = tonumber(state.PityThreshold) or 0,
-		Unlocked = state.Unlocked ~= false,
+		Unlocked = state.Unlocked == true,
+		SlotPicks = Tasks.LabState.SlotPicks or {},
 		UnlockPower = unlockPower,
 		MyPower = myPower,
 		PetOdds = type(state.PetOdds) == "table" and state.PetOdds or {},
@@ -12135,7 +12141,7 @@ function Tasks.BuildMainInterface()
 					ExitTreadmill()
 					local char = LocalPlayer.Character
 					local hrp = char and char:FindFirstChild("HumanoidRootPart")
-					if hrp then
+					if hrp and not RaceOwnsCharacter() and not RuntimeState.IsExecuting then
 						hrp.CFrame = hrp.CFrame * CFrame.new(0, 1, 6)
 						hrp.AssemblyLinearVelocity = Vector3.zero
 					end
@@ -12841,6 +12847,7 @@ function Tasks.BuildMainInterface()
 		Tooltip = "Auto treadmill",
 		Callback = function(State)
 			FarmConfig.AutoTreadmill = State
+			ApplyTreadmillShield(FarmConfig.AntiTreadmill and not State)
 			if State then
 				task.spawn(MountTreadmill)
 			else
@@ -12992,7 +12999,8 @@ function Tasks.BuildMainInterface()
 	end
 	local function IsOnTreadmill()
 		local ok, result = pcall(IsPlayerRunningOnTreadmill)
-		return (ok and result) or RuntimeState.OnTreadmill == true
+		return ok and result and (RuntimeState.OnTreadmill == true
+			or os.clock() - Tasks.TreadmillState.LastGainAt < 6)
 	end
 	local TrainSession = { Active = false, StartTime = 0, StartSpeed = 0 }
 	local LastStatusText = ""
@@ -13385,6 +13393,9 @@ function Tasks.BuildMainInterface()
 		Tooltip = "Steal lab wants",
 		Callback = function(State)
 			FarmConfig.AutoScrambleSteal = State
+			Tasks.LabState.Revision += 1
+			table.clear(RuntimeState.ScrambleWanted)
+			table.clear(RuntimeState.ScrambleReserved)
 			FarmConfig.AutoStealEnabled = State
 			if State then
 				RuntimeState.StealCancel = RuntimeState.StealCancel + 1
@@ -13403,6 +13414,7 @@ function Tasks.BuildMainInterface()
 		Tooltip = "Auto lab trade-in",
 		Callback = function(State)
 			FarmConfig.AutoScrambleSubmit = State
+			Tasks.LabState.Revision += 1
 			table.clear(RuntimeState.ScrambleReserved)
 			if State then
 				pcall(RefreshScrambleState, true)
@@ -13415,6 +13427,7 @@ function Tasks.BuildMainInterface()
 		Tooltip = "Auto reroll recipe",
 		Callback = function(State)
 			FarmConfig.Scramble_AutoReroll = State
+			Tasks.LabState.Revision += 1
 			if State then
 				pcall(RefreshScrambleState, true)
 			end
@@ -13426,6 +13439,7 @@ function Tasks.BuildMainInterface()
 		Tooltip = "Banner filter",
 		Callback = function(State)
 			FarmConfig.Scramble_LabBannerFilterOn = State
+			Tasks.LabState.Revision += 1
 			pcall(GetScrambleTradeStatusFn)
 		end,
 	})
@@ -13436,6 +13450,7 @@ function Tasks.BuildMainInterface()
 		Values = DrScramble.LabBannerOptions,
 		Callback = function(v)
 			FarmConfig.Scramble_LabBanners = ParseMultiDropdownSelection(v)
+			Tasks.LabState.Revision += 1
 			pcall(GetScrambleTradeStatusFn)
 		end,
 	})
@@ -13583,7 +13598,7 @@ function Tasks.BuildMainInterface()
 					if name == nil then
 						table.insert(lines, string.format('<font color="#8A8AA2">%d. -</font>', i))
 					else
-						local isReady = info.Picks[i] ~= nil
+						local isReady = info.SlotPicks[i] ~= nil
 						local line = isReady
 								and string.format('<font color="#57F287"><b>%d. %s</b></font>', i, tostring(name))
 							or string.format("%d. %s", i, tostring(name))
@@ -15415,9 +15430,10 @@ function Tasks.OnTreadmillPartAdded(desc)
 end
 Workspace.DescendantAdded:Connect(Tasks.OnTreadmillPartAdded)
 function Tasks.MobilityLoop()
-	while true do
+	while not LibraryLoader.Unloaded do
 		task.wait(1.5)
 		pcall(function()
+			if RaceOwnsCharacter() then return end
             local Engine = RuntimeState.StealEngine
             if Engine and Engine.AutoCycle then return end
 			if FarmConfig.AntiTreadmill and not FarmConfig.AutoTreadmill then
@@ -15425,7 +15441,7 @@ function Tasks.MobilityLoop()
 					ExitTreadmill()
 					local char = LocalPlayer.Character
 					local hrp = char and char:FindFirstChild("HumanoidRootPart")
-					if hrp then
+					if hrp and not RaceOwnsCharacter() and not RuntimeState.IsExecuting then
 						hrp.CFrame = hrp.CFrame * CFrame.new(0, 1, 6)
 						hrp.AssemblyLinearVelocity = Vector3.zero
 					end
@@ -15469,32 +15485,26 @@ function Tasks.AutomationLoop()
 			if FarmConfig.AutoEquipBestTrail then
 				Tasks.EquipBestTrail()
 			end
-			if FarmConfig.AutoTreadmill and not IsStealActive() and not RuntimeState.IsExecuting then
-				MountTreadmill()
+			if FarmConfig.AutoTreadmill and Tasks.TreadmillMayRun() then
+				task.spawn(MountTreadmill)
 			end
 		end)
 	end
 end
 task.spawn(Tasks.AutomationLoop)
 function Tasks.ScrambleTradeLoop()
-	while true do
-		task.wait(2.0)
+	while not LibraryLoader.Unloaded do
+		task.wait(2)
 		pcall(function()
-			if Tasks.PriorityStealYield and Tasks.PriorityStealYield() then
-				return
-			end
-			local live = FarmConfig.AutoScrambleSteal or FarmConfig.AutoScrambleSubmit
+			local live = FarmConfig.AutoScrambleSteal or FarmConfig.AutoScrambleSubmit or FarmConfig.Scramble_AutoReroll
 			if live or os.clock() - (RuntimeState.ScrambleStateAt or 0) > 10 then
 				RefreshScrambleState()
 				RuntimeState.ScrambleStateAt = os.clock()
 			end
-			if live then
-				GetScrambleTradeStatusFn()
-			end
-			if FarmConfig.AutoScrambleSubmit then
-				DrScramble.AutoRerollLab()
-				ExecuteScrambleTradeIn()
-			end
+			GetScrambleTradeStatusFn()
+			if FarmConfig.AutoScrambleSubmit then ExecuteScrambleTradeIn() end
+			-- Independent of Auto Trade-In; never spends a paid refresh.
+			if FarmConfig.Scramble_AutoReroll then DrScramble.AutoRerollLab() end
 		end)
 	end
 end
@@ -15704,8 +15714,6 @@ function Tasks.StealLoop()
 						if FarmConfig.AutoScrambleSubmit then
 							task.spawn(ExecuteScrambleTradeIn)
 						end
-					elseif FarmConfig.AutoTreadmill and not RuntimeState.OnTreadmill then
-						MountTreadmill()
 					end
 					task.wait(0.3)
 				end
@@ -17946,6 +17954,7 @@ function Tasks.NormalPlayWatchdog()
 				Moving = Engine.Guard.StealActive == true
 			end
 			local Busy = IsStealActive()
+				or Tasks.TreadmillState.Busy or RuntimeState.OnTreadmill
 				or Moving
 				or RuntimeState.IsExecuting
 				or FarmConfig.AutoStealEnabled

@@ -90,3 +90,18 @@ Read this before changing `Steal-An-Egg.lua`.
 - The bundled Chili reference still has max 160/default 150. The screenshot showed
   selected 144, not proof of max. Document this intentional N3 cap honestly.
 - Test races in a clean session with only one hub's drive, not simultaneous hubs.
+
+## Treadmill / Lab maintenance
+
+- Reference ranges, intentional N3 adaptations and live checklist are documented in
+  `../docs/treadmill-lab.md`. Run `tools/check_treadmill_lab_source.py` as well as
+  the race/visual checkers and whole-file Luau compilation.
+- Preserve the user-live-confirmed `1aa5920` race block byte-for-byte. Keep the
+  protected normal/Instant/swap/filter/movement bodies intact.
+- Treadmill uses one cancellable worker, native ownership and server Wear, not
+  proximity/prompt success. Upgrade sends the affordable next tier `_id`.
+- Lab reads never mutate; one action lane owns trade/reroll/reveal. Preserve raw,
+  unique unplaced UIDs, normal/small preference, boolean missing-category targets,
+  per-slot UI readiness, and independent **free-only** Auto Reroll.
+- Do not replace N3's swap or add automatic grounding-error respawns. A sent RPC
+  cannot be recalled; cancellation/compile checks aren't proof of server behavior.
