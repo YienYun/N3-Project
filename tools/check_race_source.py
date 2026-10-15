@@ -90,6 +90,14 @@ assert "FarmConfig.Defense_AntiRagdoll =" not in race, "Suppression must preserv
 for name in ("MobilityRecoveryHeartbeat", "DefenseHeartbeat", "MovementStepped"):
     start = runtime.index("function Tasks." + name + "()")
     assert "RaceOwnsCharacter()" in runtime[start:start + 220], name
+ui_start = runtime.index('local RaceRallyGroup =')
+race_ui = runtime[ui_start:runtime.index('local ScrambleEggGroup =', ui_start)]
+assert "RaceDetails" not in race_ui and "LastDetails" not in race_ui
+assert "Heat:" not in race_ui and "Phase:" not in race_ui
+for label in ("Lbl_RaceStatus", "Lbl_RaceStats"):
+    assert label + ":SetText(" in race_ui, f"Race display must be preserved: {label}"
+for field in ("Status", "Tokens", "Wins", "Racer"):
+    assert "St." + field in race_ui, f"Race display field missing: {field}"
 assert runtime.count('"Slider_Race_Speed"') == 1
 assert runtime.count('"Toggle_Race_AutoRace"') == 1
 print("PASS: Chili V2 reference, race source contracts, single controller, semantic names, UI and cancellation boundaries.")

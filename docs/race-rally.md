@@ -103,6 +103,6 @@ finish place, wins/rewards, power-up remotes, leave/respawn and streaming behavi
 Suggested user test: re-execute the updated game file in a fresh script instance,
 Event → Race Rally, Auto Race ON, Auto Equip Racer ON, Best Owned, speed 150,
 power-ups ON. If laps/wins do not count, lower speed toward 100 as advised by the
-source. For a failure report, capture the status plus Heat/Phase/Speed and any
+source. For a failure report, capture the status, Tokens/Wins/Racer and any
 `[N3 HUB] Race Rally` warning. Check disabling Auto Race mid-travel/mid-heat and
 resuming normal Sena automation after the event as separate live checks.

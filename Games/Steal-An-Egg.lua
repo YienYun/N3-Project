@@ -12970,9 +12970,8 @@ function Tasks.BuildMainInterface()
 		'<font color="#D946EF"><b>Tokens:</b></font> 0   <font color="#D946EF"><b>Wins:</b></font> 0   <font color="#D946EF"><b>Racer:</b></font> Ostrich',
 		true
 	)
-	local RaceDetails = RaceRallyGroup:AddLabel("Heat: -   |   Phase: Idle   |   Speed: 150", true)
 	task.spawn(function()
-		local LastS, LastT, LastDetails = nil, nil, nil
+		local LastS, LastT = nil, nil
 		while not LibraryLoader.Unloaded do
 			task.wait(1)
 			pcall(function()
@@ -12994,16 +12993,6 @@ function Tasks.BuildMainInterface()
 				if T ~= LastT then
 					LastT = T
 					Lbl_RaceStats:SetText(T)
-				end
-				local Details = string.format(
-					"Heat: %s   |   Phase: %s   |   Speed: %s",
-					tostring(St.Heat or "-"),
-					tostring(St.Phase or "Idle"),
-					tostring(St.EffectiveSpeed or 150)
-				)
-				if Details ~= LastDetails then
-					LastDetails = Details
-					RaceDetails:SetText(Details)
 				end
 			end)
 		end
