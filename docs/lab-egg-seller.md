@@ -22,22 +22,26 @@ It never sends pet asset UIDs in `Assets`.
 Scramble Egg group. Existing trade/reward controls stay on Lab Trade. Only the
 new seller appears on Lab Sell; it is not mixed into Pets' ordinary egg seller.
 
-- Auto Sell Lab Eggs: OFF.
+- Auto Sell Lab Egg: OFF.
 - Rule: Rarity And Value.
 - Max rarity: Off (zero rarity matches).
 - Income Below: 0 (disabled), in raw dollars **per second**, not sale price.
-- Keep Mutated: ON; Normal/None are not mutations. Supports list, keyed,
+- Keep Mutation Lab Egg: ON; Normal/None are not mutations. Supports list, keyed,
   string, base-mutation and named mutation records; unknown named-record shape
   is retained conservatively.
 - Keep Lab Pets: independent multi-select, never sold.
-- Preview: count and estimated sale price; read-only even with auto OFF.
-- Sell Matching Lab Eggs Now: double-click confirmation, uses the same filters.
+- Sell Now: double-click confirmation, uses the same filters.
   Manual sell works with auto OFF; the auto toggle isn't an authorization bypass.
 
 Default rarity/value settings match nothing. With Rarity And Value, both must
-be configured. Value 0 cannot make a value rule pass. Preview reads inventory,
-not a sale request. “Requested … awaiting inventory update” is deliberately not
-“sold”; a fire-and-forget RPC is not server acceptance.
+be configured. Value 0 cannot make a value rule pass. A fire-and-forget RPC is
+not server acceptance.
+
+User-requested compact UI: only the six control labels above plus Sell Now.
+Intro/footer explanations, preview and status rows are removed. Only the
+rarity/value hints and manual confirmation have short tooltips (under 33
+characters). Polling no longer reads inventory just to refresh hidden text;
+sale collection, filters, locks and request logic remain byte-identical.
 
 ## Safety / adaptations
 
@@ -80,11 +84,11 @@ These are static/compile checks, not simulations or proof of live sales/FPS.
 
 User live-test in a fresh Roblox session:
 
-1. Defaults show zero matches and no sell RPC; normal egg seller leaves Lab
+1. Defaults send no sell RPC; normal egg seller leaves Lab
    reward eggs untouched.
 2. Use an expendable unplaced Lab reward. Select Rarity Only + its rarity,
-   inspect preview, then double-click Sell Now. Verify game inventory and money.
-3. Confirm placed/equipped/reserved/kept-pet/mutated eggs are absent from preview.
+   then double-click Sell Now. Verify game inventory and money.
+3. Confirm placed/equipped/reserved/kept-pet/mutated eggs remain in inventory.
 4. Exercise Value Only, And, Or and threshold 0; change settings during auto
    polling, stop auto and verify future requests stop.
 5. Enable Lab trade plus auto sell and check no overlapping Lab action; enter

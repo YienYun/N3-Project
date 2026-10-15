@@ -70,8 +70,24 @@ assert not re.search(r'egg\.[A-Za-z_]+\s*=(?!=)', seller), 'Inventory records mu
 for option in ('Toggle_LabSell_Auto', 'Dropdown_LabSell_Rule', 'Dropdown_LabSell_MaxRarity',
                'Input_LabSell_IncomeLimit', 'Toggle_LabSell_KeepMutated', 'Dropdown_LabSell_KeepPets'):
     assert runtime.count(f'"{option}"') == 1, f'Duplicate UI config key: {option}'
+# User-requested compact UI: backend remains byte-identical to 9a9217f.
+ui_start = seller.index('\tfunction DrScramble.BuildLabSellerUI(group)')
+ui_end = seller.index('\tLibraryLoader:OnUnload(function()', ui_start)
+ui = seller[ui_start:ui_end]
+assert hashlib.sha256(seller[:ui_start].encode()).hexdigest() == (
+    '1b1da49adaf7881c9f9d0ab795fa6d7bd1b46d6df61cad87b94ad8a7c84a7691'
+), 'Seller backend changed during the UI-only cleanup'
+labels = re.findall(r'Text = "([^"]+)"', ui)
+assert labels == ['Auto Sell Lab Egg', 'Sell Rule', 'Max Rarity', 'Income Below',
+                  'Keep Mutation Lab Egg', 'Keep Lab Pets', 'Sell Now'], labels
+assert 'AddLabel(' not in ui and 'seller.Preview' not in ui and 'seller.StatusLabel' not in ui
+assert 'DoubleClick = true' in ui
+assert all(len(text) <= 32 for text in re.findall(r'Tooltip = "([^"]+)"', ui))
+assert 'task.spawn(DrScramble.RunLabSell, true)' in ui
+assert 'DrScramble.RunLabSell(false)' in ui
 print('PASS: separate source-backed Lab seller; EggSkin classification and ordinary-seller exclusion.')
-print('PASS: safe filters, preview, raw UIDs, placement/held/reserved/mutation/pet protection.')
+print('PASS: safe filters, raw UIDs, placement/held/reserved/mutation/pet protection.')
 print('PASS: single Lab action lock, race/cancellation guards, fresh 50-item batches, no pet sales.')
 print('PASS: undoing exactly the three seller insertion sites reproduces the full reviewed prior baseline.')
+print('PASS: compact labels, no explanation/preview/status rows; unchanged seller backend.')
 print('Static checks only; sale requests are not server acceptance or live Roblox evidence.')

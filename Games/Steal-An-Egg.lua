@@ -7917,20 +7917,13 @@ do
 		seller.StatusAt = os.clock()
 	end
 	function DrScramble.BuildLabSellerUI(group)
-		group:AddLabel("Only Dr Scramble reward eggs. Ordinary eggs use Pets > Sell Eggs.", true)
-		seller.Preview = group:AddLabel("Lab egg matches: 0", true)
-		seller.StatusLabel = group:AddLabel("Off", true)
 		group:AddToggle("Toggle_LabSell_Auto", {
-			Text = "Auto Sell Lab Eggs", Default = false,
-			Tooltip = "Inventory only; skips placed, equipped and recipe-reserved eggs.",
+			Text = "Auto Sell Lab Egg", Default = false,
 			Callback = function(value)
 				FarmConfig.LabSell_Auto = value == true
 				DrScramble.LabSellSettingsChanged()
 			end,
 		})
-		group:AddButton({ Text = "Sell Matching Lab Eggs Now", DoubleClick = true, Func = function()
-			task.spawn(DrScramble.RunLabSell, true)
-		end })
 		group:AddDropdown("Dropdown_LabSell_Rule", {
 			Text = "Sell Rule", Values = SellRuleOptions, Default = "Rarity And Value", AllowNull = false,
 			Callback = function(value)
@@ -7941,14 +7934,14 @@ do
 		local rarities = { "Off" }
 		for _, label in ipairs(RarityNumberedList) do table.insert(rarities, label) end
 		group:AddDropdown("Dropdown_LabSell_MaxRarity", {
-			Text = "Max Rarity (Off = no rarity matches)", Values = rarities, Default = "Off", AllowNull = false,
+			Text = "Max Rarity", Tooltip = "Off = no rarity matches.", Values = rarities, Default = "Off", AllowNull = false,
 			Callback = function(value)
 				FarmConfig.LabSell_MaxRarity = tonumber(tostring(value):match("^(%d+)")) or 0
 				DrScramble.LabSellSettingsChanged()
 			end,
 		})
 		group:AddInput("Input_LabSell_IncomeLimit", {
-			Text = "Income Below ($/s; 0 = disabled)", Default = "0", Numeric = true, Finished = true,
+			Text = "Income Below", Tooltip = "$/s. 0 = disabled.", Default = "0", Numeric = true, Finished = true,
 			Callback = function(value)
 				local number = tonumber(value) or 0
 				FarmConfig.LabSell_IncomeLimit = (number == number and number < math.huge) and math.max(0, number) or 0
@@ -7956,7 +7949,7 @@ do
 			end,
 		})
 		group:AddToggle("Toggle_LabSell_KeepMutated", {
-			Text = "Keep Mutated Lab Eggs", Default = true,
+			Text = "Keep Mutation Lab Egg", Default = true,
 			Callback = function(value)
 				FarmConfig.LabSell_KeepMutated = value == true
 				DrScramble.LabSellSettingsChanged()
@@ -7964,7 +7957,7 @@ do
 		})
 		if #seller.PetOptions > 0 then
 			group:AddDropdown("Dropdown_LabSell_KeepPets", {
-				Text = "Keep Lab Pets (Never Sell)", Values = seller.PetOptions,
+				Text = "Keep Lab Pets", Values = seller.PetOptions,
 				Multi = true, Default = {}, AllowNull = true, Searchable = true,
 				Callback = function(value)
 					local selected, kept = ParseMultiDropdownSelection(value), {}
@@ -7976,20 +7969,16 @@ do
 				end,
 			})
 		end
-		group:AddLabel("Safe defaults: rarity Off + value 0 match nothing. Sell Now needs a double click.", true)
+		group:AddButton({ Text = "Sell Now", DoubleClick = true, Tooltip = "Double-click to confirm.", Func = function()
+			task.spawn(DrScramble.RunLabSell, true)
+		end })
 		if seller.Started then return end
 		seller.Started = true
 		task.spawn(function()
 			while not seller.Disposed and not LibraryLoader.Unloaded do
-				local ok, eggs, price = pcall(DrScramble.CollectSellableLabEggs)
-				if seller.Disposed or LibraryLoader.Unloaded then break end
-				if ok then
-					seller.Preview:SetText(string.format("Lab egg matches: %d | estimated sale: $%.0f", #eggs, price))
-				else seller.Preview:SetText("Lab inventory unavailable; no sale requested") end
 				if FarmConfig.LabSell_Auto then
 					DrScramble.RunLabSell(false)
 				elseif os.clock() - seller.StatusAt > 6 then seller.Status = "Off (Sell Now remains available)" end
-				if not seller.Disposed and not LibraryLoader.Unloaded then seller.StatusLabel:SetText(seller.Status) end
 				task.wait(2)
 			end
 		end)

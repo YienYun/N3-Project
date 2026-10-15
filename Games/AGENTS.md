@@ -114,7 +114,8 @@ Read this before changing `Steal-An-Egg.lua`.
   known reward EggSkins even when the dedicated Lab seller is OFF.
 - Source mapping uses banner EggSkin and Pets AssetId; no egg-name heuristics.
 - Preserve safe OFF/rarity-Off/value-0 defaults, independent filters, raw UIDs,
-  placed/held/reserved/mutation/pet exclusions and truthful request status.
+  placed/held/reserved/mutation/pet exclusions. Keep UI labels short; no intro,
+  footer, preview or status rows. Tooltips must be brief, not paragraphs.
 - Seller shares LabState.ActionBusy with trade/reroll/reveal and respects race.
   Revalidate per max-50 batch and cancel unsent work on settings/unload.
 - Run `tools/check_lab_seller_source.py` with the existing three static checkers

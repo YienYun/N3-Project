@@ -13,10 +13,11 @@ assert hashlib.sha1(blob).hexdigest() == "a36898ee403cacf3aa9742bfb9f9270f867cb7
 # Reviewed race policy/144 cap plus scoped treadmill/Lab repairs (treadmill-lab.md).
 # Separate Lab seller is reviewed by check_lab_seller_source.py, which reverses
 # exactly its three insertion sites to reproduce the full 6dc1423 baseline.
+# Compact seller UI is checked there separately; its backend is byte-identical.
 # Eight gameplay blocks remain unchanged (check_race_source.py); the entire live race
 # is also fingerprinted (check_treadmill_lab_source.py). Presentation additions strip.
 normalized = strip_builtin_visual(runtime)
-assert hashlib.sha256(normalized.encode()).hexdigest() == "e0b79003d95b19925e197b9ab66dede6e262faf9552d07d422de494936150a53", (
+assert hashlib.sha256(normalized.encode()).hexdigest() == "75edbbcf572609134429e29479241b1b03bc2ebd7030fe3da8b802376d7f98fa", (
     "Gameplay outside the reviewed visual additions changed; review before updating this baseline"
 )
 assert not (ROOT / "Games/Steal-An-Egg-V2.lua").exists(), "Retire the standalone tester"
