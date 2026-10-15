@@ -151,7 +151,7 @@ Read this before changing `Steal-An-Egg.lua`.
   introduce another swap/flight controller. Current transport is bounded MoveTo.
 - Race always preempts; late RPC cleanup may not touch a newer character/owner.
   Restore tools/adapters conditionally; retain server refusal/replication delays.
-- Auto Buy Nitro refill remains pending; do not add a competing race-shop buyer.
+- Auto Buy Nitro is delivered in the shared lane below; never add a competing buyer.
 
 
 ## Auto Buy Nitro
@@ -174,3 +174,28 @@ Read this before changing `Steal-An-Egg.lua`.
 - Historical reverse-delta checks strip Nitro before their prior scopes, never
   replace old expected hashes to accommodate unrelated changes. Library, loader
   and bundled references remain untouched; static checks are not live acceptance.
+
+
+## Wisp quest (not an Event)
+
+- See `../docs/wisp-quest.md`. User explicitly requires Home/farm → a new Quests
+  outer group, nested Wisp tab, distinct header/tab icons. Never put Wisp in Event.
+  Default OFF; one short toggle/status. Banjo is later, not an empty placeholder.
+  Server Hop/tools are deferred for a separate manager module, not part of this work.
+- Follow Chili 41403–42256. Read WispQuests/Save and real area DropTables; do not
+  invent quest stages, recipes, remote payloads or target coordinates. Use raw UIDs.
+- One quest worker, native normal/Instant steal input/sorting adapters; preserve
+  in-flight native cycle lifetime and all user farm/defense choices. No second
+  steal/fly/swap worker. Race preempts; start quest actions only from native idle.
+- Track native inventory/fusion calls before yields; protect required inputs from
+  sellers/normal placement and use source-backed selective place/hatch/fuse actions.
+  Finish owned hatch/fusion before advancing the quest. Favorite/equipped pets are
+  excluded; Wisp fusion can consume mutated unfavorited pets, as documented.
+- Keep pending consumption across OFF/ON; no blind ambiguous BeginFuse retry.
+  Never clear shared IsExecuting or touch a newer character/owner in cleanup.
+- Quest-only NPC/plot pivot follows Chili fallback; N3 normal movement is untouched.
+  Check six-stud arrival, daylight, race and generation before quest requests.
+- Run `tools/check_wisp_source.py`, all seven prior checkers and full production
+  Luau compile. Exactly seven insertion sites reverse byte-for-byte to 3748a3e;
+  historical checks strip Wisp first without replacing any prior expected hashes.
+  Library/loader/references stay untouched. Static checks are not live acceptance.

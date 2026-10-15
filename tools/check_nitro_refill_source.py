@@ -1,12 +1,13 @@
 """Static contracts only; never invokes a game RPC or spends tokens."""
 from pathlib import Path
+from wisp_scope import strip_wisp
 import hashlib
 import re
 from nitro_scope import strip_nitro_refill
 from steal_visual_scope import strip_builtin_visual
 
 ROOT = Path(__file__).resolve().parents[1]
-s = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
+s = strip_wisp((ROOT / 'Games/Steal-An-Egg.lua').read_text())
 assert hashlib.sha256(strip_builtin_visual(strip_nitro_refill(s)).encode()).hexdigest() == (
     '04700b83dc3033b34536299e533b87bca688fe63aacf26930206b1438d2ff233'
 ), 'Changes escaped Nitro refill / live-confirmed Auto Mutate 1043562 baseline'

@@ -4,12 +4,13 @@ Fingerprints capture the already-working N3/Sena code before the race edit.
 Intentional future changes to those protected blocks require a separate review.
 """
 from pathlib import Path
+from wisp_scope import strip_wisp
 import hashlib
 import re
 from steal_visual_scope import strip_builtin_visual
 
 ROOT = Path(__file__).resolve().parents[1]
-runtime = strip_builtin_visual((ROOT / "Games/Steal-An-Egg.lua").read_text())
+runtime = strip_builtin_visual(strip_wisp((ROOT / "Games/Steal-An-Egg.lua").read_text()))
 reference = ROOT / "Games/Source/StealAnEgg/ChiliSourceV2.lua"
 assert hashlib.sha256(reference.read_bytes()).hexdigest() == "0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d", "Chili V2 reference changed"
 

@@ -1,11 +1,12 @@
 """Source-contract regressions only. Does not execute/simulate Roblox or RPCs."""
 from pathlib import Path
+from wisp_scope import strip_wisp
 from nitro_scope import strip_nitro_shop_hook
 import hashlib
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-runtime = (ROOT / "Games/Steal-An-Egg.lua").read_text()
+runtime = strip_wisp((ROOT / "Games/Steal-An-Egg.lua").read_text())
 reference = (ROOT / "Games/Source/StealAnEgg/ChiliSourceV2.lua").read_bytes()
 assert hashlib.sha256(reference).hexdigest() == "0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d"
 

@@ -4404,6 +4404,11 @@ end
 					end
 				end
 			end
+			-- BEGIN WISP CANDIDATE
+			local nativeSelected = canSelect
+			local wispTarget = (not carried or includeCarried == true) and Tasks.WispNeeds and Tasks.WispNeeds(rec) == true
+			if wispTarget then canSelect = true end
+			-- END WISP CANDIDATE
 			if canSelect and (normal or not Tasks.IsAnotherPlayerNearEgg(pos, 9)) then
 				table.insert(list, {
 					Uid = uid,
@@ -4424,6 +4429,9 @@ end
 					IsScramble = scrambleTarget,
 					IsScrambleMissing = scrambleMissing,
 					IsIndex = indexMissing,
+					-- BEGIN WISP FLAGS
+					IsWisp = wispTarget, WispOnly = wispTarget and not nativeSelected,
+					-- END WISP FLAGS
 					Raw = rec,
 				})
 			end
@@ -4435,6 +4443,11 @@ end
 		table.sort(list, function(a, b)
 			local ca = a.IsScramble and RankLab or (a.IsIndex and RankIndex or RankFilter)
 			local cb = b.IsScramble and RankLab or (b.IsIndex and RankIndex or RankFilter)
+			-- BEGIN WISP SORT
+			local rankWisp = Tasks.PriorityRank and Tasks.PriorityRank("Wisp") or 7
+			if a.IsWisp then ca = a.WispOnly and rankWisp or math.min(ca, rankWisp) end
+			if b.IsWisp then cb = b.WispOnly and rankWisp or math.min(cb, rankWisp) end
+			-- END WISP SORT
 			if ca ~= cb then
 				return ca < cb
 			end
@@ -7399,6 +7412,9 @@ do
 		return trios
 	end
 	local function ExecuteFuseTrio(trio)
+		-- BEGIN WISP FUSE WRAP
+		local function nativeAction()
+		-- END WISP FUSE WRAP
 		SetElevated8()
 		if not (Remotes.RemoteFuseLoad and Remotes.RemoteFuseBegin and Remotes.RemoteFuseFinish) then
 			return false
@@ -7427,6 +7443,11 @@ do
 			end
 		end)
 		return success
+		-- BEGIN WISP FUSE RETURN
+		end
+		if Tasks.WispNativeAction then return Tasks.WispNativeAction("fusion", nativeAction) end
+		return nativeAction()
+		-- END WISP FUSE RETURN
 	end
 	function Tasks.GetPetResolvedTier(rawCat, rawName)
 		local info = ResolveGameAsset(rawCat)
@@ -12705,6 +12726,9 @@ function Tasks.BuildMainInterface()
 			FarmConfig.AutoHatch = State
 		end,
 	})
+	-- BEGIN WISP UI
+	Tasks.BuildWispUI(HomeTab)
+	-- END WISP UI
 	local IndexGroup = HomeTab:AddRightGroupbox("Pet Index & Codex", "book-open")
 	IndexGroup:AddDropdown("Dropdown_Index_PriorityOrder", {
 		Text = "Missing Steal Order",
@@ -18910,6 +18934,527 @@ do
 	end)
 end
 -- END NITRO REFILL CONTROLLER
+
+-- BEGIN WISP CONTROLLER
+-- Chili V2 41403-42256: WispQuests/Save, native steal inputs, fusion, claims and tree return.
+do
+	local engine = RuntimeState.StealEngine
+	local state = { Generation = 0, Disposed = false, Busy = false, Lease = false, Valid = false,
+		NextAt = 0, SettleUntil = 0, ReadAt = 0, Status = "Off", Pools = {}, KeepEggs = {}, KeepPets = {},
+		NativeCalls = 0, Threads = {}, PendingEggs = {}, Required = 50000000000, StageCount = 4 }
+	Tasks.WispState = state
+	FarmConfig.Wisp_Auto = false
+	local nativeHold = ShouldHoldBackScrambleEgg
+	local function enabled() return not state.Disposed and not LibraryLoader.Unloaded and FarmConfig.Wisp_Auto == true end
+	local function raceWanted()
+		return RaceOwnsCharacter() or (Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal()) == true
+	end
+	local function save()
+		SetElevated8()
+		local reader = SaveModule and (SaveModule.Get or SaveModule.Peek)
+		local value = type(reader) == "function" and reader()
+		return type(value) == "table" and value or nil
+	end
+	local function owned()
+		if not EggStateModule or type(EggStateModule.ReadOwnerEggs) ~= "function" then return nil end
+		local value = EggStateModule.ReadOwnerEggs(LocalPlayer.UserId)
+		return type(value) == "table" and value or nil
+	end
+	local function incomplete(quest, record)
+		return type(quest) == "table" and quest.Id ~= nil and type(record) == "table"
+			and not (type(record.Claimed) == "table" and record.Claimed[quest.Id] == true)
+			and (tonumber(type(record.Progress) == "table" and record.Progress[quest.Id]) or 0) < (tonumber(quest.Target) or 1)
+	end
+	local function fuseStage()
+		return enabled() and state.Valid and state.Quest and state.Quest.Event == "PetFused"
+			and incomplete(state.Quest, state.Record)
+	end
+	local function petGroups(data, pool)
+		local equipped, groups = {}, {}
+		for key, uid in pairs(type(data.EquippedAssets) == "table" and data.EquippedAssets or {}) do
+			equipped[tostring(uid == true and key or uid)] = true
+		end
+		for uid, pet in pairs(type(data.Inventory) == "table" and data.Inventory or {}) do
+			local category = type(pet) == "table" and tostring(pet.Category or "")
+			if category and pool[category] and pet.IsFavorite ~= true and not equipped[tostring(uid)] then
+				groups[category] = groups[category] or {}
+				table.insert(groups[category], { Uid = uid, Value = CalculateEggIncome({
+					AssetCategory = category, AssetScale = pet.Scale, Mutations = pet.Mutations }) })
+			end
+		end
+		for _, pets in pairs(groups) do
+			table.sort(pets, function(a, b) return a.Value == b.Value and tostring(a.Uid) < tostring(b.Uid) or a.Value < b.Value end)
+		end
+		return groups
+	end
+	local function makePlan(data, eggs)
+		state.Plan, state.Pool, state.KeepEggs, state.KeepPets, state.StealWanted = nil, {}, {}, {}, false
+		local quest = state.Quest
+		if not quest or not incomplete(quest, state.Record) then return end
+		if quest.Event == "EggSecured" then state.StealWanted = true; return end
+		if quest.Event ~= "PetFused" then return end
+		if data.FusionLocked == true or state.FusionPhase or next(state.PendingEggs) ~= nil then return end
+		local area = type(quest.Match) == "table" and quest.Match.AreaId
+		if area == nil then error("Wisp fusion quest has no AreaId") end
+		local pool = state.Pools[tostring(area)]
+		if not pool then
+			local configs = ReplicatedStorage:FindFirstChild("Data")
+			configs = configs and configs:FindFirstChild("Areas")
+			configs = configs and configs:FindFirstChild("Configs")
+			local module = configs and configs:FindFirstChild(tostring(area))
+			if not module or not module:IsA("ModuleScript") then error("Wisp area data unavailable") end
+			local config = require(module)
+			if type(config) ~= "table" or type(config.DropTable) ~= "table" then error("Wisp drop table unavailable") end
+			pool = {}
+			for _, row in ipairs(config.DropTable) do
+				if type(row) == "table" and row[1] ~= nil then pool[tostring(row[1])] = true end
+			end
+			if next(pool) == nil then error("Wisp drop table empty") end
+			state.Pools[tostring(area)] = pool
+		end
+		state.Pool = pool
+		local pets, groups, largest = petGroups(data, pool), {}, 0
+		for category in pairs(pool) do groups[category] = { Pets = pets[category] or {}, Eggs = {}, Placed = {} } end
+		for key, egg in pairs(eggs) do
+			local category = type(egg) == "table" and tostring(egg.AssetCategory or "")
+			local group, uid = groups[category], type(egg) == "table" and (egg.Uid or key) or key
+			if group and (egg.Placement ~= nil or not nativeHold(category, uid)) then
+				local item = { Uid = uid, Record = egg, Value = CalculateEggIncome(egg) }
+				table.insert(egg.Placement ~= nil and group.Placed or group.Eggs, item)
+			end
+		end
+		local best
+		for category, group in pairs(groups) do
+			local total = #group.Pets + #group.Eggs + #group.Placed
+			largest = math.max(largest, total)
+			for _, list in ipairs({ group.Eggs, group.Placed }) do
+				table.sort(list, function(a, b) return a.Value == b.Value and tostring(a.Uid) < tostring(b.Uid) or a.Value < b.Value end)
+			end
+			if total >= 3 then
+				local duration, value = #group.Pets >= 3 and 0 or math.huge, 0
+				for _, list in ipairs({ group.Eggs, group.Placed }) do
+					for _, egg in ipairs(list) do
+						if EggRecordsModule and type(EggRecordsModule.GrowthDuration) == "function" then
+							local seconds = tonumber(EggRecordsModule.GrowthDuration(egg.Record))
+							if seconds and seconds >= 0 then duration = math.min(duration, seconds) end
+						end
+					end
+				end
+				for i = 1, math.min(3, #group.Pets) do value += group.Pets[i].Value end
+				if not best or duration < best.Duration or (duration == best.Duration and (value < best.Value
+					or (value == best.Value and category < best.Category))) then
+					best = { Category = category, Pets = group.Pets, Eggs = group.Eggs, Placed = group.Placed, Duration = duration, Value = value }
+				end
+			end
+		end
+		state.Plan, state.StealWanted = best, largest < 3
+		-- Protect potential materials before a trio exists, then only the chosen species.
+		for category, group in pairs(groups) do
+			if not best or category == best.Category then
+				for _, pet in ipairs(group.Pets) do state.KeepPets[tostring(pet.Uid)] = true end
+				for _, egg in ipairs(group.Eggs) do state.KeepEggs[tostring(egg.Uid)] = true end
+			end
+		end
+	end
+	local function refresh()
+		state.Valid, state.StealWanted = false, false
+		local folder = ReplicatedStorage:FindFirstChild("Data")
+		local module = folder and folder:FindFirstChild("WispQuests")
+		if not module or not module:IsA("ModuleScript") then error("Wisp quest data unavailable") end
+		local config = require(module)
+		local data, eggs = save(), owned()
+		if type(config) ~= "table" or type(config.List) ~= "table" or not data or not eggs
+			or type(data.WispCompanion) ~= "table" then error("Waiting for Wisp save/eggs") end
+		state.Required = tonumber(config.RequiredSpeedPower) or 50000000000
+		state.StageCount = tonumber(config.StageCount) or 4
+		state.Save, state.Eggs, state.Record = data, eggs, data.WispCompanion
+		local record = state.Record
+		state.Quest = record.Accepted and not record.Unlocked and config.List[tonumber(record.Stage) or 1] or nil
+		if data.FusionLocked == true and state.FusionPhase == "begin" then state.FusionPhase = "locked" end
+		local finishedQuest = state.FusionQuestId ~= nil and ((type(record.Claimed) == "table" and record.Claimed[state.FusionQuestId] == true)
+			or (tonumber(type(record.Progress) == "table" and record.Progress[state.FusionQuestId]) or 0) >= (state.FusionTarget or math.huge))
+		if data.FusionLocked ~= true and (state.FusionPhase == "reveal" or finishedQuest) then state.FusionPhase, state.FusionPets = nil, nil end
+		makePlan(data, eggs)
+		for uid in pairs(state.PendingEggs) do
+			local exists = false
+			for key, egg in pairs(eggs) do
+				if tostring(type(egg) == "table" and (egg.Uid or key) or key) == uid then exists = true; break end
+			end
+			if not exists and state.PendingEggs[uid].FinishSent then state.PendingEggs[uid] = nil end
+		end
+		state.Valid, state.ReadAt = true, os.clock()
+	end
+	function Tasks.WispNeeds(egg)
+		if not enabled() or not state.Valid or os.clock() - state.ReadAt > 3 or not state.StealWanted
+			or type(egg) ~= "table" then return false end
+		local quest = state.Quest
+		if not quest or not incomplete(quest, state.Record) then return false end
+		if quest.Event == "PetFused" then
+			return type(quest.Match) == "table" and tostring(egg.AreaId) == tostring(quest.Match.AreaId)
+		end
+		if quest.Event ~= "EggSecured" then return false end
+		for key, expected in pairs(type(quest.Match) == "table" and quest.Match or {}) do
+			if key == "AreaId" then
+				if tostring(egg.AreaId) ~= tostring(expected) then return false end
+			elseif key == "Rarity" then
+				local asset = AssetsModule and AssetsModule.Directory and AssetsModule.Directory[tostring(egg.AssetCategory)]
+				local rarity = type(asset) == "table" and asset.Rarity
+				if type(rarity) ~= "table" or tostring(rarity.DisplayName or rarity._id or "") ~= tostring(expected) then return false end
+			else return false end
+		end
+		return true
+	end
+	local function stealWanted()
+		local cycle = engine.AutoCycle
+		return enabled() and ((state.Valid and state.StealWanted) or state.InstantFlight == true
+			or (cycle ~= nil and cycle.Target ~= nil and cycle.Target.IsWisp == true)) == true
+	end
+	function Tasks.WispProtect(uid, pet)
+		if state.PendingEggs[tostring(uid)] or (pet and state.FusionPets and state.FusionPets[tostring(uid)]) then return true end
+		if not enabled() then return false end
+		if not state.Valid then return true end
+		return (pet and state.KeepPets or state.KeepEggs)[tostring(uid)] == true
+	end
+	local function carrying()
+		local tool, uid = GetEquippedEggTool()
+		local signal = engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying
+		if tool and state.Valid and EggStateModule and type(EggStateModule.ReadFieldEgg) == "function" then
+			for key, egg in pairs(state.Eggs or {}) do
+				if type(egg) == "table" and tostring(egg.Uid or key) == tostring(uid)
+					and EggStateModule.ReadFieldEgg(uid) == nil
+					and (not signal or tostring(engine.State.CarryUid) == tostring(uid)) then return false end
+			end
+		end
+		return tool ~= nil or signal or IsActivelyCarryingEgg()
+	end
+	local function idle()
+		local mutate, belt = Tasks.MutateState, Tasks.TreadmillState
+		return engine and not RuntimeState.IsExecuting and not engine.AutoCycle and not engine.Guard.Active and not engine.Guard.Busy
+			and state.NativeCalls == 0 and os.clock() >= state.SettleUntil
+			and not (mutate and (mutate.Lease or mutate.InventoryActions > 0 or os.clock() < mutate.HatchSettleUntil))
+			and not (belt and (belt.Busy or belt.WearBusy or belt.Exiting))
+			and not carrying()
+			and LocalPlayer:GetAttribute("InScrambleArena") ~= true
+	end
+	local function higherTask()
+		if raceWanted() then return true end
+		local rank = Tasks.PriorityRank("Wisp")
+		if engine.Movement.PlaceWanted and Tasks.PriorityRank("Place") < rank then return true end
+		if FarmConfig.AutoTreadmill and Tasks.PriorityRank("Treadmill") < rank then return true end
+		for _, candidate in ipairs(engine.CollectCandidates(false, not FarmConfig.Defense_InstantSteal)) do
+			local key = candidate.IsScramble and "StealLab" or candidate.IsIndex and "StealIndex" or "StealFilter"
+			if candidate.WispOnly then key = "Wisp" end
+			if Tasks.PriorityRank(key) < rank then return true end
+		end
+		return false
+	end
+	local function worldPosition(path)
+		local node = Workspace:FindFirstChild("World")
+		for _, name in ipairs(path) do node = node and node:FindFirstChild(name) end
+		if not node or not (node:IsA("Model") or node:IsA("BasePart")) then return nil end
+		return node:GetPivot().Position
+	end
+	local function run(action)
+		if not enabled() or os.clock() < (state.ConfigUntil or 0) or not idle() or higherTask() then return end
+		if not engine.ClaimMovement("wisp") then return end
+		state.Busy, state.Lease = true, true
+		local generation, character = state.Generation, LocalPlayer.Character
+		local humanoid, root
+		local function cancelled()
+			return not enabled() or generation ~= state.Generation or LocalPlayer.Character ~= character
+				or engine.Movement.Owner ~= "wisp" or raceWanted()
+				or (humanoid and (humanoid.Parent ~= character or humanoid.Health <= 0))
+				or (root and (root.Parent ~= character or character:FindFirstChild("HumanoidRootPart") ~= root))
+				or (character and character:GetAttribute("InvisApplied") == true)
+		end
+		local function invoke(name, ...)
+			state.LastDispatch = false
+			if cancelled() then return false, false end
+			local packages = ReplicatedStorage:FindFirstChild("Packages")
+			local network = packages and packages:FindFirstChild("Networking")
+			local remote = network and network:FindFirstChild(name)
+			if not remote or not remote:IsA("RemoteFunction") then return false, "missing remote" end
+			state.LastDispatch = true
+			return pcall(remote.InvokeServer, remote, ...)
+		end
+		local function travel(position, daylight)
+			if not position then state.Status = "Quest target not streamed"; return false end
+			if cancelled() then return false end
+			if daylight and GetNightAndWallStatus().ShouldRetreat then state.Status = "Waiting for daylight"; return false end
+			pcall(LocalPlayer.RequestStreamAroundAsync, LocalPlayer, position, 3)
+			if cancelled() or (daylight and GetNightAndWallStatus().ShouldRetreat) then return false end
+			-- Chili's NPC travel uses this pivot fallback; never route normal egg travel here.
+			if (root.Position - position).Magnitude > 40 then character:PivotTo(CFrame.new(position + Vector3.new(0, 3, 3))) end
+			local deadline = os.clock() + 3
+			while (root.Position - position).Magnitude > 6 do
+				if cancelled() or higherTask() or os.clock() >= deadline then return false end
+				humanoid:MoveTo(position)
+				task.wait(0.1)
+			end
+			return not cancelled()
+		end
+		local ok, failure = pcall(function()
+			SetElevated8()
+			if RuntimeState.IsExecuting or engine.AutoCycle or state.NativeCalls > 0 or cancelled() then return end
+			Tasks.ExitTreadmill()
+			if cancelled() then return end
+			if engine.ReleaseAutoShield then engine.ReleaseAutoShield(true) end
+			if RuntimeState.OriginalHumanoid then RestoreCharacter() end
+			if cancelled() then return end
+			humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			root = character and character:FindFirstChild("HumanoidRootPart")
+			if not humanoid or not root or humanoid.Health <= 0 then return end
+			if GetEquippedEggTool() then
+				if carrying() then return end
+				humanoid:UnequipTools() -- Only an owned, banked tool; never interrupt a field carry.
+			end
+			refresh()
+			if cancelled() then return end
+			action(invoke, travel, cancelled)
+		end)
+		pcall(function()
+			if LocalPlayer.Character == character and engine.Movement.Owner == "wisp" and not RaceOwnsCharacter()
+				and humanoid and humanoid.Parent == character and root and root.Parent == character then humanoid:MoveTo(root.Position) end
+		end)
+		engine.ReleaseMovement("wisp")
+		state.Busy, state.Lease, state.NextAt = false, false, os.clock() + 3
+		if engine.AutoWake then engine.AutoWake() end
+		if not ok then state.Status, state.LastError = "Waiting for quest data", tostring(failure) end
+	end
+	local function questRequest(invoke, action, id)
+		local ok, reply, message = invoke("RF/WispCompanion/Request", action, id)
+		state.Status = ok and reply == true and (action .. " sent; waiting for save") or (action .. ": " .. tostring(message or reply or "no answer"))
+	end
+	local function step(invoke, travel, cancelled)
+		local record, quest = state.Record, state.Quest
+		for _, pending in pairs(state.PendingEggs) do
+			if os.clock() >= pending.At then
+				local ok, reply = invoke("RF/EggWorld/AskFinishHatch", pending.Uid)
+				pending.FinishSent = state.LastDispatch and ok and reply ~= false
+				pending.At = os.clock() + 3
+				state.Status = "Waiting for hatch save"
+			end
+			return
+		end
+		local data = state.Save
+		-- Finish this quest's fusion before claiming/advancing, even if PetFused already progressed.
+		if data.FusionLocked == true and (state.FusionPhase ~= nil or fuseStage()) then
+			if type(data.FusionEggReward) == "table" and state.FusionPhase ~= "reveal" then
+				state.FusionPhase = "reveal"
+				local ok, reply = invoke("RF/Fusery/FinishReveal")
+				if not state.LastDispatch or (ok and reply == false) then state.FusionPhase = "locked" end
+			end
+			state.Status = "Waiting for fuse result"; return
+		end
+		if state.FusionPhase then state.Status = "Waiting for fuse confirmation"; return end
+		if record.Unlocked then state.Status = "Done — Enchanted Tree open"; return end
+		if not record.Accepted then
+			if (tonumber(state.Save.SpeedPower) or 0) < state.Required then state.Status = "Needs " .. FormatCash(state.Required) .. " Speed Power"; return end
+			local world = Workspace:FindFirstChild("World")
+			local build = world and world:FindFirstChild("Build")
+			if not build or build:GetAttribute("EnchantedForestZoneRevealed") ~= true then state.Status = "Enchanted Forest not open"; return end
+			state.Status = "Meeting Wisp"
+			if travel(worldPosition({ "Build", "EnchantedForestZone", "WispSpawn" }), true) then
+				local fresh = save()
+				if not cancelled() and fresh and type(fresh.WispCompanion) == "table" and not fresh.WispCompanion.Accepted
+					and not fresh.WispCompanion.Unlocked and (tonumber(fresh.SpeedPower) or 0) >= state.Required then questRequest(invoke, "Accept") end
+			end
+			return
+		end
+		if quest and not incomplete(quest, record) and not (record.Claimed or {})[quest.Id] then questRequest(invoke, "Claim", quest.Id); return end
+		if (tonumber(record.Stage) or 1) >= state.StageCount then
+			if not record.Returning then questRequest(invoke, "BeginReturn"); return end
+			state.Status = "Returning Wisp to tree"
+			if travel(worldPosition({ "Build", "EnchantedForestZone", "Zone13Props", "EnchantedTree", "WispAnchor" }), true) then
+				local fresh = save()
+				if not cancelled() and fresh and type(fresh.WispCompanion) == "table" and fresh.WispCompanion.Returning
+					and not fresh.WispCompanion.Unlocked then questRequest(invoke, "Return") end
+			end
+			return
+		end
+		if not quest then state.Status = "Waiting for quest stage"; return end
+		if quest.Event ~= "PetFused" then return end
+		local plan = state.Plan
+		if not plan then state.Status = "Collecting three matching pets/eggs"; return end
+		if #plan.Pets < 3 then
+			if #plan.Placed > 0 then
+				for _, item in ipairs(plan.Placed) do
+					local checker = EggStateModule.IsReadyToHatch or EggStateModule.IsLocalEggReady
+					if type(checker) == "function" and checker(item.Uid) == true then
+						state.PendingEggs[tostring(item.Uid)] = { Uid = item.Uid, At = os.clock() + 0.9 }
+						local ok, reply = invoke("RF/EggWorld/AskHatch", item.Uid)
+						if not state.LastDispatch or (ok and reply == false) then state.PendingEggs[tostring(item.Uid)] = nil end
+						state.Status = "Hatching quest egg"; return
+					end
+				end
+			end
+			if #plan.Pets + #plan.Placed < 3 and #plan.Eggs > 0 then
+				local _, area = GetPlayerPlot()
+				if not area then state.Status = "Plot unavailable"; return end
+				if not travel(area.Position + Vector3.new(0, 3.5, 0), false) then return end
+				refresh()
+				plan = state.Plan
+				if cancelled() or not fuseStage() or not plan or #plan.Eggs == 0 or #plan.Pets + #plan.Placed >= 3 then return end
+				local positions = {}
+				for _, egg in pairs(state.Eggs) do
+					if type(egg) == "table" and type(egg.Placement) == "table" and typeof(egg.Placement.LocalCFrame) == "CFrame" then
+						table.insert(positions, (area.CFrame * egg.Placement.LocalCFrame).Position)
+					end
+				end
+				local cf = GenerateSafePenPosition(area, positions)
+				if cf then invoke("RF/EggWorld/AskPlaceEgg", { Uid = plan.Eggs[1].Uid, LocalCFrame = area.CFrame:ToObjectSpace(cf) }) end
+				state.Status = "Placing quest egg"; return
+			end
+			state.Status = "Waiting for quest eggs to grow"; return
+		end
+		local selected = {}
+		for i = 1, 3 do selected[plan.Pets[i].Uid] = true end
+		local slots = type(data.FusionSlots) == "table" and data.FusionSlots or {}
+		for i = 1, 3 do
+			if slots[i] ~= nil and not selected[slots[i]] then invoke("RF/Fusery/EjectPet", slots[i]); state.Status = "Preparing fuse slots"; return end
+		end
+		if data.FusionInfoAcknowledged == false then invoke("RF/Fusery/ConfirmBriefing"); return end
+		local loaded = {}
+		for i = 1, 3 do if slots[i] ~= nil then loaded[slots[i]] = true end end
+		for i = 1, 3 do
+			local uid = plan.Pets[i].Uid
+			if not loaded[uid] then invoke("RF/Fusery/LoadPet", uid); state.Status = "Loading quest pet"; return end
+		end
+		state.FusionPets, state.FusionQuestId, state.FusionTarget = {}, quest.Id, tonumber(quest.Target) or 1
+		for i = 1, 3 do state.FusionPets[tostring(plan.Pets[i].Uid)] = true end
+		state.FusionPhase = "begin" -- Set before dispatch; ambiguous consumption is never blindly retried.
+		local ok, reply = invoke("RF/Fusery/BeginFuse")
+		if not state.LastDispatch or (ok and reply == false) then state.FusionPhase, state.FusionPets = nil, nil end
+		state.Status = "Waiting for fuse confirmation"
+	end
+	-- Shared native action gate tracks in-flight inventory/fusion work before Wisp can claim a lease.
+	function Tasks.WispNativeAction(kind, action, ...)
+		if state.Disposed or LibraryLoader.Unloaded then return false end
+		local thread = coroutine.running()
+		if not state.Threads[thread] and (state.Lease or (kind == "fusion" and (fuseStage() or (enabled() and not state.Valid)))) then
+			if kind == "fusion" then return false end
+			return 0
+		end
+		state.NativeCalls += 1
+		state.Threads[thread] = (state.Threads[thread] or 0) + 1
+		local reply = table.pack(pcall(action, ...))
+		state.Threads[thread] -= 1
+		if state.Threads[thread] == 0 then state.Threads[thread] = nil end
+		state.NativeCalls -= 1
+		state.SettleUntil = os.clock() + 1.5
+		if not reply[1] then error(reply[2], 0) end
+		return table.unpack(reply, 2, reply.n)
+	end
+	local nativeActive, nativeYield, nativeCanRun = IsStealActive, Tasks.PriorityStealYield, Tasks.PriorityCanRun
+	local nativeShield, nativeDodge, nativeClaim = engine.AutoShieldWanted, engine.TriggerGuardDodge, engine.ClaimMovement
+	local nativeDeposit, nativeHatch, nativeSell, nativeEject = Tasks.ExecuteDepositEggs, ExecuteAutoHatch, ExecuteSellSelection, EjectAllSlots
+	local activeAdapter, yieldAdapter, canRunAdapter, shieldAdapter, dodgeAdapter, claimAdapter
+	local depositAdapter, hatchAdapter, sellAdapter, ejectAdapter, holdAdapter
+	activeAdapter = function()
+		if state.Lease or nativeYield() then return false end
+		return nativeActive() or stealWanted()
+	end
+	yieldAdapter = function() return state.Lease or nativeYield() end
+	canRunAdapter = function(key) if key == "Wisp" then return enabled() and state.Lease end; return nativeCanRun(key) end
+	shieldAdapter = function()
+		return not state.Lease and (nativeShield() or (stealWanted()
+			and not FarmConfig.Defense_InstantSteal and not raceWanted() and not Tasks.MutateState.Lease))
+	end
+	dodgeAdapter = function(...) if not state.Lease then return nativeDodge(...) end end
+	claimAdapter = function(owner, ...)
+		if state.Lease and owner ~= "wisp" and owner ~= "race" then return false end
+		if owner == "essence" and enabled() and state.Valid and state.StealWanted
+			and Tasks.PriorityRank("Wisp") < Tasks.PriorityRank("Essence") then
+			for _, candidate in ipairs(engine.CollectCandidates(false, not FarmConfig.Defense_InstantSteal)) do
+				if candidate.IsWisp then return false end
+			end
+		end
+		return nativeClaim(owner, ...)
+	end
+	depositAdapter = function(...) return Tasks.WispNativeAction("inventory", nativeDeposit, ...) end
+	hatchAdapter = function(...)
+		if next(state.PendingEggs) ~= nil then return 0 end
+		return Tasks.WispNativeAction("inventory", nativeHatch, ...)
+	end
+	ejectAdapter = function(...) return Tasks.WispNativeAction("fusion", nativeEject, ...) end
+	holdAdapter = function(category, uid) return Tasks.WispProtect(uid, false) or nativeHold(category, uid) end
+	sellAdapter = function(pets, eggs)
+		local cleanPets, cleanEggs = {}, {}
+		for _, uid in ipairs(pets) do if not Tasks.WispProtect(uid, true) then table.insert(cleanPets, uid) end end
+		for _, uid in ipairs(eggs) do if not Tasks.WispProtect(uid, false) then table.insert(cleanEggs, uid) end end
+		if #cleanPets == 0 and #cleanEggs == 0 then return 0 end
+		return Tasks.WispNativeAction("inventory", nativeSell, cleanPets, cleanEggs)
+	end
+	local nativeCycle = engine.RunStealCycle
+	local cycleAdapter = function(...)
+		state.InstantFlight = enabled() and state.Valid and state.StealWanted == true
+		local reply = table.pack(pcall(nativeCycle, ...))
+		state.InstantFlight = false
+		if not reply[1] then error(reply[2], 0) end
+		return table.unpack(reply, 2, reply.n)
+	end
+	engine.RunStealCycle = cycleAdapter
+	IsStealActive, Tasks.PriorityStealYield, Tasks.PriorityCanRun = activeAdapter, yieldAdapter, canRunAdapter
+	engine.AutoShieldWanted, engine.TriggerGuardDodge, engine.ClaimMovement = shieldAdapter, dodgeAdapter, claimAdapter
+	Tasks.ExecuteDepositEggs, ExecuteAutoHatch, ExecuteSellSelection, EjectAllSlots, ShouldHoldBackScrambleEgg =
+		depositAdapter, hatchAdapter, sellAdapter, ejectAdapter, holdAdapter
+	function Tasks.BuildWispUI(tab)
+		local group = tab:AddGroupbox({ Name = "Quests", IconName = "scroll-text", Side = 2,
+			Collapsed = false, DisableCollapsing = false })
+		local wisp = group:AddTabbox({ Name = "Quest Tabs" }):AddTab("Wisp", "ghost")
+		wisp:AddToggle("Toggle_Wisp_Auto", { Text = "Auto Wisp", Default = false, Tooltip = "Complete the Wisp quest.", Callback = function(value)
+			FarmConfig.Wisp_Auto = value == true
+			state.Generation += 1
+			state.Valid, state.StealWanted, state.NextAt, state.ReadAt = false, false, 0, 0
+			state.ConfigUntil = os.clock() + 3
+			if engine.AutoWake then engine.AutoWake() end
+		end })
+		local label = wisp:AddLabel("Status: Off", true)
+		task.spawn(function()
+			while not state.Disposed and not LibraryLoader.Unloaded do
+				local ok, failure = pcall(function()
+					if not enabled() then state.Status = "Off"; return end
+					if os.clock() < (state.ConfigUntil or 0) then state.Status = "Loading settings"; return end
+					refresh()
+					local quest, record = state.Quest, state.Record
+					if record.Unlocked and next(state.PendingEggs) == nil and state.FusionPhase == nil then state.Status = "Done — Enchanted Tree open"; return end
+					if quest and incomplete(quest, record) then
+						state.Status = tostring(quest.Title or quest.Event) .. " " .. tostring((record.Progress or {})[quest.Id] or 0) .. "/" .. tostring(quest.Target or 1)
+					end
+					local pending = next(state.PendingEggs) ~= nil
+					local needsAction = pending or state.FusionPhase ~= nil or not record.Accepted or (tonumber(record.Stage) or 1) >= state.StageCount
+						or (quest and not incomplete(quest, record) and not (record.Claimed or {})[quest.Id])
+						or (fuseStage() and (state.Plan ~= nil or state.Save.FusionLocked == true or state.FusionPhase ~= nil))
+					if needsAction and os.clock() >= state.NextAt then run(step) end
+				end)
+				if not ok then
+					state.Valid, state.StealWanted, state.Status, state.LastError = false, false, "Waiting for quest data", tostring(failure)
+					if os.clock() >= (state.NoticeAt or 0) then state.NoticeAt = os.clock() + 30; warn("[N3 HUB] Auto Wisp: " .. tostring(failure)) end
+				end
+				local text = "Status: " .. tostring(state.Status):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+				if state.Shown ~= text then pcall(label.SetText, label, text); state.Shown = text end
+				task.wait(1)
+			end
+		end)
+	end
+	LibraryLoader:OnUnload(function()
+		state.Disposed, state.Valid, state.StealWanted = true, false, false
+		state.Generation += 1
+		if engine.RunStealCycle == cycleAdapter then engine.RunStealCycle = nativeCycle end
+		if IsStealActive == activeAdapter then IsStealActive = nativeActive end
+		if Tasks.PriorityStealYield == yieldAdapter then Tasks.PriorityStealYield = nativeYield end
+		if Tasks.PriorityCanRun == canRunAdapter then Tasks.PriorityCanRun = nativeCanRun end
+		if engine.AutoShieldWanted == shieldAdapter then engine.AutoShieldWanted = nativeShield end
+		if engine.TriggerGuardDodge == dodgeAdapter then engine.TriggerGuardDodge = nativeDodge end
+		if engine.ClaimMovement == claimAdapter then engine.ClaimMovement = nativeClaim end
+		if Tasks.ExecuteDepositEggs == depositAdapter then Tasks.ExecuteDepositEggs = nativeDeposit end
+		if ExecuteAutoHatch == hatchAdapter then ExecuteAutoHatch = nativeHatch end
+		if ExecuteSellSelection == sellAdapter then ExecuteSellSelection = nativeSell end
+		if EjectAllSlots == ejectAdapter then EjectAllSlots = nativeEject end
+		if ShouldHoldBackScrambleEgg == holdAdapter then ShouldHoldBackScrambleEgg = nativeHold end
+	end)
+end
+-- END WISP CONTROLLER
 
 Tasks.BuildMainInterface()
 Tasks.Loading:SetMessage("Verifying")

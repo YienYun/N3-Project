@@ -1,5 +1,6 @@
 """Static source contracts for the separate Scramble reward seller. No Roblox simulation."""
 from pathlib import Path
+from wisp_scope import strip_wisp
 from nitro_scope import strip_nitro_refill
 import hashlib
 import re
@@ -8,7 +9,7 @@ from lab_stock_scope import strip_lab_stock
 from mutate_scope import strip_auto_mutate
 
 ROOT = Path(__file__).resolve().parents[1]
-runtime = strip_nitro_refill((ROOT / "Games/Steal-An-Egg.lua").read_text())
+runtime = strip_nitro_refill(strip_wisp((ROOT / "Games/Steal-An-Egg.lua").read_text()))
 start = '-- BEGIN SCRAMBLE LAB SELLER'
 end = '-- END SCRAMBLE LAB SELLER\n\n'
 assert runtime.count(start) == runtime.count(end) == 1

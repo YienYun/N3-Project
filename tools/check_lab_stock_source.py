@@ -1,5 +1,6 @@
 """Static contracts only: no Roblox execution or game recipe simulation."""
 from pathlib import Path
+from wisp_scope import strip_wisp
 from nitro_scope import strip_nitro_refill
 import hashlib
 import re
@@ -8,7 +9,7 @@ from mutate_scope import strip_auto_mutate
 from steal_visual_scope import strip_builtin_visual
 
 ROOT = Path(__file__).resolve().parents[1]
-s = strip_nitro_refill((ROOT / 'Games/Steal-An-Egg.lua').read_text())
+s = strip_nitro_refill(strip_wisp((ROOT / 'Games/Steal-An-Egg.lua').read_text()))
 assert hashlib.sha256(strip_builtin_visual(strip_lab_stock(strip_auto_mutate(s))).encode()).hexdigest() == (
     'f2345282fdfdd7d47fcfb34863a2108698bf91f52a91c46e9c8d617aa138f66d'
 ), 'Changes escaped the four reviewed stock insertion sites / 9badf26 baseline'

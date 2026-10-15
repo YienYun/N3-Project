@@ -108,7 +108,8 @@ User live-test in a fresh Roblox session:
 
 Lab stock targets, Auto Mutate and optional Nitro replenishment are integrated
 separately (see `lab-stock.md`, `auto-mutate.md` and `nitro-refill.md`).
-Wisp/Banjo quests, Butterfly workflows, Shooting Star, Capture/Admin/Minigame events,
+Wisp is now integrated separately (`wisp-quest.md`). Banjo quests, Butterfly
+workflows, Shooting Star, Capture/Admin/Minigame events,
 Auto Hop and remaining utilities/HUD are **not implemented by these changes**.
 Priority labels are not proof of a working event. Continue one source-backed
 feature per change.
