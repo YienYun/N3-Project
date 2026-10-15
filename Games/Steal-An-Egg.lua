@@ -5447,6 +5447,7 @@ local GetScrambleTradeStatusFn = nil
 		Engine.ReleaseAutoShield(false)
 		Engine.AutoCarry.Carrying = false
 		Engine.AutoCarry.CarryUid, Engine.AutoCarry.CarryAreaId = nil, nil
+		Engine.AutoPendingDeliveryUid = nil
 		task.spawn(function()
 			character:WaitForChild("Humanoid", 10)
 			task.wait(1)
@@ -5463,6 +5464,7 @@ local GetScrambleTradeStatusFn = nil
 			if Engine.AutoCycle then
 				Engine.StopAutoHop(Engine.AutoCycle)
 				Engine.AutoStopMotion(Engine.AutoCycle)
+				Engine.AutoNoclip(Engine.AutoCycle, false)
 			end
 			Engine.ReleaseAutoShield(not FarmConfig.Defense_InstantSteal)
 		end)
@@ -5496,12 +5498,14 @@ local GetScrambleTradeStatusFn = nil
 			if cycle.Hop.Link then
 				cycle.Hop.Link:Disconnect()
 				cycle.Hop.Link = nil
+				Engine.Guard.HitArms = math.max(0, Engine.Guard.HitArms - 1)
 			end
 			cycle.Hop = nil
 		end
 	end
 	Engine.AutoNoclip = function(cycle, enabled)
 		cycle.Parts = cycle.Parts or {}
+		cycle.RagdollConstraints = cycle.RagdollConstraints or {}
 		if enabled then
 			if not cycle.PartsScanned then
 				cycle.PartsScanned = true
@@ -5511,6 +5515,8 @@ local GetScrambleTradeStatusFn = nil
 							cycle.Parts[part] = part.CanCollide
 						end
 						part.CanCollide = false
+					elseif part:IsA("Constraint") and string.find(part.Name, "RagdollConstraint", 1, true) then
+						cycle.RagdollConstraints[part] = true
 					end
 				end
 				cycle.PartsAdded = cycle.Character.DescendantAdded:Connect(capture)
@@ -5534,6 +5540,7 @@ local GetScrambleTradeStatusFn = nil
 				end)
 			end
 			table.clear(cycle.Parts)
+			table.clear(cycle.RagdollConstraints)
 			cycle.PartsScanned = false
 		end
 	end
@@ -5578,7 +5585,8 @@ local GetScrambleTradeStatusFn = nil
 				Engine.AutoStopMotion(cycle)
 				return
 			end
-			if Engine.IsRagdolled() then
+			local endTime = tonumber(LocalPlayer:GetAttribute("RagdollEndTime"))
+			if Engine.Guard.Busy or (endTime and endTime > Workspace:GetServerTimeNow()) then
 				return
 			end
 			local root = Engine.Root()
@@ -5593,7 +5601,7 @@ local GetScrambleTradeStatusFn = nil
 		local elapsed, done, reason = 0, nil, nil
 		local progress = {}
 		cycle.Motion = RunService.PreSimulation:Connect(function(dt)
-			if done ~= nil then
+			if done ~= nil or Engine.Guard.Busy then
 				return
 			end
 			elapsed = elapsed + dt
@@ -5637,7 +5645,7 @@ local GetScrambleTradeStatusFn = nil
 		end
 		return nil
 	end
-	Engine.AutoStarter = function()
+	Engine.AutoStarter = function(target)
 		local root = Engine.Root()
 		if not root then
 			return nil
@@ -5645,7 +5653,8 @@ local GetScrambleTradeStatusFn = nil
 		local preferred, closest, preferredDistance, closestDistance = nil, nil, math.huge, math.huge
 		local prefix = "FirstAreaEgg_" .. tostring(LocalPlayer.UserId)
 		local now = os.clock()
-		for _, egg in ipairs(Engine.CollectAllFieldEggs()) do
+		local eggs = Engine.CollectAllFieldEggs()
+		for _, egg in ipairs(eggs) do
 			local state = string.lower(tostring(egg.State))
 			local blocked = Engine.State.BlockList[egg.Uid]
 			if (state == "slot" or state == "dropped") and (not blocked or blocked <= now) then
@@ -5659,7 +5668,31 @@ local GetScrambleTradeStatusFn = nil
 				end
 			end
 		end
-		return preferred or closest
+		local best = preferred or closest
+		if not best or best.Uid == target.Uid then
+			return best
+		end
+		local guard = Engine.FindGuard(best.AreaId)
+		if not guard then
+			return best
+		end
+		local ok, pivot = pcall(function() return guard:GetPivot() end)
+		if ok then
+			local score = math.huge
+			for _, egg in ipairs(eggs) do
+				local state = string.lower(tostring(egg.State))
+				local blocked = Engine.State.BlockList[egg.Uid]
+				local starter = string.sub(tostring(egg.Uid), 1, #prefix) == prefix
+				if egg.Uid ~= target.Uid and egg.AreaId == best.AreaId
+					and (state == "slot" or state == "dropped") and (not blocked or blocked <= now)
+					and (not preferred or starter or Engine.GuardSleeping(egg.AreaId)) then
+					local gap = (egg.Position - root.Position).Magnitude
+					if (egg.Position - pivot.Position).Magnitude > 90 then gap = gap + 90 end
+					if gap < score then best, score = egg, gap end
+				end
+			end
+		end
+		return best
 	end
 	Engine.AutoDrop = function(cycle)
 		if EggStateModule and type(EggStateModule.DropFieldEgg) == "function" then
@@ -5674,131 +5707,269 @@ local GetScrambleTradeStatusFn = nil
 		end
 		return false
 	end
-	Engine.AutoGrab = function(egg, cycle)
-		local prefix = "FirstAreaEgg_" .. tostring(LocalPlayer.UserId)
-		local slot = string.sub(tostring(egg.Uid), 1, #prefix) == prefix
-			and string.match(egg.Uid, "_([%w ]+:Slot_%d+)$")
-		local fastStarter = cycle.Hop and slot and EggStateModule
-			and type(EggStateModule.CarryFieldEgg) == "function"
-		local elapsed, lastAttempt = 0, -1
-		while Engine.AutoValid(cycle) and elapsed < 6 do
-			if (cycle.Hop and cycle.Hop.Landed) or Engine.AutoHeld(egg.Uid) then
-				local request = Engine.AutoRequestOwner
-				if request and request.Cycle == cycle and request.Uid == egg.Uid then
-					Engine.AutoRequestOwner = nil
+	Engine.AutoFindPrompt = function(uid, position, radius)
+		local function distance(a, b)
+			return Vector3.new(a.X - b.X, 0, a.Z - b.Z).Magnitude
+		end
+		local best, promptPart = nil, nil
+		radius = radius or 14
+		for _, part in ipairs(Workspace:GetChildren()) do
+			if part.Name == "SmartPromptPart" and part:IsA("BasePart") then
+				local prompt = part:FindFirstChild("CarryAreaEgg")
+				local gap = distance(part.Position, position)
+				if prompt and prompt:IsA("ProximityPrompt") and gap < radius then
+					best, promptPart, radius = prompt, part, gap
 				end
-				Engine.State.GrabFails = 0
+			end
+		end
+		local slots = Workspace:FindFirstChild("AreaEggSlotsClient")
+		if best and slots then
+			for _, model in ipairs(slots:GetChildren()) do
+				if model:IsA("Model") and model.Name ~= uid then
+					local ok, pivot = pcall(model.GetPivot, model)
+					if ok and distance(pivot.Position, promptPart.Position) + 1.5 < radius then
+						return nil
+					end
+				end
+			end
+		end
+		return best
+	end
+	-- Chili fn36-38: recover the assembly at the landing point before taking the next egg.
+	Engine.AutoRepairBody = function(cycle, destination)
+		local root = Engine.Root()
+		if not root or Engine.Guard.Busy then
+			return
+		end
+		if (root.Position - destination).Magnitude > 6 then
+			Engine.SnapTo(destination)
+			return
+		end
+		for part in pairs(cycle.Parts or {}) do
+			if part ~= root and part.Parent and part:IsDescendantOf(cycle.Character)
+				and (part.Position - root.Position).Magnitude > 12 then
+				part.CFrame = root.CFrame
+				part.AssemblyLinearVelocity, part.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+			end
+		end
+	end
+	Engine.AutoWaitStanding = function(cycle, destination)
+		Engine.AutoNoclip(cycle, true)
+		local elapsed = 0
+		while Engine.AutoValid(cycle) and elapsed < 6 do
+			local ragdolled = Engine.IsRagdolled()
+			if not ragdolled then
+				for constraint in pairs(cycle.RagdollConstraints) do
+					if constraint.Parent and constraint:IsDescendantOf(cycle.Character) then
+						ragdolled = true
+						break
+					end
+				end
+			end
+			if not ragdolled then
 				return true
 			end
-			if Engine.AutoCarry.Carrying and Engine.AutoCarry.CarryUid and Engine.AutoCarry.CarryUid ~= egg.Uid then
-				return false
+			Engine.AutoRepairBody(cycle, destination)
+			elapsed = elapsed + RunService.Heartbeat:Wait()
+		end
+		return Engine.AutoValid(cycle)
+	end
+	Engine.AutoGrab = function(egg, cycle, anchor, duration)
+		local function requestCarry(slotRequest)
+			if Engine.AutoRequestOwner then
+				return
 			end
-			if elapsed - lastAttempt >= 0.1 and (not fastStarter or elapsed == 0 or elapsed >= 0.8) then
-				lastAttempt = elapsed
-				local slotRequest = fastStarter and elapsed == 0 and slot
-				local prompt = not slotRequest and Engine.FindCarryPrompt(egg.Uid, egg.Position, Engine.Carry.PromptRange)
-				if prompt then
-					Engine.FirePrompt(prompt)
-				elseif not Engine.AutoRequestOwner then
-					local request = { Cycle = cycle, Uid = egg.Uid }
-					Engine.AutoRequestOwner = request
-					task.spawn(function()
-						if Engine.AutoValid(cycle) then
-							if slotRequest then
-								pcall(EggStateModule.CarryFieldEgg, egg.Uid, slotRequest)
-							elseif EggStateModule and type(EggStateModule.CarryFieldEgg) == "function" then
-								pcall(EggStateModule.CarryFieldEgg, egg.Uid)
-							elseif Remotes.RemoteCarryEgg then
-								pcall(function()
-									if Remotes.RemoteCarryEgg:IsA("RemoteFunction") then
-										Remotes.RemoteCarryEgg:InvokeServer({ Uid = egg.Uid })
-									else
-										Remotes.RemoteCarryEgg:FireServer({ Uid = egg.Uid })
-									end
-								end)
+			local request = { Cycle = cycle, Uid = egg.Uid }
+			Engine.AutoRequestOwner = request
+			task.spawn(function()
+				if Engine.AutoValid(cycle) then
+					if slotRequest then
+						pcall(EggStateModule.CarryFieldEgg, egg.Uid, slotRequest)
+					elseif EggStateModule and type(EggStateModule.CarryFieldEgg) == "function" then
+						pcall(EggStateModule.CarryFieldEgg, egg.Uid)
+					elseif Remotes.RemoteCarryEgg then
+						pcall(function()
+							if Remotes.RemoteCarryEgg:IsA("RemoteFunction") then
+								Remotes.RemoteCarryEgg:InvokeServer({ Uid = egg.Uid })
+							else
+								Remotes.RemoteCarryEgg:FireServer({ Uid = egg.Uid })
 							end
-						end
-						if Engine.AutoRequestOwner == request then
-							Engine.AutoRequestOwner = nil
-						end
-					end)
+						end)
+					end
 				end
+				if Engine.AutoRequestOwner == request then
+					Engine.AutoRequestOwner = nil
+				end
+			end)
+		end
+		local hop = cycle.Hop
+		local prefix = "FirstAreaEgg_" .. tostring(LocalPlayer.UserId)
+		local slot = type(egg.Uid) == "string" and string.sub(egg.Uid, 1, #prefix) == prefix
+			and string.match(egg.Uid, "_([%w ]+:Slot_%d+)$")
+		if hop and not hop.FastRequested and slot and EggStateModule
+			and type(EggStateModule.CarryFieldEgg) == "function" then
+			hop.FastRequested = true
+			requestCarry(slot)
+			local elapsed = 0
+			while Engine.AutoValid(cycle) and not Engine.AutoHeld() and elapsed < 0.8 do
+				elapsed = elapsed + RunService.Heartbeat:Wait()
+			end
+		end
+		local elapsed, lastAttempt, misses = 0, -1, 0
+		while Engine.AutoValid(cycle) and elapsed < (duration or 1.5) do
+			if Engine.AutoHeld() then
+				local request = Engine.AutoRequestOwner
+				if request and request.Cycle == cycle and request.Uid == egg.Uid and Engine.AutoHeld(egg.Uid) then
+					Engine.AutoRequestOwner = nil
+				end
+				return Engine.AutoHeld()
+			end
+			if elapsed - lastAttempt >= (duration and 0.1 or 0.06) then
+				lastAttempt = elapsed
+				local prompt = Engine.AutoFindPrompt(egg.Uid, egg.Position)
+				if prompt then
+					misses = 0
+					Engine.FirePrompt(prompt)
+				else
+					misses = misses + 1
+					if not duration and misses >= 4 then
+						return false
+					end
+					requestCarry()
+				end
+			end
+			if anchor then
+				Engine.AutoRepairBody(cycle, anchor)
 			end
 			elapsed = elapsed + RunService.Heartbeat:Wait()
 		end
-		return false
+		return Engine.AutoValid(cycle) and Engine.AutoHeld()
 	end
-	Engine.AutoGuardHop = function(starter, target, cycle)
-		local destination = target.Position + Vector3.new(0, 3, 0)
-		cycle.Hop = { Landed = false }
-		local hop = cycle.Hop
-		hop.Link = LocalPlayer:GetAttributeChangedSignal("RagdollEndTime"):Connect(function()
-			if hop.Landed or not Engine.AutoValid(cycle) then
-				return
+	-- Chili fn30: a field snapshot is only a retry/availability check, never proof of ownership.
+	Engine.AutoConfirmPickup = function(egg, cycle)
+		local elapsed = 0
+		while Engine.AutoValid(cycle) and elapsed < 1 do
+			if Engine.AutoHeld() then
+				return Engine.AutoHeld()
 			end
-			local endTime = tonumber(LocalPlayer:GetAttribute("RagdollEndTime"))
-			if not endTime or endTime <= Workspace:GetServerTimeNow() then
-				return
+			if not Remotes.RemoteEggSnapshot or not Remotes.RemoteEggSnapshot:IsA("RemoteFunction") then
+				return false
 			end
-			local root = Engine.Root()
-			if root then
-				hop.Landed = true
-				Engine.AutoStopMotion(cycle)
-				Engine.StopHold()
-				root.CFrame = CFrame.new(destination) * root.CFrame.Rotation
-				Engine.StopVelocity()
-			end
-		end)
-		Engine.AutoStatus = "Taking starter egg"
-		if not Engine.AutoGrab(starter, cycle) then
-			Engine.StopAutoHop(cycle)
-			return false
-		end
-		local guard = Engine.FindGuard(starter.AreaId) or Engine.FindGuard("Forest")
-		local guardRoot = guard and guard:FindFirstChild("HumanoidRootPart")
-		if not hop.Landed and Remotes.RemoteForestStrike and Remotes.RemoteForestStrike:IsA("RemoteEvent") and guardRoot then
-			pcall(function()
-				Remotes.RemoteForestStrike:FireServer({ EggUid = starter.Uid, GuardCFrame = guardRoot.CFrame })
-			end)
-		end
-		Engine.AutoStatus = "Waiting for guard hit"
-		local elapsed, lostAt = 0, nil
-		while not hop.Landed and Engine.AutoValid(cycle) and elapsed < 20 do
-			if not Engine.AutoHeld() then
-				lostAt = lostAt or elapsed
-				if elapsed - lostAt > 1 then
-					break
+			local ok, snapshot = pcall(Remotes.RemoteEggSnapshot.InvokeServer, Remotes.RemoteEggSnapshot)
+			if ok and type(snapshot) == "table" and type(snapshot.Records) == "table" then
+				local available = false
+				for _, record in pairs(snapshot.Records) do
+					if type(record) == "table" and record.Uid == egg.Uid
+						and (record.State == "Slot" or record.State == "Dropped") then
+						available = true
+						break
+					end
+				end
+				if not available then
+					return Engine.AutoHeld()
 				end
 			end
+			local wait = 0
+			while Engine.AutoValid(cycle) and wait < 0.3 do
+				local dt = RunService.Heartbeat:Wait()
+				wait, elapsed = wait + dt, elapsed + dt
+			end
+		end
+		return Engine.AutoValid(cycle) and Engine.AutoHeld()
+	end
+	-- Chili fn45 (starter/hit) and fn51 (direct): approach, arm, pickup, then guard strike.
+	Engine.AutoTakeEgg = function(egg, cycle, mode, nextEgg)
+		local destination = egg.Position + Vector3.new(0, 3, 0)
+		local root = Engine.Root()
+		if not root then
+			return false
+		end
+		if mode == "hit" then
+			Engine.AutoStatus = "Waiting to stand up at target"
+			Engine.AutoHold(destination, cycle)
+			if not Engine.AutoWaitStanding(cycle, destination) then
+				return false
+			end
+		elseif mode == "starter" and (root.Position - destination).Magnitude <= 90 then
+			root.CFrame = CFrame.new(destination) * root.CFrame.Rotation
+			Engine.StopVelocity()
+		else
+			if mode == "direct" and Engine.InsideBase() and not Engine.InsideBase(egg.Position) then
+				if not Engine.AutoMove(Engine.GetBaseSafeSpot() + Vector3.new(0, 3, 0), cycle) then
+					return false
+				end
+			end
+			if not Engine.AutoMove(destination, cycle) then
+				return false
+			end
+		end
+		if not Engine.AutoValid(cycle) then
+			return false
+		end
+		if nextEgg then
+			Engine.StopAutoHop(cycle)
+			local hop = { Landed = false, Destination = nextEgg.Position + Vector3.new(0, 3, 0) }
+			cycle.Hop = hop
+			Engine.Guard.HitArms = Engine.Guard.HitArms + 1
+			Engine.Guard.HitArmedAt = os.clock()
+			hop.Link = LocalPlayer:GetAttributeChangedSignal("RagdollEndTime"):Connect(function()
+				if hop.Landed or not Engine.AutoValid(cycle) then
+					return
+				end
+				local endTime = tonumber(LocalPlayer:GetAttribute("RagdollEndTime"))
+				local currentRoot = Engine.Root()
+				if currentRoot and endTime and endTime > Workspace:GetServerTimeNow() then
+					hop.Landed = true
+					Engine.AutoStopMotion(cycle)
+					Engine.StopHold()
+					currentRoot.CFrame = CFrame.new(hop.Destination)
+					Engine.StopVelocity()
+				end
+			end)
+		end
+		Engine.AutoStatus = "Taking " .. (nextEgg and "starter" or "target") .. " egg"
+		local anchor = mode == "hit" and destination or nil
+		local taken = mode == "direct" and Engine.AutoGrab(egg, cycle, nil, 0.6)
+		taken = taken or Engine.AutoGrab(egg, cycle, anchor)
+		if not taken and mode ~= "direct" and Engine.AutoValid(cycle) then
+			taken = Engine.AutoMove(destination, cycle) and Engine.AutoGrab(egg, cycle, anchor)
+		end
+		if not taken then
+			taken = Engine.AutoConfirmPickup(egg, cycle)
+		end
+		if not taken or not Engine.AutoValid(cycle) then
+			Engine.StopAutoHop(cycle)
+			Engine.State.BlockList[egg.Uid] = os.clock() + 20
+			cycle.Failure = "Pickup not confirmed: " .. tostring(egg.Uid)
+			return false
+		end
+		local request = Engine.AutoRequestOwner
+		if request and request.Cycle == cycle and request.Uid == egg.Uid and Engine.AutoHeld(egg.Uid) then
+			Engine.AutoRequestOwner = nil
+		end
+		if nextEgg then
+			local guard = Engine.FindGuard(egg.AreaId) or Engine.FindGuard("Forest")
+			local guardRoot = guard and guard:FindFirstChild("HumanoidRootPart")
+			if Remotes.RemoteForestStrike and Remotes.RemoteForestStrike:IsA("RemoteEvent") and guardRoot then
+				pcall(Remotes.RemoteForestStrike.FireServer, Remotes.RemoteForestStrike,
+					{ EggUid = egg.Uid, GuardCFrame = guardRoot.CFrame })
+			end
+		end
+		return true
+	end
+	Engine.AutoGuardHop = function(starter, target, cycle)
+		if not Engine.AutoTakeEgg(starter, cycle, "starter", target) then
+			return false
+		end
+		local hop = cycle.Hop
+		Engine.AutoStatus = "Waiting for guard hit"
+		local elapsed = 0
+		while not hop.Landed and Engine.AutoValid(cycle) and elapsed < 20 do
 			elapsed = elapsed + RunService.Heartbeat:Wait()
 		end
 		local landed = hop.Landed
 		Engine.StopAutoHop(cycle)
-		if not landed then
-			return false
-		end
-		Engine.AutoStatus = "Recovering at target"
-		elapsed = 0
-		while Engine.AutoValid(cycle) and Engine.IsRagdolled() and elapsed < 6 do
-			local root = Engine.Root()
-			if not root then
-				return false
-			end
-			root.CFrame = CFrame.new(destination) * root.CFrame.Rotation
-			Engine.StopVelocity()
-			elapsed = elapsed + RunService.Heartbeat:Wait()
-		end
-		if not Engine.AutoValid(cycle) or Engine.IsRagdolled() then
-			return false
-		end
-		Engine.AutoHold(destination, cycle)
-		if Engine.AutoHeld(target.Uid) then
-			return true
-		end
-		if Engine.AutoHeld() and not Engine.AutoDrop(cycle) then
-			return false
-		end
-		return Engine.AutoValid(cycle)
+		return landed and Engine.AutoValid(cycle)
 	end
 	Engine.AutoStored = function(uid, refresh)
 		if uid == nil then
@@ -5848,6 +6019,9 @@ local GetScrambleTradeStatusFn = nil
 	Engine.CompleteAutoDelivery = function(cycle, uid)
 		if not uid or not Engine.AutoStored(uid, true) then
 			return false
+		end
+		if Engine.AutoPendingDeliveryUid == uid then
+			Engine.AutoPendingDeliveryUid = nil
 		end
 		if cycle.CompletedUid ~= uid then
 			cycle.CompletedUid = uid
@@ -6120,6 +6294,7 @@ local GetScrambleTradeStatusFn = nil
 				return false
 			end
 			cycle.ExpectedUid = target.Uid
+			Engine.AutoPendingDeliveryUid = nil
 			Engine.CurrentTarget = target.Uid
 			RuntimeState.currentTargetModel = target.PhysicalModel
 			if RuntimeState.OnTreadmill then
@@ -6131,46 +6306,31 @@ local GetScrambleTradeStatusFn = nil
 			end
 			local nearby = (root.Position - target.Position).Magnitude <= 20
 				or (target.AreaId ~= nil and LocalPlayer:GetAttribute("AreaId") == target.AreaId)
-			local starter = not nearby and Engine.AutoStarter() or nil
+			local starter = not nearby and Engine.AutoStarter(target) or nil
 			if not nearby and not starter then
 				cycle.Failure = "No starter egg available"
 				return false
 			end
-			if starter and starter.Uid ~= target.Uid then
-				Engine.AutoStatus = "Approaching guard starter egg"
-				if not Engine.AutoMove(starter.Position + Vector3.new(0, 3, 0), cycle) then
-					return false
-				end
-				if not Engine.AutoGuardHop(starter, target, cycle) then
-					cycle.Failure = "Guard hop failed; restarting route"
-					return false
-				end
-			end
-			if not Engine.AutoValid(cycle) then
+			local hopped = starter and starter.Uid ~= target.Uid
+			if hopped and not Engine.AutoGuardHop(starter, target, cycle) then
+				cycle.Failure = cycle.Failure or "Guard hit did not arrive"
 				return false
 			end
-			if not Engine.AutoHeld(target.Uid) then
-				Engine.CollectRawFieldEggs(true)
-				local live = Engine.AutoFindEgg(target.Uid)
-				if not live then
-					Engine.AutoStatus = "Target no longer available"
-					return false
-				end
-				target = live
-				Engine.AutoStatus = "Approaching target"
-				if not Engine.AutoMove(target.Position + Vector3.new(0, 3, 0), cycle) then
-					return false
-				end
-				Engine.AutoStatus = "Taking target egg"
-				if not Engine.AutoGrab(target, cycle) then
-					Engine.State.GrabFails = (Engine.State.GrabFails or 0) + 1
-					Engine.State.BlockList[target.Uid] = os.clock() + 5
-					return false
-				end
+			if not Engine.AutoTakeEgg(target, cycle, hopped and "hit" or "direct") then
+				return false
+			end
+			local waited = 0
+			while Engine.AutoValid(cycle) and not Engine.AutoHeld() and waited < 0.6 do
+				waited = waited + RunService.Heartbeat:Wait()
 			end
 			if not Engine.AutoValid(cycle) or not Engine.AutoHeld(target.Uid) then
+				cycle.Failure = "Expected egg never reached the hand"
+				if Engine.AutoValid(cycle) and Engine.AutoHeld() then
+					Engine.AutoDrop(cycle)
+				end
 				return false
 			end
+			Engine.AutoPendingDeliveryUid = target.Uid
 			return Engine.DeliverAutoEgg(cycle, target.Uid)
 		end)
 		if ok and delivered == true then
@@ -6201,7 +6361,21 @@ local GetScrambleTradeStatusFn = nil
 			elseif Engine.Cancelled(sessionId) or FarmConfig.Defense_InstantSteal then
 				Engine.AutoStatus = "Stopped"
 			elseif Engine.AutoStatus ~= "No egg matches" and Engine.AutoStatus ~= "Target no longer available" then
+				local stage = Engine.AutoStatus
 				Engine.AutoStatus = cycle.Failure or "Retrying after failed attempt"
+				local root = Engine.Root()
+				Engine.AutoLastFailure = {
+					Stage = stage, Reason = Engine.AutoStatus, ExpectedUid = cycle.ExpectedUid,
+					CarryUid = Engine.AutoCarry.CarryUid, Carrying = Engine.AutoCarry.Carrying,
+					Position = root and root.Position,
+				}
+				if not Engine.AutoFailureLogAt or os.clock() - Engine.AutoFailureLogAt >= 5 then
+					Engine.AutoFailureLogAt = os.clock()
+					warn(string.format("[N3 Auto] %s | %s | expected=%s carry=%s held=%s pos=%s",
+						tostring(stage), Engine.AutoStatus, tostring(cycle.ExpectedUid),
+						tostring(Engine.AutoCarry.CarryUid), tostring(Engine.AutoCarry.Carrying),
+						tostring(root and root.Position)))
+				end
 			end
 		end
 		return ok and delivered == true
@@ -14800,7 +14974,7 @@ function Tasks.StealLoop()
 					if FarmConfig.Defense_InstantSteal then
 						CarryingNow = IsActivelyCarryingEgg() or Engine.State.Carrying or (GetEquippedEggTool() ~= nil)
 					else
-						CarryingNow = Engine.AutoHeld()
+						CarryingNow = Engine.AutoPendingDeliveryUid ~= nil and Engine.AutoHeld(Engine.AutoPendingDeliveryUid)
 					end
 					if not CarryingNow or RootPart.Position.X <= SafeBaseLineX then
 						break
@@ -14821,7 +14995,7 @@ function Tasks.StealLoop()
 				if FarmConfig.Defense_InstantSteal then
 					canStart = not (IsActivelyCarryingEgg() or (GetEquippedEggTool() ~= nil))
 				else
-					canStart = not Engine.AutoHeld()
+					canStart = not Engine.AutoPendingDeliveryUid or not Engine.AutoHeld(Engine.AutoPendingDeliveryUid)
 				end
 				if canStart then
 					pcall(function()
@@ -14840,7 +15014,7 @@ function Tasks.StealLoop()
 				end
 				if deliveredNow then
 					Engine.State.GrabFails = 0
-				else
+				elseif FarmConfig.Defense_InstantSteal then
 					local Fails = Engine.State.GrabFails or 0
 					if Fails == 2 or Fails == 4 then
 						pcall(Engine.SoftResetCarryState)
