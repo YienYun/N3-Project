@@ -82,3 +82,11 @@ Read this before changing `Steal-An-Egg.lua`.
 - Instant interrupted iterations must not trigger failure resets or post-place.
 - Run visual/race static checkers and compile; the new transitions need user live
   validation. See `../docs/race-rally.md` for source ranges and deliberate changes.
+
+## Race speed cap
+
+- The user requested N3 Race Speed default/max 144 (min 100), including old-save
+  callback and runtime clamps. Keep all three in sync; normal/Instant speeds differ.
+- The bundled Chili reference still has max 160/default 150. The screenshot showed
+  selected 144, not proof of max. Document this intentional N3 cap honestly.
+- Test races in a clean session with only one hub's drive, not simultaneous hubs.

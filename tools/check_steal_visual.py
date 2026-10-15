@@ -10,10 +10,10 @@ reference = (ROOT / "Games/Source/StealAnEgg/SenaV2.lua").read_bytes()
 blob = b"blob " + str(len(reference)).encode() + b"\0" + reference
 assert hashlib.sha1(blob).hexdigest() == "a36898ee403cacf3aa9742bfb9f9270f867cb765", "Sena reference changed"
 
-# Reviewed race-first policy plus Chili mount-recovery correction: eight independent protected gameplay
+# Reviewed race policy, mount recovery and requested 144 cap: eight protected gameplay
 # blocks remain unchanged (check_race_source.py). Presentation additions strip.
 normalized = strip_builtin_visual(runtime)
-assert hashlib.sha256(normalized.encode()).hexdigest() == "74eee3ae6681b9ae5d20ac2712f1af727a267534b47b7fe5c027ba58fddd6ebb", (
+assert hashlib.sha256(normalized.encode()).hexdigest() == "009b5d70a10f53479a9ba0a5adb31e0a7c7c82521279c3ada37104f217d2ebc7", (
     "Gameplay outside the reviewed visual additions changed; review before updating this baseline"
 )
 assert not (ROOT / "Games/Steal-An-Egg-V2.lua").exists(), "Retire the standalone tester"

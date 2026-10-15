@@ -72,13 +72,15 @@ Lap/win success comes from game attributes/save, not local path distance.
   force Anti Guard on/off, and does not add a new global guard policy.
 - Source step/base/gate geometry and timeouts are retained. The glide speed is
   bound to N3's existing normal movement-speed preference (default 400), not to
-  the racer's 100–160 speed slider or Instant's independent speed.
+  the racer's user-capped 100–144 speed slider or Instant's independent speed.
 - Module dependencies retry when streamed/late instead of permanently caching a
   failed require. Exact race remote paths are resolved under Packages/Networking.
 - Racer choices come from owned racers/default racer and sort by game `Order`.
   Unsupported old hardcoded choices are removed. UI controls keep their existing
-  save IDs, and Race Speed is clamped to 100–160 with default 150. Old saved
-  values over 160 are clamped, not silently allowed at 300/400.
+  save IDs. Per the user's later request, N3 Race Speed is now 100–144/default 144,
+  enforced in config defaults, slider/callback and the effective drive speed.
+  Old saved values above 144 cannot drive above that limit. This is a deliberate
+  N3 cap, not a claim that the unchanged bundled source has a 144 maximum.
 - Source feature defaults are preserved: Auto Race/Claim/Buy OFF, power-ups and
   auto equip ON, Best Owned selected. Speed/power-up, racer and shop-item controls
   are nested under their respective toggles. Only Status and Tokens/Wins/Racer
@@ -143,7 +145,7 @@ Live requirements: actual join/queue, native racer creation, lap increments,
 finish place, wins/rewards, power-up remotes, leave/respawn and streaming behavior.
 
 Suggested user test: re-execute the updated game file in a fresh script instance,
-Event → Race Rally, Auto Race ON, Auto Equip Racer ON, Best Owned, speed 150,
+Event → Race Rally, Auto Race ON, Auto Equip Racer ON, Best Owned, speed 144,
 power-ups ON. If laps/wins do not count, lower speed toward 100 as advised by the
 source. For a failure report, capture the status, Tokens/Wins/Racer and any
 `[N3 HUB] Race Rally` warning. Check disabling Auto Race mid-travel/mid-heat and
@@ -157,7 +159,7 @@ source was reread against Chili V2, without inferring a server rollback cause.
 | Area | Comparison |
 | --- | --- |
 | Drive projection/lift and two simulation hooks, 49920–50067 | Same projection, lift floor 2, progress by speed × Heartbeat delta, CFrame/velocity writer, 40-stud reprojection ±300, six-second repeat-pull slowdown and 0.2s power-up cadence. |
-| Speed, 49506–49510 / current speed helper | Same 100–160/default 150, slowdown +50 with floor 100. Chili explicitly says to lower speed if wins do not count. No new default or invented speed compensation. |
+| Speed, 49506–49510 / current speed helper | Bundled Chili: 100–160/default 150. N3 now intentionally capped at 100–144/default 144 per the screenshot follow-up; slowdown +50/floor 100 unchanged. No invented speed compensation. |
 | Mount recovery, 50525–50633 | **Mismatch fixed:** N3 called `StopRaceDrive()` whenever the recovery helper returned true. Chili only publishes status/returns, leaving an existing drive and its projection/lift state alive. That extra teardown has been removed. |
 | Lap watchdog / finish / leave, 50626–50735 | Same heat attributes, lap timeout length/speed × 1.5 + 8, numeric `RaceFinishPlace`, stop on finish, AskLeave every 2s and bounded 8s stuck-leave recovery. |
 | Rewards, 51267–51365 | Same owned-racer equipment and optional milestone/repeat claim/shop calls. No missing finish-win claim remote was found in this source. |
@@ -181,3 +183,24 @@ existing Status and actual Wins/Tokens before/after. Keep Auto Buy OFF during th
 test if comparing token balances. Auto Claim may be enabled for milestone/repeat
 rewards. Report the final status and counter changes if credit is still missing;
 no live server or rollback outcome is established by compile/static checks.
+
+## Screenshot follow-up: selected 144 versus maximum
+
+The screenshot shows Chili **selected at 144** and N3 **150/160**. A selected value
+alone does not establish the slider maximum or which build the running Chili uses.
+The bundled, hash-verified Chili V2 at 49506–49510 explicitly says Min 100, Max 160,
+Default 150. Do not rewrite the reference or claim its maximum was 144.
+
+Per the user's requested N3 setting, the N3 runtime now uses **default 144 and max
+144**, with the same 100 floor. The slider save ID is preserved; callback and
+runtime clamps cap older 150/160 settings too. Path projection, Heartbeat progress,
+PreSimulation frame/velocity application, +50 slowdown, mount recovery, lap/finish
+and leave/claim logic are not otherwise changed. All eight protected steal blocks
+remain unchanged. This lower cap is not proof of server-accepted wins.
+
+The screenshot also shows both hubs' Auto Race controls ON. Do live comparisons
+in a fresh session with **one hub only**, not two drive writers on one character.
+That avoids a possible CFrame/velocity conflict; the image alone does not prove
+it was the cause of a particular failed reward. N3 Auto Claim Race Rewards appears
+OFF while Chili's is ON; compare that option when testing milestone/repeat claims,
+without confusing it with whether the server credited a race win.

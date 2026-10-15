@@ -292,7 +292,7 @@ local FarmConfig = {
 	Util_AntiAFK = true,
 	Util_AutoRejoin = false,
 	Race_AutoRace = false,
-	Race_Speed = 150,
+	Race_Speed = 144,
 	Race_PowerUps = true,
 	Race_AutoClaim = false,
 	Race_AutoEquip = true,
@@ -13300,12 +13300,12 @@ function Tasks.BuildMainInterface()
 	RaceDriveOptions:AddSlider("Slider_Race_Speed", {
 		Text = "Race Speed",
 		Min = 100,
-		Max = 160,
-		Default = 150,
+		Max = 144,
+		Default = 144,
 		Rounding = 0,
-		Tooltip = "Lower this if laps or wins do not count. Source range: 100–160.",
+		Tooltip = "N3 race range: 100–144. Lower this if laps or wins do not count.",
 		Callback = function(Value)
-			FarmConfig.Race_Speed = math.clamp(math.floor(tonumber(Value) or 150), 100, 160)
+			FarmConfig.Race_Speed = math.clamp(math.floor(tonumber(Value) or 144), 100, 144)
 			if Tasks.RaceSettingsChanged then
 				Tasks.RaceSettingsChanged("Speed")
 			end
@@ -16884,7 +16884,7 @@ do
 		return ok and result == true
 	end
 	local function CurrentRaceSpeed()
-		return math.max(math.clamp(tonumber(FarmConfig.Race_Speed) or 150, 100, 160) - race.Drop, 100)
+		return math.max(math.clamp(tonumber(FarmConfig.Race_Speed) or 144, 100, 144) - race.Drop, 100)
 	end
 	local function ReduceRaceSpeed(reason)
 		if CurrentRaceSpeed() <= 100 then

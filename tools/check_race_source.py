@@ -80,8 +80,8 @@ for source_contract in (
 ):
     assert source_contract in race, f"Missing source/integration contract: {source_contract}"
 assert not re.search(r"\b(?:fn|nfn|func)\d+\b", race), "Decompiler names in runtime race controller"
-assert "Race_Speed = 150" in runtime
-assert "math.clamp(tonumber(FarmConfig.Race_Speed) or 150, 100, 160)" in race
+assert "Race_Speed = 144" in runtime
+assert "math.clamp(tonumber(FarmConfig.Race_Speed) or 144, 100, 144)" in race
 assert "Race_Speed = 300" not in runtime
 assert 'local function RaceTick(' not in runtime, "Old race worker is still installed"
 assert 'local function StartDrive(' not in race, "Old drive controller remains"
@@ -145,3 +145,13 @@ assert 'if finished then\n\t\t\t\tStopRaceDrive()' in race
 assert 'RaceFinishPlace' in race and 'LeaveRace("Finished "' in race
 assert 'SetAttribute("RaceFinishPlace"' not in race, 'Finish must come from game attributes, never local fabrication'
 print('PASS: Chili mount-recovery drive lifetime; finish/leave still use game finish attributes, not local place/progress.')
+
+# User-requested N3 cap; do not misrepresent this as the bundled source's maximum.
+slider_start = runtime.index('RaceDriveOptions:AddSlider("Slider_Race_Speed", {')
+slider = runtime[slider_start:runtime.index('RaceDriveOptions:AddToggle(', slider_start)]
+for value in ('Min = 100', 'Max = 144', 'Default = 144',
+              'math.clamp(math.floor(tonumber(Value) or 144), 100, 144)'):
+    assert value in slider, value
+assert 'math.clamp(tonumber(FarmConfig.Race_Speed) or 150, 100, 160)' not in race
+assert 'Min = 100, Max = 160, Default = 150' in reference.read_text(), 'Source-version speed contract changed: re-review'
+print('PASS: N3 speed defaults/caps at 144 in config, slider callback and drive, independently of the original source range.')
