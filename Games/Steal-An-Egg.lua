@@ -1320,27 +1320,9 @@ RuntimeState.StealEngine = (function()
 		TargetLocked = nil,
 	}
 	Engine.AutoCarry = { Carrying = false, CarryUid = nil, CarryAreaId = nil, LastFinishedAt = 0 }
-	Engine.AutoDeliveredUids = {}
-	Engine.AutoDeliveredRing = {}
-	Engine.AutoDeliveredCursor = 0
-	Engine.AutoDeliverySerial = 0
-	Engine.AutoHandledDeliverySerial = 0
 	Engine.UpdateAutoCarry = function(data)
 		local carrying = type(data) == "table" and data.IsCarrying == true
 		local state = Engine.AutoCarry
-		if carrying and type(data.Uid) == "string" then
-			local expires = Engine.AutoDeliveredUids[data.Uid]
-			if expires and os.clock() < expires then
-				return
-			elseif expires then
-				Engine.AutoDeliveredUids[data.Uid] = nil
-			end
-			local request = Engine.AutoRequestOwner
-			if request and request.Uid == data.Uid then
-				request.Acknowledged = true
-				Engine.AutoRequestOwner = nil
-			end
-		end
 		if state.Carrying and not carrying then
 			state.LastFinishedAt = os.clock()
 		end
@@ -1350,6 +1332,8 @@ RuntimeState.StealEngine = (function()
 		end
 		state.Carrying = carrying
 	end
+	Engine.AutoDeliverySerial = 0
+	Engine.AutoHandledDeliverySerial = 0
 	Engine.Guard = {
 		Enabled = false,
 		Busy = false,
@@ -4326,10 +4310,6 @@ local GetScrambleTradeStatusFn = nil
 			if uid == "" then
 				continue
 			end
-			local deliveredUntil = Engine.AutoDeliveredUids[uid]
-			if not FarmConfig.Defense_InstantSteal and deliveredUntil and now < deliveredUntil then
-				continue
-			end
 			local blockExpiry = Engine.State.BlockList[uid]
 			if blockExpiry and now < blockExpiry then
 				continue
@@ -5657,29 +5637,29 @@ local GetScrambleTradeStatusFn = nil
 		end
 		return nil
 	end
-	Engine.AutoStarter = function(target)
+	Engine.AutoStarter = function()
 		local root = Engine.Root()
 		if not root then
 			return nil
 		end
-		local best, nearest = nil, math.huge
+		local preferred, closest, preferredDistance, closestDistance = nil, nil, math.huge, math.huge
 		local prefix = "FirstAreaEgg_" .. tostring(LocalPlayer.UserId)
+		local now = os.clock()
 		for _, egg in ipairs(Engine.CollectAllFieldEggs()) do
 			local state = string.lower(tostring(egg.State))
-			local available = state == "slot" or state == "dropped"
-			local starter = string.sub(tostring(egg.Uid), 1, #prefix) == prefix
 			local blocked = Engine.State.BlockList[egg.Uid]
-			local deliveredUntil = Engine.AutoDeliveredUids[egg.Uid]
-			if available and egg.Uid ~= target.Uid and (not deliveredUntil or deliveredUntil <= os.clock())
-				and (not blocked or blocked <= os.clock())
-				and (starter or Engine.GuardSleeping(egg.AreaId)) then
+			if (state == "slot" or state == "dropped") and (not blocked or blocked <= now) then
 				local distance = (egg.Position - root.Position).Magnitude
-				if distance < nearest then
-					best, nearest = egg, distance
+				if distance < closestDistance then
+					closest, closestDistance = egg, distance
+				end
+				local starter = string.sub(tostring(egg.Uid), 1, #prefix) == prefix
+				if (starter or Engine.GuardSleeping(egg.AreaId)) and distance < preferredDistance then
+					preferred, preferredDistance = egg, distance
 				end
 			end
 		end
-		return best
+		return preferred or closest
 	end
 	Engine.AutoDrop = function(cycle)
 		if EggStateModule and type(EggStateModule.DropFieldEgg) == "function" then
@@ -5695,34 +5675,37 @@ local GetScrambleTradeStatusFn = nil
 		return false
 	end
 	Engine.AutoGrab = function(egg, cycle)
+		local prefix = "FirstAreaEgg_" .. tostring(LocalPlayer.UserId)
+		local slot = string.sub(tostring(egg.Uid), 1, #prefix) == prefix
+			and string.match(egg.Uid, "_([%w ]+:Slot_%d+)$")
+		local fastStarter = cycle.Hop and slot and EggStateModule
+			and type(EggStateModule.CarryFieldEgg) == "function"
 		local elapsed, lastAttempt = 0, -1
 		while Engine.AutoValid(cycle) and elapsed < 6 do
-			if cycle.Hop and cycle.Hop.Landed then
-				return true
-			end
-			if Engine.AutoHeld(egg.Uid) then
+			if (cycle.Hop and cycle.Hop.Landed) or Engine.AutoHeld(egg.Uid) then
+				local request = Engine.AutoRequestOwner
+				if request and request.Cycle == cycle and request.Uid == egg.Uid then
+					Engine.AutoRequestOwner = nil
+				end
 				Engine.State.GrabFails = 0
 				return true
 			end
 			if Engine.AutoCarry.Carrying and Engine.AutoCarry.CarryUid and Engine.AutoCarry.CarryUid ~= egg.Uid then
 				return false
 			end
-			if elapsed - lastAttempt >= 0.1 then
+			if elapsed - lastAttempt >= 0.1 and (not fastStarter or elapsed == 0 or elapsed >= 0.8) then
 				lastAttempt = elapsed
-				local prompt = Engine.FindCarryPrompt(egg.Uid, egg.Position, Engine.Carry.PromptRange)
+				local slotRequest = fastStarter and elapsed == 0 and slot
+				local prompt = not slotRequest and Engine.FindCarryPrompt(egg.Uid, egg.Position, Engine.Carry.PromptRange)
 				if prompt then
 					Engine.FirePrompt(prompt)
-				end
-				if not Engine.AutoRequestOwner then
+				elseif not Engine.AutoRequestOwner then
 					local request = { Cycle = cycle, Uid = egg.Uid }
 					Engine.AutoRequestOwner = request
 					task.spawn(function()
 						if Engine.AutoValid(cycle) then
-							local prefix = "FirstAreaEgg_" .. tostring(LocalPlayer.UserId)
-							local slot = string.sub(tostring(egg.Uid), 1, #prefix) == prefix
-								and string.match(egg.Uid, "_([%w ]+:Slot_%d+)$")
-							if slot and EggStateModule and type(EggStateModule.CarryFieldEgg) == "function" then
-								pcall(EggStateModule.CarryFieldEgg, egg.Uid, slot)
+							if slotRequest then
+								pcall(EggStateModule.CarryFieldEgg, egg.Uid, slotRequest)
 							elseif EggStateModule and type(EggStateModule.CarryFieldEgg) == "function" then
 								pcall(EggStateModule.CarryFieldEgg, egg.Uid)
 							elseif Remotes.RemoteCarryEgg then
@@ -5817,14 +5800,14 @@ local GetScrambleTradeStatusFn = nil
 		end
 		return Engine.AutoValid(cycle)
 	end
-	Engine.AutoStored = function(uid)
+	Engine.AutoStored = function(uid, refresh)
 		if uid == nil then
 			return false
 		end
 		local cycle = Engine.AutoCycle
 		local probe = cycle and cycle.StoredProbe
 		local now = os.clock()
-		if probe and probe.Uid == uid and (probe.Found or now - probe.At < 0.1) then
+		if not refresh and probe and probe.Uid == uid and now - probe.At < 0.1 then
 			return probe.Found
 		end
 		if cycle then
@@ -5836,7 +5819,8 @@ local GetScrambleTradeStatusFn = nil
 			if type(eggs) ~= "table" then
 				return false
 			end
-			if type(eggs[uid]) == "table" then
+			local record = eggs[uid]
+			if type(record) == "table" and tostring(record.Uid or uid) == tostring(uid) then
 				return true
 			end
 			for key, egg in pairs(eggs) do
@@ -5862,34 +5846,22 @@ local GetScrambleTradeStatusFn = nil
 		return found
 	end
 	Engine.CompleteAutoDelivery = function(cycle, uid)
-		if not uid or not Engine.AutoStored(uid) then
+		if not uid or not Engine.AutoStored(uid, true) then
 			return false
 		end
-		local now = os.clock()
-		local previous = Engine.AutoDeliveredUids[uid]
-		if not previous or previous <= now then
-			local cursor = Engine.AutoDeliveredCursor % 32 + 1
-			local old = Engine.AutoDeliveredRing[cursor]
-			if old and Engine.AutoDeliveredUids[old.Uid] == old.Expires then
-				Engine.AutoDeliveredUids[old.Uid] = nil
-			end
-			local expires = now + 30
-			Engine.AutoDeliveredCursor = cursor
-			Engine.AutoDeliveredRing[cursor] = { Uid = uid, Expires = expires }
-			Engine.AutoDeliveredUids[uid] = expires
+		if cycle.CompletedUid ~= uid then
+			cycle.CompletedUid = uid
 			Engine.AutoDeliverySerial = Engine.AutoDeliverySerial + 1
 		end
 		if Engine.AutoCarry.CarryUid == uid then
 			Engine.AutoCarry.Carrying = false
 			Engine.AutoCarry.CarryUid, Engine.AutoCarry.CarryAreaId = nil, nil
-			Engine.AutoCarry.LastFinishedAt = now
+			Engine.AutoCarry.LastFinishedAt = os.clock()
 		end
 		local request = Engine.AutoRequestOwner
-		if request and request.Uid == uid then
-			request.Acknowledged = true
+		if request and request.Cycle == cycle and request.Uid == uid then
 			Engine.AutoRequestOwner = nil
 		end
-		cycle.CompletedUid = uid
 		return true
 	end
 	Engine.AutoRecoveryModel = function(uid)
@@ -6159,20 +6131,19 @@ local GetScrambleTradeStatusFn = nil
 			end
 			local nearby = (root.Position - target.Position).Magnitude <= 20
 				or (target.AreaId ~= nil and LocalPlayer:GetAttribute("AreaId") == target.AreaId)
-			local starter = not nearby and Engine.AutoStarter(target) or nil
-			if starter then
-				Engine.AutoStatus = "Approaching sleeping guard egg"
+			local starter = not nearby and Engine.AutoStarter() or nil
+			if not nearby and not starter then
+				cycle.Failure = "No starter egg available"
+				return false
+			end
+			if starter and starter.Uid ~= target.Uid then
+				Engine.AutoStatus = "Approaching guard starter egg"
 				if not Engine.AutoMove(starter.Position + Vector3.new(0, 3, 0), cycle) then
 					return false
 				end
 				if not Engine.AutoGuardHop(starter, target, cycle) then
-					Engine.State.BlockList[starter.Uid] = os.clock() + 5
-					if not Engine.AutoValid(cycle) or Engine.IsRagdolled() then
-						return false
-					end
-					if Engine.AutoHeld() and not Engine.AutoDrop(cycle) then
-						return false
-					end
+					cycle.Failure = "Guard hop failed; restarting route"
+					return false
 				end
 			end
 			if not Engine.AutoValid(cycle) then
