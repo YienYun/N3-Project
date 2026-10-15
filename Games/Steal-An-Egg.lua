@@ -17589,7 +17589,7 @@ do
 			local finishPlace = LocalPlayer:GetAttribute("RaceFinishPlace")
 			local finished = type(finishPlace) == "number"
 			if not finished and enabled and NudgeRaceMount() then
-				StopRaceDrive()
+				-- Chili keeps an existing drive alive while the mount recovery runs.
 				SetRaceAction(
 					string.format("Not on the racer yet, moving and jumping to get back on (%d/3)", race.NudgeCount)
 				)

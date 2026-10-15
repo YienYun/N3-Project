@@ -73,8 +73,9 @@ python tools/check_race_source.py
 
 The visual checker verifies the exact Sena reference, retired tester, one optional
 OFF-by-default toggle, both steal modes and the shared movement adapter. Its
-reviewed gameplay baseline now includes the user-requested race-first policy:
-SHA256 `611aa5dfdb913934ae82d1fd71254bbabea570f2d4bdd29adc67ad2d88be418b` after
+reviewed gameplay baseline includes the user-requested race-first policy and
+the source-backed mount-recovery drive-lifetime correction:
+SHA256 `74eee3ae6681b9ae5d20ac2712f1af727a267534b47b7fe5c027ba58fddd6ebb` after
 removing the four marked visual/config/UI blocks and legacy camera gates.
 The race checker independently keeps all eight original Sena/N3 gameplay-block
 fingerprints: normal lifecycle, filters, approach/pace, swap/health, Instant and

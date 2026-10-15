@@ -148,3 +148,36 @@ power-ups ON. If laps/wins do not count, lower speed toward 100 as advised by th
 source. For a failure report, capture the status, Tokens/Wins/Racer and any
 `[N3 HUB] Race Rally` warning. Check disabling Auto Race mid-travel/mid-heat and
 resuming normal Sena automation after the event as separate live checks.
+
+## Follow-up comparison: place 1 but no reward
+
+The user reported first place without a credited reward. Drive/finish/reward
+source was reread against Chili V2, without inferring a server rollback cause.
+
+| Area | Comparison |
+| --- | --- |
+| Drive projection/lift and two simulation hooks, 49920–50067 | Same projection, lift floor 2, progress by speed × Heartbeat delta, CFrame/velocity writer, 40-stud reprojection ±300, six-second repeat-pull slowdown and 0.2s power-up cadence. |
+| Speed, 49506–49510 / current speed helper | Same 100–160/default 150, slowdown +50 with floor 100. Chili explicitly says to lower speed if wins do not count. No new default or invented speed compensation. |
+| Mount recovery, 50525–50633 | **Mismatch fixed:** N3 called `StopRaceDrive()` whenever the recovery helper returned true. Chili only publishes status/returns, leaving an existing drive and its projection/lift state alive. That extra teardown has been removed. |
+| Lap watchdog / finish / leave, 50626–50735 | Same heat attributes, lap timeout length/speed × 1.5 + 8, numeric `RaceFinishPlace`, stop on finish, AskLeave every 2s and bounded 8s stuck-leave recovery. |
+| Rewards, 51267–51365 | Same owned-racer equipment and optional milestone/repeat claim/shop calls. No missing finish-win claim remote was found in this source. |
+
+Only the extra mount-recovery drive teardown was changed in the runtime in this
+follow-up. Tests assert that Chili and N3 both keep the drive alive in that branch
+and still stop it on actual finish. The whole-file reviewed baseline was advanced
+from `611aa5dfdb913934ae82d1fd71254bbabea570f2d4bdd29adc67ad2d88be418b`
+to `74eee3ae6681b9ae5d20ac2712f1af727a267534b47b7fe5c027ba58fddd6ebb` after
+this one source-backed correction; all eight protected steal fingerprints remain.
+
+This mismatch is a verified difference, **not proof that it caused the missing
+reward**. Live `RacePlace = 1` is a position indicator; the script's finish branch
+uses numeric `RaceFinishPlace`. Even a finish attribute is not an independent
+proof that the server's save credited Wins/Tokens. Auto Claim Race Rewards claims
+milestones/repeats, not a fabricated finish award. No local win/token increment,
+new guessed remote, extra result wait or forced user preference was introduced.
+
+Retest one race at speed 100 (the existing source-supported minimum), checking
+existing Status and actual Wins/Tokens before/after. Keep Auto Buy OFF during that
+test if comparing token balances. Auto Claim may be enabled for milestone/repeat
+rewards. Report the final status and counter changes if credit is still missing;
+no live server or rollback outcome is established by compile/static checks.

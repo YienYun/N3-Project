@@ -132,3 +132,16 @@ print("PASS: Chili V2 reference, race source contracts, single controller, seman
 print("PASS: 8 pre-existing gameplay blocks are byte-identical after excluding reviewed presentation additions.")
 print("Static checks only: no Roblox execution, simulation, server-win or FPS claim.")
 print('PASS: race-first pause/resume, no farm toggle writes, no egg/carry starvation and Instant cleanup boundary.')
+
+# Chili 50627-50633 returns from mount recovery without tearing down its drive.
+# Match that lifetime: otherwise recovery repeatedly rebuilds/reprojects the path.
+source_mount = re.search(r'if not E and s and Z\(\) then(.*?)return true', reference.read_text(), re.S)
+assert source_mount is not None and not re.search(r'\ba\(\)', source_mount[1])
+nudge_start = race.index('if not finished and enabled and NudgeRaceMount() then')
+nudge_branch = race[nudge_start:race.index('if finished then', nudge_start)]
+assert 'StopRaceDrive()' not in nudge_branch, 'Keep the existing drive alive during mount recovery, as Chili does'
+assert 'return' in nudge_branch
+assert 'if finished then\n\t\t\t\tStopRaceDrive()' in race
+assert 'RaceFinishPlace' in race and 'LeaveRace("Finished "' in race
+assert 'SetAttribute("RaceFinishPlace"' not in race, 'Finish must come from game attributes, never local fabrication'
+print('PASS: Chili mount-recovery drive lifetime; finish/leave still use game finish attributes, not local place/progress.')
