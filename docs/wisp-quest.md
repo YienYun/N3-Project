@@ -78,22 +78,35 @@ or treadmill RPCs. A banked equipped egg is distinguished from field carry only
 with an owned-record match plus a nil live field read; otherwise wait. No invented
 UID prefix, rollback workaround, reset or alternate swap controller is used.
 
-Reuse native rig restoration under owner `wisp`. NPC/plot travel uses Chili's
-stream-around, >40-stud character pivot fallback and bounded three-second MoveTo;
-NPC trips wait for daylight/open wall. Unlike Chili, arrival must actually be
-within six studs before the quest request. This pivot is quest-specific, **not**
-a replacement for N3 normal egg movement. There is no imported RagdollTravel or
-second fly/swap controller. Recheck generation, character/humanoid/root, owner,
-invisibility and race after yields. Cleanup may stop motion only on the same
-character while still owning the lease; it never clears shared IsExecuting or
-restores a newer race owner's rig. Sent InvokeServer calls cannot be recalled.
+Reuse native rig restoration under owner `wisp`. The user's live report rejected
+our immediate >40-stud pivot: **that transport adaptation has been removed**.
+Chili's original Wisp helper actually attempts long-distance RagdollTravel and
+then a pivot fallback; it is not exclusively tween-based. Per the user's explicit
+correction, NPC/plot travel now uses the shared quest-only continuous tween
+approach documented in [Banjo](banjo-quest.md), followed by a short MoveTo and
+actual six-stud proximity check. No destination TP, imported swap or new worker.
+NPC trips remain daylight/wall guarded. The source-backed quest/UID/fusion
+protocol and native egg movement remain unchanged.
+
+The helper checks generation, current character/humanoid/root, ownership,
+invisibility and race; owned flight cleanup restores captured collision/platform
+state and disconnects its callbacks. Two scoped native recovery guards prevent
+ordinary heartbeat recovery from undoing active quest flight. Outside flight,
+normal behavior remains. Never clear shared IsExecuting or restore a newer
+race owner's rig. Sent InvokeServer calls cannot be recalled.
+
+The prior Wisp implementation was **not live-confirmed**. The reported failure
+is not overridden by old static/compile results; this transport repair needs
+fresh live validation as well.
 
 ## Validation / live checklist
 
-Run `check_wisp_source.py`, all seven existing source checkers, full production
+Run `check_quest_transit_source.py`, `check_banjo_source.py`, `check_wisp_source.py`,
+all seven older source checkers, full production
 Luau compilation and reference/Library checksums. Removing exactly seven Wisp
 insertion sites reproduces **byte-for-byte 3748a3e** (the user-live-confirmed Nitro
-version). Historical checkers strip Wisp first; all prior expected hashes remain
+version). Historical checkers normalize the four transport repair scopes and Banjo before
+stripping Wisp; all prior expected hashes remain
 unchanged, including race, swap, movement, normal/Instant and mutation proofs.
 No live Roblox/quest/pet-consumption/FPS result is claimed by the agent.
 

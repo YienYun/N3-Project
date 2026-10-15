@@ -16277,6 +16277,9 @@ task.spawn(function()
 	end
 end)
 function Tasks.MobilityRecoveryHeartbeat()
+	-- BEGIN QUEST TRANSIT MOBILITY GUARD
+	if Tasks.QuestTransitOwnsActor and Tasks.QuestTransitOwnsActor() then return end
+	-- END QUEST TRANSIT MOBILITY GUARD
 	if RaceOwnsCharacter() then return end
 	if RuntimeState.StealEngine and RuntimeState.StealEngine.AutoCycle then
 		return
@@ -16304,6 +16307,9 @@ function Tasks.MobilityRecoveryHeartbeat()
 end
 RunService.Heartbeat:Connect(Tasks.MobilityRecoveryHeartbeat)
 function Tasks.DefenseHeartbeat()
+	-- BEGIN QUEST TRANSIT DEFENSE GUARD
+	if Tasks.QuestTransitOwnsActor and Tasks.QuestTransitOwnsActor() then return end
+	-- END QUEST TRANSIT DEFENSE GUARD
 	if RaceOwnsCharacter() then return end
     local Engine = RuntimeState.StealEngine
     if Engine and Engine.AutoCycle then return end
@@ -18935,6 +18941,136 @@ do
 end
 -- END NITRO REFILL CONTROLLER
 
+-- BEGIN QUEST TRANSIT CONTROLLER
+-- Shared quest-only transport: Chili FlyTo 13798-13970 / Banjo flight 14990-15210.
+-- Runs inside the existing Wisp/Banjo job and movement lease, never a second swap/worker.
+do
+	local engine = RuntimeState.StealEngine
+	local active
+	function Tasks.QuestTransitOwnsActor()
+		return active ~= nil and active.Owns()
+	end
+	function Tasks.NewQuestTransit(owner, character, humanoid, root, valid)
+		assert(owner == "wisp" or owner == "banjo", "Quest transport owner required")
+		local transit = { Active = false }
+		local heartbeat, stepped, parts, savedPlatform
+		function transit.Owns()
+			return LocalPlayer.Character == character and character ~= nil and humanoid ~= nil and root ~= nil
+				and humanoid.Parent == character and character:FindFirstChildOfClass("Humanoid") == humanoid
+				and humanoid.Health > 0 and root.Parent == character
+				and character:FindFirstChild("HumanoidRootPart") == root
+				and engine.Movement.Owner == owner and not RaceOwnsCharacter()
+		end
+		function transit:Stop()
+			if heartbeat then heartbeat:Disconnect(); heartbeat = nil end
+			if stepped then stepped:Disconnect(); stepped = nil end
+			if self.Active and self.Owns() then
+				engine.SetVelocity(root, Vector3.zero)
+				humanoid.PlatformStand = savedPlatform
+				for _, part in ipairs(parts or {}) do
+					if part:IsDescendantOf(character) and not FarmConfig.Movement_Noclip then part.CanCollide = true end
+				end
+			end
+			self.Active = false
+			parts = nil
+			if active == self then active = nil end
+		end
+		function transit:FlyTo(position, speed, cancel, arrived, mode, seconds, face, onLeg)
+			if not self.Owns() or LibraryLoader.Unloaded or not valid() or (cancel and cancel()) then return false end
+			if not self.Owns() or not valid() then return false end -- a priority read above may yield
+			assert(active == nil, "A quest flight is already active")
+			local points = typeof(position) == "Vector3" and { position } or position
+			assert(type(points) == "table" and #points > 0, "Quest route is empty")
+			local distance, previous = 0, root.Position
+			for _, point in ipairs(points) do
+				assert(typeof(point) == "Vector3", "Quest route point must be a Vector3")
+				distance += (point - previous).Magnitude
+				previous = point
+			end
+			local leg, result, elapsed, cursor = 1, nil, 0, root.Position
+			position = points[leg]
+			local budget = seconds or distance / math.max(speed, 1) + 3 * #points
+			local ok, failure = pcall(function()
+				savedPlatform, parts = humanoid.PlatformStand, {}
+				for _, part in ipairs(character:GetDescendants()) do
+					if part:IsA("BasePart") and part.CanCollide then table.insert(parts, part) end
+				end
+				self.Active, active = true, self
+				humanoid:Move(Vector3.zero, false)
+				humanoid.PlatformStand = true
+				humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+				stepped = RunService.Stepped:Connect(function()
+					if not self.Active then return end
+					if not self.Owns() or LibraryLoader.Unloaded or not valid() then self:Stop(); result = false; return end
+					for _, part in ipairs(parts) do if part:IsDescendantOf(character) then part.CanCollide = false end end
+				end)
+				heartbeat = RunService.Heartbeat:Connect(function(dt)
+					if result ~= nil then return end
+					if not self.Owns() or LibraryLoader.Unloaded or not valid() then self:Stop(); result = false; return end
+					elapsed += dt
+					if arrived and arrived() then result = true; self:Stop(); return end
+					if elapsed > budget then result = false; self:Stop(); return end
+					humanoid.PlatformStand = true
+					local delta = position - root.Position
+					if delta.Magnitude <= 0.75 then
+						engine.SetVelocity(root, Vector3.zero)
+						if leg == #points then result = true; self:Stop(); return end
+						-- Keep the same flight/collision scope between legs; never fall into the water here.
+						leg += 1
+						position, cursor = points[leg], root.Position
+						if onLeg then onLeg(leg) end
+						return
+					end
+					local facing = face and Vector3.new(face.X - root.Position.X, 0, face.Z - root.Position.Z) or Vector3.new(delta.X, 0, delta.Z)
+					if mode == "tween" then
+						-- Chili's FlyTo: small dt-scaled CFrame steps, not a destination PivotTo.
+						if (root.Position - cursor).Magnitude > 6 then cursor = root.Position end
+						local difference = position - cursor
+						cursor += difference.Magnitude <= speed * dt and difference or difference.Unit * speed * dt
+						root.CFrame = CFrame.new(cursor) * (facing.Magnitude > 0.05 and CFrame.lookAt(Vector3.zero, facing.Unit) or root.CFrame.Rotation)
+						engine.SetVelocity(root, Vector3.zero)
+					else
+						-- Banjo's own source leg: physical velocity capped by remaining distance / dt.
+						engine.SetVelocity(root, delta.Unit * math.min(speed, delta.Magnitude / math.max(dt, 1 / 60)))
+						if facing.Magnitude > 0.05 then root.CFrame = CFrame.lookAt(root.Position, root.Position + facing.Unit) end
+					end
+				end)
+				while result == nil do
+					if cancel and cancel() then result = false; break end
+					if result == nil then RunService.Heartbeat:Wait() end
+				end
+			end)
+			self:Stop()
+			if not ok then error(failure, 0) end
+			return result == true
+		end
+		function transit:Approach(position, cancel, arrived)
+			-- Chili FlyTo raises first, crosses at max(startY, endY)+30, then descends.
+			local function route(target)
+				local destination = target + Vector3.new(0, 3, 0)
+				local height = math.max(root.Position.Y, destination.Y) + 30
+				return self:FlyTo({ Vector3.new(root.Position.X, height, root.Position.Z),
+					Vector3.new(destination.X, height, destination.Z), destination }, 120, cancel, arrived, "tween")
+			end
+			-- Source crossing dependency uses StealHome; map it to N3's existing safe spot.
+			local world = Workspace:FindFirstChild("World") or Workspace:FindFirstChild("__OBJECTS")
+			local areas = world and world:FindFirstChild("Areas")
+			local line = areas and areas:FindFirstChild("SeparationLine")
+			local boundary = line and line:IsA("BasePart") and line.Position.X or 552
+			if (root.Position.X < boundary) ~= (position.X < boundary) then
+				local home = engine.GetBaseSafeSpot()
+				if typeof(home) == "Vector3" and (home - root.Position).Magnitude > 12 and (home - position).Magnitude > 12 then
+					if not route(home) then return false end
+				end
+			end
+			return route(position)
+		end
+		return transit
+	end
+	LibraryLoader:OnUnload(function() if active then active:Stop() end end)
+end
+-- END QUEST TRANSIT CONTROLLER
+
 -- BEGIN WISP CONTROLLER
 -- Chili V2 41403-42256: WispQuests/Save, native steal inputs, fusion, claims and tree return.
 do
@@ -19177,14 +19313,19 @@ do
 			state.LastDispatch = true
 			return pcall(remote.InvokeServer, remote, ...)
 		end
+		-- BEGIN QUEST TRANSIT WISP TRAVEL
 		local function travel(position, daylight)
 			if not position then state.Status = "Quest target not streamed"; return false end
 			if cancelled() then return false end
 			if daylight and GetNightAndWallStatus().ShouldRetreat then state.Status = "Waiting for daylight"; return false end
 			pcall(LocalPlayer.RequestStreamAroundAsync, LocalPlayer, position, 3)
 			if cancelled() or (daylight and GetNightAndWallStatus().ShouldRetreat) then return false end
-			-- Chili's NPC travel uses this pivot fallback; never route normal egg travel here.
-			if (root.Position - position).Magnitude > 40 then character:PivotTo(CFrame.new(position + Vector3.new(0, 3, 3))) end
+			local transit = Tasks.NewQuestTransit("wisp", character, humanoid, root, function() return not cancelled() end)
+			if (root.Position - position).Magnitude > 6 then
+				if not transit:Approach(position, function()
+					return cancelled() or higherTask() or (daylight and GetNightAndWallStatus().ShouldRetreat)
+				end) then state.Status = "Quest travel interrupted"; return false end
+			end
 			local deadline = os.clock() + 3
 			while (root.Position - position).Magnitude > 6 do
 				if cancelled() or higherTask() or os.clock() >= deadline then return false end
@@ -19193,6 +19334,7 @@ do
 			end
 			return not cancelled()
 		end
+		-- END QUEST TRANSIT WISP TRAVEL
 		local ok, failure = pcall(function()
 			SetElevated8()
 			if RuntimeState.IsExecuting or engine.AutoCycle or state.NativeCalls > 0 or cancelled() then return end
@@ -19616,7 +19758,8 @@ do
 		state.Notes, state.Acks, state.Solved, state.Cleared, state.LastAt = nil, {}, false, 0, 0
 		local character, generation = state.Character, state.JobGeneration
 		local previousTool = character and character:FindFirstChildWhichIsA("Tool")
-		local humanoid, root, bat, deadline = nil, nil, nil, os.clock() + 420
+		local humanoid, root, bat, transit, deadline = nil, nil, nil, nil, os.clock() + 420
+		local finishing = false
 		local function safe()
 			return not LibraryLoader.Unloaded and not state.Disposed and LocalPlayer.Character == character
 				and engine.Movement.Owner == "banjo" and not raceWanted()
@@ -19644,38 +19787,23 @@ do
 			local hit = Workspace:Raycast(position + Vector3.new(0, 8, 0), Vector3.new(0, -30, 0), params)
 			return hit and Vector3.new(position.X, hit.Position.Y + 3, position.Z) or position
 		end
-		local function walk(position, seconds, cleanup, allowExit, arrived)
-			if not position or (cleanup and not safe() or not cleanup and cancelled()) then return false end
-			local nodes = { position }
-			local ok, path = pcall(function()
-				local route = game:GetService("PathfindingService"):CreatePath({ AgentRadius = 2, AgentHeight = 5, AgentCanJump = true, WaypointSpacing = 6 })
-				route:ComputeAsync(root.Position, position)
-				return route
-			end)
-			if cleanup and not safe() or not cleanup and cancelled() then return false end
-			if ok and path.Status == Enum.PathStatus.Success then
-				nodes = path:GetWaypoints()
-				table.insert(nodes, { Position = position })
-			end
-			local untilAt, exit = os.clock() + (seconds or 15), marker("ExitTrigger")
-			for _, node in ipairs(nodes) do
-				local point = typeof(node) == "Vector3" and node or node.Position
-				if not allowExit and exit and (point - exit).Magnitude < 14 then continue end
-				local nodeUntil = #nodes == 1 and untilAt or math.min(untilAt, os.clock() + 3)
-				repeat
-					if cleanup and not safe() or not cleanup and cancelled() then return false end
-					if arrived and arrived() then humanoid:MoveTo(root.Position); return true end
-					if typeof(node) ~= "Vector3" and node.Action == Enum.PathWaypointAction.Jump then humanoid.Jump = true end
-					humanoid:MoveTo(point)
-					if Vector2.new(root.Position.X - point.X, root.Position.Z - point.Z).Magnitude <= 1.5 and math.abs(root.Position.Y - point.Y) <= 8 then break end
-					task.wait(0.05)
-				until os.clock() >= nodeUntil
-				if os.clock() >= untilAt then break end
-			end
-			if cleanup and not safe() or not cleanup and cancelled() then return false end
-			humanoid:MoveTo(root.Position)
-			return (arrived and arrived()) or ((root.Position - position).Magnitude <= 8
-				and Vector2.new(root.Position.X - position.X, root.Position.Z - position.Z).Magnitude <= 2.5)
+		local function walk(position, seconds, cleanup, arrived)
+			-- Tree prompt / exit fallback only. Never walk the water route to Secret Leap.
+			local untilAt = os.clock() + seconds
+			repeat
+				if cleanup and not safe() or not cleanup and cancelled() then return false end
+				if arrived and arrived() then humanoid:MoveTo(root.Position); return true end
+				if (root.Position - position).Magnitude <= 4 then humanoid:MoveTo(root.Position); return true end
+				humanoid:MoveTo(position)
+				task.wait(0.05)
+			until os.clock() >= untilAt
+			if safe() then humanoid:MoveTo(root.Position) end
+			return (arrived and arrived()) or (root.Position - position).Magnitude <= 4
+		end
+		local function fly(position, speed, cleanup, arrived, seconds, face)
+			if not transit then return false end
+			return transit:FlyTo(position, speed, function() return cleanup and not safe() or not cleanup and cancelled() end,
+				arrived, "velocity", seconds, face)
 		end
 		local function treePrompt()
 			local tree = interior()
@@ -19694,12 +19822,15 @@ do
 			if not prompt or not position then state.Status = "Tree entrance unavailable"; return false end
 			pcall(LocalPlayer.RequestStreamAroundAsync, LocalPlayer, position, 3)
 			if cancelled() or GetNightAndWallStatus().ShouldRetreat then return false end
-			-- Source tree-entry fallback only; no replacement of N3 egg movement or swap.
-			if (root.Position - position).Magnitude > 30 then character:PivotTo(CFrame.new(position + Vector3.new(0, 1, -12))) end
+			state.Status = "Flying to Enchanted Tree entrance"
+			if not transit:Approach(position + Vector3.new(0, 3, -12), function()
+				return cancelled() or GetNightAndWallStatus().ShouldRetreat
+			end, inTree) then state.Status = "Tree approach interrupted"; return false end
+			if inTree() then return waitFor(0.5) end
 			for attempt = 1, 4 do
 				if cancelled() then return false end
 				state.Status = "Entering Enchanted Tree"
-				if not walk(position, 4, false, true) then return false end
+				if not walk(position, 3, false, inTree) then return false end
 				if cancelled() or not prompt.Parent or not prompt.Enabled or (root.Position - position).Magnitude > math.min(8, prompt.MaxActivationDistance) then return false end
 				if attempt % 2 == 1 and type(fireproximityprompt) == "function" then pcall(fireproximityprompt, prompt)
 				else
@@ -19720,13 +19851,17 @@ do
 			local position = hint and hint:IsA("BasePart") and hint.Position or leapHint
 			for _ = 1, 2 do
 				if cancelled() or not inTree() then return false end
-				state.Status = "Taking the Secret Leap"
-				if not walk(floor(position), 20, false, false, inRoom) then state.Status = "Cannot reach Secret Leap"; return false end
-				if cancelled() then return false end
-				if inRoom() then return waitFor(0.5) end
-				-- Reuse N3's existing lift, then let the game's leap trigger move the character.
-				engine.Lift(18, position.Y)
-				if waitFor(8, inRoom) then return waitFor(0.5) end
+				local above = position + Vector3.new(0, 18, 0)
+				state.Status = "Secret Leap: rising above the water"
+				local leapRoute = { Vector3.new(root.Position.X, above.Y, root.Position.Z), above }
+				if not transit:FlyTo(leapRoute, 120, function() return cancelled() or not inTree() end,
+					inRoom, "velocity", nil, nil, function(leg)
+						if leg == 2 then state.Status = "Secret Leap: flying to the hint" end
+					end) then return false end
+				if cancelled() or not inTree() then return false end
+				-- Flight has ended: collisions/platform state restored BEFORE the natural fall.
+				state.Status = "Secret Leap: falling through the hint"
+				if waitFor(8, inRoom) then return waitFor(1.5) end
 			end
 			state.Status = "Secret Leap not confirmed"
 			return false
@@ -19738,7 +19873,8 @@ do
 			if not target then return nil end
 			local offset = Vector3.new(center.X - target.X, 0, center.Z - target.Z)
 			local stance = floor(target + (offset.Magnitude > 0.01 and offset.Unit or Vector3.new(0, 0, -1)) * 6.5)
-			if not walk(stance, 8) or cancelled() or replaced() or not inRoom() then return nil end
+			if not transit:FlyTo(stance, 60, function() return cancelled() or replaced() or not inRoom() end, nil, "velocity", nil, target)
+				or cancelled() or replaced() or not inRoom() then return nil end
 			bat = EquipBatTool() -- Existing N3 equipment helper; no bat purchase or forced preferences.
 			if not bat or not waitFor(0.25) or bat.Parent ~= character then state.Status = "Needs a bat in your bag"; return nil end
 			local ready = waitFor(2, function()
@@ -19809,10 +19945,12 @@ do
 			if not waitFor(5) or not inRoom() then return end
 			local npc = taggedPosition("BanjoCricketNpc", nil, npcFallback)
 			if (root.Position - npc).Magnitude > 9 then
-				state.Status = "Walking to Jitterbug"
-				for _, point in ipairs(claimRoute) do if not walk(floor(point), 10) then return end end
+				state.Status = "Flying to Jitterbug"
+				local route = {}
+				for _, point in ipairs(claimRoute) do table.insert(route, floor(point)) end
 				local offset = Vector3.new(claimRoute[2].X - npc.X, 0, claimRoute[2].Z - npc.Z)
-				if not walk(floor(npc + (offset.Magnitude > 0.01 and offset.Unit or Vector3.new(0, 0, -1)) * 6), 10) then return end
+				table.insert(route, floor(npc + (offset.Magnitude > 0.01 and offset.Unit or Vector3.new(0, 0, -1)) * 6))
+				if not fly(route, 60, false, nil, nil, npc) then return end
 			end
 			if cancelled() or not inRoom() or (root.Position - npc).Magnitude > 9 then return end
 			if readSave().Claimed == true then state.Done = true; return end
@@ -19828,20 +19966,25 @@ do
 			else state.Status = "Waiting for claim save" end
 		end
 		local function leave()
-			if not safe() or not inTree() then return end
+			if not safe() or not inTree() or not transit then return end
+			finishing = true
 			if inRoom() then
 				state.Status = "Leaving secret room"
-				walk(floor(marker("SecretRoomExit", roomExit)), 6, true, true, function() return not inRoom() end)
+				fly(marker("SecretRoomExit", roomExit), 60, true, function() return not inRoom() end)
+				if inRoom() then fly(marker("SecretRoomExit", roomExit), 60, true, function() return not inRoom() end, 5) end
 				waitFor(5, function() return not inRoom() end, true)
+				if safe() and inRoom() then state.ExitFailed = true end
 			end
 			if not safe() or not inTree() or inRoom() then return end
 			state.Status = "Leaving Enchanted Tree"
 			local exit = marker("ExitTrigger")
-			if exit then walk(floor(exit), 6, true, true, function() return not inTree() end); waitFor(1, function() return not inTree() end, true) end
-			if safe() and inTree() then
-				local _, entrance = treePrompt()
-				if entrance then character:PivotTo(CFrame.new(entrance + Vector3.new(0, 3, -30))); waitFor(3, function() return not inTree() end, true) end
+			if exit then
+				transit:Approach(exit, function() return not safe() end, function() return not inTree() end)
+				waitFor(0.5, function() return not inTree() end, true)
+				if safe() and inTree() then walk(exit, 6, true, function() return not inTree() end) end
 			end
+			-- No raw exterior TP fallback: user requires continuous travel, not a reset loop.
+			if safe() and inTree() then state.ExitFailed = true end
 		end
 		local ok, failure = pcall(function()
 			SetElevated8()
@@ -19854,10 +19997,21 @@ do
 			humanoid = character and character:FindFirstChildOfClass("Humanoid")
 			root = character and character:FindFirstChild("HumanoidRootPart")
 			if not humanoid or not root then return end
-			if not enterTree() or not enterRoom() then return end
+			transit = Tasks.NewQuestTransit("banjo", character, humanoid, root, function()
+				return safe() and os.clock() < deadline and character:GetAttribute("InvisApplied") ~= true
+					and (finishing or (enabled() and generation == state.Generation))
+			end)
+			state.ExitFailed = false
+			if not enterTree() then state.NextAt = math.max(state.NextAt, os.clock() + 10); return end
+			if not enterRoom() then
+				state.NextAt = math.max(state.NextAt, os.clock() + 15)
+				if not cancelled() then state.Status = "Secret Leap not confirmed" end
+				return
+			end
 			if readSave().Solved == true or solve() then claim() end
 		end)
 		local result = state.Status
+		if transit then transit:Stop() end
 		pcall(leave) -- Only same-character/same-owner cleanup; never travels over a race handoff.
 		pcall(function()
 			if not safe() then return end
@@ -19868,10 +20022,12 @@ do
 				elseif previousTool ~= bat then humanoid:UnequipTools() end
 			end
 		end)
+		if transit then transit:Stop() end
 		engine.ReleaseMovement("banjo")
 		state.Busy, state.Lease, state.Character = false, false, nil
 		state.NextAt = math.max(state.NextAt, os.clock() + 3)
 		state.Status = state.Done and "Done — Cricket's Banjo claimed" or result
+		if state.ExitFailed then state.Status ..= " · exit not confirmed" end
 		if not ok then state.Status, state.LastError, state.NextAt = "Banjo paused; retrying", tostring(failure), os.clock() + 10 end
 		if engine.AutoWake then engine.AutoWake() end
 	end

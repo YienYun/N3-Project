@@ -18,7 +18,7 @@ for contract in (
     '"EnchantedTreeUnlocked"', '"InEnchantedTree"', 'FindFirstChild("EnchantedTreeInterior")',
     'FindFirstChild("EnchantedTreeEntrance")', 'FindFirstChild("EnchantedTreePrompt")',
     'marker("SecretRoomSpawn", roomSpawn)', 'marker("SecretRoomExit", roomExit)', 'marker("ExitTrigger")',
-    'FindFirstChild("SecretLeapHint")', 'FindFirstChild("Streaks")', 'engine.Lift(18, position.Y)',
+    'FindFirstChild("SecretLeapHint")', 'FindFirstChild("Streaks")', 'local above = position + Vector3.new(0, 18, 0)',
     '"BanjoCricketMushroom", index, mushrooms[index]', '"BanjoCricketNpc", nil, npcFallback',
     'model:GetAttribute("MushroomIndex")', 'local center = Vector3.new(6244.93, 17159.02, 16880)',
     'remote("RE/BanjoCricket/Effect", "RemoteEvent")', 'remote("RE/BanjoCricket/Aim", "RemoteEvent")',
@@ -37,8 +37,8 @@ for contract in (
     'generation ~= state.Generation', 'LocalPlayer.Character == character', 'engine.Movement.Owner == "banjo"',
     'and not raceWanted()', 'character:GetAttribute("InvisApplied")', 'local higher = higherTask()',
     'return higher or not safe()', 'requestedGeneration ~= state.Generation', 'Tasks.PriorityCanRun("Essence")', 'GetNightAndWallStatus().ShouldRetreat',
-    'PathfindingService', 'AgentCanJump = true', 'path.Status == Enum.PathStatus.Success',
-    'node.Action == Enum.PathWaypointAction.Jump', 'humanoid:MoveTo(point)', 'engine.SetVelocity(root, Vector3.zero)',
+    'transit:Approach(position + Vector3.new(0, 3, -12)', 'transit:FlyTo(leapRoute, 120',
+    'transit:FlyTo(stance, 60', 'engine.SetVelocity(root, Vector3.zero)',
     'prompt:InputHoldBegin()', 'pcall(prompt.InputHoldEnd, prompt)', 'prompt.MaxActivationDistance',
     'state.ClaimPending = "Claiming Cricket\'s Banjo", true', 'if ok and reply == false then state.ClaimPending = false end',
     'if state.ClaimPending then state.Status = "Waiting for claim save"; return end',
@@ -62,8 +62,8 @@ assert n.index('state.Status, state.ClaimPending =') < n.index('pcall(request.In
 ref = (ROOT / 'Games/Source/StealAnEgg/ChiliSourceV2.lua').read_text()
 for coords in re.findall(r'Vector3.new\((\d[\d.]+), ([\d.]+), ([\d.]+)\)', n):
     assert 'Vector3.new(' + ', '.join(coords) + ')' in ref, f'Invented room coordinate: {coords}'
-print('PASS: two-site exact reversal to published Wisp 7591d6f; all prior feature bodies preserved.')
+print('PASS: transport repair normalization + two Banjo sites reverse exactly to published Wisp 7591d6f.')
 print('PASS: one Banjo subtab in the same Home Quests group; safe OFF default and one worker.')
 print('PASS: source tree/room/bat protocol, real server Playback/Note acknowledgements and Save-verified claim.')
-print('PASS: native ownership/arbitration, bounded walk/lift adaptation, race cancellation and guarded cleanup.')
+print('PASS: native ownership/arbitration, source-backed aerial quest route, race cancellation and guarded cleanup.')
 print('Static/compile checks only; no Roblox puzzle execution, reward claim or FPS evidence.')

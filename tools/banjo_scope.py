@@ -1,5 +1,6 @@
 """Reverse the Banjo controller and exact shared-quest-tab replacement only."""
 import re
+from quest_transit_scope import strip_quest_transit
 
 QUEST_TABS = (
     '\t\t-- BEGIN BANJO QUEST TABS\n'
@@ -12,6 +13,8 @@ ORIGINAL_TABS = '\t\tlocal wisp = group:AddTabbox({ Name = "Quest Tabs" }):AddTa
 
 
 def strip_banjo(runtime):
+    if "-- BEGIN QUEST TRANSIT" in runtime:
+        runtime = strip_quest_transit(runtime)
     assert runtime.count('-- BEGIN BANJO QUEST TABS') == 1
     assert runtime.count('-- END BANJO QUEST TABS') == 1
     assert runtime.count(QUEST_TABS) == 1, 'Unexpected changes to the reviewed shared-tab replacement'

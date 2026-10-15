@@ -194,8 +194,10 @@ Read this before changing `Steal-An-Egg.lua`.
   excluded; Wisp fusion can consume mutated unfavorited pets, as documented.
 - Keep pending consumption across OFF/ON; no blind ambiguous BeginFuse retry.
   Never clear shared IsExecuting or touch a newer character/owner in cleanup.
-- Quest-only NPC/plot pivot follows Chili fallback; N3 normal movement is untouched.
-  Check six-stud arrival, daylight, race and generation before quest requests.
+- User rejected Wisp's immediate NPC/plot TP in live testing. Use shared quest-only
+  continuous tween approach, then six-stud arrival; no destination TP. This is an
+  explicit replacement for source RagdollTravel/pivot fallback, not a claim Chili
+  uses only tween. Keep daylight, race/generation gates and N3 egg movement intact.
 - Run `tools/check_wisp_source.py`, all seven prior checkers and full production
   Luau compile. Exactly seven insertion sites reverse byte-for-byte to 3748a3e;
   historical checks strip Wisp first without replacing any prior expected hashes.
@@ -215,17 +217,37 @@ Read this before changing `Steal-An-Egg.lua`.
   lane and exclusive `banjo` movement owner; race first. Do not force shared
   IsExecuting, farm/defense settings or invisibility. Do not run steal-only
   RunPace/FlyToPosition by pretending that stealing is active.
-- Intentional traversal adaptation: bounded MoveTo/pathfinding, existing N3 Lift
-  for the source Secret Leap, source prompt/pivot fallback for tree entry/exit.
-  No imported flight/swap/noclip/physics loop. This requires live route validation.
+- The walk/pathfinding + Lift adaptation in 4d2db61 FAILED the user's live test;
+  do not restore it or treat compile success as route acceptance. Use the shared
+  quest transit below: tween to entrance, actual prompt/attribute entry, vertical
+  rise to hint.Y+18, horizontal flight to hint+18, END flight and naturally fall.
+  Source-speed-60 flight for mushrooms, Jitterbug and SecretRoomExit; separate
+  ExitTrigger flight/short walk to leave. No destination TP or reset fallback.
 - Scope native inventory/fusion actions and normal/Instant activity through the
   existing adapters; preserve preferences and restore only owned adapters.
   Late cleanup requires the same living actor/root/humanoid and `banjo` owner,
   and must not travel/restore tools after race takeover or unload.
 - Success requires authoritative Save.BanjoCricket.Claimed. Keep ambiguous claim
   dispatch pending across OFF/ON rather than issuing duplicate reward calls.
-- Run all nine current source checkers + full production Luau compile. Two marked
+- Run all ten current source checkers + full production Luau compile. Two marked
   sites reverse byte-for-byte to published Wisp 7591d6f (SHA256 in checker).
   `wisp_scope.strip_wisp` strips Banjo first so historical expected hashes stay
   unchanged. Library, loader and bundled references remain untouched.
   None of this is a live/server/reward/FPS acceptance test.
+
+
+## Wisp / Banjo transport repair after live rejection
+
+- Source dependencies are mandatory: general dt-scaled FlyTo (13798–13970),
+  PlatformStand flight (40119–40175), Banjo velocity/ghost/EndFlight helpers
+  (14990–15210), and full TreeTrip entry/exit (72155–72421). See current Banjo doc.
+- One shared lease-scoped helper runs inside existing quest workers; never add a
+  new swap or movement worker. It owns temporary heartbeat/stepped connections
+  only while flying, restoring captured state only on the same owned actor.
+- The two tiny MobilityRecoveryHeartbeat / DefenseHeartbeat guards apply ONLY
+  during owned active quest flight, so native recovery cannot dismantle it.
+  User toggles remain unchanged; source race/normal/Instant bodies stay protected.
+- `tools/quest_transit_scope.py` reverses exactly the helper, Wisp travel replacement
+  and those two guards before existing Banjo/Wisp normalization. Never change old
+  expected hashes to hide unrelated changes. Run `check_quest_transit_source.py`
+  with all nine prior checkers and full compilation. No live success/FPS claim.
