@@ -1,12 +1,13 @@
 """Static source contracts only; does not execute Roblox or spend consumables."""
 from pathlib import Path
+from nitro_scope import strip_nitro_refill
 import hashlib
 import re
 from mutate_scope import strip_auto_mutate
 from steal_visual_scope import strip_builtin_visual
 
 ROOT = Path(__file__).resolve().parents[1]
-s = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
+s = strip_nitro_refill((ROOT / 'Games/Steal-An-Egg.lua').read_text())
 assert hashlib.sha256(strip_builtin_visual(strip_auto_mutate(s)).encode()).hexdigest() == (
     '1ee1ccad97d280302fe1d458b6ac749e2772f348f05e80c3ab69bb27b1100353'
 ), 'Changes escaped Auto Mutate / reviewed dbaeb09 baseline'

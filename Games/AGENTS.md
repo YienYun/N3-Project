@@ -152,3 +152,25 @@ Read this before changing `Steal-An-Egg.lua`.
 - Race always preempts; late RPC cleanup may not touch a newer character/owner.
   Restore tools/adapters conditionally; retain server refusal/replication delays.
 - Auto Buy Nitro refill remains pending; do not add a competing race-shop buyer.
+
+
+## Auto Buy Nitro
+
+- See `../docs/nitro-refill.md`; default OFF in Pets → Mutation. Requires Auto
+  Mutate + Nitro selected, settled settings, no usable tool, affordable race
+  tokens and valid official shop limit/count. Never buy tokens or force choices.
+- Run `tools/check_nitro_refill_source.py`, all six prior source checkers and
+  full Luau compile. Four marked insertions reverse exactly to 1043562.
+- The only deliberate race-body exception is the tiny AskBuy-only routing gate
+  into a shared purchase adapter. Full-race hash strips ONLY that hook and keeps
+  the old expected hash; no race drive, finish/leave or ownership change allowed.
+- Both native shop and refill use one lock taken before yielding reads, fresh
+  preference/data checks, per-item throttling and conservative token reservation.
+  Preserve packed pcall results. No second worker; reuse the mutation tick.
+- Track pending out-of-stock Nitro grants before RPC, even for the native shop.
+  OFF/ON must not clear pending. Only an observed tool or explicit server false
+  clears it; ambiguous outcomes fail closed rather than timed duplicate buying.
+  A sent RPC cannot be recalled. Native race caller must not gain a grant wait.
+- Historical reverse-delta checks strip Nitro before their prior scopes, never
+  replace old expected hashes to accommodate unrelated changes. Library, loader
+  and bundled references remain untouched; static checks are not live acceptance.

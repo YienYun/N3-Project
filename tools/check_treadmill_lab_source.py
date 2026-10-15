@@ -1,5 +1,6 @@
 """Source-contract regressions only. Does not execute/simulate Roblox or RPCs."""
 from pathlib import Path
+from nitro_scope import strip_nitro_shop_hook
 import hashlib
 import re
 
@@ -21,7 +22,7 @@ def contains(text, *contracts):
 
 # The user live-confirmed 1aa5920's race. Protect the entire body, not just names.
 race = section("-- Racing Event: semantic port", "LocalPlayer.CharacterAdded:Connect(Tasks.OnCharacterAdded)")
-assert hashlib.sha256(race.encode()).hexdigest() == "439836859bcbfcea949a78aea791381e721000b21246b8e5e110db2823244876", "Live-confirmed race changed"
+assert hashlib.sha256(strip_nitro_shop_hook(race).encode()).hexdigest() == "439836859bcbfcea949a78aea791381e721000b21246b8e5e110db2823244876", "Live-confirmed race changed beyond the reviewed shop gate"
 
 scan = section("function Tasks.ScanTreadmillInPlot(", "local GetTreadmillPart")
 assert scan.index('"TreadmillBottom"') < scan.index('"__ClientTreadmillRenders"')
@@ -100,7 +101,7 @@ contains(place, "pcall(GetScrambleTradeStatusFn)", "elseif not ShouldHoldBackScr
 contains(runtime, "local isReady = info.SlotPicks[i] ~= nil", "Unlocked = state.Unlocked == true,",
          "or Tasks.TreadmillState.Busy or RuntimeState.OnTreadmill",
          "ApplyTreadmillShield(FarmConfig.AntiTreadmill and not State)")
-print("PASS: Chili identity; live-confirmed race byte-identical; single-flight/cancellable treadmill and correct tier payload.")
+print("PASS: Chili identity; live race byte-identical after excluding only the reviewed shop gate; single-flight/cancellable treadmill and correct tier payload.")
 print("PASS: unique raw Lab UIDs, placed exclusion, normal/small preference, boolean missing targets, stale-state clearing.")
 print("PASS: one gated Lab action lane, pending reward ordering, independent free reroll, slot-correct UI and Auto Place holdback.")
 print("Static source contracts only: no live Roblox/server/FPS or simulated acceptance claim.")

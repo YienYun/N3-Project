@@ -3,6 +3,7 @@ from pathlib import Path
 import hashlib
 import re
 from steal_visual_scope import strip_builtin_visual
+from nitro_scope import strip_nitro_refill
 
 ROOT = Path(__file__).resolve().parents[1]
 runtime = (ROOT / "Games/Steal-An-Egg.lua").read_text()
@@ -17,8 +18,9 @@ assert hashlib.sha1(blob).hexdigest() == "a36898ee403cacf3aa9742bfb9f9270f867cb7
 # Stock has four reviewed insertion sites, reversed by check_lab_stock_source.py.
 # Auto Mutate has two scoped insertions checked by check_auto_mutate_source.py.
 # Eight gameplay blocks remain unchanged (check_race_source.py); the entire live race
-# is also fingerprinted (check_treadmill_lab_source.py). Presentation additions strip.
-normalized = strip_builtin_visual(runtime)
+# is also fingerprinted after stripping only the Nitro shop hook. Nitro itself
+# reverses to 1043562 (check_nitro_refill_source.py); no baseline hash replacement.
+normalized = strip_builtin_visual(strip_nitro_refill(runtime))
 assert hashlib.sha256(normalized.encode()).hexdigest() == "04700b83dc3033b34536299e533b87bca688fe63aacf26930206b1438d2ff233", (
     "Gameplay outside the reviewed visual additions changed; review before updating this baseline"
 )
@@ -73,6 +75,6 @@ assert 'Engine.IsSafeZoneVisual and Engine.IsSafeZoneVisual()' in runtime
 assert 'character:FindFirstChild("HumanoidRootPart")' in visual
 assert 'character:FindFirstChildOfClass("Humanoid")' in visual
 print('PASS: exact Sena reference; no standalone tester; optional visual toggle defaults OFF and supports normal/Instant.')
-print('PASS: removing only reviewed presentation additions reproduces the reviewed race-priority + treadmill/Lab + stock/seller + Auto Mutate baseline.')
+print('PASS: removing reviewed Nitro/presentation additions reproduces the reviewed race-priority + treadmill/Lab + stock/seller + Auto Mutate baseline.')
 print('PASS: reuse, reversible visibility/camera, cancellation/unload and no visual remote or real-root movement.')
 print('Static checks only: normal V2 was user-confirmed live; the promoted Instant integration still needs live testing.')

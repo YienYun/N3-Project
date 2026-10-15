@@ -14,11 +14,12 @@ Production uses one marked controller after Race initialization, plus one marked
 UI-builder call. No modification of Race, normal/Instant/Line Drop, stock or
 seller bodies. No second swap/fly controller. No additional shop purchase RPC.
 
-**Auto Buy Nitro is not part of this change.** Nitro consumables already owned
-can be used. The existing Event/Race shop still supports Nitro purchase; its
-settings are not forced. Dedicated replenishment must coordinate with that shop
-before it is implemented. Chili's one-time forced Nitro-selection file migration
-is intentionally omitted; user's mutation choices must remain their own.
+**Follow-up: optional Auto Buy Nitro is now integrated separately.** See
+`nitro-refill.md` for its default-OFF toggle and shared race-shop purchase lane.
+The no-race-body/no-shop-RPC scope above describes the original Auto Mutate
+change; the follow-up adds only an AskBuy routing gate inside the race body,
+not changes to driving/ownership. Chili's one-time forced Nitro-selection file
+migration remains intentionally omitted; mutation choices stay user-owned.
 
 ## Compact UI
 
@@ -96,11 +97,13 @@ can consume them too, according to the game. Use restrictive targets first.
 
 ## Validation
 
-Run `check_auto_mutate_source.py` plus the five existing source checkers and
-compile the entire production Luau file. Mutation scope checker removes exactly
-two marked insertions and reproduces dbaeb09's full reviewed normalized hash.
-Eight protected gameplay blocks and the full live-confirmed race retain their
-fingerprints. Library and bundled references remain unchanged.
+Run `check_auto_mutate_source.py`, `check_nitro_refill_source.py` and the five
+other source checkers, then compile the entire production Luau file. Mutation
+scope checker removes exactly two marked insertions (after stripping the separate
+Nitro follow-up) and reproduces dbaeb09's full reviewed normalized hash.
+Eight protected gameplay blocks retain their fingerprints. The full race
+fingerprint now excludes only the separately reviewed Nitro shop-routing gate.
+Library and bundled references remain unchanged.
 
 These are static/compile checks, not Roblox/server/mutation/FPS tests. No actual
 consumables were spent or game recipe simulation executed by the agent.

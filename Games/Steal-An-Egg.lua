@@ -16712,6 +16712,11 @@ do
 		return remote and remote:IsA(className) and remote or nil
 	end
 	local function InvokeRace(name, ...)
+		-- BEGIN NITRO REFILL SHOP HOOK
+		if name == "RF/RaceRally/AskBuy" and Tasks.InvokeRaceShopPurchase then
+			return Tasks.InvokeRaceShopPurchase("race", ...)
+		end
+		-- END NITRO REFILL SHOP HOOK
 		local remote = RaceRemote(name, "RemoteFunction")
 		if not remote then
 			return false
@@ -18697,6 +18702,9 @@ do
 			FarmConfig.Mutate_Auto = value == true
 			Tasks.MutateSettingsChanged()
 		end })
+		-- BEGIN NITRO REFILL UI
+		Tasks.BuildNitroRefillUI(group)
+		-- END NITRO REFILL UI
 		group:AddDropdown("Dropdown_Mutate_Use", { Text = "Mutations", Values = { "Fractured", "Scrambled", "Enchanted", "Nitro" },
 			Multi = true, AllowNull = true, Default = { "Fractured", "Scrambled", "Enchanted", "Nitro" }, Callback = function(value)
 				local selected = {}
@@ -18741,6 +18749,9 @@ do
 		state.Started = true
 		task.spawn(function()
 			while not state.Disposed and not LibraryLoader.Unloaded do
+				-- BEGIN NITRO REFILL TICK
+				pcall(Tasks.TickNitroRefill)
+				-- END NITRO REFILL TICK
 				if FarmConfig.Mutate_Auto and os.clock() >= math.max(state.NextAt, state.SettleUntil) then
 					local ok, failure = pcall(function()
 						for key, untilAt in pairs(state.Refused) do if untilAt <= os.clock() then state.Refused[key] = nil end end
@@ -18770,6 +18781,135 @@ do
 	end)
 end
 -- END AUTO MUTATE CONTROLLER
+
+-- BEGIN NITRO REFILL CONTROLLER
+-- Chili 54473-54536: no Nitro tool, affordable MutationToken, wait for tool grant.
+-- One shared purchase lane for the existing race shop and the optional refill.
+do
+	local shop = { Busy = false, Disposed = false, Generation = 0, NextAt = {}, PendingNitro = false }
+	Tasks.RaceShopState = shop
+	FarmConfig.Mutate_BuyNitro = false
+	local function hasNitro()
+		for _, container in pairs({ LocalPlayer.Character, LocalPlayer:FindFirstChildOfClass("Backpack") }) do
+			for _, tool in ipairs(container:GetChildren()) do
+				if tool:IsA("Tool") and tool:GetAttribute("ItemType") == "MutationConsumable" then
+					local id = tostring(tool:GetAttribute("MutationId") or tool:GetAttribute("MutationTemplate") or "Boss")
+					local uses = tonumber(tool:GetAttribute("Uses")) or tonumber(tool.Name:match("%[[Xx](%d+)%]")) or 1
+					if string.lower(id):match("^%s*(.-)%s*$") == "nitro" and uses > 0 then return true end
+				end
+			end
+		end
+		return false
+	end
+	local function refillEnabled()
+		local mutate = Tasks.MutateState
+		return not shop.Disposed and not LibraryLoader.Unloaded and FarmConfig.Mutate_BuyNitro == true
+			and FarmConfig.Mutate_Auto == true and (FarmConfig.Mutate_Use or {}).Nitro == true
+			and mutate ~= nil and not mutate.Disposed and os.clock() >= mutate.SettleUntil
+	end
+	local function dataAndSave(itemId)
+		local dataFolder = ReplicatedStorage:FindFirstChild("Data")
+		local module = dataFolder and dataFolder:FindFirstChild("RaceRally")
+		if not module or not module:IsA("ModuleScript") then return nil end
+		local data = require(module)
+		local definition = type(data) == "table" and type(data.Shop) == "table" and data.Shop[itemId]
+		local reader = SaveModule and (SaveModule.Get or SaveModule.Peek)
+		local save = reader and reader()
+		local raceSave = type(save) == "table" and save.RaceRally
+		if type(definition) ~= "table" or type(raceSave) ~= "table" then return nil end
+		local price, tokens, limit = tonumber(definition.Price), tonumber(raceSave.Tokens), tonumber(definition.Limit)
+		if not price or price ~= price or price < 0 or price >= math.huge
+			or not tokens or tokens ~= tokens or tokens < 0 or tokens >= math.huge
+			or not limit or limit ~= limit or limit < 0 or limit >= math.huge then return nil end
+		local purchase = type(raceSave.Purchases) == "table" and raceSave.Purchases[itemId]
+		local count = type(purchase) == "table" and tonumber(purchase.Count) or 0
+		if not count or count ~= count or count < 0 or count >= math.huge then return nil end
+		if limit > 0 and count >= limit then return nil end
+		return price, tokens
+	end
+	local function budget(tokens)
+		if shop.Balance == nil then shop.Balance = tokens
+		elseif tokens > shop.ObservedTokens then shop.Balance += tokens - shop.ObservedTokens end
+		shop.Balance = math.min(shop.Balance, tokens)
+		shop.ObservedTokens = tokens
+		return shop.Balance
+	end
+	function Tasks.InvokeRaceShopPurchase(source, itemId)
+		if shop.Disposed or LibraryLoader.Unloaded or shop.Busy or type(itemId) ~= "string"
+			or os.clock() < (shop.NextAt[itemId] or 0) then return false, false end
+		if source ~= "race" and source ~= "refill" then return false, false end
+		shop.Busy = true -- Lock before require/save reads or any yielding operation.
+		shop.NextAt[itemId] = os.clock() + 2
+		local generation, mutateGeneration = shop.Generation, Tasks.MutateState and Tasks.MutateState.Generation
+		local function cancelled()
+			return shop.Disposed or LibraryLoader.Unloaded
+				or (source == "race" and (not Tasks.RaceState or Tasks.RaceState.Disposed or not FarmConfig.Race_AutoBuy
+					or not (FarmConfig.Race_ShopItems or {})[string.lower(shop.ItemNames and shop.ItemNames[itemId] or "")]))
+				or (source == "refill" and (generation ~= shop.Generation or not refillEnabled()
+					or not Tasks.MutateState or mutateGeneration ~= Tasks.MutateState.Generation))
+		end
+		local ok, result = pcall(function()
+			SetElevated8()
+			if source == "refill" and itemId ~= "MutationToken" then return table.pack(false, false) end
+			local price, tokens = dataAndSave(itemId)
+			if not price or cancelled() or budget(tokens) < price then return table.pack(false, false) end
+			local outOfStockOnly = itemId == "MutationToken" and (source == "refill" or refillEnabled())
+			local nitroOwned = hasNitro()
+			if nitroOwned then shop.PendingNitro = false end
+			if itemId == "MutationToken" and shop.PendingNitro then return table.pack(false, false) end
+			if outOfStockOnly and nitroOwned then return table.pack(false, false) end
+			local trackGrant = itemId == "MutationToken" and not nitroOwned
+			local packages = ReplicatedStorage:FindFirstChild("Packages")
+			local network = packages and packages:FindFirstChild("Networking")
+			local remote = network and network:FindFirstChild("RF/RaceRally/AskBuy")
+			if not remote or not remote:IsA("RemoteFunction") or cancelled() then return table.pack(false, false) end
+			shop.Balance -= price -- Reserve locally until the authoritative save catches up.
+			if trackGrant then shop.PendingNitro = true end
+			local reply = table.pack(pcall(remote.InvokeServer, remote, itemId))
+			-- Preserve the race caller's original pcall return shape; don't invent a purchase result.
+			if reply[1] and reply[2] == false then
+				shop.Balance = math.min(tokens, shop.Balance + price)
+				if trackGrant then shop.PendingNitro = false end
+			end
+			if source == "refill" and outOfStockOnly and reply[1] and reply[2] then
+				local deadline = os.clock() + 1.5
+				while not cancelled() and os.clock() < deadline and not hasNitro() do task.wait(0.1) end
+			end
+			if hasNitro() then shop.PendingNitro = false end
+			-- An unknown answer/late grant stays pending: no automatic duplicate Nitro purchase.
+			return reply
+		end)
+		shop.Busy = false
+		if not ok then shop.LastError = tostring(result); return false, false end
+		return table.unpack(result, 1, result.n)
+	end
+	-- Same names as the existing race shop; never force its selection/preferences.
+	shop.ItemNames = { MutationToken = "Nitro Mutation", CashBooster = "Cash Booster",
+		SpeedBoost = "Speed Boost", TreadmillBoost = "Treadmill Boost", RacingBat = "Racing Bat" }
+	function Tasks.TickNitroRefill()
+		if shop.Disposed or LibraryLoader.Unloaded then return end
+		if not shop.PendingNitro and not refillEnabled() then return end
+		if hasNitro() then shop.PendingNitro = false; return end
+		if not refillEnabled() or shop.PendingNitro or shop.Busy then return end
+		Tasks.InvokeRaceShopPurchase("refill", "MutationToken")
+	end
+	function Tasks.BuildNitroRefillUI(group)
+		group:AddToggle("Toggle_Mutate_BuyNitro", {
+			Text = "Auto Buy Nitro", Default = false, Tooltip = "Refill with race tokens.",
+			Callback = function(value)
+				FarmConfig.Mutate_BuyNitro = value == true
+				shop.Generation += 1
+				Tasks.MutateSettingsChanged()
+			end,
+		})
+	end
+	LibraryLoader:OnUnload(function()
+		shop.Disposed = true
+		shop.Generation += 1
+		-- Keep the lock and pending grant for an RPC already sent; it cannot be recalled.
+	end)
+end
+-- END NITRO REFILL CONTROLLER
 
 Tasks.BuildMainInterface()
 Tasks.Loading:SetMessage("Verifying")
