@@ -1320,9 +1320,27 @@ RuntimeState.StealEngine = (function()
 		TargetLocked = nil,
 	}
 	Engine.AutoCarry = { Carrying = false, CarryUid = nil, CarryAreaId = nil, LastFinishedAt = 0 }
+	Engine.AutoDeliveredUids = {}
+	Engine.AutoDeliveredRing = {}
+	Engine.AutoDeliveredCursor = 0
+	Engine.AutoDeliverySerial = 0
+	Engine.AutoHandledDeliverySerial = 0
 	Engine.UpdateAutoCarry = function(data)
 		local carrying = type(data) == "table" and data.IsCarrying == true
 		local state = Engine.AutoCarry
+		if carrying and type(data.Uid) == "string" then
+			local expires = Engine.AutoDeliveredUids[data.Uid]
+			if expires and os.clock() < expires then
+				return
+			elseif expires then
+				Engine.AutoDeliveredUids[data.Uid] = nil
+			end
+			local request = Engine.AutoRequestOwner
+			if request and request.Uid == data.Uid then
+				request.Acknowledged = true
+				Engine.AutoRequestOwner = nil
+			end
+		end
 		if state.Carrying and not carrying then
 			state.LastFinishedAt = os.clock()
 		end
@@ -4308,6 +4326,10 @@ local GetScrambleTradeStatusFn = nil
 			if uid == "" then
 				continue
 			end
+			local deliveredUntil = Engine.AutoDeliveredUids[uid]
+			if not FarmConfig.Defense_InstantSteal and deliveredUntil and now < deliveredUntil then
+				continue
+			end
 			local blockExpiry = Engine.State.BlockList[uid]
 			if blockExpiry and now < blockExpiry then
 				continue
@@ -5501,21 +5523,38 @@ local GetScrambleTradeStatusFn = nil
 	Engine.AutoNoclip = function(cycle, enabled)
 		cycle.Parts = cycle.Parts or {}
 		if enabled then
-			for _, part in ipairs(cycle.Character:GetDescendants()) do
-				if part:IsA("BasePart") then
-					if cycle.Parts[part] == nil then
-						cycle.Parts[part] = part.CanCollide
+			if not cycle.PartsScanned then
+				cycle.PartsScanned = true
+				local function capture(part)
+					if part:IsA("BasePart") then
+						if cycle.Parts[part] == nil then
+							cycle.Parts[part] = part.CanCollide
+						end
+						part.CanCollide = false
 					end
+				end
+				cycle.PartsAdded = cycle.Character.DescendantAdded:Connect(capture)
+				for _, part in ipairs(cycle.Character:GetDescendants()) do
+					capture(part)
+				end
+			end
+			for part in pairs(cycle.Parts) do
+				if part.Parent and part.CanCollide and part:IsDescendantOf(cycle.Character) then
 					part.CanCollide = false
 				end
 			end
 		else
+			if cycle.PartsAdded then
+				cycle.PartsAdded:Disconnect()
+				cycle.PartsAdded = nil
+			end
 			for part, collision in pairs(cycle.Parts) do
 				pcall(function()
 					part.CanCollide = collision
 				end)
 			end
 			table.clear(cycle.Parts)
+			cycle.PartsScanned = false
 		end
 	end
 	Engine.AutoStopMotion = function(cycle)
@@ -5630,7 +5669,9 @@ local GetScrambleTradeStatusFn = nil
 			local available = state == "slot" or state == "dropped"
 			local starter = string.sub(tostring(egg.Uid), 1, #prefix) == prefix
 			local blocked = Engine.State.BlockList[egg.Uid]
-			if available and egg.Uid ~= target.Uid and (not blocked or blocked <= os.clock())
+			local deliveredUntil = Engine.AutoDeliveredUids[egg.Uid]
+			if available and egg.Uid ~= target.Uid and (not deliveredUntil or deliveredUntil <= os.clock())
+				and (not blocked or blocked <= os.clock())
 				and (starter or Engine.GuardSleeping(egg.AreaId)) then
 				local distance = (egg.Position - root.Position).Magnitude
 				if distance < nearest then
@@ -5673,7 +5714,8 @@ local GetScrambleTradeStatusFn = nil
 					Engine.FirePrompt(prompt)
 				end
 				if not Engine.AutoRequestOwner then
-					Engine.AutoRequestOwner = cycle
+					local request = { Cycle = cycle, Uid = egg.Uid }
+					Engine.AutoRequestOwner = request
 					task.spawn(function()
 						if Engine.AutoValid(cycle) then
 							local prefix = "FirstAreaEgg_" .. tostring(LocalPlayer.UserId)
@@ -5693,7 +5735,7 @@ local GetScrambleTradeStatusFn = nil
 								end)
 							end
 						end
-						if Engine.AutoRequestOwner == cycle then
+						if Engine.AutoRequestOwner == request then
 							Engine.AutoRequestOwner = nil
 						end
 					end)
@@ -5776,28 +5818,79 @@ local GetScrambleTradeStatusFn = nil
 		return Engine.AutoValid(cycle)
 	end
 	Engine.AutoStored = function(uid)
+		if uid == nil then
+			return false
+		end
+		local cycle = Engine.AutoCycle
+		local probe = cycle and cycle.StoredProbe
+		local now = os.clock()
+		if probe and probe.Uid == uid and (probe.Found or now - probe.At < 0.1) then
+			return probe.Found
+		end
+		if cycle then
+			probe = probe or {}
+			probe.Uid, probe.At, probe.Found = uid, now, false
+			cycle.StoredProbe = probe
+		end
+		local function contains(eggs)
+			if type(eggs) ~= "table" then
+				return false
+			end
+			if type(eggs[uid]) == "table" then
+				return true
+			end
+			for key, egg in pairs(eggs) do
+				if type(egg) == "table" and tostring(egg.Uid or key) == tostring(uid) then
+					return true
+				end
+			end
+			return false
+		end
+		local found = false
 		if EggStateModule and type(EggStateModule.ReadOwnerEggs) == "function" then
 			local ok, eggs = pcall(EggStateModule.ReadOwnerEggs, LocalPlayer.UserId)
-			if ok and type(eggs) == "table" then
-				for key, egg in pairs(eggs) do
-					if type(egg) == "table" and tostring(egg.Uid or key) == tostring(uid) then
-						return true
-					end
-				end
-			end
+			found = ok and contains(eggs)
 		end
-		if SaveModule and type(SaveModule.Peek) == "function" then
+		if not found and SaveModule and type(SaveModule.Peek) == "function" then
 			local ok, save = pcall(SaveModule.Peek)
-			local eggs = ok and type(save) == "table" and save.EggInventory
-			if type(eggs) == "table" then
-				for key, egg in pairs(eggs) do
-					if type(egg) == "table" and tostring(egg.Uid or key) == tostring(uid) then
-						return true
-					end
-				end
-			end
+			found = ok and type(save) == "table" and contains(save.EggInventory)
 		end
-		return false
+		found = found == true
+		if probe then
+			probe.Found = found
+		end
+		return found
+	end
+	Engine.CompleteAutoDelivery = function(cycle, uid)
+		if not uid or not Engine.AutoStored(uid) then
+			return false
+		end
+		local now = os.clock()
+		local previous = Engine.AutoDeliveredUids[uid]
+		if not previous or previous <= now then
+			local cursor = Engine.AutoDeliveredCursor % 32 + 1
+			local old = Engine.AutoDeliveredRing[cursor]
+			if old and Engine.AutoDeliveredUids[old.Uid] == old.Expires then
+				Engine.AutoDeliveredUids[old.Uid] = nil
+			end
+			local expires = now + 30
+			Engine.AutoDeliveredCursor = cursor
+			Engine.AutoDeliveredRing[cursor] = { Uid = uid, Expires = expires }
+			Engine.AutoDeliveredUids[uid] = expires
+			Engine.AutoDeliverySerial = Engine.AutoDeliverySerial + 1
+		end
+		if Engine.AutoCarry.CarryUid == uid then
+			Engine.AutoCarry.Carrying = false
+			Engine.AutoCarry.CarryUid, Engine.AutoCarry.CarryAreaId = nil, nil
+			Engine.AutoCarry.LastFinishedAt = now
+		end
+		local request = Engine.AutoRequestOwner
+		if request and request.Uid == uid then
+			request.Acknowledged = true
+			Engine.AutoRequestOwner = nil
+		end
+		cycle.CompletedUid = uid
+		return true
 	end
 	Engine.AutoRecoveryModel = function(uid)
 		for _, container in ipairs(Engine.GetCarryContainers()) do
@@ -6041,7 +6134,8 @@ local GetScrambleTradeStatusFn = nil
 		Engine.AutoStatus = "Finding target"
 		local ok, delivered = pcall(function()
 			if recovering then
-				return Engine.DeliverAutoEgg(cycle, Engine.AutoCarry.CarryUid)
+				cycle.ExpectedUid = Engine.AutoCarry.CarryUid
+				return Engine.DeliverAutoEgg(cycle, cycle.ExpectedUid)
 			end
 			pcall(UnequipAllTools)
 			local candidates = Engine.CollectCandidates()
@@ -6053,6 +6147,7 @@ local GetScrambleTradeStatusFn = nil
 				Engine.AutoStatus = "No egg matches"
 				return false
 			end
+			cycle.ExpectedUid = target.Uid
 			Engine.CurrentTarget = target.Uid
 			RuntimeState.currentTargetModel = target.PhysicalModel
 			if RuntimeState.OnTreadmill then
@@ -6107,6 +6202,9 @@ local GetScrambleTradeStatusFn = nil
 			end
 			return Engine.DeliverAutoEgg(cycle, target.Uid)
 		end)
+		if ok and delivered == true then
+			delivered = Engine.CompleteAutoDelivery(cycle, cycle.ExpectedUid)
+		end
 		Engine.StopAutoHop(cycle)
 		if cycle.Recovery then
 			cycle.Recovery.Active = false
@@ -14736,11 +14834,14 @@ function Tasks.StealLoop()
 					if not CarryingNow or RootPart.Position.X <= SafeBaseLineX then
 						break
 					end
+					local delivered = false
 					if Engine.ClaimMovement("steal") then
-						pcall(function()
-							Engine.DeliverEggToBase(CurrentSession)
-						end)
+						local ok, result = pcall(Engine.DeliverEggToBase, CurrentSession)
+						delivered = ok and result == true
 						Engine.ReleaseMovement("steal")
+					end
+					if not FarmConfig.Defense_InstantSteal and delivered then
+						break
 					end
 					DeliverTries = DeliverTries + 1
 					task.wait(0.35)
@@ -14759,7 +14860,14 @@ function Tasks.StealLoop()
 				local finishedAt = FarmConfig.Defense_InstantSteal and Engine.State.LastFinishedAt
 					or Engine.AutoLastDeliveredAt
 				local idleFor = (finishedAt and finishedAt > 0) and (os.clock() - finishedAt) or math.huge
-				if idleFor < 2 then
+				local deliveredCount = 1
+				local deliveredNow = idleFor < 2
+				if not FarmConfig.Defense_InstantSteal then
+					deliveredCount = Engine.AutoDeliverySerial - Engine.AutoHandledDeliverySerial
+					deliveredNow = deliveredCount > 0
+					Engine.AutoHandledDeliverySerial = Engine.AutoDeliverySerial
+				end
+				if deliveredNow then
 					Engine.State.GrabFails = 0
 				else
 					local Fails = Engine.State.GrabFails or 0
@@ -14782,14 +14890,14 @@ function Tasks.StealLoop()
 						continue
 					end
 				end
-				if idleFor < 2 then
+				if deliveredNow then
 					local heldCount = CountPlayerHeldEggs()
 					local shouldDeposit = false
 					if FarmConfig.AutoPlaceAllEggs or FarmConfig.AutoPlaceSelect then
 						if FarmConfig.PlaceMethod == "Now" then
 							shouldDeposit = true
 						elseif FarmConfig.PlaceMethod == "Every 5" then
-							FarmConfig.BatchStealCount = FarmConfig.BatchStealCount + 1
+							FarmConfig.BatchStealCount = FarmConfig.BatchStealCount + deliveredCount
 							if FarmConfig.BatchStealCount >= 5 or heldCount >= 5 then
 								FarmConfig.BatchStealCount = 0
 								shouldDeposit = true
