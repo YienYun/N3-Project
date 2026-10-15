@@ -180,7 +180,8 @@ Read this before changing `Steal-An-Egg.lua`.
 
 - See `../docs/wisp-quest.md`. User explicitly requires Home/farm → a new Quests
   outer group, nested Wisp tab, distinct header/tab icons. Never put Wisp in Event.
-  Default OFF; one short toggle/status. Banjo is later, not an empty placeholder.
+  Default OFF; one short toggle/status. Banjo is now delivered in the same tabbox
+  (see below), not a placeholder or second outer group.
   Server Hop/tools are deferred for a separate manager module, not part of this work.
 - Follow Chili 41403–42256. Read WispQuests/Save and real area DropTables; do not
   invent quest stages, recipes, remote payloads or target coordinates. Use raw UIDs.
@@ -199,3 +200,32 @@ Read this before changing `Steal-An-Egg.lua`.
   Luau compile. Exactly seven insertion sites reverse byte-for-byte to 3748a3e;
   historical checks strip Wisp first without replacing any prior expected hashes.
   Library/loader/references stay untouched. Static checks are not live acceptance.
+
+
+## Banjo Cricket quest
+
+- See `../docs/banjo-quest.md`. Home → Quests → Wisp / Banjo, one existing
+  named/icon/collapsible group and one shared tabbox. Banjo uses a distinct music
+  icon, one default-OFF toggle and status. No Butterfly or server tools import.
+- Follow immutable Chili V2 14644–15798 and the scoped TreeTrip dependency through
+  72421. Official BanjoCricket data/flags/save and Effect/Aim/AskClaim only;
+  listen to server Notes, activate a real bat and require matching new Note acks.
+  Playback/Wrong/Reset invalidate old notes even during travel/cooldown.
+- Tree unlocked + bat required. One cancellable worker, native idle, Wisp priority
+  lane and exclusive `banjo` movement owner; race first. Do not force shared
+  IsExecuting, farm/defense settings or invisibility. Do not run steal-only
+  RunPace/FlyToPosition by pretending that stealing is active.
+- Intentional traversal adaptation: bounded MoveTo/pathfinding, existing N3 Lift
+  for the source Secret Leap, source prompt/pivot fallback for tree entry/exit.
+  No imported flight/swap/noclip/physics loop. This requires live route validation.
+- Scope native inventory/fusion actions and normal/Instant activity through the
+  existing adapters; preserve preferences and restore only owned adapters.
+  Late cleanup requires the same living actor/root/humanoid and `banjo` owner,
+  and must not travel/restore tools after race takeover or unload.
+- Success requires authoritative Save.BanjoCricket.Claimed. Keep ambiguous claim
+  dispatch pending across OFF/ON rather than issuing duplicate reward calls.
+- Run all nine current source checkers + full production Luau compile. Two marked
+  sites reverse byte-for-byte to published Wisp 7591d6f (SHA256 in checker).
+  `wisp_scope.strip_wisp` strips Banjo first so historical expected hashes stay
+  unchanged. Library, loader and bundled references remain untouched.
+  None of this is a live/server/reward/FPS acceptance test.

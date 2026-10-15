@@ -3,8 +3,9 @@
 Wisp is a **quest, not an Event**. UI: **Home → Quests → Wisp**. The explicit
 collapsible outer Quests group has one icon and a nested Wisp tab with its own
 icon, like the approved Lab/Custom structure. One OFF-by-default **Auto Wisp**
-toggle and one short live status row. Banjo is not implemented or shown as an
-empty tab. Server Hop is excluded at the user's request.
+toggle and one short live status row. The delivered [Banjo quest](banjo-quest.md)
+now shares this same tabbox as a separate subtab, not a second outer group.
+Server Hop is excluded at the user's request.
 
 ## Chili source map
 

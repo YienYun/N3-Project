@@ -19401,7 +19401,11 @@ do
 	function Tasks.BuildWispUI(tab)
 		local group = tab:AddGroupbox({ Name = "Quests", IconName = "scroll-text", Side = 2,
 			Collapsed = false, DisableCollapsing = false })
-		local wisp = group:AddTabbox({ Name = "Quest Tabs" }):AddTab("Wisp", "ghost")
+		-- BEGIN BANJO QUEST TABS
+		local questTabs = group:AddTabbox({ Name = "Quest Tabs" })
+		local wisp = questTabs:AddTab("Wisp", "ghost")
+		Tasks.BuildBanjoUI(questTabs)
+		-- END BANJO QUEST TABS
 		wisp:AddToggle("Toggle_Wisp_Auto", { Text = "Auto Wisp", Default = false, Tooltip = "Complete the Wisp quest.", Callback = function(value)
 			FarmConfig.Wisp_Auto = value == true
 			state.Generation += 1
@@ -19455,6 +19459,500 @@ do
 	end)
 end
 -- END WISP CONTROLLER
+
+-- BEGIN BANJO CONTROLLER
+-- Chili V2 14662-15797 + tree-trip dependency 71960-72421. No Butterfly controller import.
+do
+	local engine = RuntimeState.StealEngine
+	local state = { Generation = 0, Busy = false, Lease = false, Disposed = false, NextAt = 0,
+		Status = "Off", Notes = nil, Acks = {}, Serial = 0, Playback = 0, Cleared = 0, Wrong = 0, LastAt = 0 }
+	Tasks.BanjoState = state
+	FarmConfig.Banjo_Auto = false
+	local mushrooms = { Vector3.new(6218.93, 17159.02, 16903.8), Vector3.new(6257.93, 17159.02, 16912.8),
+		Vector3.new(6270.93, 17159.02, 16903.8), Vector3.new(6244.93, 17159.02, 16918.8), Vector3.new(6231.93, 17159.02, 16912.8) }
+	local center = Vector3.new(6244.93, 17159.02, 16880)
+	local roomSpawn, roomExit = Vector3.new(6246.9, 17161, 16887), Vector3.new(6246.9, 17165, 16881.6)
+	local leapHint, npcFallback = Vector3.new(5905.63, 17027.3, 15610.83), Vector3.new(6272.46, 17164.04, 16958.18)
+	local claimRoute = { Vector3.new(6248.72, 17163, 16928), Vector3.new(6248.72, 17163, 16944) }
+	local function enabled() return not state.Disposed and not LibraryLoader.Unloaded and FarmConfig.Banjo_Auto == true end
+	local function raceWanted()
+		return RaceOwnsCharacter() or (Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal()) == true
+	end
+	local function inTree() return LocalPlayer:GetAttribute("InEnchantedTree") == true end
+	local function interior()
+		local world = Workspace:FindFirstChild("World")
+		local build = world and world:FindFirstChild("Build")
+		return build and build:FindFirstChild("EnchantedTreeInterior")
+	end
+	local function marker(name, fallback)
+		local tree = interior()
+		local markers = tree and tree:FindFirstChild("Markers")
+		local passages = markers and markers:FindFirstChild("Passages")
+		local part = (passages and passages:FindFirstChild(name)) or (markers and markers:FindFirstChild(name))
+		return part and part:IsA("BasePart") and part.Position or fallback
+	end
+	local function inRoom()
+		local root = engine.Root()
+		return inTree() and root ~= nil and (root.Position - marker("SecretRoomSpawn", roomSpawn)).Magnitude <= 120
+	end
+	local function readSave()
+		SetElevated8()
+		local reader = SaveModule and (SaveModule.Get or SaveModule.Peek)
+		local data = type(reader) == "function" and reader()
+		if type(data) ~= "table" then error("Banjo save unavailable") end
+		return type(data.BanjoCricket) == "table" and data.BanjoCricket or {}
+	end
+	local function remote(name, class)
+		local packages = ReplicatedStorage:FindFirstChild("Packages")
+		local network = packages and packages:FindFirstChild("Networking")
+		local found = network and network:FindFirstChild(name)
+		return found and found:IsA(class) and found or nil
+	end
+	local function findBat()
+		for _, container in pairs({ LocalPlayer.Character, LocalPlayer:FindFirstChildOfClass("Backpack") }) do
+			for _, tool in ipairs(container:GetChildren()) do
+				if tool:IsA("Tool") and (tool:GetAttribute("IsBat") == true or string.find(tool.Name:lower(), "bat", 1, true)) then return tool end
+			end
+		end
+	end
+	local function taggedPosition(tag, index, fallback)
+		for _, model in ipairs(game:GetService("CollectionService"):GetTagged(tag)) do
+			if index == nil or tonumber(model:GetAttribute("MushroomIndex")) == index then
+				local hitbox = model:FindFirstChild("Hitbox") or model:FindFirstChild("Hitbox Part")
+				if hitbox and hitbox:IsA("BasePart") then return hitbox.Position end
+				if model:IsA("Model") or model:IsA("BasePart") then return model:GetPivot().Position end
+			end
+		end
+		return fallback
+	end
+	local function playbackSeconds(count)
+		local fn = state.Data and state.Data.PlaybackSeconds
+		local ok, value = false, nil
+		if type(fn) == "function" then ok, value = pcall(fn, count) end
+		value = ok and tonumber(value)
+		return value and value == value and value >= 0 and value < math.huge and value or count * 0.65 + 0.5
+	end
+	local function loadData()
+		local data = ReplicatedStorage:FindFirstChild("Data")
+		local module = data and data:FindFirstChild("BanjoCricket")
+		if not module or not module:IsA("ModuleScript") then error("Banjo data unavailable") end
+		state.Data = require(module)
+		if type(state.Data) ~= "table" then error("Banjo data invalid") end
+		local shared = ReplicatedStorage:FindFirstChild("Shared")
+		local flags = shared and shared:FindFirstChild("Flags")
+		local flagModule = flags and flags:FindFirstChild("BanjoCricketFlags")
+		state.Stages = 5 -- Same source fallback; no sequence is manufactured.
+		if flagModule and flagModule:IsA("ModuleScript") then
+			local config = require(flagModule)
+			if type(config) == "table" and config.Stages and type(config.Stages.Get) == "function" then
+				local count = tonumber(config.Stages:Get())
+				if count and count == count and count >= 1 and count < math.huge then state.Stages = math.floor(count) end
+			end
+		end
+		local effect = remote("RE/BanjoCricket/Effect", "RemoteEvent")
+		if not effect or not remote("RE/BanjoCricket/Aim", "RemoteEvent") or not remote("RF/BanjoCricket/AskClaim", "RemoteFunction") then error("Banjo remotes unavailable") end
+		if state.Effect ~= effect then
+			if state.Connection then state.Connection:Disconnect() end
+			state.Effect = effect
+			state.Connection = effect.OnClientEvent:Connect(function(message)
+				if not enabled() or not state.Lease or engine.Movement.Owner ~= "banjo" or state.JobGeneration ~= state.Generation
+					or state.Character ~= LocalPlayer.Character or not inRoom() or type(message) ~= "table" then return end
+				state.Serial += 1
+				state.LastAt = os.clock()
+				local kind = message.Kind
+				if kind == "Playback" and type(message.Notes) == "table" then
+					local notes = {}
+					if #message.Notes == 0 or #message.Notes > 256 then return end
+					for _, value in ipairs(message.Notes) do
+						local note = tonumber(value)
+						if not note or note % 1 ~= 0 or note < 1 or note > 5 then return end
+						table.insert(notes, note)
+					end
+					state.Notes, state.ListenAt, state.Playback = notes, os.clock() + playbackSeconds(#notes), state.Playback + 1
+				elseif kind == "Note" then
+					table.insert(state.Acks, { Mushroom = tonumber(message.Mushroom), Serial = state.Serial })
+					if #state.Acks > 40 then table.remove(state.Acks, 1) end
+				elseif kind == "Wrong" then state.Wrong, state.Notes, state.Playback = state.Serial, nil, state.Playback + 1
+				elseif kind == "StageComplete" then state.Cleared = tonumber(message.Cleared) or state.Cleared
+				elseif kind == "Reset" then state.Notes, state.Cleared, state.Playback = nil, 0, state.Playback + 1
+				elseif kind == "Solved" then state.Solved = true end
+			end)
+		end
+	end
+	local function higherTask()
+		if raceWanted() then return true end
+		if os.clock() < (state.PriorityAt or 0) then return state.Higher == true end
+		state.PriorityAt, state.Higher = os.clock() + 0.75, false
+		local rank = Tasks.PriorityRank("Wisp") -- Chili assigns Banjo to the Wisp quest lane.
+		if engine.Movement.PlaceWanted and Tasks.PriorityRank("Place") < rank then state.Higher = true end
+		if FarmConfig.AutoTreadmill and Tasks.PriorityRank("Treadmill") < rank then state.Higher = true end
+		if Tasks.PriorityRank("Essence") < rank and Tasks.PriorityCanRun("Essence") then state.Higher = true end
+		for _, candidate in ipairs(engine.CollectCandidates(false, not FarmConfig.Defense_InstantSteal)) do
+			local key = candidate.IsScramble and "StealLab" or candidate.IsIndex and "StealIndex" or "StealFilter"
+			if candidate.WispOnly then key = "Wisp" end
+			if Tasks.PriorityRank(key) < rank then state.Higher = true; break end
+		end
+		return state.Higher
+	end
+	local function idle()
+		local wisp, mutate, belt = Tasks.WispState, Tasks.MutateState, Tasks.TreadmillState
+		return not RuntimeState.IsExecuting and not engine.AutoCycle and not engine.Guard.Active and not engine.Guard.Busy
+			and not (wisp and (wisp.Busy or wisp.Lease or wisp.NativeCalls > 0 or os.clock() < wisp.SettleUntil))
+			and not (mutate and (mutate.Lease or mutate.InventoryActions > 0 or os.clock() < mutate.HatchSettleUntil))
+			and not (belt and (belt.Busy or belt.WearBusy or belt.Exiting))
+			and not IsActivelyCarryingEgg() and not GetEquippedEggTool()
+			and not (engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying)
+			and LocalPlayer:GetAttribute("InScrambleArena") ~= true
+	end
+	local function run()
+		local requestedGeneration = state.Generation
+		if not enabled() or os.clock() < (state.ConfigUntil or 0) or not idle() or higherTask() then return end
+		-- Candidate/save reads may yield: revalidate settings and idle before the claim.
+		if not enabled() or requestedGeneration ~= state.Generation or os.clock() < (state.ConfigUntil or 0) or not idle() then return end
+		if not engine.ClaimMovement("banjo") then return end
+		state.Busy, state.Lease, state.JobGeneration = true, true, state.Generation
+		state.Done = false
+		state.Character = LocalPlayer.Character
+		state.Notes, state.Acks, state.Solved, state.Cleared, state.LastAt = nil, {}, false, 0, 0
+		local character, generation = state.Character, state.JobGeneration
+		local previousTool = character and character:FindFirstChildWhichIsA("Tool")
+		local humanoid, root, bat, deadline = nil, nil, nil, os.clock() + 420
+		local function safe()
+			return not LibraryLoader.Unloaded and not state.Disposed and LocalPlayer.Character == character
+				and engine.Movement.Owner == "banjo" and not raceWanted()
+				and (not humanoid or (humanoid.Parent == character and humanoid.Health > 0))
+				and (not root or (root.Parent == character and character:FindFirstChild("HumanoidRootPart") == root))
+		end
+		local function cancelled()
+			if not safe() or not enabled() or generation ~= state.Generation or os.clock() >= deadline
+				or (character and character:GetAttribute("InvisApplied") == true) then return true end
+			local higher = higherTask()
+			return higher or not safe() or generation ~= state.Generation or not enabled()
+		end
+		local function waitFor(seconds, check, cleanup)
+			local untilAt = os.clock() + seconds
+			repeat
+				if cleanup and not safe() or not cleanup and cancelled() then return false end
+				if check and check() then return true end
+				task.wait(0.05)
+			until os.clock() >= untilAt
+			return check == nil or check() == true
+		end
+		local function floor(position)
+			local params = RaycastParams.new()
+			params.FilterType, params.FilterDescendantsInstances = Enum.RaycastFilterType.Exclude, { character }
+			local hit = Workspace:Raycast(position + Vector3.new(0, 8, 0), Vector3.new(0, -30, 0), params)
+			return hit and Vector3.new(position.X, hit.Position.Y + 3, position.Z) or position
+		end
+		local function walk(position, seconds, cleanup, allowExit, arrived)
+			if not position or (cleanup and not safe() or not cleanup and cancelled()) then return false end
+			local nodes = { position }
+			local ok, path = pcall(function()
+				local route = game:GetService("PathfindingService"):CreatePath({ AgentRadius = 2, AgentHeight = 5, AgentCanJump = true, WaypointSpacing = 6 })
+				route:ComputeAsync(root.Position, position)
+				return route
+			end)
+			if cleanup and not safe() or not cleanup and cancelled() then return false end
+			if ok and path.Status == Enum.PathStatus.Success then
+				nodes = path:GetWaypoints()
+				table.insert(nodes, { Position = position })
+			end
+			local untilAt, exit = os.clock() + (seconds or 15), marker("ExitTrigger")
+			for _, node in ipairs(nodes) do
+				local point = typeof(node) == "Vector3" and node or node.Position
+				if not allowExit and exit and (point - exit).Magnitude < 14 then continue end
+				local nodeUntil = #nodes == 1 and untilAt or math.min(untilAt, os.clock() + 3)
+				repeat
+					if cleanup and not safe() or not cleanup and cancelled() then return false end
+					if arrived and arrived() then humanoid:MoveTo(root.Position); return true end
+					if typeof(node) ~= "Vector3" and node.Action == Enum.PathWaypointAction.Jump then humanoid.Jump = true end
+					humanoid:MoveTo(point)
+					if Vector2.new(root.Position.X - point.X, root.Position.Z - point.Z).Magnitude <= 1.5 and math.abs(root.Position.Y - point.Y) <= 8 then break end
+					task.wait(0.05)
+				until os.clock() >= nodeUntil
+				if os.clock() >= untilAt then break end
+			end
+			if cleanup and not safe() or not cleanup and cancelled() then return false end
+			humanoid:MoveTo(root.Position)
+			return (arrived and arrived()) or ((root.Position - position).Magnitude <= 8
+				and Vector2.new(root.Position.X - position.X, root.Position.Z - position.Z).Magnitude <= 2.5)
+		end
+		local function treePrompt()
+			local tree = interior()
+			local markers = tree and tree:FindFirstChild("Markers")
+			local trigger = markers and markers:FindFirstChild("EnterTrigger")
+			local entrance = trigger and trigger:FindFirstChild("EnchantedTreeEntrance")
+			local prompt = entrance and entrance:FindFirstChild("EnchantedTreePrompt")
+			local parent = prompt and prompt.Parent
+			local position = parent and (parent:IsA("Attachment") and parent.WorldPosition or parent:IsA("BasePart") and parent.Position)
+			return prompt and prompt:IsA("ProximityPrompt") and prompt or nil, position
+		end
+		local function enterTree()
+			if inTree() then return true end
+			if GetNightAndWallStatus().ShouldRetreat then state.Status = "Waiting for daylight"; return false end
+			local prompt, position = treePrompt()
+			if not prompt or not position then state.Status = "Tree entrance unavailable"; return false end
+			pcall(LocalPlayer.RequestStreamAroundAsync, LocalPlayer, position, 3)
+			if cancelled() or GetNightAndWallStatus().ShouldRetreat then return false end
+			-- Source tree-entry fallback only; no replacement of N3 egg movement or swap.
+			if (root.Position - position).Magnitude > 30 then character:PivotTo(CFrame.new(position + Vector3.new(0, 1, -12))) end
+			for attempt = 1, 4 do
+				if cancelled() then return false end
+				state.Status = "Entering Enchanted Tree"
+				if not walk(position, 4, false, true) then return false end
+				if cancelled() or not prompt.Parent or not prompt.Enabled or (root.Position - position).Magnitude > math.min(8, prompt.MaxActivationDistance) then return false end
+				if attempt % 2 == 1 and type(fireproximityprompt) == "function" then pcall(fireproximityprompt, prompt)
+				else
+					prompt:InputHoldBegin()
+					waitFor(math.clamp(tonumber(prompt.HoldDuration) or 0, 0, 10) + 0.1)
+					pcall(prompt.InputHoldEnd, prompt)
+				end
+				if waitFor(4, inTree) then return waitFor(0.5) end
+			end
+			state.Status = "Tree entry not confirmed"
+			return false
+		end
+		local function enterRoom()
+			if inRoom() then return true end
+			local tree = interior()
+			local hint = tree and tree:FindFirstChild("SecretLeapHint")
+			hint = hint and hint:FindFirstChild("Streaks")
+			local position = hint and hint:IsA("BasePart") and hint.Position or leapHint
+			for _ = 1, 2 do
+				if cancelled() or not inTree() then return false end
+				state.Status = "Taking the Secret Leap"
+				if not walk(floor(position), 20, false, false, inRoom) then state.Status = "Cannot reach Secret Leap"; return false end
+				if cancelled() then return false end
+				if inRoom() then return waitFor(0.5) end
+				-- Reuse N3's existing lift, then let the game's leap trigger move the character.
+				engine.Lift(18, position.Y)
+				if waitFor(8, inRoom) then return waitFor(0.5) end
+			end
+			state.Status = "Secret Leap not confirmed"
+			return false
+		end
+		local function hit(index, version)
+			local function replaced() return version ~= nil and state.Playback ~= version end
+			if cancelled() or replaced() or not inRoom() then return nil end
+			local target = taggedPosition("BanjoCricketMushroom", index, mushrooms[index])
+			if not target then return nil end
+			local offset = Vector3.new(center.X - target.X, 0, center.Z - target.Z)
+			local stance = floor(target + (offset.Magnitude > 0.01 and offset.Unit or Vector3.new(0, 0, -1)) * 6.5)
+			if not walk(stance, 8) or cancelled() or replaced() or not inRoom() then return nil end
+			bat = EquipBatTool() -- Existing N3 equipment helper; no bat purchase or forced preferences.
+			if not bat or not waitFor(0.25) or bat.Parent ~= character then state.Status = "Needs a bat in your bag"; return nil end
+			local ready = waitFor(2, function()
+				return bat:GetAttribute("CooldownActive") ~= true or Workspace:GetServerTimeNow() >= (tonumber(bat:GetAttribute("CooldownEndTime")) or 0)
+			end)
+			if not ready or cancelled() or replaced() or bat.Parent ~= character then return nil end
+			local aim = remote("RE/BanjoCricket/Aim", "RemoteEvent")
+			if not aim then return nil end
+			local facing = Vector3.new(target.X, root.Position.Y, target.Z)
+			if (facing - root.Position).Magnitude > 0.05 then root.CFrame = CFrame.lookAt(root.Position, facing) end
+			engine.SetVelocity(root, Vector3.zero)
+			local serial = state.Serial
+			aim:FireServer(index)
+			-- No yielding priority scan between aim and swing; the full check ran above.
+			if not safe() or not enabled() or generation ~= state.Generation or replaced() or bat.Parent ~= character then return nil end
+			bat:Activate()
+			return serial
+		end
+		local function acknowledge(index, serial)
+			local result
+			waitFor(1.6, function()
+				if state.Wrong > serial then result = "wrong"; return true end
+				for _, ack in ipairs(state.Acks) do
+					if ack.Serial > serial and ack.Mushroom == index then ack.Serial = 0; result = "ok"; return true end
+				end
+				return false
+			end)
+			return result
+		end
+		local function solve()
+			local untilAt, wakes = os.clock() + 300, 0
+			while os.clock() < untilAt and not cancelled() and inRoom() do
+				if state.Solved or readSave().Solved == true then return true end
+				local notes, version = state.Notes, state.Playback
+				if not notes then
+					if os.clock() - state.LastAt > 4 then
+						wakes += 1
+						if wakes > 12 then state.Status = "Mushrooms are not answering"; state.NextAt = os.clock() + 30; return false end
+						state.Status = "Waking the mushrooms"
+						hit(4)
+						state.LastAt = os.clock()
+					end
+					waitFor(0.1)
+				elseif os.clock() < (state.ListenAt or 0) then
+					state.Status = string.format("Stage %d/%d: listening (%d notes)", state.Cleared + 1, state.Stages, #notes)
+					waitFor(0.05)
+				else
+					state.Notes = nil
+					for i, index in ipairs(notes) do
+						if cancelled() or state.Playback ~= version then break end
+						state.Status = string.format("Stage %d/%d: note %d/%d", state.Cleared + 1, state.Stages, i, #notes)
+						local answer
+						for _ = 1, 2 do
+							if cancelled() or state.Playback ~= version then break end
+							local serial = hit(index, version)
+							if not serial then break end
+							answer = acknowledge(index, serial)
+							if answer or cancelled() then break end
+						end
+						if answer ~= "ok" then state.Status = "Note not confirmed; waiting for replay"; break end
+					end
+					state.LastAt, wakes = os.clock(), 0
+				end
+			end
+			return false
+		end
+		local function claim()
+			if not waitFor(5) or not inRoom() then return end
+			local npc = taggedPosition("BanjoCricketNpc", nil, npcFallback)
+			if (root.Position - npc).Magnitude > 9 then
+				state.Status = "Walking to Jitterbug"
+				for _, point in ipairs(claimRoute) do if not walk(floor(point), 10) then return end end
+				local offset = Vector3.new(claimRoute[2].X - npc.X, 0, claimRoute[2].Z - npc.Z)
+				if not walk(floor(npc + (offset.Magnitude > 0.01 and offset.Unit or Vector3.new(0, 0, -1)) * 6), 10) then return end
+			end
+			if cancelled() or not inRoom() or (root.Position - npc).Magnitude > 9 then return end
+			if readSave().Claimed == true then state.Done = true; return end
+			if cancelled() then return end
+			local request = remote("RF/BanjoCricket/AskClaim", "RemoteFunction")
+			if not request then state.Status = "Claim remote unavailable"; return end
+			state.Status, state.ClaimPending = "Claiming Cricket's Banjo", true
+			local ok, reply = pcall(request.InvokeServer, request)
+			if ok and reply == false then state.ClaimPending = false end
+			if cancelled() then return end
+			waitFor(3, function() return readSave().Claimed == true end)
+			if not cancelled() and readSave().Claimed == true then state.Done, state.ClaimPending = true, false
+			else state.Status = "Waiting for claim save" end
+		end
+		local function leave()
+			if not safe() or not inTree() then return end
+			if inRoom() then
+				state.Status = "Leaving secret room"
+				walk(floor(marker("SecretRoomExit", roomExit)), 6, true, true, function() return not inRoom() end)
+				waitFor(5, function() return not inRoom() end, true)
+			end
+			if not safe() or not inTree() or inRoom() then return end
+			state.Status = "Leaving Enchanted Tree"
+			local exit = marker("ExitTrigger")
+			if exit then walk(floor(exit), 6, true, true, function() return not inTree() end); waitFor(1, function() return not inTree() end, true) end
+			if safe() and inTree() then
+				local _, entrance = treePrompt()
+				if entrance then character:PivotTo(CFrame.new(entrance + Vector3.new(0, 3, -30))); waitFor(3, function() return not inTree() end, true) end
+			end
+		end
+		local ok, failure = pcall(function()
+			SetElevated8()
+			if cancelled() or not idle() then return end
+			Tasks.ExitTreadmill()
+			if cancelled() then return end
+			if engine.ReleaseAutoShield then engine.ReleaseAutoShield(true) end
+			if RuntimeState.OriginalHumanoid then RestoreCharacter() end
+			if cancelled() then return end
+			humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			root = character and character:FindFirstChild("HumanoidRootPart")
+			if not humanoid or not root then return end
+			if not enterTree() or not enterRoom() then return end
+			if readSave().Solved == true or solve() then claim() end
+		end)
+		local result = state.Status
+		pcall(leave) -- Only same-character/same-owner cleanup; never travels over a race handoff.
+		pcall(function()
+			if not safe() then return end
+			humanoid:MoveTo(root.Position)
+			engine.SetVelocity(root, Vector3.zero)
+			if bat and character:FindFirstChildWhichIsA("Tool") == bat then
+				if previousTool and previousTool ~= bat and (previousTool.Parent == character or previousTool.Parent == LocalPlayer:FindFirstChildOfClass("Backpack")) then humanoid:EquipTool(previousTool)
+				elseif previousTool ~= bat then humanoid:UnequipTools() end
+			end
+		end)
+		engine.ReleaseMovement("banjo")
+		state.Busy, state.Lease, state.Character = false, false, nil
+		state.NextAt = math.max(state.NextAt, os.clock() + 3)
+		state.Status = state.Done and "Done — Cricket's Banjo claimed" or result
+		if not ok then state.Status, state.LastError, state.NextAt = "Banjo paused; retrying", tostring(failure), os.clock() + 10 end
+		if engine.AutoWake then engine.AutoWake() end
+	end
+	local nativeActive, nativeYield, nativeCanRun = IsStealActive, Tasks.PriorityStealYield, Tasks.PriorityCanRun
+	local nativeShield, nativeDodge, nativeClaim = engine.AutoShieldWanted, engine.TriggerGuardDodge, engine.ClaimMovement
+	local nativeAction = Tasks.WispNativeAction
+	local activeAdapter = function() return not state.Lease and nativeActive() end
+	local yieldAdapter = function() return state.Lease or nativeYield() end
+	local canRunAdapter = function(key) if key == "Wisp" and state.Lease then return true end; return nativeCanRun(key) end
+	local shieldAdapter = function() return not state.Lease and nativeShield() end
+	local dodgeAdapter = function(...) if not state.Lease then return nativeDodge(...) end end
+	local claimAdapter = function(owner, ...)
+		if state.Lease and owner ~= "banjo" and owner ~= "race" then return false end
+		return nativeClaim(owner, ...)
+	end
+	local actionAdapter = function(kind, action, ...)
+		if state.Lease then if kind == "fusion" then return false end; return 0 end
+		return nativeAction(kind, action, ...)
+	end
+	IsStealActive = activeAdapter
+	Tasks.PriorityStealYield, Tasks.PriorityCanRun = yieldAdapter, canRunAdapter
+	engine.AutoShieldWanted, engine.TriggerGuardDodge, engine.ClaimMovement = shieldAdapter, dodgeAdapter, claimAdapter
+	Tasks.WispNativeAction = actionAdapter
+	function Tasks.BuildBanjoUI(tabs)
+		local group = tabs:AddTab("Banjo", "music")
+		group:AddToggle("Toggle_Banjo_Auto", { Text = "Auto Banjo Cricket", Default = false, Tooltip = "Repeat the mushroom melody.", Callback = function(value)
+			FarmConfig.Banjo_Auto = value == true
+			state.Generation += 1
+			state.ConfigUntil, state.NextAt, state.PriorityAt = os.clock() + 3, 0, 0
+		end })
+		local label = group:AddLabel("Status: Off", true)
+		-- A separate label refresh keeps the status live during this bounded, single quest job.
+		local connection, elapsed = nil, 0
+		connection = RunService.Heartbeat:Connect(function(dt)
+			elapsed += dt
+			if elapsed < 0.5 then return end
+			elapsed = 0
+			local text = "Status: " .. tostring(state.Status):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+			if text ~= state.Shown then pcall(label.SetText, label, text); state.Shown = text end
+		end)
+		state.LabelConnection = connection
+		task.spawn(function()
+			while not state.Disposed and not LibraryLoader.Unloaded do
+				local ok, failure = pcall(function()
+					if not enabled() then state.Status = "Off"; return end
+					if os.clock() < (state.ConfigUntil or 0) then state.Status = "Loading settings"; return end
+					if os.clock() < state.NextAt then return end
+					local data = readSave()
+					if data.Claimed == true then state.Done, state.ClaimPending, state.Status = true, false, "Done — Cricket's Banjo claimed"; return end
+					if state.ClaimPending then state.Status = "Waiting for claim save"; return end
+					if LocalPlayer:GetAttribute("EnchantedTreeUnlocked") ~= true then state.Status, state.NextAt = "Finish Wisp; open Enchanted Tree", os.clock() + 10; return end
+					if not findBat() then state.Status, state.NextAt = "Needs a bat in your bag", os.clock() + 10; return end
+					local char = LocalPlayer.Character
+					if char and char:GetAttribute("InvisApplied") == true then state.Status = "Waiting for invisibility to end"; return end
+					loadData()
+					if not idle() or higherTask() then state.Status = raceWanted() and "Paused for Auto Race" or "Waiting for other tasks"; return end
+					run()
+				end)
+				if not ok then
+					state.Status, state.LastError, state.NextAt = "Banjo data unavailable", tostring(failure), os.clock() + 10
+					if os.clock() >= (state.NoticeAt or 0) then state.NoticeAt = os.clock() + 30; warn("[N3 HUB] Auto Banjo: " .. tostring(failure)) end
+				end
+				task.wait(1)
+			end
+		end)
+	end
+	LibraryLoader:OnUnload(function()
+		state.Disposed = true
+		state.Generation += 1
+		if state.Connection then state.Connection:Disconnect() end
+		if state.LabelConnection then state.LabelConnection:Disconnect() end
+		if IsStealActive == activeAdapter then IsStealActive = nativeActive end
+		if Tasks.PriorityStealYield == yieldAdapter then Tasks.PriorityStealYield = nativeYield end
+		if Tasks.PriorityCanRun == canRunAdapter then Tasks.PriorityCanRun = nativeCanRun end
+		if engine.AutoShieldWanted == shieldAdapter then engine.AutoShieldWanted = nativeShield end
+		if engine.TriggerGuardDodge == dodgeAdapter then engine.TriggerGuardDodge = nativeDodge end
+		if engine.ClaimMovement == claimAdapter then engine.ClaimMovement = nativeClaim end
+		if Tasks.WispNativeAction == actionAdapter then Tasks.WispNativeAction = nativeAction end
+	end)
+end
+-- END BANJO CONTROLLER
 
 Tasks.BuildMainInterface()
 Tasks.Loading:SetMessage("Verifying")
