@@ -3137,6 +3137,9 @@ do
 	end
 end
 local function ShouldHoldBackScrambleEgg(rawCategory, rawUid)
+	-- BEGIN LAB STOCK HOLDBACK
+	if DrScramble.HoldStockEgg and DrScramble.HoldStockEgg(rawCategory, rawUid) then return true end
+	-- END LAB STOCK HOLDBACK
 	if not FarmConfig.ScrambleHoldBack then
 		return false
 	end
@@ -4259,6 +4262,10 @@ end
 		return 0
 	end
 	local function IsScrambleTarget(cat, reqs)
+		-- BEGIN LAB STOCK TARGET
+		if DrScramble.RefreshStock then DrScramble.RefreshStock() end
+		if DrScramble.StockActive and DrScramble.StockActive() and DrScramble.Stock.Wanted[ScrambleCleanName(cat)] then return true end
+		-- END LAB STOCK TARGET
 		return FarmConfig.AutoScrambleSteal == true
 			and #reqs > 0
 			and GetScrambleState().Unlocked == true
@@ -8464,6 +8471,244 @@ GetScrambleTradeStatusFn = function()
 	end
 	return wanted, summary, picks, ready
 end
+-- BEGIN LAB STOCK CONTROLLER
+-- Chili: StockTargets 8874+, inventory shortfall 75075+, recipe pools 36450+.
+-- One quota per category across banners; feed the existing N3 picker only.
+do
+	local stock = { Wanted = {}, Reserved = {}, Targets = {}, Valid = false, NextAt = 0,
+		Banners = {}, BannerOptions = {}, BannerIds = {}, Pools = {}, Pickers = {},
+		EggOptions = {}, Categories = {}, Disposed = false, Loading = false, Generation = 0, RecipeWanted = {} }
+	DrScramble.Stock = stock
+	FarmConfig.LabStock_Banners = {}
+	FarmConfig.LabStock_Eggs = {}
+	FarmConfig.LabStock_PerEgg = 3
+	local function addBanner(id, display)
+		if id == nil then return end
+		id = tostring(id)
+		if stock.Banners[id] then return end
+		local label = tostring(display or id)
+		if stock.BannerIds[string.lower(label)] then label ..= " (" .. id .. ")" end
+		stock.Banners[id] = label
+		stock.BannerIds[string.lower(label)] = id
+		table.insert(stock.BannerOptions, label)
+	end
+	for key, banner in pairs((ScrambleTradeInData and ScrambleTradeInData.Banners) or {}) do
+		if type(banner) == "table" then
+			addBanner(banner.Id or banner._id or (type(key) == "string" and key), banner.DisplayName)
+		end
+	end
+	-- The game's rotation API also supplies canonical IDs when Banners is an array.
+	pcall(function()
+		local duration = tonumber(ScrambleTradeInData.RotationSeconds()) or 10800
+		local period = math.floor(Workspace:GetServerTimeNow() / math.max(1, duration))
+		for offset = 0, 11 do
+			local id = ScrambleTradeInData.BannerIdForPeriod(period + offset)
+			if id ~= nil then addBanner(id, ScrambleTradeInData.GetBannerDisplayName(id)) end
+		end
+	end)
+	table.sort(stock.BannerOptions)
+	for category, asset in pairs((AssetsModule and AssetsModule.Directory) or {}) do
+		if type(asset) == "table" and asset.Rarity ~= nil and tonumber(asset.EarningRate) then
+			local label = tostring(asset.DisplayName or category)
+			if stock.Categories[string.lower(label)] then label ..= " [" .. tostring(category) .. "]" end
+			stock.Categories[string.lower(label)] = tostring(category)
+			table.insert(stock.EggOptions, label)
+		end
+	end
+	table.sort(stock.EggOptions)
+	function DrScramble.StockActive()
+		return not stock.Disposed and not LibraryLoader.Unloaded
+			and FarmConfig.AutoScrambleSteal == true and next(FarmConfig.LabStock_Banners) ~= nil
+	end
+	local function targets()
+		local result = {}
+		if not DrScramble.StockActive() then return result end
+		for banner in pairs(FarmConfig.LabStock_Banners) do
+			local pool = stock.Pools[banner] or {}
+			for category in pairs(FarmConfig.LabStock_Eggs[banner] or {}) do
+				if pool[category] then result[ScrambleCleanName(category)] = FarmConfig.LabStock_PerEgg end
+			end
+		end
+		return result
+	end
+	function DrScramble.RefreshStock()
+		if stock.Updating or os.clock() < stock.NextAt then return end
+		stock.Updating = true
+		stock.NextAt = os.clock() + 0.5
+		local generation = stock.Generation
+		stock.Targets, stock.Wanted, stock.Reserved, stock.Valid = targets(), {}, {}, false
+		local ok = pcall(function()
+			if next(stock.Targets) == nil then stock.Valid = true; return end
+			SetElevated8()
+			local save = SaveModule and ((SaveModule.Get and SaveModule.Get()) or (SaveModule.Peek and SaveModule.Peek()))
+			if type(save) ~= "table" or type(save.EggInventory) ~= "table"
+				or not EggStateModule or type(EggStateModule.ReadOwnerEggs) ~= "function" then return end
+			local owned = EggStateModule.ReadOwnerEggs(LocalPlayer.UserId)
+			if type(owned) ~= "table" or generation ~= stock.Generation or stock.Disposed then return end
+			local placed, byCategory = {}, {}
+			for uid, record in pairs(owned) do
+				if type(record) == "table" and record.Placement ~= nil then placed[tostring(uid)] = true end
+			end
+			for uid, record in pairs(save.EggInventory) do
+				if type(record) == "table" and record.Placement == nil and not placed[tostring(uid)] then
+					local category = ScrambleCleanName(record.AssetCategory or record.Category)
+					if stock.Targets[category] then
+						byCategory[category] = byCategory[category] or {}
+						table.insert(byCategory[category], { Uid = uid, Scale = tonumber(record.AssetScale) or 0,
+							Mutated = (record.BaseMutation ~= nil and record.BaseMutation ~= "Normal")
+								or (type(record.Mutations) == "table" and next(record.Mutations) ~= nil) })
+					end
+				end
+			end
+			for category, quota in pairs(stock.Targets) do
+				local eggs = byCategory[category] or {}
+				table.sort(eggs, function(a, b)
+					if a.Mutated ~= b.Mutated then return not a.Mutated end
+					if a.Scale ~= b.Scale then return a.Scale < b.Scale end
+					return tostring(a.Uid) < tostring(b.Uid)
+				end)
+				if #eggs < quota then stock.Wanted[category] = true end
+				for index = 1, math.min(quota, #eggs) do stock.Reserved[tostring(eggs[index].Uid)] = true end
+			end
+			stock.Valid = true
+		end)
+		if not ok or generation ~= stock.Generation or stock.Disposed then
+			stock.Wanted, stock.Reserved, stock.Valid = {}, {}, false
+		end
+		for category in pairs(stock.Targets) do
+			RuntimeState.ScrambleWanted[category] = (stock.Wanted[category] or stock.RecipeWanted[category]) or nil
+		end
+		stock.Updating = false
+	end
+	function DrScramble.HoldStockEgg(category, uid)
+		if not DrScramble.StockActive() then return false end
+		DrScramble.RefreshStock()
+		local target = stock.Targets[ScrambleCleanName(category)]
+		if not target then return false end
+		-- If inventory is unavailable, hold selected materials, but don't steal blindly.
+		return not stock.Valid or stock.Wanted[ScrambleCleanName(category)] == true
+			or uid == nil or stock.Reserved[tostring(uid)] == true
+	end
+	local function updatePickers()
+		for id, picker in pairs(stock.Pickers) do
+			local disabled = {}
+			for _, label in ipairs(stock.EggOptions) do
+				local category = stock.Categories[string.lower(label)]
+				if not (stock.Pools[id] or {})[category] then table.insert(disabled, label) end
+			end
+			picker:SetDisabledValues(disabled)
+			picker:SetVisible(FarmConfig.LabStock_Banners[id] == true)
+		end
+	end
+	function DrScramble.StockSettingsChanged()
+		stock.Generation += 1
+		stock.Wanted, stock.Reserved, stock.Targets, stock.Valid = {}, {}, targets(), false
+		stock.NextAt = 0
+		Tasks.LabState.Revision += 1
+		if GetScrambleTradeStatusFn then GetScrambleTradeStatusFn() end
+		updatePickers()
+	end
+	function DrScramble.LoadStockPools()
+		if stock.Loading or stock.Disposed or LibraryLoader.Unloaded then return end
+		stock.Loading = true
+		local ok, message = pcall(function()
+			SetElevated8()
+			local shared = ReplicatedStorage:FindFirstChild("Shared")
+			local modules = shared and shared:FindFirstChild("Modules")
+			local module = modules and modules:FindFirstChild("ScrambleTradeInRecipes")
+			local recipes = module and require(module)
+			if type(recipes) ~= "table" or type(recipes.Simulate) ~= "function" then
+				return "Recipe pools unavailable"
+			end
+			for id in pairs(stock.Banners) do
+				if stock.Disposed or LibraryLoader.Unloaded then return end
+				-- Same official game data API and sample budget as Chili. Not a live test.
+				local sampled, result = pcall(recipes.Simulate, id, 4000)
+				if stock.Disposed or LibraryLoader.Unloaded then return end
+				if sampled and type(result) == "table" and type(result.SlotPicks) == "table" then
+					local pool = stock.Pools[id] or {}
+					for _, slot in pairs(result.SlotPicks) do
+						for category, count in pairs(type(slot) == "table" and slot or {}) do
+							if (tonumber(count) or 0) > 0 then pool[tostring(category)] = true end
+						end
+					end
+					stock.Pools[id] = pool
+				end
+				task.wait()
+			end
+		end)
+		stock.Loading = false
+		if stock.Disposed or LibraryLoader.Unloaded then return end
+		if not ok or message then
+			LibraryLoader:Notify(message or "Recipe pool read failed", 4)
+		end
+		DrScramble.StockSettingsChanged()
+	end
+	-- Remember real observed recipes too; don't substitute a fabricated species pool.
+	local nativeStatus = GetScrambleTradeStatusFn
+	GetScrambleTradeStatusFn = function()
+		local wanted, summary, picks, ready = nativeStatus()
+		stock.RecipeWanted = table.clone(wanted)
+		local state = GetScrambleState()
+		if state.BannerId ~= nil and type(state.Requirements) == "table" then
+			local id = tostring(state.BannerId)
+			stock.Pools[id] = stock.Pools[id] or {}
+			for _, category in ipairs(state.Requirements) do stock.Pools[id][tostring(category)] = true end
+		end
+		DrScramble.RefreshStock()
+		if DrScramble.StockActive() then
+			for category in pairs(stock.Wanted) do wanted[category] = true end
+		end
+		return wanted, summary, picks, ready
+	end
+	function DrScramble.BuildStockUI(group)
+		group:AddDropdown("Dropdown_LabStock_Banners", {
+			Text = "Stock Banners", Values = stock.BannerOptions, Default = {}, Multi = true, AllowNull = true,
+			Callback = function(value)
+				local banners = {}
+				for label in pairs(ParseMultiDropdownSelection(value)) do
+					local id = stock.BannerIds[label]
+					if id then banners[id] = true end
+				end
+				FarmConfig.LabStock_Banners = banners
+				DrScramble.StockSettingsChanged()
+			end,
+		})
+		for _, label in ipairs(stock.BannerOptions) do
+			local id = stock.BannerIds[string.lower(label)]
+			stock.Pickers[id] = group:AddDropdown("Dropdown_LabStock_Eggs_" .. id, {
+				Text = label .. " Eggs", Values = stock.EggOptions, Default = {}, Multi = true,
+				AllowNull = true, Searchable = true,
+				Callback = function(value)
+					local selected = {}
+					for name in pairs(ParseMultiDropdownSelection(value)) do
+						local category = stock.Categories[name]
+						if category then selected[category] = true end
+					end
+					FarmConfig.LabStock_Eggs[id] = selected
+					DrScramble.StockSettingsChanged()
+				end,
+			})
+		end
+		group:AddSlider("Slider_LabStock_PerEgg", {
+			Text = "Stock Per Egg", Min = 1, Max = 30, Default = 3, Rounding = 0,
+			Callback = function(value)
+				FarmConfig.LabStock_PerEgg = math.clamp(math.floor(tonumber(value) or 3), 1, 30)
+				DrScramble.StockSettingsChanged()
+			end,
+		})
+		group:AddButton("Refresh Pools", function() task.spawn(DrScramble.LoadStockPools) end)
+		updatePickers()
+		task.spawn(DrScramble.LoadStockPools)
+	end
+	LibraryLoader:OnUnload(function()
+		stock.Disposed = true
+		stock.Generation += 1
+		stock.Wanted, stock.Reserved, stock.Targets = {}, {}, {}
+	end)
+end
+-- END LAB STOCK CONTROLLER
+
 function DrScramble.LabActionAllowed()
 	-- Like Chili, this operates on owned inventory, not the character/field carry.
 	-- A busy egg farm must not starve a ready recipe; race still has user priority.
@@ -13697,6 +13942,9 @@ function Tasks.BuildMainInterface()
 			pcall(GetScrambleTradeStatusFn)
 		end,
 	})
+	-- BEGIN LAB STOCK UI
+	DrScramble.BuildStockUI(ScrambleEggGroup)
+	-- END LAB STOCK UI
 	local ScrambleOddsSpotlight = ScrambleEggGroup:AddSpotlightCard("ScrambleOddsSpotlight", {
 		Title = "Pet Preview",
 		Description = "Click a pet in the odds list.",

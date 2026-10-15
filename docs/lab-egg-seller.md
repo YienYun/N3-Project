@@ -86,7 +86,9 @@ Compile the whole production file as Luau, not just the addition. The new checke
 undoes **exactly three insertion sites** and verifies the full visual-normalized
 runtime returns to the reviewed `6dc1423` SHA256. Race and eight protected steal
 blocks keep their existing fingerprints. Library and bundled source stay intact.
-These are static/compile checks, not simulations or proof of live sales/FPS.
+The independent stock checker reverses its four additions before this older
+baseline comparison. These are static/compile checks, not simulations or proof
+of live sales/FPS.
 
 User live-test in a fresh Roblox session:
 
@@ -104,7 +106,8 @@ User live-test in a fresh Roblox session:
 
 ## Still pending from the audit
 
-Lab stock targets, Wisp/Banjo quests, Butterfly workflows, Shooting Star,
+Lab stock targets are now integrated separately (see `lab-stock.md`).
+Wisp/Banjo quests, Butterfly workflows, Shooting Star,
 Auto Mutate/Nitro replenish, Capture/Admin/Minigame events, Auto Hop and remaining
 utilities/HUD are **not implemented by this change**. Priority labels are not
 proof of a working event. Continue one source-backed feature per change.

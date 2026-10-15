@@ -122,3 +122,19 @@ Read this before changing `Steal-An-Egg.lua`.
   Revalidate per max-50 batch and cancel unsent work on settings/unload.
 - Run `tools/check_lab_seller_source.py` with the existing three static checkers
   and compile the entire runtime. Its reverse-delta hash protects all prior code.
+
+
+## Lab stock targets
+
+- See `../docs/lab-stock.md`; run `tools/check_lab_stock_source.py` as well as
+  all prior checkers/full compilation. Four marked insertions reverse to 9badf26.
+- Preserve the live-confirmed explicit outer Lab group and its two subtabs.
+  Stock controls stay in Lab Trade with short labels and no prose/status rows.
+- Quota 1–30/default 3 is shared per category across banners, not summed.
+  Require Auto Steal Lab Eggs plus selected banners/species. Empty means inactive.
+- Pool membership must come from the actual game recipe API or observed recipe;
+  never fabricate Shares, recipes, percentages or game-module payloads. Sampling
+  the game's data API at runtime is not agent test/server-acceptance evidence.
+- Count only unplaced inventory, exclude placed owner UIDs, hold the quota against
+  auto-place/sellers, and fail closed on read errors. Preserve original trade
+  readiness/raw UID picks. No second picker, swap, worker, or race changes.
