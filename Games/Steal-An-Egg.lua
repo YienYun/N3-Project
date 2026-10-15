@@ -2841,6 +2841,9 @@ RuntimeState.StealEngine = (function()
 		end
 	end)
 	LocalPlayer:GetAttributeChangedSignal("RagdollEndTime"):Connect(function()
+		-- BEGIN QUEST TRANSIT RAGDOLL GUARD
+		if Tasks.QuestTransitOwnsActor and Tasks.QuestTransitOwnsActor() then return end
+		-- END QUEST TRANSIT RAGDOLL GUARD
 		if RaceOwnsCharacter() then return end
 		if Engine.AutoCycle or Engine.Carry.LineDrop or not Engine.Guard.Enabled then
 			return
@@ -18950,17 +18953,43 @@ do
 	function Tasks.QuestTransitOwnsActor()
 		return active ~= nil and active.Owns()
 	end
+	local function forestSlot(record, uid)
+		if type(record) ~= "table" or type(uid) ~= "string" then return nil end
+		local ownPrefix = "FirstAreaEgg_" .. LocalPlayer.UserId
+		if string.sub(uid, 1, 13) == "FirstAreaEgg_" then
+			if string.sub(uid, 1, #ownPrefix) ~= ownPrefix then return nil end
+			local slot = string.match(uid, "_([%w ]+:Slot_%d+)$")
+			return slot and string.match(slot, "^Forest:Slot_%d+$") and slot or nil
+		end
+		if record.AreaId == "Forest" and type(record.NestId) == "string" then return "Forest:" .. record.NestId end
+	end
+	function Tasks.QuestHeldForestEgg()
+		if not EggStateModule or type(EggStateModule.ReadFieldEggs) ~= "function" then return nil end
+		local ok, snapshot = pcall(EggStateModule.ReadFieldEggs)
+		local records = ok and type(snapshot) == "table" and snapshot.Records
+		if type(records) ~= "table" then return nil end
+		for key, record in pairs(records) do
+			local uid = type(record) == "table" and (record.Uid or key)
+			local slot = forestSlot(record, uid)
+			if slot and tonumber(record.CarrierUserId) == LocalPlayer.UserId then
+				local guard = engine.FindGuard("Forest")
+				local guardRoot = guard and guard:FindFirstChild("HumanoidRootPart", true)
+				if guardRoot and guardRoot:IsA("BasePart") then return { Uid = uid, Slot = slot, Guard = guardRoot } end
+			end
+		end
+	end
 	function Tasks.NewQuestTransit(owner, character, humanoid, root, valid)
 		assert(owner == "wisp" or owner == "banjo", "Quest transport owner required")
 		local transit = { Active = false }
 		local heartbeat, stepped, parts, savedPlatform
-		function transit.Owns()
+		function transit.ActorMatches()
 			return LocalPlayer.Character == character and character ~= nil and humanoid ~= nil and root ~= nil
 				and humanoid.Parent == character and character:FindFirstChildOfClass("Humanoid") == humanoid
-				and humanoid.Health > 0 and root.Parent == character
+				and root.Parent == character
 				and character:FindFirstChild("HumanoidRootPart") == root
 				and engine.Movement.Owner == owner and not RaceOwnsCharacter()
 		end
+		function transit.Owns() return transit.ActorMatches() and humanoid.Health > 0 end
 		function transit:Stop()
 			if self.Ragdoll then if self.RagdollStop then self.RagdollStop() end; return end
 			if heartbeat then heartbeat:Disconnect(); heartbeat = nil end
@@ -19071,7 +19100,6 @@ do
 			local ok, snapshot = pcall(EggStateModule.ReadFieldEggs)
 			local records = ok and type(snapshot) == "table" and snapshot.Records
 			if type(records) ~= "table" then return nil end
-			local ownPrefix = "FirstAreaEgg_" .. LocalPlayer.UserId
 			local models = Workspace:FindFirstChild("AreaEggSlotsClient")
 			local nearest, visible, distance, visibleDistance = nil, nil, math.huge, math.huge
 			for key, record in pairs(records) do
@@ -19079,14 +19107,8 @@ do
 				if type(uid) ~= "string" or excluded[uid] or typeof(record.BottomCFrame) ~= "CFrame"
 					or (tonumber(record.CarrierUserId) or 0) > 0
 					or not (record.State == nil or record.State == "Slot" or record.State == "Dropped") then continue end
-				local slot
-				if string.sub(uid, 1, 13) == "FirstAreaEgg_" then
-					if string.sub(uid, 1, #ownPrefix) == ownPrefix then slot = string.match(uid, "_([%w ]+:Slot_%d+)$") end
-				elseif type(record.AreaId) == "string" and type(record.NestId) == "string" then
-					slot = record.AreaId .. ":" .. record.NestId
-				end
-				local guard = slot and engine.FindGuard(record.AreaId)
-				if slot and not guard and string.sub(uid, 1, #ownPrefix) == ownPrefix then guard = engine.FindGuard("Forest") end
+				local slot = forestSlot(record, uid)
+				local guard = slot and engine.FindGuard("Forest")
 				local guardRoot = guard and guard:FindFirstChild("HumanoidRootPart", true)
 				if not slot or not guardRoot or not guardRoot:IsA("BasePart") then continue end
 				local at, model = record.BottomCFrame.Position, models and models:FindFirstChild(uid)
@@ -19106,7 +19128,8 @@ do
 				return not self.Owns() or LibraryLoader.Unloaded or not valid() or (cancel and cancel())
 			end
 			if stopped() then return false, "cancelled" end
-			if not selectTravelEgg(root.Position, {}) then return false, "no egg to start the jump" end
+			local heldForest = Tasks.QuestHeldForestEgg()
+			if not heldForest and not selectTravelEgg(root.Position, {}) then return false, "no Forest egg for door TP" end
 			local packages = ReplicatedStorage:FindFirstChild("Packages")
 			local network = packages and packages:FindFirstChild("Networking")
 			local strike = network and network:FindFirstChild("RE/GuardPatrol/ForestStrike")
@@ -19116,6 +19139,19 @@ do
 			assert(active == nil, "Quest movement already active")
 			local taken, strikeConnection, landed, states, dropSent = nil, nil, false, {}, false
 			local wasRigPatched, released = DefenseRigPatched, false
+			local healthLinks, healthSaved, healing = {}, nil, false
+			local function protectHealth()
+				if healing or not self.Ragdoll or LibraryLoader.Unloaded or not self.ActorMatches() then return end
+				healing = true
+				pcall(function()
+					humanoid.BreakJointsOnDeath, humanoid.RequiresNeck = false, false
+					humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+					if humanoid.MaxHealth > 0 and humanoid.MaxHealth < math.huge and humanoid.Health < humanoid.MaxHealth then
+						humanoid.Health = humanoid.MaxHealth
+					end
+				end)
+				healing = false
+			end
 			local function snap(destination)
 				if not self.Ragdoll or not self.Owns() or LibraryLoader.Unloaded or not valid() then return false end
 				root.CFrame = CFrame.new(destination) * root.CFrame.Rotation
@@ -19135,7 +19171,12 @@ do
 				if released then return end
 				released = true
 				if strikeConnection then strikeConnection:Disconnect(); strikeConnection = nil end
+				for _, link in ipairs(healthLinks) do link:Disconnect() end
 				if self.Owns() then
+					if healthSaved then pcall(function()
+						humanoid.BreakJointsOnDeath, humanoid.RequiresNeck = healthSaved.BreakJointsOnDeath, healthSaved.RequiresNeck
+						humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, healthSaved.DeadEnabled)
+					end) end
 					for state, enabled in pairs(states) do pcall(humanoid.SetStateEnabled, humanoid, state, enabled) end
 					if wasRigPatched and FarmConfig.Defense_AntiRagdoll then pcall(Tasks.EnsureDefenseRigSyncOff) end
 				end
@@ -19146,16 +19187,30 @@ do
 				-- N3 equivalent of Chili's armed-hit exemption: allow the real game's ragdoll.
 				-- Keep preferences unchanged; suppress recovery only for this owned transport.
 				self.Active, self.Ragdoll, active = true, true, self
+				-- Chili Proto_122 health protection must survive releasing the normal steal shield.
+				healthSaved = { BreakJointsOnDeath = humanoid.BreakJointsOnDeath, RequiresNeck = humanoid.RequiresNeck,
+					DeadEnabled = humanoid:GetStateEnabled(Enum.HumanoidStateType.Dead) }
+				protectHealth()
+				table.insert(healthLinks, humanoid.HealthChanged:Connect(protectHealth))
+				table.insert(healthLinks, humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(protectHealth))
+				table.insert(healthLinks, humanoid.StateChanged:Connect(protectHealth))
+				local healthElapsed = 0
+				table.insert(healthLinks, RunService.Heartbeat:Connect(function(dt)
+					healthElapsed += dt
+					if healthElapsed >= 0.5 then healthElapsed = 0; protectHealth() end
+				end))
 				if Tasks.ResumeRaceRigSync then Tasks.ResumeRaceRigSync() end
 				for _, state in ipairs({ Enum.HumanoidStateType.Ragdoll, Enum.HumanoidStateType.FallingDown,
 					Enum.HumanoidStateType.Physics, Enum.HumanoidStateType.PlatformStanding }) do
 					states[state] = humanoid:GetStateEnabled(state)
 					humanoid:SetStateEnabled(state, true)
 				end
-				humanoid:UnequipTools()
-				if report then report("Ragdoll travel: taking the closest egg") end
+				if not heldForest then humanoid:UnequipTools() end
+				if report then report(heldForest and "Forest egg held; preparing door TP" or "Taking Forest egg for door TP") end
+				taken = heldForest
 				local excluded = {}
 				for _ = 1, 3 do
+					if taken then break end
 					local candidate = selectTravelEgg(root.Position, excluded)
 					if not candidate or stopped() then break end
 					local elapsed = 0
@@ -19171,21 +19226,23 @@ do
 				end
 				if not taken then return false, "no egg would come for the jump" end
 				if stopped() then return false, "cancelled" end
-				strikeConnection = LocalPlayer:GetAttributeChangedSignal("RagdollEndTime"):Connect(function()
+				local function landOnWindow()
 					if landed or not self.Ragdoll or not self.Owns() or LibraryLoader.Unloaded or not valid()
 						or (tonumber(LocalPlayer:GetAttribute("RagdollEndTime")) or 0) <= Workspace:GetServerTimeNow() then return end
 					local destination = target()
 					if destination then landed = snap(destination) end
-				end)
-				if report then report("Ragdoll travel: waiting for the guard strike") end
+				end
+				strikeConnection = LocalPlayer:GetAttributeChangedSignal("RagdollEndTime"):Connect(landOnWindow)
+				if report then report("Forest egg held; TP on guard window") end
 				if stopped() then return false, "cancelled" end
-				strike:FireServer({ EggUid = taken.Uid, GuardCFrame = taken.Guard.CFrame })
+				landOnWindow() -- Reuse an already-active real server window; don't wait for another attribute change.
+				if not landed then strike:FireServer({ EggUid = taken.Uid, GuardCFrame = taken.Guard.CFrame }) end
 				local deadline = os.clock() + 3
 				while not landed and os.clock() < deadline and not stopped() do task.wait() end
 				strikeConnection:Disconnect(); strikeConnection = nil
 				dropTaken()
 				if not landed then return false, "the guard strike did not land" end
-				if report then report("Ragdoll travel: holding destination during ragdoll") end
+				if report then report("At destination; finishing Forest TP") end
 				while (tonumber(LocalPlayer:GetAttribute("RagdollEndTime")) or 0) > Workspace:GetServerTimeNow() and not stopped() do
 					local destination = target()
 					if destination then snap(destination) end
@@ -19430,6 +19487,12 @@ do
 		return (pet and state.KeepPets or state.KeepEggs)[tostring(uid)] == true
 	end
 	local function carrying()
+		-- BEGIN QUEST TRANSIT WISP CARRY ADMISSION
+		local record = state.Record
+		local npcTrip = type(record) == "table" and not record.Unlocked and
+			(not record.Accepted or (tonumber(record.Stage) or 1) >= state.StageCount)
+		if npcTrip and state.FusionPhase == nil and next(state.PendingEggs) == nil and Tasks.QuestHeldForestEgg() then return false end
+		-- END QUEST TRANSIT WISP CARRY ADMISSION
 		local tool, uid = GetEquippedEggTool()
 		local signal = engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying
 		if tool and state.Valid and EggStateModule and type(EggStateModule.ReadFieldEgg) == "function" then
@@ -19498,21 +19561,16 @@ do
 			if daylight and GetNightAndWallStatus().ShouldRetreat then state.Status = "Waiting for daylight"; return false end
 			pcall(LocalPlayer.RequestStreamAroundAsync, LocalPlayer, position, 3)
 			if cancelled() or (daylight and GetNightAndWallStatus().ShouldRetreat) then return false end
-			-- Chili Wisp k(), 41964-42056: RagdollTravel at >1200, THEN >40 pivot fallback.
-			-- No Approach/tween route: that substitution was rejected in live testing.
-			if (root.Position - position).Magnitude > 1200 then
-				humanoid:UnequipTools()
+			-- User correction: Forest carry -> direct source ragdoll TP, no free tween / blind far pivot.
+			if (root.Position - position).Magnitude > 40 then
 				local transit = Tasks.NewQuestTransit("wisp", character, humanoid, root, function() return not cancelled() end)
 				local ok, reason = transit:RagdollTravel(function() return position + Vector3.new(0, 3, 3) end,
 					cancelled, function(message) state.Status = message end)
 				if not transit.Owns() then return false end
 				state.TravelReply = ok and "landed" or tostring(reason)
+				if not ok then state.Status = "Forest TP: " .. tostring(reason); return false end
 			end
-			if cancelled() then return false end
-			if (root.Position - position).Magnitude > 40 then
-				character:PivotTo(CFrame.new(position + Vector3.new(0, 3, 3)))
-				engine.SetVelocity(root, Vector3.zero)
-			end
+			if cancelled() or (root.Position - position).Magnitude > 40 then return false end
 			local deadline = os.clock() + 3
 			while (root.Position - position).Magnitude > 6 do
 				if cancelled() or higherTask() or os.clock() >= deadline then return false end
@@ -19536,7 +19594,9 @@ do
 			humanoid = character and character:FindFirstChildOfClass("Humanoid")
 			root = character and character:FindFirstChild("HumanoidRootPart")
 			if not humanoid or not root or humanoid.Health <= 0 then return end
-			if GetEquippedEggTool() then
+			-- BEGIN QUEST TRANSIT WISP CARRY PREP
+			if GetEquippedEggTool() and not Tasks.QuestHeldForestEgg() then
+			-- END QUEST TRANSIT WISP CARRY PREP
 				if carrying() then return end
 				humanoid:UnequipTools() -- Only an owned, banked tool; never interrupt a field carry.
 			end
@@ -19928,12 +19988,13 @@ do
 	end
 	local function idle()
 		local wisp, mutate, belt = Tasks.WispState, Tasks.MutateState, Tasks.TreadmillState
+		local heldForest = Tasks.QuestHeldForestEgg() ~= nil
 		return not RuntimeState.IsExecuting and not engine.AutoCycle and not engine.Guard.Active and not engine.Guard.Busy
 			and not (wisp and (wisp.Busy or wisp.Lease or wisp.NativeCalls > 0 or os.clock() < wisp.SettleUntil))
 			and not (mutate and (mutate.Lease or mutate.InventoryActions > 0 or os.clock() < mutate.HatchSettleUntil))
 			and not (belt and (belt.Busy or belt.WearBusy or belt.Exiting))
-			and not IsActivelyCarryingEgg() and not GetEquippedEggTool()
-			and not (engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying)
+			and (heldForest or (not IsActivelyCarryingEgg() and not GetEquippedEggTool()
+				and not (engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying)))
 			and LocalPlayer:GetAttribute("InScrambleArena") ~= true
 	end
 	local function run()
@@ -20013,21 +20074,13 @@ do
 			pcall(LocalPlayer.RequestStreamAroundAsync, LocalPlayer, position, 3)
 			if cancelled() or GetNightAndWallStatus().ShouldRetreat then return false end
 			local approach = position + Vector3.new(0, 3, -12)
-			-- Full Chili TreeTrip entry: >500 ragdoll (two tries), then >60 FlyTo, THEN local fallback.
-			if (root.Position - approach).Magnitude > 500 then
-				for _ = 1, 2 do
-					if cancelled() or GetNightAndWallStatus().ShouldRetreat then return false end
-					if (root.Position - approach).Magnitude <= 60 then break end
-					transit:RagdollTravel(function() return approach end, cancelled, function(message) state.Status = message end)
-					if not transit:Settle(0.5, cancelled) then return false end
-				end
-			end
-			if cancelled() then return false end
+			-- Forest egg -> direct door TP. Do not fall through to a world tween after a refused jump.
 			if (root.Position - approach).Magnitude > 60 then
-				state.Status = "Flying to Enchanted Tree entrance"
-				if not transit:Approach(approach, cancelled, inTree) then state.Status = "Tree approach interrupted"; return false end
+				local moved, reason = transit:RagdollTravel(function() return approach end, cancelled, function(message) state.Status = message end)
+				if not moved then state.Status = "Forest TP: " .. tostring(reason); return false end
 				if not transit:Settle(0.5, cancelled) then return false end
 			end
+			if cancelled() or (root.Position - approach).Magnitude > 60 then state.Status = "Door TP not confirmed"; return false end
 			if inTree() then return waitFor(0.5) end
 			for attempt = 1, 4 do
 				if cancelled() then return false end

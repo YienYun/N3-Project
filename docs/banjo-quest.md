@@ -1,11 +1,10 @@
 # Auto Banjo Cricket — Home / Quests
 
-**Live report:** the user rejected build `4d2db61`: Banjo did not work, direct TP
-was unwanted, and interior travel went into water / repeatedly returned to the
-start. The former walk/pathfinding + Lift adaptation is withdrawn, not treated
-as successful because it compiled. Build `47e1483` was also rejected: its custom Wisp tween repeatedly killed the
-user. [The actual RagdollTravel dependency](quest-ragdoll-transport.md) is now
-ported; neither previous build is live-confirmed. This correction needs live testing.
+**Live report:** builds `4d2db61` (water/reset), `47e1483` (custom Wisp
+world tween/deaths) and **`36128e6` (ragdoll-port glitches/deaths)** were rejected.
+Latest instruction: **Forest egg held → immediate door TP**, superseding the
+older no-TP instruction. The current correction is not live-confirmed; read the
+[transport/dependency mapping](quest-ragdoll-transport.md), not old success claims.
 
 UI remains **Home → Quests → Wisp / Banjo**, one collapsible/icon group and one
 nested tabbox. Banjo has a music icon, one default-OFF toggle and one status row.
@@ -60,47 +59,43 @@ EndFlight (40119–40175). Both dependencies matter; ordinary MoveTo is not a po
 
 ## Current transport correction and remaining differences
 
-- **Wisp does not call general FlyTo.** Its source caller uses >1200
-  RagdollTravel, then >40 pivot fallback, then short MoveTo. The custom Wisp
-  continuous tween was an incorrect substitution and is removed. Read the
-  [complete source dependency mapping](quest-ragdoll-transport.md).
-- TreeTrip now uses >500 RagdollTravel (up to two attempts) → settle → >60 FlyTo
-  → local prompt loop with >30 pivot fallback. The source exit pivot and final
-  ExitTrigger retry are restored. Earlier removal of these source fallbacks
-  based on interpreting the user's word 'tween' was incorrect.
-- RagdollTravel actually takes an eligible nearby field egg, calls its guard
-  strike, waits for the real RagdollEndTime signal, drops the temporary egg, and
-  holds the destination during the real ragdoll window. It is not a tween alias.
-  No invented guard payload or manually-set ragdoll signal.
-- The shared helper still runs within existing quest workers and native leases.
-  No second swap/worker or race-controller rewrite. N3-owned RigSync and captured
-  humanoid state restoration replace Chili's armed-hit recovery exemption;
-  recovery is suppressed only during owned flight/ragdoll. User flags stay unchanged.
-- The existing raised FlyTo legs remain for TreeTrip's source flight branch,
-  not Wisp's NPC travel. Secret Leap keeps one uninterrupted rise/cross flight
-  until hint +18, then releases flight for the natural fall. Room legs remain
-  source-speed-60 velocity motion, actual server notes and bat activations.
-- N3 actor/generation/owner/race cancellation remains stricter than source
-  cleanup. Temporary state and signal connections restore only under the same
-  actor/owner; a sent RPC cannot be recalled. No arbitrary health-zero reset.
-- Done still requires **Save.BanjoCricket.Claimed**, not a local route return or
-  true reply alone. Unknown dispatches stay pending across OFF/ON; explicit false
-  permits retry. This conservative policy differs from Chili's reply shortcut.
-- Progression, egg/guard strike, both exit passages and absence of death still
-  need actual in-game verification. Prior user failures remain recorded.
+- Door transport more than 60 studs away uses **Forest-only carry → real guard
+  ragdoll window → TP to prompt +(0,3,-12)**. An already-held Forest egg is reused;
+  do not drop/unequip it just to fetch another egg. An already-active real window
+  can land immediately instead of waiting for another attribute change.
+- If carry/strike/arrival fails, return a status and stop this attempt. **No world
+  FlyTo or bare far pivot fallback** after failed transport. The source's original
+  >500 / two-attempt / >60 FlyTo policy is documented above as source, not falsely
+  described as the current Forest-only implementation. Local >30 prompt alignment
+  remains behind a <=60 approach gate; actual InEnchantedTree still confirms entry.
+- Wisp also uses the shared Forest transport, no general Approach/FlyTo or far
+  pivot fallback. This is the user's explicit correction, not a claim that Chili's
+  original nearest-egg selector was Forest-only.
+- Add Chili Proto_122 health/neck/dead protection while the owned ragdoll scope is
+  open; snapshot/restore flags and disconnect listeners on cleanup. This is local
+  protection, not immunity to server death. Existing dodge lease adapters were
+  already present; the native RagdollEndTime handler now also respects the scope.
+- No new movement worker, swap, race rewrite or forced Anti Guard preference.
+  Existing elevated Secret Leap rise/cross/natural fall, speed-60 room movement,
+  server bat notes/acknowledgements, Jitterbug claim and exit flow remain.
+- Success still requires **Save.BanjoCricket.Claimed**. Ambiguous dispatch stays
+  pending across OFF/ON; no health-zero reset or reward shortcut.
+- Actual entry, no glitch/death, cancellation, race takeover, server puzzle/claim
+  and exits still need live verification. Static checks do not prove them.
 
 ## Validation
 
 Run **check_quest_transit_source.py**, **check_banjo_source.py**, all eight older
 source checkers and full production Luau compilation, protected file identities
-and `git diff --check`. `quest_transit_scope.py` reverses exactly four repair
-scopes (shared helper, Wisp travel replacement and two recovery guards), then
+and `git diff --check`. `quest_transit_scope.py` reverses the four original repair
+scopes plus three exact reviewed additions (native ragdoll attribute guard, Wisp
+held-Forest admission and preserving its equipped carry), then
 existing Banjo/Wisp normalizers retain every historical expected hash. The
 published pre-Banjo Wisp runtime SHA256 remains
 `693a7d99189757fedfff69a579da5ed46c32806fd80de28fb3e16ea986bb424d`.
 
 These are **static / compile checks**, not live route, server reward or FPS proof.
-Live validation must cover continuous approach, real prompt/entry, both elevated
+Live validation must cover Forest carry/window/door TP, real prompt/entry, both elevated
 leap legs and natural room warp, mushroom acknowledgement/replay, saved reward,
 both exit passages, OFF during flight, race interruption and respawn. The user's
 previous failure remains recorded; this corrected build is not live-confirmed.

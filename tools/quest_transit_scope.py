@@ -20,8 +20,34 @@ ORIGINAL_WISP_TRAVEL = """\
 		end
 """
 
+# Reviewed literal additions: old snapshots may lack them; current contract tests require all three.
+FOREST_DOOR_SCOPES = {
+    'RAGDOLL GUARD': ("""\
+		-- BEGIN QUEST TRANSIT RAGDOLL GUARD
+		if Tasks.QuestTransitOwnsActor and Tasks.QuestTransitOwnsActor() then return end
+		-- END QUEST TRANSIT RAGDOLL GUARD
+""", ''),
+    'WISP CARRY ADMISSION': ("""\
+		-- BEGIN QUEST TRANSIT WISP CARRY ADMISSION
+		local record = state.Record
+		local npcTrip = type(record) == "table" and not record.Unlocked and
+			(not record.Accepted or (tonumber(record.Stage) or 1) >= state.StageCount)
+		if npcTrip and state.FusionPhase == nil and next(state.PendingEggs) == nil and Tasks.QuestHeldForestEgg() then return false end
+		-- END QUEST TRANSIT WISP CARRY ADMISSION
+""", ''),
+    'WISP CARRY PREP': ("""\
+			-- BEGIN QUEST TRANSIT WISP CARRY PREP
+			if GetEquippedEggTool() and not Tasks.QuestHeldForestEgg() then
+			-- END QUEST TRANSIT WISP CARRY PREP
+""", '\t\t\tif GetEquippedEggTool() then\n'),
+}
+
 
 def strip_quest_transit(runtime):
+    for label, (block, replacement) in FOREST_DOOR_SCOPES.items():
+        if '-- BEGIN QUEST TRANSIT ' + label in runtime:
+            assert runtime.count(block) == 1, f'Unexpected edits inside reviewed {label}'
+            runtime = runtime.replace(block, replacement, 1)
     for label in ('CONTROLLER', 'MOBILITY GUARD', 'DEFENSE GUARD', 'WISP TRAVEL'):
         pattern = (r'^[\t ]*-- BEGIN QUEST TRANSIT ' + label + r'\n.*?'
                    r'^[\t ]*-- END QUEST TRANSIT ' + label + r'\n')

@@ -78,23 +78,36 @@ or treadmill RPCs. A banked equipped egg is distinguished from field carry only
 with an owned-record match plus a nil live field read; otherwise wait. No invented
 UID prefix, rollback workaround, reset or alternate swap controller is used.
 
-Reuse native rig restoration under owner `wisp`. **Both earlier transport builds
-were rejected live**: immediate pivot without the long-distance dependency,
-then a custom raised tween that repeatedly killed the user. The custom tween
-was not the Wisp source logic and has been removed from Wisp travel.
+Reuse native rig restoration under owner `wisp`. Builds `4d2db61`, `47e1483`
+and **`36128e6` have all been rejected live**. The last port still glitched and
+killed the user. Compilation does not invalidate that report.
 
-See [the actual RagdollTravel port](quest-ragdoll-transport.md). The Wisp caller
-now follows Chili 41964–42056: stream destination, **>1200 RagdollTravel** to
-position +(0,3,3), **>40 source pivot fallback**, then a short 0.2-second MoveTo
-within six studs and 0.5-second settle. The dependency actually carries a nearby
-egg, calls its guard strike, observes real RagdollEndTime, drops the temporary
-egg and holds the destination during that window. No free world tween to Wisp.
+The latest explicit instruction supersedes the earlier no-TP request:
+**hold a Forest egg, then TP directly to the door**. See
+[the current dependency and integration mapping](quest-ragdoll-transport.md).
+For a destination more than 40 studs away, Wisp now uses the Forest-only carry /
+real guard-window TP, not a custom world tween or a bare far-pivot fallback.
+It reuses a Forest egg already carried by the player, including an already-active
+real ragdoll window, then keeps the source's short final MoveTo/settle.
+Failed carry/strike does not fall through to an unprotected destination snap.
 
-N3 actor/lease/generation/race checks, native rig restoration and scoped recovery
-suspension are explicit integration adaptations. User defense preferences and
-normal egg selection/movement remain unchanged. Late callbacks cannot control a
-new actor/owner, and already-sent RPCs cannot be recalled. This correction is
-**not live-confirmed**; do not represent compilation as proof of a death fix.
+Original Chili 41964–42056 has >1200 RagdollTravel then >40 pivot fallback;
+Chili's shared selector can choose other areas. Those are **not** described as
+Forest-only source behavior: the current restriction and fail-closed fallback
+policy implement the user's latest explicit correction after the live failures.
+
+The separate Chili health module (Proto_122, 42455–42623) supplies neck/joint/dead
+state protection and health maintenance that the preceding port omitted after
+releasing N3's normal steal shield. The current equivalent is scoped to owned
+ragdoll transport, snapshots/restores settings, disconnects all its listeners,
+and cannot heal/move a replacement actor or a race-owned actor. This is local
+protection, **not proof against authoritative server death**.
+
+Existing guard-dodge lease adapters already suppress TriggerGuardDodge. The
+additional native RagdollEndTime attribute handler now also respects the quest
+scope; no global Anti Guard preference is forced. Native inventory/fusion,
+normal/Instant selection and race-first ownership remain protected by the same
+historical fingerprints. The correction is **not live-confirmed**.
 
 ## Validation / live checklist
 
@@ -102,7 +115,8 @@ Run `check_quest_transit_source.py`, `check_banjo_source.py`, `check_wisp_source
 all seven older source checkers, full production
 Luau compilation and reference/Library checksums. Removing exactly seven Wisp
 insertion sites reproduces **byte-for-byte 3748a3e** (the user-live-confirmed Nitro
-version). Historical checkers normalize the four transport repair scopes and Banjo before
+version). Historical checkers normalize the four original transport scopes plus three
+exact, reviewed Forest-door additions and Banjo before
 stripping Wisp; all prior expected hashes remain
 unchanged, including race, swap, movement, normal/Instant and mutation proofs.
 No live Roblox/quest/pet-consumption/FPS result is claimed by the agent.
