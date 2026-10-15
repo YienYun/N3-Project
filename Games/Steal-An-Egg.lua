@@ -2861,6 +2861,7 @@ local function RefreshStealState()
 	if Engine then
 		if Engine.AutoCycle then
 			Engine.StopAutoHop(Engine.AutoCycle)
+			Engine.AutoStopMotion(Engine.AutoCycle)
 		end
 		Engine.CurrentTarget = nil
 		Engine.Guard.StealActive = false
@@ -5277,7 +5278,7 @@ local GetScrambleTradeStatusFn = nil
 			return Engine.State.Carrying or IsActivelyCarryingEgg()
 		end
 		return IsActivelyCarryingEgg(uid)
-			or (Engine.State.CarryUid == uid and (Engine.State.SignalCarrying or Engine.State.WeldCarrying))
+			or (Engine.State.CarryUid == uid and Engine.State.Carrying)
 	end
 	Engine.AutoValid = function(cycle)
 		return Engine.AutoCycle == cycle
@@ -5320,51 +5321,93 @@ local GetScrambleTradeStatusFn = nil
 			table.clear(cycle.Parts)
 		end
 	end
-	Engine.AutoMove = function(destination, cycle, carrying, timeout)
-		local function finish(result)
-			Engine.AutoNoclip(cycle, false)
-			return result
+	Engine.AutoStopMotion = function(cycle)
+		if cycle.Motion then
+			cycle.Motion:Disconnect()
+			cycle.Motion = nil
 		end
-		local elapsed, stalled, mark = 0, 0, nil
-		while Engine.AutoValid(cycle) and elapsed < (timeout or 25) do
-			local root = Engine.Root()
-			if not root then
-				return finish(false)
-			end
-			if carrying and not Engine.AutoHeld(carrying) then
-				return finish(false)
-			end
-			local dt = RunService.PreSimulation:Wait()
-			if not Engine.AutoValid(cycle) then
-				return finish(false)
-			end
-			root = Engine.Root()
-			if not root then
-				return finish(false)
-			end
-			elapsed = elapsed + dt
-			local delta = destination - root.Position
-			local distance = delta.Magnitude
-			if distance <= 0.5 then
-				Engine.StopVelocity()
-				return finish(true)
-			end
-			local speed = Engine.AutoSpeed()
-			local step = math.max(dt, 1 / 240)
-			Engine.AutoNoclip(cycle, true)
-			root.AssemblyLinearVelocity = delta.Unit * math.min(speed, distance / step)
-				+ Vector3.new(0, Workspace.Gravity * step * 0.5, 0)
-			root.AssemblyAngularVelocity = Vector3.zero
-			mark = mark or distance
-			stalled = stalled + dt
-			if stalled >= 0.4 then
-				if mark - distance < speed * 0.1 then
+		if LocalPlayer.Character == cycle.Character then
+			Engine.StopVelocity()
+		end
+	end
+	Engine.AutoDrive = function(root, destination, speed, dt, progress)
+		local delta = destination - root.Position
+		local distance = delta.Magnitude
+		local step = math.max(dt, 1 / 240)
+		local velocity = Vector3.zero
+		if distance > 0.01 then
+			velocity = delta.Unit * math.min(speed, distance / step)
+		end
+		if distance > 2 then
+			progress.Mark = progress.Mark or distance
+			progress.Clock = (progress.Clock or 0) + dt
+			if progress.Clock >= 0.4 then
+				if progress.Mark - distance < speed * 0.1 then
 					root.CFrame = root.CFrame + delta.Unit * math.min(distance, speed * step)
 				end
-				mark, stalled = distance, 0
+				progress.Mark, progress.Clock = distance, 0
 			end
+		else
+			progress.Mark = nil
 		end
-		return finish(false)
+		root.AssemblyLinearVelocity = velocity + Vector3.new(0, Workspace.Gravity * step * 0.5, 0)
+		root.AssemblyAngularVelocity = Vector3.zero
+		return distance <= 0.5
+	end
+	Engine.AutoHold = function(destination, cycle)
+		Engine.AutoStopMotion(cycle)
+		local progress = {}
+		cycle.Motion = RunService.PreSimulation:Connect(function(dt)
+			if not Engine.AutoValid(cycle) then
+				Engine.AutoStopMotion(cycle)
+				return
+			end
+			if Engine.IsRagdolled() then
+				return
+			end
+			local root = Engine.Root()
+			if root then
+				Engine.AutoNoclip(cycle, true)
+				Engine.AutoDrive(root, destination, Engine.AutoSpeed(), dt, progress)
+			end
+		end)
+	end
+	Engine.AutoMove = function(destination, cycle, carrying, timeout)
+		Engine.AutoStopMotion(cycle)
+		local elapsed, done, reason = 0, nil, nil
+		local progress = {}
+		cycle.Motion = RunService.PreSimulation:Connect(function(dt)
+			if done ~= nil then
+				return
+			end
+			elapsed = elapsed + dt
+			if not Engine.AutoValid(cycle) or elapsed >= (timeout or 25) then
+				done, reason = false, "cancelled"
+				return
+			end
+			if carrying and not Engine.AutoHeld(carrying) then
+				done, reason = false, "dropped"
+				return
+			end
+			local root = Engine.Root()
+			if not root then
+				done, reason = false, "respawned"
+				return
+			end
+			Engine.AutoNoclip(cycle, true)
+			if Engine.AutoDrive(root, destination, Engine.AutoSpeed(), dt, progress) then
+				done = true
+			end
+		end)
+		while done == nil and Engine.AutoValid(cycle) do
+			RunService.Heartbeat:Wait()
+		end
+		Engine.AutoStopMotion(cycle)
+		if done and Engine.AutoValid(cycle) then
+			Engine.AutoHold(destination, cycle)
+			return true
+		end
+		return false, reason or "cancelled"
 	end
 	Engine.AutoFindEgg = function(uid)
 		for _, egg in ipairs(Engine.CollectAllFieldEggs()) do
@@ -5481,6 +5524,7 @@ local GetScrambleTradeStatusFn = nil
 			local root = Engine.Root()
 			if root then
 				hop.Landed = true
+				Engine.AutoStopMotion(cycle)
 				Engine.StopHold()
 				root.CFrame = CFrame.new(destination) * root.CFrame.Rotation
 				Engine.StopVelocity()
@@ -5528,6 +5572,7 @@ local GetScrambleTradeStatusFn = nil
 		if not Engine.AutoValid(cycle) or Engine.IsRagdolled() then
 			return false
 		end
+		Engine.AutoHold(destination, cycle)
 		if Engine.AutoHeld(target.Uid) then
 			return true
 		end
@@ -5536,53 +5581,246 @@ local GetScrambleTradeStatusFn = nil
 		end
 		return Engine.AutoValid(cycle)
 	end
+	Engine.AutoStored = function(uid)
+		if EggStateModule and type(EggStateModule.ReadOwnerEggs) == "function" then
+			local ok, eggs = pcall(EggStateModule.ReadOwnerEggs, LocalPlayer.UserId)
+			if ok and type(eggs) == "table" then
+				for key, egg in pairs(eggs) do
+					if type(egg) == "table" and tostring(egg.Uid or key) == tostring(uid) then
+						return true
+					end
+				end
+			end
+		end
+		if SaveModule and type(SaveModule.Peek) == "function" then
+			local ok, save = pcall(SaveModule.Peek)
+			local eggs = ok and type(save) == "table" and save.EggInventory
+			if type(eggs) == "table" then
+				for key, egg in pairs(eggs) do
+					if type(egg) == "table" and tostring(egg.Uid or key) == tostring(uid) then
+						return true
+					end
+				end
+			end
+		end
+		return false
+	end
+	Engine.AutoRecoveryModel = function(uid)
+		for _, container in ipairs(Engine.GetCarryContainers()) do
+			local model = container:FindFirstChild(uid)
+			if model then
+				return model
+			end
+		end
+		return nil
+	end
+	Engine.AutoOtherCarrier = function(model)
+		if not model then
+			return false
+		end
+		for _, joint in ipairs(model:GetDescendants()) do
+			if joint:IsA("JointInstance") or joint:IsA("WeldConstraint") or joint:IsA("RigidConstraint") then
+				local ok, a, b = pcall(function()
+					return joint.Part0, joint.Part1
+				end)
+				if ok then
+					for _, part in pairs({ a, b }) do
+						if part and not part:IsDescendantOf(model) then
+							local character = part:FindFirstAncestorOfClass("Model")
+							if character and character ~= LocalPlayer.Character and Players:GetPlayerFromCharacter(character) then
+								return true
+							end
+						end
+					end
+				end
+			end
+		end
+		return false
+	end
+	Engine.AutoRecoverEgg = function(cycle, uid)
+		Engine.AutoStopMotion(cycle)
+		Engine.AutoStatus = "Following dropped egg"
+		local recovery = { Destination = nil, Velocity = Vector3.zero, Active = true }
+		cycle.Recovery = recovery
+		cycle.Motion = RunService.PreSimulation:Connect(function(dt)
+			if not Engine.AutoValid(cycle) or not recovery.Active or Engine.AutoHeld(uid) then
+				return
+			end
+			local root = Engine.Root()
+			local destination = recovery.Destination
+			if not root or not destination then
+				return
+			end
+			if Engine.IsRagdolled() then
+				if (root.Position - destination).Magnitude > 2 then
+					root.CFrame = CFrame.new(destination) * root.CFrame.Rotation
+				end
+				return
+			end
+			local step = math.max(dt, 1 / 240)
+			local velocity = recovery.Velocity + (destination - root.Position) * (1 / math.max(0.08, step))
+			local maxSpeed = Engine.AutoSpeed() + recovery.Velocity.Magnitude
+			if velocity.Magnitude > maxSpeed then
+				velocity = velocity.Unit * maxSpeed
+			end
+			Engine.AutoNoclip(cycle, true)
+			root.AssemblyLinearVelocity = velocity + Vector3.new(0, Workspace.Gravity * step * 0.5, 0)
+			root.AssemblyAngularVelocity = Vector3.zero
+		end)
+		local elapsed, lastPrompt, lastSnapshot, lastSample, oldPosition, misses = 0, -1, -1, nil, nil, 0
+		local success = false
+		while Engine.AutoValid(cycle) and elapsed < 30 do
+			if Engine.AutoStored(uid) or Engine.AutoHeld(uid) then
+				success = true
+				break
+			end
+			local model = Engine.AutoRecoveryModel(uid)
+			if Engine.AutoOtherCarrier(model) then
+				Engine.AutoStatus = "Another player took the egg"
+				break
+			end
+			local position = nil
+			if model then
+				local ok, pivot = pcall(model.GetPivot, model)
+				if ok then
+					position = pivot.Position
+				end
+			end
+			if not position and elapsed - lastSnapshot >= 0.5 and not Engine.AutoSnapshotOwner then
+				lastSnapshot = elapsed
+				if Remotes.RemoteEggSnapshot and Remotes.RemoteEggSnapshot:IsA("RemoteFunction") then
+					Engine.AutoSnapshotOwner = recovery
+					task.spawn(function()
+						local ok, snapshot = pcall(Remotes.RemoteEggSnapshot.InvokeServer, Remotes.RemoteEggSnapshot)
+						if recovery.Active and Engine.AutoValid(cycle) and ok and type(snapshot) == "table" and type(snapshot.Records) == "table" then
+							for _, record in pairs(snapshot.Records) do
+								if type(record) == "table" and record.Uid == uid and typeof(record.BottomCFrame) == "CFrame" then
+									recovery.Snapshot = record.BottomCFrame.Position
+									break
+								end
+							end
+						end
+						if Engine.AutoSnapshotOwner == recovery then
+							Engine.AutoSnapshotOwner = nil
+						end
+					end)
+				else
+					local egg = Engine.AutoFindEgg(uid)
+					recovery.Snapshot = egg and egg.Position
+				end
+			end
+			position = position or recovery.Snapshot
+			if position then
+				local now = os.clock()
+				if oldPosition and lastSample and now > lastSample then
+					local velocity = (position - oldPosition) * (1 / math.max(now - lastSample, 1 / 240))
+					if velocity.Magnitude < 3000 then
+						recovery.Velocity = recovery.Velocity:Lerp(velocity, 0.3)
+					end
+				end
+				oldPosition, lastSample = position, now
+				recovery.Destination = position + Vector3.new(0, 3, 0)
+			end
+			local root = Engine.Root()
+			if root and recovery.Destination and (recovery.Destination - root.Position).Magnitude <= 20 and elapsed - lastPrompt >= 0.1 then
+				lastPrompt = elapsed
+				local prompt = Engine.FindCarryPrompt(uid, recovery.Destination - Vector3.new(0, 3, 0), 6)
+				if prompt then
+					Engine.FirePrompt(prompt)
+					misses = 0
+				else
+					misses = misses + 1
+					if misses >= 20 then
+						break
+					end
+				end
+			end
+			elapsed = elapsed + RunService.Heartbeat:Wait()
+		end
+		recovery.Active = false
+		cycle.Recovery = nil
+		Engine.AutoStopMotion(cycle)
+		return success and Engine.AutoValid(cycle)
+	end
 	Engine.DeliverAutoEgg = function(cycle, uid)
-		if not uid or not Engine.AutoValid(cycle) or not Engine.AutoHeld(uid) then
+		if not uid or not Engine.AutoValid(cycle) then
 			return false
 		end
-		Engine.AutoStatus = "Flying home"
-		local root = Engine.Root()
-		if not root then
+		local heldWait = 0
+		while not Engine.AutoHeld(uid) and Engine.AutoValid(cycle) and heldWait < 0.6 do
+			if Engine.AutoStored(uid) then
+				return true
+			end
+			heldWait = heldWait + RunService.Heartbeat:Wait()
+		end
+		if not Engine.AutoHeld(uid) and not Engine.AutoRecoverEgg(cycle, uid) then
 			return false
 		end
-		local started = os.clock()
 		local home = Engine.GetBaseSafeSpot()
+		local root = Engine.Root()
+		if not root or not Engine.AutoValid(cycle) then
+			return false
+		end
 		local height = math.max(root.Position.Y, home.Y) + 27.4
-		local ascent = Vector3.new(root.Position.X + (home.X - root.Position.X) * 0.25,
-			root.Position.Y + (height - root.Position.Y) * 0.7,
-			root.Position.Z + (home.Z - root.Position.Z) * 0.25)
-		for _, destination in ipairs({ ascent, Vector3.new(home.X, height, home.Z), home }) do
-			if not Engine.AutoMove(destination, cycle, uid) then
+		local retries = 0
+		while Engine.AutoValid(cycle) do
+			if Engine.AutoStored(uid) then
+				return true
+			end
+			root = Engine.Root()
+			if not root then
+				return false
+			end
+			Engine.AutoStatus = "Flying home"
+			local position = root.Position
+			local cruise = math.max(height, position.Y)
+			local ascent = Vector3.new(position.X + (home.X - position.X) * 0.25,
+				position.Y + (cruise - position.Y) * 0.7,
+				position.Z + (home.Z - position.Z) * 0.25)
+			local arrived, reason = true, nil
+			for _, destination in ipairs({ ascent, Vector3.new(home.X, cruise, home.Z), home }) do
+				arrived, reason = Engine.AutoMove(destination, cycle, uid)
+				if not arrived then
+					break
+				end
+			end
+			if not Engine.AutoValid(cycle) then
+				return false
+			end
+			if Engine.AutoStored(uid) then
+				return true
+			end
+			if arrived then
+				cycle.Humanoid.PlatformStand = false
+				Engine.AutoStatus = "Settling in safe zone"
+				local settled = 0
+				while Engine.AutoValid(cycle) and settled < 0.2 do
+					settled = settled + RunService.Heartbeat:Wait()
+				end
 				if not Engine.AutoValid(cycle) then
 					return false
 				end
-				local current = Engine.Root()
-				if Engine.State.LastDelivered >= started then
-					return true
+				if Engine.AutoHeld(uid) then
+					Engine.AutoStatus = "Confirming inventory"
+					Engine.AutoDrop(cycle)
+					local wait = 0
+					while Engine.AutoValid(cycle) and wait < 3 do
+						if Engine.AutoStored(uid) then
+							return true
+						end
+						wait = wait + RunService.Heartbeat:Wait()
+					end
 				end
-				if not current or (current.Position - home).Magnitude > 15 then
-					return false
-				end
-				break
+				cycle.Failure = "Inventory not confirmed after safe-zone drop"
+				reason = "dropped"
 			end
-		end
-		Engine.StopVelocity()
-		Engine.AutoStatus = "Confirming delivery"
-		if Engine.State.LastDelivered >= started then
-			return true
-		end
-		if Engine.AutoHeld(uid) then
-			Engine.AutoDrop(cycle)
-		end
-		local elapsed = 0
-		while Engine.AutoValid(cycle) and elapsed < 3 do
-			if Engine.State.LastDelivered >= started then
-				return true
-			end
-			if Engine.State.LastFailed >= started then
+			if reason ~= "dropped" or retries >= 3 or not Engine.AutoValid(cycle) then
 				return false
 			end
-			elapsed = elapsed + RunService.Heartbeat:Wait()
+			retries = retries + 1
+			if not Engine.AutoRecoverEgg(cycle, uid) then
+				return false
+			end
 		end
 		return false
 	end
@@ -5671,6 +5909,10 @@ local GetScrambleTradeStatusFn = nil
 			return Engine.DeliverAutoEgg(cycle, target.Uid)
 		end)
 		Engine.StopAutoHop(cycle)
+		if cycle.Recovery then
+			cycle.Recovery.Active = false
+		end
+		Engine.AutoStopMotion(cycle)
 		Engine.AutoNoclip(cycle, false)
 		if Engine.AutoCycle == cycle then
 			Engine.AutoCycle = nil
@@ -5691,7 +5933,7 @@ local GetScrambleTradeStatusFn = nil
 			elseif Engine.Cancelled(sessionId) or FarmConfig.Defense_InstantSteal then
 				Engine.AutoStatus = "Stopped"
 			elseif Engine.AutoStatus ~= "No egg matches" and Engine.AutoStatus ~= "Target no longer available" then
-				Engine.AutoStatus = "Retrying after failed attempt"
+				Engine.AutoStatus = cycle.Failure or "Retrying after failed attempt"
 			end
 		end
 		return ok and delivered == true
@@ -10768,9 +11010,9 @@ function Tasks.BuildMainInterface()
 				local status = "Idle"
 				if RuntimeState.OnTreadmill then
 					status = "Training on Treadmill"
-				elseif RuntimeState.IsExecuting then
+				elseif RuntimeState.IsExecuting or (IsStealActive() and not FarmConfig.Defense_InstantSteal) then
 					local Engine = RuntimeState.StealEngine
-					status = Engine and Engine.AutoCycle and Engine.AutoStatus or "Stealing / Moving"
+					status = Engine and not FarmConfig.Defense_InstantSteal and Engine.AutoStatus or "Stealing / Moving"
 				end
 				Lbl_MainStatus:SetText('<font color="#D946EF"><b>Status:</b></font> ' .. status)
 			end)
