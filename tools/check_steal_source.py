@@ -17,7 +17,7 @@ reference = (ROOT / "Games/Source/StealAnEgg/SenaV2.lua").read_bytes()
 blob = hashlib.sha1(b"blob " + str(len(reference)).encode() + b"\0" + reference).hexdigest()
 assert blob == REFERENCE_BLOB, "Sena reference changed: review source and update docs/baseline intentionally"
 assert not (ROOT / "Games/Source/Chili-SourceV1.lua").exists(), "Retired reference must not return"
-assert "chili" not in runtime.lower(), "Retired integration remains in the game runtime"
+assert "Chili-SourceV1" not in runtime, "Retired V1 reference remains in the runtime"
 assert not re.search(r"\bfn\d+\b", runtime), "Numbered decompiler functions in runtime"
 
 

@@ -289,7 +289,7 @@ local FarmConfig = {
 	Util_AntiAFK = true,
 	Util_AutoRejoin = false,
 	Race_AutoRace = false,
-	Race_Speed = 300,
+	Race_Speed = 150,
 	Race_PowerUps = true,
 	Race_AutoClaim = false,
 	Race_AutoEquip = true,
@@ -351,6 +351,9 @@ local RuntimeState = {
 getgenv().N3Hub_State = getgenv().N3Hub_State or {}
 getgenv().N3Hub_State.FarmConfig = FarmConfig
 getgenv().N3Hub_State.RuntimeState = RuntimeState
+local function RaceOwnsCharacter()
+	return Tasks.RaceHoldsCharacter ~= nil and Tasks.RaceHoldsCharacter() == true
+end
 local function IsStealActive()
 	if Tasks.PriorityStealYield and Tasks.PriorityStealYield() then
 		return false
@@ -2828,6 +2831,7 @@ RuntimeState.StealEngine = (function()
 		end
 	end)
 	LocalPlayer:GetAttributeChangedSignal("RagdollEndTime"):Connect(function()
+		if RaceOwnsCharacter() then return end
 		if Engine.AutoCycle or Engine.Carry.LineDrop or not Engine.Guard.Enabled then
 			return
 		end
@@ -3875,7 +3879,16 @@ end
 local SavedJumpHeight = 50
 local DefenseRigRefresh = nil
 local DefenseRigPatched = false
+local DefenseRigConnections = {}
+function Tasks.ResumeRaceRigSync()
+	for _, connection in ipairs(DefenseRigConnections) do
+		pcall(function() connection:Enable() end)
+	end
+	table.clear(DefenseRigConnections)
+	DefenseRigPatched = false
+end
 function Tasks.ApplyDefenseAntiTrap()
+	if RaceOwnsCharacter() then return end
 	local Character = LocalPlayer.Character
 	local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
 	local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
@@ -3916,6 +3929,7 @@ function Tasks.ApplyDefenseAntiTrap()
 	end
 end
 function Tasks.EnsureDefenseRigSyncOff()
+	if RaceOwnsCharacter() or (Tasks.RaceSuppressRagdoll and Tasks.RaceSuppressRagdoll()) then return false end
 	if DefenseRigPatched then
 		return true
 	end
@@ -3939,15 +3953,19 @@ function Tasks.EnsureDefenseRigSyncOff()
 	end
 	local Patched = 0
 	for _, Conn in ipairs(Result) do
-		pcall(function()
-			Conn:Disconnect()
-		end)
-		Patched = Patched + 1
+		if Conn.Enabled ~= false then
+			local disabled = pcall(function() Conn:Disable() end)
+			if disabled then
+				table.insert(DefenseRigConnections, Conn)
+				Patched += 1
+			end
+		end
 	end
-	DefenseRigPatched = true
-	return true
+	DefenseRigPatched = Patched > 0
+	return DefenseRigPatched
 end
 function Tasks.ApplyDefenseAntiRagdoll()
+	if RaceOwnsCharacter() or (Tasks.RaceSuppressRagdoll and Tasks.RaceSuppressRagdoll()) then return end
 	if RuntimeState.StealEngine and RuntimeState.StealEngine.AutoCycle then
 		return
 	end
@@ -7623,6 +7641,7 @@ local function ExitTreadmill()
 end
 Tasks.ExitTreadmill = ExitTreadmill
 local function MountTreadmill()
+	if RaceOwnsCharacter() then return false end
 	if IsPlayerRunningOnTreadmill() then
 		RuntimeState.OnTreadmill = true
 		return true
@@ -7650,6 +7669,7 @@ local function MountTreadmill()
 		Humanoid.AutoRotate = false
 		while (RootPart.Position - TargetPos).Magnitude > 3.0 and (os.clock() < Timeout) do
 			local DeltaTime = RunService.Heartbeat:Wait()
+			if RaceOwnsCharacter() then return false end
 			local CurrentPos = RootPart.Position
 			local Delta = (TargetPos - CurrentPos)
 			local Step = Delta.Unit * math.min(Delta.Magnitude, FlySpeed * DeltaTime)
@@ -7664,6 +7684,7 @@ local function MountTreadmill()
 		end
 		Humanoid.AutoRotate = true
 	end
+	if RaceOwnsCharacter() then return false end
 	RootPart.CFrame = CFrame.new(TargetPos)
 	RootPart.AssemblyLinearVelocity = Vector3.zero
 	RootPart.AssemblyAngularVelocity = Vector3.zero
@@ -12946,12 +12967,13 @@ function Tasks.BuildMainInterface()
 	local RaceRallyGroup = EventTab:AddLeftGroupbox("Race Rally", "flag")
 	local Lbl_RaceStatus = RaceRallyGroup:AddLabel('<font color="#D946EF"><b>Status:</b></font> Off', true)
 	local Lbl_RaceStats = RaceRallyGroup:AddLabel(
-		'<font color="#D946EF"><b>Trophies:</b></font> 0   <font color="#D946EF"><b>Wins:</b></font> 0   <font color="#D946EF"><b>Racer:</b></font> Ostrich',
+		'<font color="#D946EF"><b>Tokens:</b></font> 0   <font color="#D946EF"><b>Wins:</b></font> 0   <font color="#D946EF"><b>Racer:</b></font> Ostrich',
 		true
 	)
+	local RaceDetails = RaceRallyGroup:AddLabel("Heat: -   |   Phase: Idle   |   Speed: 150", true)
 	task.spawn(function()
-		local LastS, LastT = nil, nil
-		while true do
+		local LastS, LastT, LastDetails = nil, nil, nil
+		while not LibraryLoader.Unloaded do
 			task.wait(1)
 			pcall(function()
 				local St = Tasks.RaceState
@@ -12964,7 +12986,7 @@ function Tasks.BuildMainInterface()
 					Lbl_RaceStatus:SetText(S)
 				end
 				local T = string.format(
-					'<font color="#D946EF"><b>Trophies:</b></font> %s   <font color="#D946EF"><b>Wins:</b></font> %s   <font color="#D946EF"><b>Racer:</b></font> %s',
+					'<font color="#D946EF"><b>Tokens:</b></font> %s   <font color="#D946EF"><b>Wins:</b></font> %s   <font color="#D946EF"><b>Racer:</b></font> %s',
 					tostring(St.Tokens or "0"),
 					tostring(St.Wins or "0"),
 					tostring(St.Racer or "Ostrich")
@@ -12973,67 +12995,47 @@ function Tasks.BuildMainInterface()
 					LastT = T
 					Lbl_RaceStats:SetText(T)
 				end
+				local Details = string.format(
+					"Heat: %s   |   Phase: %s   |   Speed: %s",
+					tostring(St.Heat or "-"),
+					tostring(St.Phase or "Idle"),
+					tostring(St.EffectiveSpeed or 150)
+				)
+				if Details ~= LastDetails then
+					LastDetails = Details
+					RaceDetails:SetText(Details)
+				end
 			end)
 		end
 	end)
-	RaceRallyGroup:AddDropdown("Dropdown_Race_Racer", {
-		Text = "Racer",
-		Values = { "Best Owned", "Ostrich", "Seahorse", "Lizard", "Bird", "Cheetah", "Engine Snail" },
-		Default = "Best Owned",
-		Multi = false,
-		AllowNull = false,
-		Tooltip = "Racer to use",
-		Callback = function(Selected)
-			FarmConfig.Race_Racer = tostring(Selected or "Best Owned")
-		end,
-	})
-	RaceRallyGroup:AddDropdown("Dropdown_Race_ShopItems", {
-		Text = "Race Shop Items",
-		Values = { "Nitro Mutation", "Cash Booster", "Speed Boost", "Treadmill Boost", "Racing Bat" },
-		Default = {},
-		Multi = true,
-		AllowNull = true,
-		Tooltip = "Shop items to buy",
-		Callback = function(v)
-			FarmConfig.Race_ShopItems = ParseMultiDropdownSelection(v)
-		end,
-	})
-	RaceRallyGroup:AddToggle("Toggle_Race_AutoEquip", {
-		Text = "Auto Equip Racer",
-		Default = true,
-		Tooltip = "Auto equip racer",
-		Callback = function(State)
-			FarmConfig.Race_AutoEquip = State == true
-		end,
-	})
-	RaceRallyGroup:AddToggle("Toggle_Race_AutoBuy", {
-		Text = "Auto Buy Race Shop",
-		Default = false,
-		Tooltip = "Auto buy shop items",
-		Callback = function(State)
-			FarmConfig.Race_AutoBuy = State == true
-		end,
-	})
-	RaceRallyGroup:AddSlider("Slider_Race_Speed", {
-		Text = "Race Speed",
-		Min = 100,
-		Max = 400,
-		Default = 300,
-		Rounding = 0,
-		Tooltip = "Track speed",
-		Callback = function(Value)
-			FarmConfig.Race_Speed = math.clamp(math.floor(tonumber(Value) or 300), 100, 400)
-		end,
-	})
-	RaceRallyGroup:AddToggle("Toggle_Race_AutoRace", {
+	local RaceAutoToggle = RaceRallyGroup:AddToggle("Toggle_Race_AutoRace", {
 		Text = "Auto Race",
 		Default = false,
 		Tooltip = "Auto join & race",
 		Callback = function(State)
 			FarmConfig.Race_AutoRace = State == true
+			if Tasks.RaceSettingsChanged then
+				Tasks.RaceSettingsChanged("Enabled")
+			end
 		end,
 	})
-	RaceRallyGroup:AddToggle("Toggle_Race_PowerUps", {
+	local RaceDriveOptions = RaceRallyGroup:AddDependencyBox()
+	RaceDriveOptions:SetupDependencies({ { RaceAutoToggle, true } })
+	RaceDriveOptions:AddSlider("Slider_Race_Speed", {
+		Text = "Race Speed",
+		Min = 100,
+		Max = 160,
+		Default = 150,
+		Rounding = 0,
+		Tooltip = "Lower this if laps or wins do not count. Source range: 100–160.",
+		Callback = function(Value)
+			FarmConfig.Race_Speed = math.clamp(math.floor(tonumber(Value) or 150), 100, 160)
+			if Tasks.RaceSettingsChanged then
+				Tasks.RaceSettingsChanged("Speed")
+			end
+		end,
+	})
+	RaceDriveOptions:AddToggle("Toggle_Race_PowerUps", {
 		Text = "Auto Use Power-Ups",
 		Default = true,
 		Tooltip = "Grab & use powerups",
@@ -13047,6 +13049,54 @@ function Tasks.BuildMainInterface()
 		Tooltip = "Auto claim rewards",
 		Callback = function(State)
 			FarmConfig.Race_AutoClaim = State == true
+		end,
+	})
+	local RaceEquipToggle = RaceRallyGroup:AddToggle("Toggle_Race_AutoEquip", {
+		Text = "Auto Equip Racer",
+		Default = true,
+		Tooltip = "Auto equip racer",
+		Callback = function(State)
+			FarmConfig.Race_AutoEquip = State == true
+			if Tasks.RaceSettingsChanged then
+				Tasks.RaceSettingsChanged("Racer")
+			end
+		end,
+	})
+	local RaceEquipOptions = RaceRallyGroup:AddDependencyBox()
+	RaceEquipOptions:SetupDependencies({ { RaceEquipToggle, true } })
+	Tasks.RaceRacerDropdown = RaceEquipOptions:AddDropdown("Dropdown_Race_Racer", {
+		Text = "Racer",
+		Values = { "Best Owned", "Ostrich" },
+		Default = "Best Owned",
+		Multi = false,
+		AllowNull = false,
+		Tooltip = "Racer to use",
+		Callback = function(Selected)
+			FarmConfig.Race_Racer = tostring(Selected or "Best Owned")
+			if Tasks.RaceSettingsChanged then
+				Tasks.RaceSettingsChanged("Racer")
+			end
+		end,
+	})
+	local RaceBuyToggle = RaceRallyGroup:AddToggle("Toggle_Race_AutoBuy", {
+		Text = "Auto Buy Race Shop",
+		Default = false,
+		Tooltip = "Auto buy shop items",
+		Callback = function(State)
+			FarmConfig.Race_AutoBuy = State == true
+		end,
+	})
+	local RaceShopOptions = RaceRallyGroup:AddDependencyBox()
+	RaceShopOptions:SetupDependencies({ { RaceBuyToggle, true } })
+	RaceShopOptions:AddDropdown("Dropdown_Race_ShopItems", {
+		Text = "Race Shop Items",
+		Values = { "Nitro Mutation", "Cash Booster", "Speed Boost", "Treadmill Boost", "Racing Bat" },
+		Default = {},
+		Multi = true,
+		AllowNull = true,
+		Tooltip = "Shop items to buy",
+		Callback = function(v)
+			FarmConfig.Race_ShopItems = ParseMultiDropdownSelection(v)
 		end,
 	})
 	local ScrambleEggGroup = EventTab:AddRightGroupbox("Scramble Egg", "flask-conical")
@@ -15385,6 +15435,7 @@ task.spawn(function()
 		pcall(function()
             local Engine = RuntimeState.StealEngine
             if Engine and Engine.AutoCycle then return end
+			if RaceOwnsCharacter() then return end
 			local live = GetNightAndWallStatus()
 			if not live.ShouldRetreat then
 				return
@@ -15413,6 +15464,7 @@ task.spawn(function()
 	end
 end)
 function Tasks.MobilityRecoveryHeartbeat()
+	if RaceOwnsCharacter() then return end
 	if RuntimeState.StealEngine and RuntimeState.StealEngine.AutoCycle then
 		return
 	end
@@ -15439,6 +15491,7 @@ function Tasks.MobilityRecoveryHeartbeat()
 end
 RunService.Heartbeat:Connect(Tasks.MobilityRecoveryHeartbeat)
 function Tasks.DefenseHeartbeat()
+	if RaceOwnsCharacter() then return end
     local Engine = RuntimeState.StealEngine
     if Engine and Engine.AutoCycle then return end
 	if FarmConfig.Defense_AntiTrap then
@@ -15752,6 +15805,7 @@ task.spawn(Tasks.EspRenderLoop)
 do
 	local _NoclipChar, _NoclipParts, _NoclipScanAt = nil, {}, 0
 	function Tasks.MovementStepped()
+	if RaceOwnsCharacter() then return end
         local Engine = RuntimeState.StealEngine
         if Engine and Engine.AutoCycle then return end
 		local char = LocalPlayer.Character
@@ -15795,7 +15849,7 @@ end
 RunService.Stepped:Connect(Tasks.MovementStepped)
 function Tasks.OnCharacterAdded(NewCharacter)
 	task.wait(0.6)
-	if LocalPlayer.Character ~= NewCharacter then
+	if LocalPlayer.Character ~= NewCharacter or RaceOwnsCharacter() then
 		return
 	end
 	local Engine = RuntimeState.StealEngine
@@ -15808,550 +15862,1757 @@ function Tasks.OnCharacterAdded(NewCharacter)
 	ApplyAntiRagdoll(NewCharacter)
 	UnequipAllTools()
 end
+-- Racing Event: semantic port of ChiliSourceV2's Race Rally controller.
+-- See docs/race-rally.md for source ranges and N3 integration boundaries.
 do
-	local Players = game:GetService("Players")
-	local RunService = game:GetService("RunService")
-	local Workspace = game:GetService("Workspace")
-	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local CollectionService = game:GetService("CollectionService")
-	local LocalPlayer = Players.LocalPlayer
-	local St = {
+	local engine = RuntimeState.StealEngine
+	local race = {
+		Action = "Off",
+		Status = "Off",
+		Tokens = "0",
+		Wins = "0",
+		Racer = "Ostrich",
 		Driving = nil,
 		Travelling = false,
+		TravelGeneration = 0,
+		Disposed = false,
 		JoinTriedAt = 0,
-		LeaveAt = 0,
 		EquipAt = 0,
-		ClaimAt = 0,
-		PowerAt = 0,
+		RewardAt = 0,
 		Drop = 0,
-		LapSeen = nil,
-		LapAt = nil,
-		RemCache = {},
+		OwnedRacers = { "Best Owned", "Ostrich" },
+		Connections = {},
+		ModuleCache = {},
+		ModuleRetryAt = {},
+		ErrorAt = 0,
 	}
-	Tasks.RaceState = { Status = "Off", Tokens = "0", Wins = "0", Racer = "Ostrich" }
-	local RaceData, PathMod, Sched = nil, nil, nil
-	local function GetRaceData()
-		if RaceData ~= nil then
-			return RaceData or nil
+	Tasks.RaceState = race
+
+	local function LoadRaceModule(path)
+		local key = table.concat(path, "/")
+		if race.ModuleCache[key] then
+			return race.ModuleCache[key]
 		end
-		local D = ReplicatedStorage:FindFirstChild("Data")
-		local M = D and D:FindFirstChild("RaceRally")
-		local ok, mod = pcall(function()
-			return require(M)
-		end)
-		RaceData = (ok and mod) and mod or false
-		return RaceData or nil
-	end
-	local function GetPathMod()
-		if PathMod ~= nil then
-			return PathMod or nil
-		end
-		local S = ReplicatedStorage:FindFirstChild("Shared")
-		local M = S and S:FindFirstChild("Modules")
-		local P = M and M:FindFirstChild("RaceTrackPath")
-		local ok, mod = pcall(function()
-			return require(P)
-		end)
-		PathMod = (ok and mod) and mod or false
-		return PathMod or nil
-	end
-	local function Rem(FullName, Short)
-		local C = St.RemCache[FullName]
-		if C == nil then
-			C = FindRemote(FullName, Short) or false
-			St.RemCache[FullName] = C
-		end
-		return C or nil
-	end
-	local function SetStatus(Text)
-		Tasks.RaceState.Status = Text
-	end
-	local function FmtTime(N)
-		N = math.max(math.ceil(N), 0)
-		return string.format("%d:%02d", N // 60, N % 60)
-	end
-	local function Root()
-		local Char = LocalPlayer.Character
-		return Char and Char:FindFirstChild("HumanoidRootPart")
-	end
-	local function GetTrack()
-		return Workspace:FindFirstChild("RaceTrack")
-	end
-	local function GetPortal()
-		local W = Workspace:FindFirstChild("World")
-		local P = W and W:FindFirstChild("RaceRallyPortal")
-		return (P and P:FindFirstChild("Hitbox")) or nil
-	end
-	local function JoinOpen()
-		if Workspace:GetAttribute("RaceRallyRunning") ~= true then
-			return false
-		end
-		local T = Workspace:GetAttribute("RaceRallyJoinEndsAt")
-		return type(T) == "number" and Workspace:GetServerTimeNow() < T
-	end
-	local function InRace()
-		return LocalPlayer:GetAttribute("RaceId") ~= nil
-	end
-	Tasks.RacePriority = function()
-		if FarmConfig.Race_AutoRace ~= true then
-			return false
-		end
-		return InRace() or JoinOpen() or St.Travelling == true
-	end
-	local function SpeedNow()
-		return math.max((tonumber(FarmConfig.Race_Speed) or 300) - (St.Drop or 0), 100)
-	end
-	local function SlowDown()
-		if SpeedNow() <= 100 then
-			return
-		end
-		St.Drop = (St.Drop or 0) + 50
-	end
-	local function SaveRace()
-		if not (SaveModule and type(SaveModule.Peek) == "function") then
+		if os.clock() < (race.ModuleRetryAt[key] or 0) then
 			return nil
 		end
-		local ok, sData = pcall(SaveModule.Peek)
-		if ok and type(sData) == "table" and type(sData.RaceRally) == "table" then
-			return sData.RaceRally
+		race.ModuleRetryAt[key] = os.clock() + 2
+		local module = ReplicatedStorage
+		for _, name in ipairs(path) do
+			module = module and module:FindFirstChild(name)
+		end
+		if not module or not module:IsA("ModuleScript") then
+			return nil
+		end
+		local ok, result = pcall(require, module)
+		if ok and type(result) == "table" then
+			race.ModuleCache[key] = result
+			return result
 		end
 		return nil
 	end
-	local function StopDrive()
-		local D = St.Driving
-		St.Driving = nil
-		if D then
-			for _, C in ipairs(D.Connections) do
-				pcall(function()
-					C:Disconnect()
-				end)
+	local function RaceData()
+		return LoadRaceModule({ "Data", "RaceRally" })
+	end
+	local function RaceRemote(name, className)
+		-- Exact network names only; do not accidentally pick another minigame's remote.
+		local packages = ReplicatedStorage:FindFirstChild("Packages")
+		local network = packages and packages:FindFirstChild("Networking")
+		local remote = network and network:FindFirstChild(name)
+		return remote and remote:IsA(className) and remote or nil
+	end
+	local function InvokeRace(name, ...)
+		local remote = RaceRemote(name, "RemoteFunction")
+		if not remote then
+			return false
+		end
+		return pcall(remote.InvokeServer, remote, ...)
+	end
+	local function ReadRaceSave()
+		if not SaveModule then
+			return nil
+		end
+		local reader = SaveModule.Get or SaveModule.Peek
+		if type(reader) ~= "function" then
+			return nil
+		end
+		local ok, save = pcall(reader)
+		return ok and type(save) == "table" and type(save.RaceRally) == "table" and save.RaceRally or nil
+	end
+	local function RaceRoot()
+		local character = LocalPlayer.Character
+		return character and character:FindFirstChild("HumanoidRootPart")
+	end
+	local function SetRaceAction(message)
+		race.Action = message
+	end
+	local function GetRaceTrack()
+		local data = RaceData()
+		return Workspace:FindFirstChild(data and data.Track or "RaceTrack")
+	end
+	local function GetRacePortal()
+		local world = Workspace:FindFirstChild("World")
+		local portal = world and world:FindFirstChild("RaceRallyPortal")
+		local hitbox = portal and portal:FindFirstChild("Hitbox")
+		return hitbox and hitbox:IsA("BasePart") and hitbox or nil
+	end
+	local function RaceJoinOpen()
+		local joinEnds = Workspace:GetAttribute("RaceRallyJoinEndsAt")
+		return Workspace:GetAttribute("RaceRallyRunning") == true
+			and type(joinEnds) == "number"
+			and Workspace:GetServerTimeNow() < joinEnds
+	end
+	local function RaceJoinDelay()
+		local ok, ping = pcall(LocalPlayer.GetNetworkPing, LocalPlayer)
+		return math.clamp(1.2 + (ok and tonumber(ping) or 0) * 4, 1.2, 6)
+	end
+	local function RacedThisWindow()
+		local flags = LoadRaceModule({ "Shared", "Flags", "RaceRallyFlags" })
+		if flags and flags.OneRacePerWindow then
+			local ok, enabled = pcall(flags.OneRacePerWindow.Get, flags.OneRacePerWindow)
+			if ok and enabled == false then
+				return false
 			end
 		end
-	end
-	local function ApplyDrive()
-		local D = St.Driving
-		if not D then
-			return
-		end
-		local Hrp = Root()
-		if not Hrp then
-			return
-		end
-		local Frame = D.Path:FrameAt(D.Progress)
-		if os.clock() >= D.CheckAt then
-			D.CheckAt = os.clock() + 1
-			local Want = Frame.Position + Frame.UpVector * D.Lift
-			if (Hrp.Position - Want).Magnitude > 40 then
-				D.Progress = D.Path:Project(Hrp.Position, D.Progress, 300, 300)
-				Frame = D.Path:FrameAt(D.Progress)
-				local Now = os.clock()
-				if D.PulledAt and Now - D.PulledAt < 6 then
-					D.PulledAt = nil
-					St.LapAt = Now
-					SlowDown()
-				else
-					D.PulledAt = Now
-				end
-			end
-		end
-		Hrp.CFrame = Frame + Frame.UpVector * D.Lift
-		Hrp.AssemblyLinearVelocity = Frame.LookVector * SpeedNow()
-		Hrp.AssemblyAngularVelocity = Vector3.zero
-	end
-	local function StartDrive(Track)
-		if St.Driving then
+		local window, save = Workspace:GetAttribute("RaceRallyWindow"), ReadRaceSave()
+		if type(window) == "number" and save and save.LastRacedWindow == window then
 			return true
 		end
-		local Hrp = Root()
-		local Att = Track and Track:FindFirstChild("AttachmentTrack")
-		local P = GetPathMod()
-		if not (Hrp and Att and P) then
-			return false
-		end
-		local ok, Path = pcall(P.new, Att)
-		if not ok or Path == nil then
-			return false
-		end
-		local ok2, Progress = pcall(Path.Project, Path, Hrp.Position, Path.Length / 2, Path.Length / 2, Path.Length / 2)
-		if not ok2 then
-			return false
-		end
-		local Frame = Path:FrameAt(Progress)
-		local Lift = math.max((Hrp.Position - Frame.Position):Dot(Frame.UpVector), 2)
-		local D = {
-			Path = Path,
-			Track = Track,
-			Progress = Progress,
-			Lift = Lift,
-			Connections = {},
-			CheckAt = 0,
-			PulledAt = nil,
-			Life = LocalPlayer.Character,
-		}
-		St.Driving = D
-		table.insert(
-			D.Connections,
-			RunService.Heartbeat:Connect(function(Dt)
-				if St.Driving ~= D or LocalPlayer.Character ~= D.Life then
-					return
-				end
-				D.Progress = D.Progress + SpeedNow() * Dt
-				pcall(ApplyDrive)
-			end)
-		)
-		table.insert(
-			D.Connections,
-			RunService.PreSimulation:Connect(function()
-				if St.Driving == D then
-					pcall(ApplyDrive)
-				end
-			end)
-		)
-		return true
+		return race.RacedWindow ~= nil and race.RacedWindow == Workspace:GetAttribute("RaceRallyJoinEndsAt")
 	end
-	local function DoPowerups()
-		if FarmConfig.Race_PowerUps ~= true then
-			return
+	local function InRaceArea()
+		local root, track = RaceRoot(), GetRaceTrack()
+		if not root then
+			return false
 		end
-		local Now = Workspace:GetServerTimeNow()
-		local Hrp = Root()
-		local D = St.Driving
-		if not (Hrp and D) then
-			return
+		local lineup = track and track:FindFirstChild("PlayerLineUpArea")
+		local lineupPosition = lineup and lineup:IsA("BasePart") and lineup.Position or Vector3.new(-3400, 191, 9555)
+		if (root.Position - lineupPosition).Magnitude <= 500 then
+			return true
 		end
-		local RemP = Rem("RE/MountRace/PowerUp", "PowerUp")
-		if not RemP then
-			return
+		if not track then
+			return false
 		end
-		local Item = LocalPlayer:GetAttribute("RacePowerUp")
-		if type(Item) == "string" and Item ~= "" then
-			local Rolling = (tonumber(LocalPlayer:GetAttribute("RacePowerUpRollEndsAt")) or 0) > Now
-			local Effect = (tonumber(LocalPlayer:GetAttribute("RacePowerUpEffectEndsAt")) or 0) > Now
-			local Stun = (tonumber(LocalPlayer:GetAttribute("RacePowerUpStunEndsAt")) or 0) > Now
-			if not (Rolling or Effect or Stun) then
-				local Frame = D.Path:FrameAt(D.Progress)
-				pcall(function()
-					RemP:FireServer("Use", Hrp.Position, Frame.LookVector)
-				end)
+		if race.BoundsTrack ~= track then
+			race.BoundsTrack, race.BoundsMin, race.BoundsMax = track, nil, nil
+			local minimum, maximum =
+				Vector3.new(math.huge, math.huge, math.huge), Vector3.new(-math.huge, -math.huge, -math.huge)
+			for _, part in ipairs(track:GetDescendants()) do
+				if part:IsA("BasePart") then
+					minimum, maximum = minimum:Min(part.Position), maximum:Max(part.Position)
+				end
 			end
-			return
+			if minimum.X < maximum.X then
+				race.BoundsMin, race.BoundsMax =
+					minimum - Vector3.new(500, 1000, 500), maximum + Vector3.new(500, 1000, 500)
+			end
 		end
-		for _, Box in ipairs(CollectionService:GetTagged("RacePowerUpSpawn")) do
-			if Box:IsDescendantOf(D.Track or Workspace) then
-				local ReadyAt = Box:GetAttribute("RaceBoxReadyAt")
-				local Pad = Box:FindFirstChild("Pad") or Box.PrimaryPart or Box:FindFirstChildWhichIsA("BasePart")
+		local minimum, maximum, position = race.BoundsMin, race.BoundsMax, root.Position
+		return minimum ~= nil
+			and position.X >= minimum.X
+			and position.X <= maximum.X
+			and position.Y >= minimum.Y
+			and position.Y <= maximum.Y
+			and position.Z >= minimum.Z
+			and position.Z <= maximum.Z
+	end
+	local function EnteredRace()
+		return LocalPlayer:GetAttribute("RaceId") ~= nil
+			or LocalPlayer:GetAttribute("RaceGridFrame") ~= nil
+			or LocalPlayer:GetAttribute("RaceRallyQueued") == true
+			or (not RacedThisWindow() and InRaceArea())
+	end
+	local function InRaceNow()
+		if LocalPlayer:GetAttribute("RaceId") ~= nil or LocalPlayer:GetAttribute("RaceRallyQueued") == true then
+			return true
+		end
+		local heat = LocalPlayer:GetAttribute("RaceHeat")
+		if type(heat) ~= "string" then
+			race.HeldHeat = nil
+		elseif race.HeldHeat ~= heat then
+			race.HeldHeat, race.HeldSince = heat, os.clock()
+		end
+		if race.HeldHeat and os.clock() - race.HeldSince < 660 then
+			return true
+		end
+		local joinEnds = Workspace:GetAttribute("RaceRallyJoinEndsAt")
+		return type(joinEnds) == "number" and Workspace:GetServerTimeNow() < joinEnds + 25 and EnteredRace()
+	end
+	local function RaceEligible()
+		if os.clock() < (race.EligibilityAt or 0) then
+			return race.Eligible, race.Requirement
+		end
+		race.EligibilityAt = os.clock() + 2
+		local eligibility = LoadRaceModule({ "Shared", "Util", "RaceRallyEligibility" })
+		local flags = LoadRaceModule({ "Shared", "Flags", "RaceRallyFlags" })
+		local ok, eligible, requirement = pcall(function()
+			local save = SaveModule and SaveModule.Peek and SaveModule.Peek()
+			return save == nil or eligibility.IsEligible(tonumber(save.SpeedPower) or 0),
+				flags.SpeedPowerRequirement:Get()
+		end)
+		race.Eligible, race.Requirement = not ok or eligible ~= false, ok and tonumber(requirement) or nil
+		return race.Eligible, race.Requirement
+	end
+	local function CandidateRank(candidate)
+		return Tasks.PriorityRank(
+			candidate.IsScramble and "StealLab" or candidate.IsIndex and "StealIndex" or "StealFilter"
+		)
+	end
+	local function HigherPriorityRaceTask()
+		-- Chili's HigherFirst: finish an active steal/carry; otherwise inspect actual wanted eggs,
+		-- not just an enabled toggle (which would starve the event indefinitely).
+		if os.clock() < (race.PriorityCheckAt or 0) then
+			return race.HigherFirst
+		end
+		race.PriorityCheckAt, race.HigherFirst = os.clock() + 0.25, nil
+		local state = engine and engine.State
+		if
+			not race.RagdollTravel
+			and ((engine and engine.AutoCycle) or RuntimeState.IsExecuting or (state and state.Carrying))
+		then
+			race.HigherFirst = "Auto Steal"
+		elseif
+			engine
+			and engine.CollectCandidates
+			and not engine.IsNight()
+			and not engine.WallSealed()
+			and (FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll or FarmConfig.AutoStealSelected)
+		then
+			local rank = Tasks.PriorityRank("Race")
+			for _, candidate in ipairs(engine.CollectCandidates(false, true)) do
+				local record = candidate.Raw
 				if
-					Pad
-					and (type(ReadyAt) ~= "number" or ReadyAt <= Now)
-					and (Pad.Position - Hrp.Position).Magnitude <= 30
+					CandidateRank(candidate) < rank
+					and candidate.Uid ~= Workspace:GetAttribute("Event_CaptureTheEggUid")
+					and (not record or not record.CarrierUserId or tonumber(record.CarrierUserId) == 0)
+					and (not record or record.State == nil or record.State == "Slot" or record.State == "Dropped")
 				then
-					pcall(function()
-						RemP:FireServer("Pickup", Box)
-					end)
+					race.HigherFirst = "Auto Steal"
 					break
 				end
 			end
 		end
+		-- Keep extension points for N3 event controllers without importing unrelated Chili features.
+		if
+			not race.HigherFirst
+			and Tasks.ShootingStarState
+			and Tasks.ShootingStarState.Wanted
+			and Tasks.PriorityRank("Star") < Tasks.PriorityRank("Race")
+		then
+			race.HigherFirst = "Shooting Star"
+		end
+		if not race.HigherFirst and engine and engine.Movement and (engine.Movement.CaptureUntil or 0) > os.clock() then
+			race.HigherFirst = "Capture The Egg"
+		end
+		return race.HigherFirst
 	end
-	local function FlyTo(GetTarget, CancelFn, Speed, Timeout)
-		local Start = os.clock()
-		while os.clock() - Start < (Timeout or 30) do
-			if CancelFn and CancelFn() then
-				return false
+	local nativePriorityStealYield = Tasks.PriorityStealYield
+	Tasks.PriorityStealYield = function()
+		if Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal() then
+			return true
+		end
+		if FarmConfig.Race_AutoRace == true and RaceJoinOpen() and HigherPriorityRaceTask() ~= nil then
+			return false
+		end
+		return nativePriorityStealYield()
+	end
+	Tasks.RaceShouldYieldSteal = function()
+		if race.Disposed then
+			return false
+		end
+		if InRaceNow() or race.Travelling or (engine and engine.Movement.Owner == "race") then
+			return true
+		end
+		return FarmConfig.Race_AutoRace == true
+			and RaceJoinOpen()
+			and not RacedThisWindow()
+			and RaceEligible()
+			and HigherPriorityRaceTask() == nil
+	end
+	Tasks.RacePriority = function()
+		return not race.Disposed
+			and FarmConfig.Race_AutoRace == true
+			and (InRaceNow() or race.Travelling or (RaceJoinOpen() and not RacedThisWindow() and RaceEligible()))
+	end
+	Tasks.RaceHoldsCharacter = function()
+		return not race.Disposed
+			and (
+				race.Resetting == true
+				or race.Travelling
+				or (engine ~= nil and engine.Movement.Owner == "race")
+				or InRaceNow()
+			)
+	end
+	Tasks.RaceSuppressRagdoll = function()
+		if race.Disposed then
+			return false
+		end
+		if LocalPlayer:GetAttribute("RaceId") ~= nil then
+			return true
+		end
+		if os.clock() < (race.RagdollResumeAt or 0) then
+			return true
+		end
+		if not RaceJoinOpen() then
+			return false
+		end
+		if Tasks.RaceHoldsCharacter() then
+			return true
+		end
+		local portal, root = GetRacePortal(), RaceRoot()
+		return portal ~= nil and root ~= nil and (root.Position - portal.Position).Magnitude <= 40
+	end
+	local function StopRaceDrive()
+		local drive = race.Driving
+		race.Driving = nil
+		if drive then
+			for _, connection in ipairs(drive.Connections) do
+				connection:Disconnect()
 			end
-			local Target = GetTarget()
-			if not Target then
+		end
+	end
+	local function ReleaseRaceMovement()
+		if engine then
+			engine.ReleaseMovement("race")
+		end
+		race.PreparedCharacter = nil
+	end
+	local function PrepareRaceCharacter()
+		local character = LocalPlayer.Character
+		if not character or race.PreparedCharacter == character then
+			return
+		end
+		race.PreparedCharacter = character
+		-- Undo N3's existing swap once, rather than importing a second swap controller.
+		if engine and engine.ReleaseAutoShield then
+			engine.ReleaseAutoShield(true)
+		end
+		if RuntimeState.OriginalHumanoid then
+			RestoreCharacter()
+		end
+		if Tasks.ResumeRaceRigSync then
+			Tasks.ResumeRaceRigSync()
+		end
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			for _, state in ipairs({
+				Enum.HumanoidStateType.Ragdoll,
+				Enum.HumanoidStateType.FallingDown,
+				Enum.HumanoidStateType.Physics,
+				Enum.HumanoidStateType.PlatformStanding,
+				Enum.HumanoidStateType.Dead,
+			}) do
+				humanoid:SetStateEnabled(state, true)
+			end
+		end
+	end
+	local function ClaimRaceMovement()
+		if not engine then
+			SetRaceAction("Waiting for movement engine")
+			return false
+		end
+		if engine.AutoCycle or RuntimeState.IsExecuting or engine.Guard.Active or engine.Guard.Busy then
+			SetRaceAction("Race open, waiting for the current movement to stop")
+			return false
+		end
+		if engine.ClaimMovement("race") then
+			race.WaitSince = nil
+			PrepareRaceCharacter()
+			return true
+		end
+		local owner = engine.Movement.Owner
+		local keys = {
+			steal = "StealFilter",
+			place = "Place",
+			treadmill = "Treadmill",
+			wisp = "Wisp",
+			essence = "Essence",
+			butterfly = "Butterfly",
+			star = "Star",
+			scramble = "StealLab",
+		}
+		local rank = owner == "capture" and 0 or Tasks.PriorityRank(keys[owner] or "Unknown")
+		if Tasks.PriorityRank("Race") >= rank then
+			race.WaitSince = nil
+			SetRaceAction("Race open, " .. tostring(owner or "another task") .. " goes first (Task Priority)")
+			return false
+		end
+		race.WaitSince = race.WaitSince or os.clock()
+		if (engine.State and engine.State.Carrying) or os.clock() - race.WaitSince < 8 then
+			SetRaceAction("Race open, waiting for " .. tostring(owner) .. " to stop")
+			return false
+		end
+		race.WaitSince, engine.Movement.Owner = nil, "race"
+		PrepareRaceCharacter()
+		return true
+	end
+	local function ExitRaceTreadmill()
+		for _ = 1, 3 do
+			if LocalPlayer:GetAttribute("RaceId") ~= nil or LocalPlayer:GetAttribute("RaceRallyQueued") == true then
+				return
+			end
+			local root = RaceRoot()
+			if not (RuntimeState.OnTreadmill or IsPlayerRunningOnTreadmill() or (root and root.Anchored)) then
+				return
+			end
+			SetRaceAction("Getting off the treadmill")
+			ExitTreadmill()
+			task.wait(0.4)
+		end
+	end
+	local function TeleportRacePosition(position)
+		if typeof(position) ~= "Vector3" then
+			return false
+		end
+		local root = RaceRoot()
+		if not root then
+			return false
+		end
+		root.CFrame = CFrame.new(position) * root.CFrame.Rotation
+		root.AssemblyLinearVelocity, root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+		return true
+	end
+	local function RaceTravelCancelled(generation, character, allowRespawn)
+		return race.Disposed
+			or generation ~= race.TravelGeneration
+			or FarmConfig.Race_AutoRace ~= true
+			or (not allowRespawn and character ~= LocalPlayer.Character)
+	end
+	local function WaitRaceFieldOpen(cancelled, report)
+		local heldPosition, waited = nil, false
+		while not cancelled() do
+			local now = Workspace:GetServerTimeNow()
+			if engine.IsNight() and AreaEggCycleModule and AreaEggCycleModule.NextResetTime then
+				local ok, nextReset = pcall(AreaEggCycleModule.NextResetTime, now)
+				local cycle = LoadRaceModule({ "Shared", "Util", "AreaEggResetCycle" })
+				local delay = cycle
+						and ((tonumber(cycle.WallCountdownDelayAfterDayStartsSeconds) or 2) + (tonumber(
+							cycle.WallCountdownSeconds
+						) or 3))
+					or 5
+				if ok and type(nextReset) == "number" then
+					race.FieldOpenAt = nextReset + delay
+				end
+			end
+			local remaining = math.max((race.FieldOpenAt or now) - now, engine.WallSealed() and 0.3 or 0)
+			if remaining <= 0 and not engine.IsNight() then
+				if waited then
+					local deadline = os.clock() + 5
+					while os.clock() < deadline do
+						if cancelled() then
+							return false
+						end
+						RunService.Heartbeat:Wait()
+					end
+				end
 				return true
 			end
-			local Hrp = Root()
-			if not Hrp then
-				return false
+			waited = true
+			local root = RaceRoot()
+			if root then
+				heldPosition = heldPosition or root.Position
+				if (root.Position - heldPosition).Magnitude > 4 then
+					TeleportRacePosition(heldPosition)
+				end
+				root.AssemblyLinearVelocity = Vector3.zero
 			end
-			local Delta = Target - Hrp.Position
-			if Delta.Magnitude <= 5 then
-				return true
+			if report then
+				report("waiting in the safe zone, field opens in " .. math.ceil(remaining) .. "s")
 			end
-			local Step = math.min(Speed * RunService.Heartbeat:Wait(), Delta.Magnitude)
-			pcall(function()
-				Hrp.CFrame = CFrame.new(Hrp.Position + Delta.Unit * Step) * Hrp.CFrame.Rotation
-				Hrp.AssemblyLinearVelocity = Vector3.zero
-			end)
+			RunService.Heartbeat:Wait()
 		end
 		return false
 	end
-	local function DoEquip()
-		if FarmConfig.Race_AutoEquip ~= true or os.clock() < St.EquipAt then
-			return
+	local function LeaveRaceBase(cancelled, report)
+		local safe, root = engine.GetBaseSafeSpot(), RaceRoot()
+		if safe and root and engine.InsideBase() and (root.Position - safe).Magnitude > 69 then
+			if report then
+				report("leaving the base through the safe zone")
+			end
+			local target, deadline = safe + Vector3.new(0, 3, 0), os.clock() + 20
+			while os.clock() < deadline and not cancelled() do
+				root = RaceRoot()
+				if not root then
+					return false
+				end
+				local delta = target - root.Position
+				if delta.Magnitude <= 4 then
+					break
+				end
+				local dt = RunService.Heartbeat:Wait()
+				if cancelled() then
+					return false
+				end
+				TeleportRacePosition(root.Position + delta.Unit * math.min(250 * dt, delta.Magnitude))
+			end
+			task.wait(0.3)
 		end
-		local Save, Data = SaveRace(), GetRaceData()
-		if not (Save and Data and type(Data.Racers) == "table") then
-			return
+		return not cancelled()
+	end
+	local function StepRaceTravel(target, cancelled, report)
+		if not LeaveRaceBase(cancelled, report) then
+			return false
 		end
-		local Owned = {}
-		for Id, Def in pairs(Data.Racers) do
-			if (type(Save.Racers) == "table" and Save.Racers[Id] == true) or Id == Data.DefaultRacer then
-				table.insert(Owned, { Id = Id, Name = Def.DisplayName, Order = Def.Order })
+		if engine.InsideBase() and not WaitRaceFieldOpen(cancelled, report) then
+			return false
+		end
+		local deadline, previousDistance, stalled = os.clock() + 30, math.huge, 0
+		while os.clock() < deadline and not cancelled() do
+			local root, destination = RaceRoot(), target()
+			if not root or not destination then
+				return false
+			end
+			local horizontal = Vector3.new(destination.X - root.Position.X, 0, destination.Z - root.Position.Z)
+			local stride = math.max(engine.GetWalkSpeed() * 1.515, 40)
+			if horizontal.Magnitude > previousDistance - stride * 0.5 then
+				stalled += 1
+				if stalled >= 2 then
+					return false
+				end
+			else
+				stalled = 0
+			end
+			previousDistance = horizontal.Magnitude
+			if horizontal.Magnitude <= stride then
+				TeleportRacePosition(destination)
+				task.wait(0.5)
+				root, destination = RaceRoot(), target()
+				return not cancelled()
+					and root ~= nil
+					and destination ~= nil
+					and Vector3.new(destination.X - root.Position.X, 0, destination.Z - root.Position.Z).Magnitude
+						<= stride
+			end
+			local step = Vector3.new(root.Position.X, destination.Y + 42, root.Position.Z) + horizontal.Unit * stride
+			if report then
+				report(math.floor(horizontal.Magnitude - stride + 0.5))
+			end
+			local elapsed = 0
+			while elapsed < 0.1 and not cancelled() do
+				TeleportRacePosition(step)
+				elapsed += RunService.Heartbeat:Wait()
 			end
 		end
-		table.sort(Owned, function(A, B)
-			return A.Order > B.Order
+		return false
+	end
+	local function GlideRaceTravel(target, cancelled, tolerance, report, timeout)
+		if engine.InsideBase() and not WaitRaceFieldOpen(cancelled, report) then
+			return false
+		end
+		local root = RaceRoot()
+		if not root then
+			return false
+		end
+		local character, position = LocalPlayer.Character, root.Position
+		local deadline, pauseUntil, rollbacks = os.clock() + timeout, 0, 0
+		while os.clock() < deadline and not cancelled() and LocalPlayer.Character == character do
+			local dt = RunService.Heartbeat:Wait()
+			if cancelled() then
+				return false
+			end
+			root = RaceRoot()
+			local destination = target()
+			if not root or not destination then
+				return false
+			end
+			local horizontalDistance =
+				Vector3.new(destination.X - root.Position.X, 0, destination.Z - root.Position.Z).Magnitude
+			if horizontalDistance <= tolerance then
+				return true
+			end
+			if root.Anchored then
+				ExitRaceTreadmill()
+				position = root.Position
+			end
+			if os.clock() < pauseUntil then
+				root.AssemblyLinearVelocity, root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+				position = root.Position
+				continue
+			end
+			if (root.Position - position).Magnitude > 25 then
+				rollbacks += 1
+				pauseUntil, position = os.clock() + math.min(0.25 + 0.25 * rollbacks, 1), root.Position
+				if report then
+					report("lagged back, waiting a moment (" .. rollbacks .. ")")
+				end
+				continue
+			end
+			local speed = math.clamp(tonumber(FarmConfig.AutoTweenSpeed) or 400, 100, 1000)
+				* (rollbacks < 2 and 1 or math.max(0.5, 0.8 ^ (rollbacks - 1)))
+			local delta = destination - position
+			position = delta.Magnitude <= speed * dt and destination or position + delta.Unit * speed * dt
+			local facing = Vector3.new(delta.X, 0, delta.Z)
+			root.CFrame = CFrame.new(position)
+				* (facing.Magnitude > 0.05 and CFrame.lookAt(Vector3.zero, facing.Unit) or root.CFrame.Rotation)
+			root.AssemblyLinearVelocity, root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+			if report then
+				report(math.floor(horizontalDistance + 0.5))
+			end
+		end
+		return false
+	end
+	local function ReadTravelEgg(uid)
+		if EggStateModule and type(EggStateModule.ReadFieldEgg) == "function" then
+			local ok, record = pcall(EggStateModule.ReadFieldEgg, uid)
+			if ok then
+				return record
+			end
+		end
+		return nil
+	end
+	local function TravelEggHeld(uid)
+		local record = ReadTravelEgg(uid)
+		return (engine.State.Carrying and engine.State.CarryUid == uid)
+			or (record ~= nil and tonumber(record.CarrierUserId) == LocalPlayer.UserId)
+	end
+	local function SelectTravelEgg(position, excluded)
+		if not EggStateModule or type(EggStateModule.ReadFieldEggs) ~= "function" then
+			return nil
+		end
+		local ok, snapshot = pcall(EggStateModule.ReadFieldEggs)
+		local records = ok and type(snapshot) == "table" and snapshot.Records
+		if type(records) ~= "table" then
+			return nil
+		end
+		local ownPrefix = "FirstAreaEgg_" .. LocalPlayer.UserId
+		local models = Workspace:FindFirstChild("AreaEggSlotsClient")
+		local nearest, nearestVisible, distance, visibleDistance = nil, nil, math.huge, math.huge
+		for key, record in pairs(records) do
+			local uid = type(record) == "table" and (record.Uid or key)
+			if
+				type(uid) ~= "string"
+				or excluded[uid]
+				or typeof(record.BottomCFrame) ~= "CFrame"
+				or (tonumber(record.CarrierUserId) or 0) > 0
+				or not (record.State == nil or record.State == "Slot" or record.State == "Dropped")
+			then
+				continue
+			end
+			local slot
+			if string.sub(uid, 1, 13) == "FirstAreaEgg_" then
+				if string.sub(uid, 1, #ownPrefix) == ownPrefix then
+					slot = string.match(uid, "_([%w ]+:Slot_%d+)$")
+				end
+			elseif type(record.AreaId) == "string" and type(record.NestId) == "string" then
+				slot = record.AreaId .. ":" .. record.NestId
+			end
+			local guard = slot and engine.FindGuard(record.AreaId)
+			if slot and not guard and string.sub(uid, 1, #ownPrefix) == ownPrefix then
+				guard = engine.FindGuard("Forest")
+			end
+			local guardRoot = guard and guard:FindFirstChild("HumanoidRootPart", true)
+			if not slot or not guardRoot or not guardRoot:IsA("BasePart") then
+				continue
+			end
+			local at, model = record.BottomCFrame.Position, models and models:FindFirstChild(uid)
+			if model and model:IsA("Model") then
+				local modelPosition = model:GetPivot().Position
+				at = Vector3.new(modelPosition.X, math.min(modelPosition.Y, at.Y + 6), modelPosition.Z)
+			end
+			local separation = Vector3.new(at.X - position.X, 0, at.Z - position.Z).Magnitude
+			local candidate = { Uid = uid, Slot = slot, Guard = guardRoot, Position = at }
+			if model and separation < visibleDistance then
+				nearestVisible, visibleDistance = candidate, separation
+			end
+			if separation < distance then
+				nearest, distance = candidate, separation
+			end
+		end
+		return nearestVisible or nearest
+	end
+	local function RagdollRaceTravel(target, cancelled)
+		-- Source portal fallback only. This is NOT the normal Sena steal controller.
+		local root = RaceRoot()
+		local strike = RaceRemote("RE/GuardPatrol/ForestStrike", "RemoteEvent")
+		if not root or not strike or not EggStateModule or type(EggStateModule.CarryFieldEgg) ~= "function" then
+			return false
+		end
+		local taken, excluded = nil, {}
+		race.RagdollTravel = true
+		local landed, strikeConnection = false, nil
+		local ok, result = pcall(function()
+			for _ = 1, 3 do
+				root = RaceRoot()
+				local candidate = root and SelectTravelEgg(root.Position, excluded)
+				if not candidate or cancelled() then
+					break
+				end
+				local elapsed = 0
+				while not TravelEggHeld(candidate.Uid) and elapsed < 2.5 and not cancelled() do
+					TeleportRacePosition(candidate.Position + Vector3.new(0, 3, 0))
+					local carried, accepted, reason = pcall(EggStateModule.CarryFieldEgg, candidate.Uid, candidate.Slot)
+					if
+						carried
+						and accepted ~= true
+						and type(reason) == "string"
+						and elapsed > 0.4
+						and not string.find(string.lower(reason), "closer", 1, true)
+					then
+						break
+					end
+					elapsed += task.wait()
+				end
+				if TravelEggHeld(candidate.Uid) then
+					taken = candidate
+					break
+				end
+				excluded[candidate.Uid] = true
+			end
+			if not taken or cancelled() then
+				return false
+			end
+			strikeConnection = LocalPlayer:GetAttributeChangedSignal("RagdollEndTime"):Connect(function()
+				if
+					landed
+					or cancelled()
+					or (tonumber(LocalPlayer:GetAttribute("RagdollEndTime")) or 0) <= Workspace:GetServerTimeNow()
+				then
+					return
+				end
+				local destination = target()
+				if destination then
+					landed = true
+					TeleportRacePosition(destination)
+				end
+			end)
+			strike:FireServer({ EggUid = taken.Uid, GuardCFrame = taken.Guard.CFrame })
+			local deadline = os.clock() + 3
+			while not landed and os.clock() < deadline and not cancelled() do
+				task.wait()
+			end
+			if strikeConnection then
+				strikeConnection:Disconnect()
+				strikeConnection = nil
+			end
+			if taken and TravelEggHeld(taken.Uid) and type(EggStateModule.DropFieldEgg) == "function" then
+				pcall(EggStateModule.DropFieldEgg, "PlayerRequest")
+			end
+			if not landed then
+				return false
+			end
+			while
+				(tonumber(LocalPlayer:GetAttribute("RagdollEndTime")) or 0) > Workspace:GetServerTimeNow()
+				and not cancelled()
+			do
+				local destination = target()
+				if destination then
+					TeleportRacePosition(destination)
+				end
+				RunService.Heartbeat:Wait()
+			end
+			return true
 		end)
-		local Want = (Owned[1] and Owned[1].Id) or Data.DefaultRacer
-		local Pref = tostring(FarmConfig.Race_Racer or "Best Owned")
-		if Pref ~= "Best Owned" then
-			for _, R in ipairs(Owned) do
-				if R.Name == Pref then
-					Want = R.Id
+		if strikeConnection then
+			strikeConnection:Disconnect()
+		end
+		if taken and TravelEggHeld(taken.Uid) and type(EggStateModule.DropFieldEgg) == "function" then
+			pcall(EggStateModule.DropFieldEgg, "PlayerRequest")
+		end
+		race.RagdollTravel = false
+		return ok and result == true
+	end
+	local function CurrentRaceSpeed()
+		return math.max(math.clamp(tonumber(FarmConfig.Race_Speed) or 150, 100, 160) - race.Drop, 100)
+	end
+	local function ReduceRaceSpeed(reason)
+		if CurrentRaceSpeed() <= 100 then
+			return
+		end
+		race.Drop += 50
+		SetRaceAction(reason .. ", racing at " .. CurrentRaceSpeed())
+	end
+	local function StartRaceDrive(track)
+		local root = RaceRoot()
+		local attachment = track and track:FindFirstChild("AttachmentTrack")
+		local pathModule = LoadRaceModule({ "Shared", "Modules", "RaceTrackPath" })
+		if not root or not attachment or not pathModule then
+			SetRaceAction("Race started, waiting for character / AttachmentTrack / RaceTrackPath")
+			return false
+		end
+		local ok, path = pcall(pathModule.new, attachment)
+		if not ok or not path then
+			SetRaceAction("RaceTrackPath could not be built")
+			return false
+		end
+		local halfLength = path.Length / 2
+		local progress = path:Project(root.Position, halfLength, halfLength, halfLength)
+		local frame = path:FrameAt(progress)
+		if (root.Position - frame.Position).Magnitude > 80 then
+			SetRaceAction("Waiting for the game to place the racer on the track")
+			return false
+		end
+		local drive = {
+			Path = path,
+			Track = track,
+			Progress = progress,
+			Lift = math.max((root.Position - frame.Position):Dot(frame.UpVector), 2),
+			Character = LocalPlayer.Character,
+			Connections = {},
+			CheckAt = 0,
+			PowerAt = 0,
+		}
+		race.Driving = drive
+		local function ApplyRaceFrame()
+			if
+				race.Driving ~= drive
+				or race.Disposed
+				or FarmConfig.Race_AutoRace ~= true
+				or LocalPlayer.Character ~= drive.Character
+			then
+				return
+			end
+			local currentRoot = RaceRoot()
+			if not currentRoot then
+				return
+			end
+			local currentFrame = path:FrameAt(drive.Progress)
+			if os.clock() >= drive.CheckAt then
+				drive.CheckAt = os.clock() + 1
+				local expected = currentFrame.Position + currentFrame.UpVector * drive.Lift
+				if (currentRoot.Position - expected).Magnitude > 40 then
+					drive.Progress = path:Project(currentRoot.Position, drive.Progress, 300, 300)
+					currentFrame = path:FrameAt(drive.Progress)
+					local now = os.clock()
+					if drive.PulledAt and now - drive.PulledAt < 6 then
+						drive.PulledAt, race.LapAt = nil, now
+						ReduceRaceSpeed("Pulled back")
+					else
+						drive.PulledAt = now
+					end
+				end
+			end
+			currentRoot.CFrame = currentFrame + currentFrame.UpVector * drive.Lift
+			currentRoot.AssemblyLinearVelocity = currentFrame.LookVector * CurrentRaceSpeed()
+			currentRoot.AssemblyAngularVelocity = Vector3.zero
+		end
+		local powerRemote = RaceRemote("RE/MountRace/PowerUp", "RemoteEvent")
+		local function UseRacePowerUps()
+			if not powerRemote or FarmConfig.Race_PowerUps ~= true then
+				return
+			end
+			local currentRoot, now = RaceRoot(), Workspace:GetServerTimeNow()
+			if not currentRoot then
+				return
+			end
+			local item = LocalPlayer:GetAttribute("RacePowerUp")
+			if type(item) == "string" and item ~= "" then
+				local rolling = (tonumber(LocalPlayer:GetAttribute("RacePowerUpRollEndsAt")) or 0) > now
+				local effect = (tonumber(LocalPlayer:GetAttribute("RacePowerUpEffectEndsAt")) or 0) > now
+				local stunned = (tonumber(LocalPlayer:GetAttribute("RacePowerUpStunEndsAt")) or 0) > now
+				if not rolling and not effect and not stunned then
+					powerRemote:FireServer("Use", currentRoot.Position, path:FrameAt(drive.Progress).LookVector)
+				end
+				return
+			end
+			for _, box in ipairs(CollectionService:GetTagged("RacePowerUpSpawn")) do
+				if not box:IsDescendantOf(track) then
+					continue
+				end
+				local readyAt = box:GetAttribute("RaceBoxReadyAt")
+				local pad = box:FindFirstChild("Pad")
+					or (box:IsA("Model") and box.PrimaryPart)
+					or box:FindFirstChildWhichIsA("BasePart")
+				if
+					pad
+					and (type(readyAt) ~= "number" or readyAt <= now)
+					and (pad.Position - currentRoot.Position).Magnitude <= 30
+				then
+					powerRemote:FireServer("Pickup", box)
 					break
 				end
 			end
 		end
-		local Equipped = tostring(Save.EquippedRacer or "")
-		if Equipped == "" then
-			Equipped = Data.DefaultRacer
+		drive.Connections[1] = RunService.Heartbeat:Connect(function(dt)
+			if
+				race.Driving ~= drive
+				or race.Disposed
+				or LocalPlayer.Character ~= drive.Character
+				or FarmConfig.Race_AutoRace ~= true
+			then
+				return
+			end
+			drive.Progress += CurrentRaceSpeed() * dt
+			pcall(ApplyRaceFrame)
+			if os.clock() >= drive.PowerAt then
+				drive.PowerAt = os.clock() + 0.2
+				pcall(UseRacePowerUps)
+			end
+		end)
+		drive.Connections[2] = RunService.PreSimulation:Connect(function()
+			if race.Driving == drive then
+				pcall(ApplyRaceFrame)
+			end
+		end)
+		return true
+	end
+	local function NudgeRaceMount()
+		local key = tostring(LocalPlayer:GetAttribute("RaceHeat"))
+			.. tostring(Workspace:GetAttribute("RaceRallyWindow"))
+		if race.NudgeRace ~= key then
+			race.NudgeRace, race.NudgeCount = key, 0
 		end
-		if Want ~= Equipped then
-			St.EquipAt = os.clock() + 2
-			local R = Rem("RF/RaceRally/AskEquipRacer", "AskEquipRacer")
-			if R then
-				pcall(function()
-					R:InvokeServer(Want)
-				end)
+		if race.NudgeCount >= 3 then
+			return false
+		end
+		local character, root = LocalPlayer.Character, RaceRoot()
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local ragdolled = (tonumber(LocalPlayer:GetAttribute("RagdollEndTime")) or 0) > Workspace:GetServerTimeNow()
+		if
+			not humanoid
+			or not root
+			or ragdolled
+			or LocalPlayer:GetAttribute("RaceCutscenePlaying") == true
+			or (humanoid.PlatformStand and root:FindFirstChild("MountDrive") ~= nil)
+		then
+			race.OffRacerSince = nil
+			return false
+		end
+		race.OffRacerSince = race.OffRacerSince or os.clock()
+		if os.clock() - race.OffRacerSince < 1 or os.clock() < (race.NudgeAt or 0) then
+			return true
+		end
+		race.NudgeAt, race.NudgeCount = os.clock() + 5, race.NudgeCount + 1
+		local generation = race.TravelGeneration
+		task.spawn(function()
+			if RaceTravelCancelled(generation, character) then
+				return
+			end
+			local forward = root.CFrame.LookVector
+			pcall(humanoid.Move, humanoid, Vector3.new(forward.X, 0, forward.Z), false)
+			humanoid.Jump = true
+			task.wait(0.3)
+			if not RaceTravelCancelled(generation, character) then
+				pcall(humanoid.Move, humanoid, Vector3.zero, false)
+			end
+		end)
+		return true
+	end
+	local function StartRaceTravel(action)
+		if race.Travelling or race.Disposed then
+			return false
+		end
+		race.TravelGeneration += 1
+		local generation, character, cancelVersion = race.TravelGeneration, LocalPlayer.Character, race.CancelVersion
+		race.Travelling = true
+		task.spawn(function()
+			local function cancelled(allowRespawn)
+				return RaceTravelCancelled(generation, character, allowRespawn) or race.CancelVersion ~= cancelVersion
+			end
+			local ok, failure = pcall(function()
+				if not cancelled() then
+					action(cancelled)
+				end
+			end)
+			if generation ~= race.TravelGeneration then
+				return
+			end
+			race.Travelling, race.Resetting = false, false
+			if not ok then
+				race.LastError = tostring(failure)
+				SetRaceAction("Race travel failed: " .. tostring(failure))
+				warn("[N3 HUB] Race travel: " .. tostring(failure))
+			end
+			if race.Disposed or not InRaceNow() then
+				ReleaseRaceMovement()
+			end
+			race.NextTick = 0
+		end)
+		return true
+	end
+	local function ResetRaceCharacter(cancelled)
+		race.Resetting = true
+		StopRaceDrive()
+		if engine and engine.ReleaseAutoShield then
+			engine.ReleaseAutoShield(true)
+		end
+		if RuntimeState.OriginalHumanoid then
+			RestoreCharacter()
+		end
+		ExitRaceTreadmill()
+		local oldCharacter = LocalPlayer.Character
+		local humanoid = oldCharacter and oldCharacter:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			pcall(humanoid.UnequipTools, humanoid)
+			humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+			humanoid.BreakJointsOnDeath, humanoid.RequiresNeck, humanoid.Health = true, true, 0
+			pcall(humanoid.ChangeState, humanoid, Enum.HumanoidStateType.Dead)
+		end
+		if oldCharacter then
+			pcall(oldCharacter.BreakJoints, oldCharacter)
+		end
+		local wipe = RaceRemote("RE/RigSync/AskRigWipe", "RemoteEvent")
+		if wipe and oldCharacter then
+			pcall(wipe.FireServer, wipe, oldCharacter)
+		end
+		local deadline = os.clock() + 8
+		while
+			os.clock() < deadline
+			and not cancelled(true)
+			and (LocalPlayer.Character == oldCharacter or not RaceRoot())
+		do
+			SetRaceAction("Race portal: respawning")
+			task.wait(0.1)
+		end
+		race.Resetting = false
+		if LocalPlayer.Character == oldCharacter or cancelled(true) then
+			return false
+		end
+		race.PreparedCharacter = nil
+		PrepareRaceCharacter()
+		task.wait(1)
+		return not cancelled(true)
+	end
+	local function RequestRaceReset(reason)
+		local window = Workspace:GetAttribute("RaceRallyWindow") or Workspace:GetAttribute("RaceRallyJoinEndsAt") or 0
+		if race.ResetWindow ~= window then
+			race.ResetWindow, race.ResetCount = window, 0
+		end
+		if race.Travelling or race.ResetCount >= 2 or os.clock() < (race.ResetUntil or 0) then
+			return false
+		end
+		race.ResetCount += 1
+		race.ResetUntil = os.clock() + 10
+		SetRaceAction(reason .. ", resetting to get back")
+		return StartRaceTravel(ResetRaceCharacter)
+	end
+	local function LeaveRace(reason)
+		if os.clock() < (race.LeaveAt or 0) then
+			return
+		end
+		race.LeaveAt = os.clock() + 2
+		local remote = RaceRemote("RE/MountRace/AskLeave", "RemoteEvent")
+		if remote then
+			pcall(remote.FireServer, remote)
+		end
+		SetRaceAction(reason)
+	end
+	local function PassThroughRacePortal(hitbox, cancelled)
+		local deadline = os.clock() + 10
+		local function stopped()
+			return os.clock() >= deadline or cancelled() or EnteredRace() or not hitbox.Parent
+		end
+		local function WalkPortalPass(destination, touching, timeout)
+			local untilAt = os.clock() + timeout
+			while os.clock() < untilAt and not stopped() do
+				local root, character = RaceRoot(), LocalPlayer.Character
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if not root or not humanoid then
+					return false
+				end
+				if root.Anchored then
+					ExitRaceTreadmill()
+				end
+				local delta = Vector3.new(destination.X - root.Position.X, 0, destination.Z - root.Position.Z)
+				if delta.Magnitude <= 3 then
+					return true
+				end
+				local speed = math.max(humanoid.WalkSpeed, 16) * 0.95
+				root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+					+ delta.Unit * math.min(speed, delta.Magnitude / 0.05)
+				humanoid:Move(delta.Unit, false)
+				if
+					touching
+					and type(firetouchinterest) == "function"
+					and Vector3.new(hitbox.Position.X - root.Position.X, 0, hitbox.Position.Z - root.Position.Z).Magnitude
+						<= 12
+				then
+					pcall(firetouchinterest, root, hitbox, 0)
+					pcall(firetouchinterest, root, hitbox, 1)
+				end
+				RunService.Heartbeat:Wait()
+			end
+			return false
+		end
+		for attempt = 1, 4 do
+			if stopped() then
+				break
+			end
+			local forward = hitbox.CFrame.LookVector
+			forward = Vector3.new(forward.X, 0, forward.Z)
+			forward = forward.Magnitude > 0.01 and forward.Unit or Vector3.new(1, 0, 0)
+			local side, distance = attempt % 2 == 1 and 1 or -1, attempt == 1 and 30 or attempt == 2 and 60 or 100
+			local origin = hitbox.Position
+			local retreat = origin + forward * side * distance
+			SetRaceAction(
+				string.format("Not in yet, backing off %d studs and going in again (%d/4)", distance, attempt)
+			)
+			if distance >= 100 then
+				local root = RaceRoot()
+				if root then
+					TeleportRacePosition(Vector3.new(retreat.X, root.Position.Y, retreat.Z))
+				end
+				task.wait(0.5)
+			else
+				WalkPortalPass(retreat, false, distance / 40 + 2)
+				task.wait(0.2)
+			end
+			WalkPortalPass(origin - forward * side * 10, true, distance / 40 + 3)
+			task.wait(0.3)
+		end
+		-- Never zero a newly spawned racer's velocity from a late portal worker.
+		if not cancelled() and not EnteredRace() then
+			local root, character = RaceRoot(), LocalPlayer.Character
+			if root then
+				root.AssemblyLinearVelocity = Vector3.zero
+			end
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid:Move(Vector3.zero, false)
 			end
 		end
+		return EnteredRace()
 	end
-	local function DoClaim()
-		if FarmConfig.Race_AutoClaim ~= true or os.clock() < St.ClaimAt then
+	local function TravelToRacePortal(hitbox, cancelled)
+		ExitRaceTreadmill()
+		local function stopped()
+			return cancelled()
+				or not RaceJoinOpen()
+				or EnteredRace()
+				or RacedThisWindow()
+				or HigherPriorityRaceTask() ~= nil
+				or not hitbox.Parent
+		end
+		local function report(message)
+			SetRaceAction(
+				type(message) == "string" and "Race portal: " .. message
+					or "Step TP to the race portal (2/4), " .. message .. " studs"
+			)
+		end
+		if not LeaveRaceBase(stopped, report) then
 			return
 		end
-		St.ClaimAt = os.clock() + 5
-		local Save, Data = SaveRace(), GetRaceData()
-		if not (Save and Data) then
+		if engine.InsideBase() and not WaitRaceFieldOpen(stopped, report) then
 			return
 		end
-		local R = Rem("RF/RaceRally/AskClaimMilestone", "AskClaimMilestone")
-		if not R then
-			return
+		local function destination()
+			return hitbox.Parent and hitbox.Position + Vector3.new(0, 3, 0) or nil
 		end
-		local Claimed = (type(Save.Milestones) == "table" and Save.Milestones) or {}
-		if type(Data.Milestones) == "table" then
-			for Id, Def in pairs(Data.Milestones) do
-				if not Claimed[Id] and (tonumber(Save.Wins) or 0) >= Def.Wins then
-					pcall(function()
-						R:InvokeServer(Id)
-					end)
-					task.wait(0.15)
+		local function confirm(method)
+			if EnteredRace() then
+				return true
+			end
+			if stopped() then
+				return EnteredRace()
+			end
+			local root = RaceRoot()
+			if root and (root.Position - hitbox.Position).Magnitude <= 30 then
+				root.CFrame, root.AssemblyLinearVelocity = hitbox.CFrame, Vector3.zero
+				if type(firetouchinterest) == "function" then
+					pcall(firetouchinterest, root, hitbox, 0)
+					pcall(firetouchinterest, root, hitbox, 1)
 				end
 			end
+			SetRaceAction("Race portal: " .. method .. ", checking the race area")
+			local deadline = os.clock() + math.max(3, RaceJoinDelay() + 1)
+			while os.clock() < deadline and not stopped() do
+				task.wait(0.1)
+			end
+			return EnteredRace()
 		end
-		if type(Data.Repeat) == "table" and type(Data.RepeatsEarned) == "function" then
-			local ok, Earned = pcall(Data.RepeatsEarned, tonumber(Save.Wins) or 0)
-			if ok and (tonumber(Save.Repeats) or 0) < Earned then
-				pcall(function()
-					R:InvokeServer(tostring(Data.RepeatId or "Repeat"))
-				end)
+		local function farFromPortal()
+			local root = RaceRoot()
+			return root and (root.Position - hitbox.Position).Magnitude > 15
+		end
+		if not stopped() then
+			SetRaceAction("Race portal: direct TP (1/4)")
+			TeleportRacePosition(destination())
+			task.wait(0.3)
+			if confirm("direct TP") then
+				return
 			end
 		end
+		if not stopped() then
+			if farFromPortal() then
+				StepRaceTravel(destination, stopped, report)
+			end
+			if confirm("step TP") then
+				return
+			end
+		end
+		if not stopped() then
+			SetRaceAction("Ragdoll TP to the race portal (3/4)")
+			local character = LocalPlayer.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid:UnequipTools()
+			end
+			local function besidePortal()
+				if not hitbox.Parent then
+					return nil
+				end
+				local forward = hitbox.CFrame.LookVector
+				forward = Vector3.new(forward.X, 0, forward.Z)
+				forward = forward.Magnitude > 0.01 and forward.Unit or Vector3.new(1, 0, 0)
+				return hitbox.Position + forward * 18 + Vector3.new(0, 3, 0)
+			end
+			RagdollRaceTravel(besidePortal, stopped)
+			local deadline = os.clock() + 4
+			while
+				os.clock() < deadline
+				and not stopped()
+				and (tonumber(LocalPlayer:GetAttribute("RagdollEndTime")) or 0) > Workspace:GetServerTimeNow()
+			do
+				SetRaceAction("Race portal: waiting for the ragdoll to end")
+				task.wait(0.1)
+			end
+			if confirm("ragdoll TP") then
+				return
+			end
+		end
+		if not stopped() then
+			if farFromPortal() then
+				GlideRaceTravel(destination, stopped, 15, function(message)
+					SetRaceAction(
+						type(message) == "string" and "Race portal: " .. message
+							or "Flying to the race portal (4/4), " .. message .. " studs"
+					)
+				end, 30)
+			end
+			confirm("flying")
+		end
 	end
-	local ShopNames = {
+	local function RetryRacePortalAfterReset(hitbox, cancelled)
+		if not ResetRaceCharacter(cancelled) then
+			return
+		end
+		local character = LocalPlayer.Character
+		local function stopped()
+			return cancelled(true)
+				or LocalPlayer.Character ~= character
+				or not RaceJoinOpen()
+				or EnteredRace()
+				or RacedThisWindow()
+				or HigherPriorityRaceTask() ~= nil
+				or not hitbox.Parent
+		end
+		local function destination()
+			return hitbox.Parent and hitbox.Position + Vector3.new(0, 3, 0) or nil
+		end
+		for attempt = 1, 2 do
+			local root = RaceRoot()
+			if stopped() or not root or (root.Position - hitbox.Position).Magnitude <= 15 then
+				break
+			end
+			StepRaceTravel(destination, stopped, function(message)
+				SetRaceAction(
+					type(message) == "string" and "Race portal: " .. message
+						or string.format(
+							"Step TP to the race portal after the reset, %d studs (try %d)",
+							message,
+							attempt
+						)
+				)
+			end)
+		end
+	end
+	local function ReturnFromRace(cancelled)
+		local function stopped()
+			return cancelled() or InRaceNow()
+		end
+		local function destination()
+			local safe = engine.GetBaseSafeSpot()
+			return safe and safe + Vector3.new(0, 3, 0)
+		end
+		local function report(message)
+			SetRaceAction(
+				type(message) == "string" and "Going home: " .. message
+					or "Raced this window, going home, " .. message .. " studs"
+			)
+		end
+		if destination() and not StepRaceTravel(destination, stopped, report) and not stopped() then
+			GlideRaceTravel(destination, stopped, 15, report, 120)
+		end
+		if not stopped() and InRaceArea() then
+			-- The current travel owns cleanup; schedule the source's bounded reset for the next tick.
+			race.ReturnFailed = true
+		end
+	end
+	local raceShop = {
 		{ Id = "MutationToken", Name = "Nitro Mutation" },
 		{ Id = "CashBooster", Name = "Cash Booster" },
 		{ Id = "SpeedBoost", Name = "Speed Boost" },
 		{ Id = "TreadmillBoost", Name = "Treadmill Boost" },
 		{ Id = "RacingBat", Name = "Racing Bat" },
 	}
-	local function DoBuy()
-		if FarmConfig.Race_AutoBuy ~= true then
+	local function UpdateOwnedRaceRacers(save, data)
+		local owned, names = {}, { "Best Owned" }
+		for id, definition in pairs(data.Racers or {}) do
+			if (type(save.Racers) == "table" and save.Racers[id] == true) or id == data.DefaultRacer then
+				table.insert(owned, { Id = id, Name = definition.DisplayName, Order = definition.Order })
+			end
+		end
+		table.sort(owned, function(left, right)
+			return left.Order > right.Order
+		end)
+		for _, racer in ipairs(owned) do
+			table.insert(names, racer.Name)
+		end
+		race.OwnedRacers = names
+		local dropdown, key = Tasks.RaceRacerDropdown, table.concat(names, ",")
+		if dropdown and race.OwnedKey ~= key then
+			local selected = table.find(names, FarmConfig.Race_Racer) and FarmConfig.Race_Racer or "Best Owned"
+			dropdown:SetValues(names)
+			if dropdown.Value ~= selected then
+				dropdown:SetValue(selected)
+			end
+			race.OwnedKey = key
+		end
+		if FarmConfig.Race_AutoEquip == true and os.clock() >= race.EquipAt then
+			local desired = owned[1] and owned[1].Id or data.DefaultRacer
+			for _, racer in ipairs(owned) do
+				if racer.Name == FarmConfig.Race_Racer then
+					desired = racer.Id
+				end
+			end
+			local equipped = tostring(save.EquippedRacer or "")
+			if equipped == "" then
+				equipped = data.DefaultRacer
+			end
+			if desired ~= equipped then
+				race.EquipAt = os.clock() + 2
+				InvokeRace("RF/RaceRally/AskEquipRacer", desired)
+			end
+		end
+	end
+	local function ClaimAndBuyRaceRewards(save, data)
+		if os.clock() < race.RewardAt then
 			return
 		end
-		local Save, Data = SaveRace(), GetRaceData()
-		if not (Save and Data and type(Data.Shop) == "table") then
-			return
+		race.RewardAt = os.clock() + 5
+		if FarmConfig.Race_AutoClaim == true then
+			local claimed = type(save.Milestones) == "table" and save.Milestones or {}
+			for id, definition in pairs(data.Milestones or {}) do
+				if race.Disposed then
+					return
+				end
+				if not claimed[id] and (tonumber(save.Wins) or 0) >= definition.Wins then
+					InvokeRace("RF/RaceRally/AskClaimMilestone", id)
+				end
+			end
+			if type(data.RepeatsEarned) == "function" then
+				local ok, earned = pcall(data.RepeatsEarned, tonumber(save.Wins) or 0)
+				if ok and (tonumber(save.Repeats) or 0) < earned then
+					InvokeRace("RF/RaceRally/AskClaimMilestone", data.RepeatId)
+				end
+			end
 		end
-		local Picks = FarmConfig.Race_ShopItems or {}
-		local Tokens = tonumber(Save.Tokens) or 0
-		local R = Rem("RF/RaceRally/AskBuy", "AskBuy")
-		if not R then
-			return
-		end
-		for _, Item in ipairs(ShopNames) do
-			if Picks[string.lower(Item.Name)] then
-				local Def = Data.Shop[Item.Id]
-				if Def and Tokens >= Def.Price then
-					local Purch = (type(Save.Purchases) == "table" and Save.Purchases[Item.Id]) or nil
-					local Count = Purch and tonumber(Purch.Count) or 0
-					if Def.Limit == 0 or Count < Def.Limit then
-						local ok, Res = pcall(function()
-							return R:InvokeServer(Item.Id)
-						end)
-						if ok and Res then
-							Tokens = Tokens - Def.Price
+		if FarmConfig.Race_AutoBuy == true then
+			local tokens = tonumber(save.Tokens) or 0
+			for _, item in ipairs(raceShop) do
+				if race.Disposed then
+					return
+				end
+				local definition = data.Shop and data.Shop[item.Id]
+				local picked = FarmConfig.Race_ShopItems or {}
+				if picked[string.lower(item.Name)] and definition and tokens >= definition.Price then
+					local purchase = type(save.Purchases) == "table" and save.Purchases[item.Id]
+					local count = purchase and tonumber(purchase.Count) or 0
+					if definition.Limit == 0 or count < definition.Limit then
+						local ok, accepted = InvokeRace("RF/RaceRally/AskBuy", item.Id)
+						if ok and accepted then
+							tokens -= definition.Price
 						end
-						task.wait(0.15)
 					end
 				end
 			end
 		end
 	end
-	local function StatusIdle()
-		local Now = Workspace:GetServerTimeNow()
-		local Running = Workspace:GetAttribute("RaceRallyRunning") == true
-		local JoinEnds = Workspace:GetAttribute("RaceRallyJoinEndsAt")
-		if Running and type(JoinEnds) == "number" and Now < JoinEnds then
-			return "Racing Event open, " .. FmtTime(JoinEnds - Now) .. " to join"
+	local function PublishRaceStatus()
+		race.EffectiveSpeed = CurrentRaceSpeed()
+		if LocalPlayer:GetAttribute("RaceId") == nil then
+			race.Heat, race.Phase = LocalPlayer:GetAttribute("RaceHeat"), race.Lined and "Queued" or "Idle"
 		end
-		local NextAt = nil
-		if Sched == nil then
-			local S = ReplicatedStorage:FindFirstChild("Shared")
-			local U = S and S:FindFirstChild("Util")
-			local M = U and U:FindFirstChild("RaceRallySchedule")
-			local ok, mod = pcall(function()
-				return require(M)
-			end)
-			Sched = (ok and mod) and mod or false
+		local now, joinEnds = Workspace:GetServerTimeNow(), Workspace:GetAttribute("RaceRallyJoinEndsAt")
+		local function duration(seconds)
+			seconds = math.max(math.ceil(seconds), 0)
+			return string.format("%d:%02d", seconds // 60, seconds % 60)
 		end
-		if type(Sched) == "table" and type(Sched.NextOpening) == "function" then
-			local ok, T = pcall(Sched.NextOpening, Now)
-			if ok and type(T) == "number" then
-				NextAt = T
+		local scheduleText
+		if RaceJoinOpen() then
+			scheduleText = "Racing Event open, " .. duration(joinEnds - now) .. " to join"
+		else
+			local schedule = LoadRaceModule({ "Shared", "Util", "RaceRallySchedule" })
+			local ok, nextOpening = false, nil
+			if schedule and type(schedule.NextOpening) == "function" then
+				ok, nextOpening = pcall(schedule.NextOpening, now)
 			end
+			if not ok or type(nextOpening) ~= "number" then
+				nextOpening = (math.floor(now / 1800) + 1) * 1800
+			end
+			scheduleText = (
+				Workspace:GetAttribute("RaceRallyRunning") == true and "Racing Event running, next in "
+				or "Next Racing Event in "
+			) .. duration(nextOpening - now)
 		end
-		NextAt = NextAt or ((math.floor(Now / 1800) + 1) * 1800)
-		return (Running and "Racing Event running, next in " or "Next Racing Event in ") .. FmtTime(NextAt - Now)
+		if LocalPlayer:GetAttribute("RaceId") ~= nil then
+			race.Status = race.Action
+		elseif FarmConfig.Race_AutoRace ~= true then
+			race.Status = "Off  |  " .. scheduleText
+		elseif race.Action ~= "Off" and race.Action ~= "" then
+			race.Status = race.Action .. "  |  " .. scheduleText
+		else
+			race.Status = scheduleText
+		end
+		local save, data = ReadRaceSave(), RaceData()
+		if save then
+			race.Tokens, race.Wins = tostring(save.Tokens or 0), tostring(save.Wins or 0)
+			local equipped = tostring(save.EquippedRacer or "")
+			local definition = data and data.Racers and data.Racers[equipped ~= "" and equipped or data.DefaultRacer]
+			race.Racer = definition and definition.DisplayName or "Ostrich"
+		end
 	end
-	local function RaceTick()
-		local Save = SaveRace()
-		if Save then
-			local Data = GetRaceData()
-			local RS = Tasks.RaceState
-			RS.Tokens = tostring(Save.Tokens or 0)
-			RS.Wins = tostring(Save.Wins or 0)
-			local Eq = tostring(Save.EquippedRacer or "")
-			local Def = Data and Data.Racers and Data.Racers[(Eq ~= "" and Eq or (Data and Data.DefaultRacer or ""))]
-			RS.Racer = (Def and Def.DisplayName) or "Ostrich"
+	local function TickRaceRally()
+		if race.Resetting then
+			StopRaceDrive()
+			return
 		end
-		local Track = GetTrack()
-		if InRace() then
-			if FarmConfig.Race_AutoRace ~= true then
-				StopDrive()
-				SetStatus("Off")
+		if Tasks.RaceSuppressRagdoll() and Tasks.ResumeRaceRigSync then
+			Tasks.ResumeRaceRigSync()
+		end
+		local enabled = FarmConfig.Race_AutoRace == true
+		race.InRace = InRaceNow()
+		local raceId = LocalPlayer:GetAttribute("RaceId")
+		race.Lined = race.InRace and raceId == nil
+		race.Wanted = enabled and (race.InRace or (RaceJoinOpen() and not RacedThisWindow() and RaceEligible()))
+		if raceId ~= nil then
+			race.RacedWindow = Workspace:GetAttribute("RaceRallyJoinEndsAt")
+			if not race.WasRacing then
+				race.WasRacing, race.FinishedRace, race.FinishedAt = true, false, nil
+			end
+			local data = RaceData()
+			if tostring(raceId) ~= tostring(data and data.Track or "RaceTrack") then
+				StopRaceDrive()
+				SetRaceAction("In another race, Auto Race does not move you")
 				return
 			end
-			local Finish = LocalPlayer:GetAttribute("RaceFinishPlace")
-			if type(Finish) == "number" then
-				StopDrive()
-				if os.clock() >= St.LeaveAt then
-					St.LeaveAt = os.clock() + 2
-					local R = Rem("RE/MountRace/AskLeave", "AskLeave")
-					if R then
-						pcall(function()
-							R:FireServer()
-						end)
-					end
-					SetStatus("Finished " .. tostring(Finish) .. ", leaving the race")
+			if enabled and engine then
+				if engine.AutoCycle then
+					engine.CancelAutoSteal()
+					SetRaceAction("In the race, waiting for the steal worker to release movement")
+					return
+				end
+				if RuntimeState.IsExecuting then
+					SetRaceAction("In the race, waiting for the current task to stop")
+					return
+				end
+				engine.Movement.Owner = "race"
+				PrepareRaceCharacter()
+			end
+			local track = GetRaceTrack()
+			local heatName = LocalPlayer:GetAttribute("RaceHeat")
+			local heats = track and track:FindFirstChild("RaceHeats")
+			local heat = (type(heatName) == "string" and heats and heats:FindFirstChild(heatName)) or track
+			race.Heat = heatName
+			local phase, goAt = heat and heat:GetAttribute("RacePhase"), heat and heat:GetAttribute("RaceGoAt")
+			race.Phase = phase
+			local finishPlace = LocalPlayer:GetAttribute("RaceFinishPlace")
+			local finished = type(finishPlace) == "number"
+			if not finished and enabled and NudgeRaceMount() then
+				StopRaceDrive()
+				SetRaceAction(
+					string.format("Not on the racer yet, moving and jumping to get back on (%d/3)", race.NudgeCount)
+				)
+				return
+			end
+			if finished then
+				StopRaceDrive()
+				race.FinishedRace, race.FinishedAt = true, race.FinishedAt or os.clock()
+				if enabled and os.clock() - race.FinishedAt > 8 and RequestRaceReset("Could not leave the race") then
+					return
+				end
+				if os.clock() >= (race.LeaveAt or 0) then
+					LeaveRace("Finished " .. finishPlace .. ", leaving the race")
 				else
-					SetStatus("Finished " .. tostring(Finish) .. ", waiting for results")
+					SetRaceAction("Finished " .. finishPlace .. ", waiting for results")
 				end
 				return
 			end
-			local Phase = Track and Track:GetAttribute("RacePhase")
-			local GoAt = Track and Track:GetAttribute("RaceGoAt")
-			if Phase == "Racing" and type(GoAt) == "number" and Workspace:GetServerTimeNow() >= GoAt then
-				if St.Driving and LocalPlayer.Character ~= St.Driving.Life then
-					StopDrive()
+			if phase == "Racing" and type(goAt) == "number" and Workspace:GetServerTimeNow() >= goAt then
+				local lap = LocalPlayer:GetAttribute("RaceLap")
+				if race.Driving and race.Driving.Character ~= LocalPlayer.Character then
+					StopRaceDrive()
 				end
-				local Lap = LocalPlayer:GetAttribute("RaceLap")
-				if Lap ~= St.LapSeen then
-					St.LapSeen, St.LapAt = Lap, os.clock()
+				if lap ~= race.LapSeen then
+					race.LapSeen, race.LapAt = lap, os.clock()
 				end
-				if St.Driving then
-					local Len = St.Driving.Path.Length
-					if os.clock() - (St.LapAt or os.clock()) > Len / SpeedNow() * 1.5 + 8 then
-						St.LapAt = os.clock()
-						StopDrive()
-						SlowDown()
+				if
+					enabled
+					and race.Driving
+					and os.clock() - (race.LapAt or os.clock())
+						> race.Driving.Path.Length / CurrentRaceSpeed() * 1.5 + 8
+				then
+					race.LapAt = os.clock()
+					StopRaceDrive()
+					ReduceRaceSpeed("Lap did not count")
+				end
+				if enabled and not race.Driving then
+					if not StartRaceDrive(track) then
+						return
 					end
+				elseif not enabled then
+					StopRaceDrive()
 				end
-				if St.Driving == nil then
-					StartDrive(Track)
-				end
-				if St.Driving and os.clock() >= St.PowerAt then
-					St.PowerAt = os.clock() + 0.2
-					pcall(DoPowerups)
-				end
-				SetStatus(
+				SetRaceAction(
 					string.format(
 						"Racing, lap %s/%s, place %s",
-						tostring(Lap or "?"),
-						tostring((Track and Track:GetAttribute("RaceLaps")) or 3),
+						tostring(lap or "?"),
+						tostring(heat:GetAttribute("RaceLaps") or track:GetAttribute("RaceLaps") or 3),
 						tostring(LocalPlayer:GetAttribute("RacePlace") or "?")
 					)
 				)
 			else
-				StopDrive()
-				SetStatus("In the race, waiting for the start")
+				StopRaceDrive()
+				local higher = enabled and HigherPriorityRaceTask()
+				if higher then
+					LeaveRace("Leaving the race, " .. higher .. " goes first (Task Priority)")
+				else
+					SetRaceAction("In the race, waiting for the start")
+				end
 			end
 			return
 		end
-		StopDrive()
-		St.LapSeen, St.LapAt = nil, nil
-		St.Drop = 0
-		pcall(DoEquip)
-		pcall(DoClaim)
-		pcall(DoBuy)
-		if FarmConfig.Race_AutoRace ~= true then
-			SetStatus("Off")
-			return
+		if race.WasRacing then
+			race.WasRacing, race.EndedAt = false, os.clock()
 		end
-		if not JoinOpen() then
-			SetStatus(StatusIdle())
-			return
-		end
-		local Hitbox = GetPortal()
-		if not Hitbox then
-			SetStatus("Race open, portal not found")
-			return
-		end
-		local Hrp = Root()
-		if not Hrp then
-			return
-		end
-		if (Hrp.Position - Hitbox.Position).Magnitude > 80 then
-			if St.Travelling then
+		if race.EndedAt and os.clock() - race.EndedAt >= 1.5 then
+			race.EndedAt = nil
+			if enabled and not race.FinishedRace and RequestRaceReset("The server did not count the race") then
 				return
 			end
-			St.Travelling = true
-			SetStatus("Flying to the race portal")
-			task.spawn(function()
-				pcall(function()
-					FlyTo(function()
-						local B = GetPortal()
-						return B and (B.Position + Vector3.new(0, 3, 0)) or nil
-					end, function()
-						return InRace() or FarmConfig.Race_AutoRace ~= true
-					end, 350, 30)
-				end)
-				St.Travelling = false
-			end)
+		end
+		if race.Lined then
+			StopRaceDrive()
+			if enabled and engine and not engine.AutoCycle and not RuntimeState.IsExecuting then
+				engine.Movement.Owner = "race"
+				PrepareRaceCharacter()
+			end
+			SetRaceAction(
+				RacedThisWindow() and "Race done, waiting for the game to close the heat"
+					or RaceJoinOpen() and "In the race area, waiting for the race to start"
+					or "In the race area, waiting for the race to place you"
+			)
 			return
 		end
-		if os.clock() - St.JoinTriedAt >= 0.5 then
-			St.JoinTriedAt = os.clock()
-			SetStatus("Joining the race")
-			pcall(function()
-				Hrp.CFrame = Hitbox.CFrame
-				Hrp.AssemblyLinearVelocity = Vector3.zero
-			end)
-			if type(firetouchinterest) == "function" then
-				pcall(firetouchinterest, Hrp, Hitbox, 0)
-				pcall(firetouchinterest, Hrp, Hitbox, 1)
+		StopRaceDrive()
+		race.LapSeen, race.LapAt, race.Drop = nil, nil, 0
+		if not race.Travelling then
+			ReleaseRaceMovement()
+		end
+		local joinEnds = Workspace:GetAttribute("RaceRallyJoinEndsAt")
+		if race.OpenWindow ~= joinEnds then
+			race.OpenWindow, race.OpenSeen = joinEnds, os.clock()
+		end
+		local openFor = type(joinEnds) == "number" and os.clock() - race.OpenSeen or 0
+		local alreadyRaced = RacedThisWindow()
+		if enabled and race.ReturnFailed and not race.Travelling then
+			race.ReturnFailed = nil
+			if RequestRaceReset("Could not get back from the race") then
+				return
+			end
+		end
+		if enabled and alreadyRaced and not race.Travelling and InRaceArea() and ClaimRaceMovement() then
+			SetRaceAction("Raced this window, going home")
+			StartRaceTravel(ReturnFromRace)
+			return
+		end
+		local eligible, requirement = RaceEligible()
+		local higher = enabled and RaceJoinOpen() and not race.Travelling and HigherPriorityRaceTask() or nil
+		if enabled and RaceJoinOpen() and not eligible then
+			SetRaceAction(
+				requirement and string.format("Racing Event needs %.1fM Speed Power to join", requirement / 1000000)
+					or "Racing Event needs more Speed Power to join"
+			)
+		elseif enabled and RaceJoinOpen() and alreadyRaced then
+			SetRaceAction("Raced this window, waiting for the next Racing Event")
+		elseif higher then
+			SetRaceAction("Race open, " .. higher .. " goes first (Task Priority)")
+		elseif enabled and RaceJoinOpen() and not race.Travelling and openFor < 3 then
+			SetRaceAction(string.format("Race open, checking for filter eggs first (%ds)", math.ceil(3 - openFor)))
+		elseif enabled and RaceJoinOpen() then
+			local hitbox, root = GetRacePortal(), RaceRoot()
+			if hitbox and root and race.Travelling then
+				-- The travel worker publishes the exact source recovery stage.
+			elseif hitbox and root and (root.Position - hitbox.Position).Magnitude > 80 then
+				if ClaimRaceMovement() then
+					SetRaceAction("Flying to the race portal")
+					StartRaceTravel(function(cancelled)
+						TravelToRacePortal(hitbox, cancelled)
+					end)
+					return
+				end
+			elseif hitbox and root and os.clock() - race.JoinTriedAt >= RaceJoinDelay() and ClaimRaceMovement() then
+				race.JoinTriedAt, race.JoinTries = os.clock(), (race.JoinTries or 0) + 1
+				ExitRaceTreadmill()
+				if EnteredRace() then
+					return
+				end
+				race.NearSince = race.NearSince or os.clock()
+				if os.clock() - race.NearSince < math.max(10, RaceJoinDelay() * 4) then
+					SetRaceAction(
+						"Joining the race" .. (race.JoinTries > 1 and " (try " .. race.JoinTries .. ")" or "")
+					)
+					root = RaceRoot()
+					if root and hitbox.Parent then
+						root.CFrame, root.AssemblyLinearVelocity = hitbox.CFrame, Vector3.zero
+						if type(firetouchinterest) == "function" then
+							pcall(firetouchinterest, root, hitbox, 0)
+							pcall(firetouchinterest, root, hitbox, 1)
+						end
+					end
+					return
+				end
+				local remaining = type(joinEnds) == "number" and joinEnds - Workspace:GetServerTimeNow() or 0
+				if race.PassWindow ~= joinEnds then
+					race.PassWindow, race.PassRounds = joinEnds, 0
+				end
+				if
+					race.PassRounds >= 1
+					and race.PortalResetWindow ~= joinEnds
+					and remaining > 12 + RaceJoinDelay() * 2
+				then
+					race.PortalResetWindow = joinEnds
+					SetRaceAction("Still not in, resetting and stepping to the portal again")
+					StartRaceTravel(function(cancelled)
+						RetryRacePortalAfterReset(hitbox, cancelled)
+						race.NearSince = nil
+					end)
+				else
+					SetRaceAction("Not in yet, backing off and going in again")
+					StartRaceTravel(function(cancelled)
+						PassThroughRacePortal(hitbox, function()
+							return cancelled()
+								or not RaceJoinOpen()
+								or EnteredRace()
+								or RacedThisWindow()
+								or HigherPriorityRaceTask() ~= nil
+						end)
+						race.PassRounds = (race.PassRounds or 0) + 1
+					end)
+				end
+				return
+			elseif not hitbox then
+				SetRaceAction("Race open, portal not found")
+			end
+		else
+			SetRaceAction("Off")
+		end
+		if not RaceJoinOpen() then
+			race.JoinTries, race.NearSince, race.WaitSince = 0, nil, nil
+		end
+		local save, data = ReadRaceSave(), RaceData()
+		if save and data then
+			UpdateOwnedRaceRacers(save, data)
+			if not race.Disposed then
+				ClaimAndBuyRaceRewards(save, data)
 			end
 		end
 	end
+	Tasks.RaceSettingsChanged = function(setting)
+		if setting == "Speed" then
+			race.Drop = 0
+		end
+		if setting == "Racer" then
+			race.EquipAt, race.OwnedKey = 0, nil
+		end
+		if setting == "Enabled" then
+			race.CancelVersion = (race.CancelVersion or 0) + 1
+			if FarmConfig.Race_AutoRace ~= true then
+				StopRaceDrive()
+				if not race.Travelling then
+					ReleaseRaceMovement()
+				end
+			end
+		end
+		race.NextTick, race.PriorityCheckAt = 0, 0
+	end
+	-- Keep the working Sena lifecycle intact. Only arbitrate shared movement/rig ownership.
+	if engine then
+		local nativeShieldWanted, nativeClaimMovement, nativeGuardDodge =
+			engine.AutoShieldWanted, engine.ClaimMovement, engine.TriggerGuardDodge
+		engine.AutoShieldWanted = function()
+			return not Tasks.RaceHoldsCharacter() and nativeShieldWanted()
+		end
+		engine.ClaimMovement = function(owner)
+			if owner ~= "race" and (Tasks.RaceHoldsCharacter() or Tasks.RaceShouldYieldSteal()) then
+				return false
+			end
+			return nativeClaimMovement(owner)
+		end
+		engine.TriggerGuardDodge = function(force)
+			if Tasks.RaceHoldsCharacter() then
+				return
+			end
+			return nativeGuardDodge(force)
+		end
+		race.RestoreEngineAdapters = function()
+			engine.AutoShieldWanted, engine.ClaimMovement, engine.TriggerGuardDodge =
+				nativeShieldWanted, nativeClaimMovement, nativeGuardDodge
+		end
+	end
+	for _, attribute in ipairs({ "RaceId", "RaceHeat", "RaceGridFrame", "RaceRallyQueued", "RaceFinishPlace" }) do
+		table.insert(
+			race.Connections,
+			LocalPlayer:GetAttributeChangedSignal(attribute):Connect(function()
+				if attribute == "RaceFinishPlace" and type(LocalPlayer:GetAttribute(attribute)) == "number" then
+					race.FinishedRace = true
+				end
+				if attribute == "RaceId" and LocalPlayer:GetAttribute(attribute) == nil then
+					race.RagdollResumeAt = os.clock() + 20
+				end
+				race.NextTick, race.PriorityCheckAt = 0, 0
+			end)
+		)
+	end
+	table.insert(
+		race.Connections,
+		LocalPlayer.CharacterAdded:Connect(function()
+			StopRaceDrive()
+			race.PreparedCharacter, race.BoundsTrack, race.NextTick = nil, nil, 0
+		end)
+	)
+	local function DisposeRaceRally()
+		race.Disposed = true
+		race.CancelVersion = (race.CancelVersion or 0) + 1
+		StopRaceDrive()
+		for _, connection in ipairs(race.Connections) do
+			connection:Disconnect()
+		end
+		-- An in-flight travel retains ownership until it observes cancellation and unwinds.
+		if not race.Travelling then
+			ReleaseRaceMovement()
+		end
+		if race.RestoreEngineAdapters then
+			race.RestoreEngineAdapters()
+		end
+		Tasks.PriorityStealYield = nativePriorityStealYield
+		if Tasks.ResumeRaceRigSync then
+			Tasks.ResumeRaceRigSync()
+		end
+	end
+	LibraryLoader:OnUnload(DisposeRaceRally)
 	task.spawn(function()
-		while true do
-			task.wait(0.25)
-			pcall(RaceTick)
+		while not race.Disposed do
+			if os.clock() >= (race.NextTick or 0) then
+				race.NextTick = os.clock() + 0.25
+				local ok, failure = pcall(TickRaceRally)
+				if not ok then
+					StopRaceDrive()
+					race.LastError = tostring(failure)
+					SetRaceAction("Race error: " .. tostring(failure))
+					if os.clock() >= race.ErrorAt then
+						race.ErrorAt = os.clock() + 5
+						warn("[N3 HUB] Race Rally: " .. tostring(failure))
+					end
+					if not race.Travelling and not InRaceNow() then
+						ReleaseRaceMovement()
+					end
+				end
+				if not race.Disposed then
+					pcall(PublishRaceStatus)
+				end
+			end
+			task.wait(0.05)
 		end
 	end)
 end
@@ -16388,6 +17649,7 @@ do
 end
 function Tasks.InitialCharacterSetup()
 	task.wait(0.5)
+	if RaceOwnsCharacter() then return end
 	local Engine = RuntimeState.StealEngine
 	if Engine and Engine.AutoShieldWanted() then
 		pcall(Engine.MaintainAutoShield)
@@ -16402,6 +17664,7 @@ function Tasks.NormalPlayWatchdog()
 	while true do
 		task.wait(1)
 		pcall(function()
+			if RaceOwnsCharacter() then IdleSince = os.clock(); return end
 			local Engine = RuntimeState.StealEngine
 			local Moving = false
 			if Engine and Engine.Guard then
@@ -16456,6 +17719,7 @@ function Tasks.VoidAndDamageGuard()
 	while true do
 		task.wait(0.4)
 		pcall(function()
+			if RaceOwnsCharacter() then return end
 			local Busy = IsStealActive()
 				or RuntimeState.IsExecuting
 				or FarmConfig.AutoStealEnabled

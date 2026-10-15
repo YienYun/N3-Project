@@ -40,3 +40,15 @@ Read this before changing `Steal-An-Egg.lua`.
   or FPS tests. Do not run simulations as acceptance evidence.
 - Record intentional differences from Sena and untested behavior in
   `../docs/auto-steal.md`. The user performs live validation.
+
+## Race Rally (separate Chili V2 event integration)
+
+- Race work is now authorized separately; normal Auto Steal stays Sena-based.
+- Reference `Source/StealAnEgg/ChiliSourceV2.lua` is untouched from main `5c1763a`.
+  See `../docs/race-rally.md` for source mapping, adaptations and live limitations.
+- Read the player heat under `RaceHeats[RaceHeat]`, not just root track attributes.
+- Preserve native racer `PlatformStand` / `MountDrive` and race RigSync handling.
+  User defense preferences must not be overwritten by automation.
+- Never install a second race worker or copy decompiler names into the runtime.
+- Run `python tools/check_race_source.py` and compile the complete game file.
+  This checker protects pre-race Sena/Instant/swap/filter/movement fingerprints.
