@@ -24,6 +24,9 @@ new seller appears on Lab Sell; it is not mixed into Pets' ordinary egg seller.
 The outer group has a flask icon, with arrow-left-right for Lab Trade and
 badge-dollar-sign for Lab Sell. The tabbox is a child of the group, matching
 Webhook Custom; it is not a standalone tabbox on the Event column.
+Construction explicitly uses `EventTab:AddGroupbox({Name, IconName, Side = 2})`,
+then `Tasks.LabGroup:AddTabbox(...)`, the same API sequence as Webhook Custom.
+The group is visible, initially expanded and collapsible. No Library changes.
 
 - Auto Sell Lab Egg: OFF.
 - Rule: Rarity And Value.

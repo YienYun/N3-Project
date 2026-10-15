@@ -13616,7 +13616,15 @@ function Tasks.BuildMainInterface()
 			FarmConfig.Race_ShopItems = ParseMultiDropdownSelection(v)
 		end,
 	})
-	Tasks.LabTabbox = EventTab:AddRightGroupbox("Scramble Lab", "flask-conical"):AddTabbox({ Name = "Lab Tabs" })
+	Tasks.LabGroup = EventTab:AddGroupbox({
+		Name = "Scramble Lab",
+		IconName = "flask-conical",
+		Side = 2,
+		Visible = true,
+		Collapsed = false,
+		DisableCollapsing = false,
+	})
+	Tasks.LabTabbox = Tasks.LabGroup:AddTabbox({ Name = "Lab Tabs" })
 	local ScrambleEggGroup = Tasks.LabTabbox:AddTab("Lab Trade", "arrow-left-right")
 	DrScramble.BuildLabSellerUI(Tasks.LabTabbox:AddTab("Lab Sell", "badge-dollar-sign"))
 	local ScrambleLabUI = {
