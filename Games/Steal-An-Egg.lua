@@ -6016,24 +6016,8 @@ local GetScrambleTradeStatusFn = nil
 		end
 		return found
 	end
-	Engine.AutoDeliveryConfirmed = function(cycle, uid, refresh)
-		if not uid then
-			return false
-		end
-		-- The redeem verdict can arrive before inventory replication (and its field UID may change).
-		-- Only use a new verdict for the exact egg this cycle actually dropped at home.
-		if cycle.DropUid == uid then
-			if (Engine.State.LastFailed or 0) > cycle.DropFailureBefore then
-				return false
-			end
-			if (Engine.State.LastDelivered or 0) > cycle.DropVerdictBefore then
-				return true
-			end
-		end
-		return Engine.AutoStored(uid, refresh)
-	end
 	Engine.CompleteAutoDelivery = function(cycle, uid)
-		if not Engine.AutoDeliveryConfirmed(cycle, uid, true) then
+		if not uid or not Engine.AutoStored(uid, true) then
 			return false
 		end
 		if Engine.AutoPendingDeliveryUid == uid then
@@ -6049,7 +6033,7 @@ local GetScrambleTradeStatusFn = nil
 			Engine.AutoCarry.LastFinishedAt = os.clock()
 		end
 		local request = Engine.AutoRequestOwner
-		if request and request.Cycle == cycle then
+		if request and request.Cycle == cycle and request.Uid == uid then
 			Engine.AutoRequestOwner = nil
 		end
 		return true
@@ -6197,7 +6181,7 @@ local GetScrambleTradeStatusFn = nil
 		end
 		local heldWait = 0
 		while not Engine.AutoHeld(uid) and Engine.AutoValid(cycle) and heldWait < 0.6 do
-			if Engine.AutoDeliveryConfirmed(cycle, uid) then
+			if Engine.AutoStored(uid) then
 				return true
 			end
 			heldWait = heldWait + RunService.Heartbeat:Wait()
@@ -6213,7 +6197,7 @@ local GetScrambleTradeStatusFn = nil
 		local height = math.max(root.Position.Y, home.Y) + 27.4
 		local retries = 0
 		while Engine.AutoValid(cycle) do
-			if Engine.AutoDeliveryConfirmed(cycle, uid) then
+			if Engine.AutoStored(uid) then
 				return true
 			end
 			root = Engine.Root()
@@ -6236,7 +6220,7 @@ local GetScrambleTradeStatusFn = nil
 			if not Engine.AutoValid(cycle) then
 				return false
 			end
-			if Engine.AutoDeliveryConfirmed(cycle, uid) then
+			if Engine.AutoStored(uid) then
 				return true
 			end
 			if arrived then
@@ -6250,14 +6234,11 @@ local GetScrambleTradeStatusFn = nil
 					return false
 				end
 				if Engine.AutoHeld(uid) then
-					Engine.AutoStatus = "Confirming delivery"
-					cycle.DropUid = uid
-					cycle.DropVerdictBefore = Engine.State.LastDelivered or 0
-					cycle.DropFailureBefore = Engine.State.LastFailed or 0
+					Engine.AutoStatus = "Confirming inventory"
 					Engine.AutoDrop(cycle)
 					local wait = 0
 					while Engine.AutoValid(cycle) and wait < 3 do
-						if Engine.AutoDeliveryConfirmed(cycle, uid) then
+						if Engine.AutoStored(uid) then
 							return true
 						end
 						wait = wait + RunService.Heartbeat:Wait()
