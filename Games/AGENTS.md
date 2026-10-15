@@ -138,3 +138,17 @@ Read this before changing `Steal-An-Egg.lua`.
 - Count only unplaced inventory, exclude placed owner UIDs, hold the quota against
   auto-place/sellers, and fail closed on read errors. Preserve original trade
   readiness/raw UID picks. No second picker, swap, worker, or race changes.
+
+## Auto Mutate
+
+- See `../docs/auto-mutate.md`. Run its source checker and all previous checkers,
+  then full Luau compile. Two marked insertions reverse exactly to dbaeb09.
+- UI stays compact in Pets → Mutation. Default OFF. Uses only placed owned eggs
+  and real MutationConsumable tools; recheck filters/proximity before raw UID RPC.
+- Use the existing essence ownership lane only from native idle; never cancel
+  active steal/carry or write shared IsExecuting / farm / defense preferences.
+- Reuse N3 rig restoration; do not lie to steal-only FlyToPosition/RunPace or
+  introduce another swap/flight controller. Current transport is bounded MoveTo.
+- Race always preempts; late RPC cleanup may not touch a newer character/owner.
+  Restore tools/adapters conditionally; retain server refusal/replication delays.
+- Auto Buy Nitro refill remains pending; do not add a competing race-shop buyer.

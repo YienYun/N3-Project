@@ -13311,6 +13311,9 @@ function Tasks.BuildMainInterface()
 			end)
 		end
 	end)
+	-- BEGIN AUTO MUTATE UI
+	Tasks.BuildAutoMutateUI(PetsTab:AddLeftGroupbox("Mutation", "wand-sparkles"))
+	-- END AUTO MUTATE UI
 	local TrainingGroup = ProgressTab:AddLeftGroupbox("Training", "dumbbell")
 	local Lbl_TrainingStatus = TrainingGroup:AddLabel(
 		'<font color="#D946EF"><b>Status:</b></font> <font color="#8A8AA2">Idle</font>\n'
@@ -18394,6 +18397,380 @@ LocalPlayer.CharacterAdded:Connect(Tasks.OnCharacterAdded)
 Tasks.Loading:SetMessage("Load All Requirements")
 Tasks.Loading:SetCurrentStep(4)
 Tasks.Loading:SetDescription("Building the window, tabs & all N3 Hub features...")
+-- BEGIN AUTO MUTATE CONTROLLER
+-- Chili 53868-54810: equipped consumable + placed owned UID, no mutation argument.
+do
+	local engine = RuntimeState.StealEngine
+	local state = { Generation = 0, Busy = false, Lease = false, Wanted = false, Disposed = false,
+		NextAt = 0, SettleUntil = 0, Refused = {}, Awaiting = {}, Failures = 0, Status = "Off",
+		EggOptions = {}, Categories = {}, NoticeAt = 0, InventoryActions = 0, HatchSettleUntil = 0 }
+	Tasks.MutateState = state
+	local mutationIds = { fractured = "Boss", boss = "Boss", scrambled = "Scrambled", enchanted = "Enchanted", nitro = "Nitro" }
+	local mutationOrder = { "Boss", "Scrambled", "Enchanted", "Nitro" }
+	FarmConfig.Mutate_Auto = false
+	FarmConfig.Mutate_Use = { Boss = true, Scrambled = true, Enchanted = true, Nitro = true }
+	FarmConfig.Mutate_MinRarity = 1
+	FarmConfig.Mutate_MinIncome = 0
+	FarmConfig.Mutate_Targets = {}
+	FarmConfig.Mutate_Priority = "Highest Value"
+	FarmConfig.Mutate_Delay = 1
+	for category, asset in pairs((AssetsModule and AssetsModule.Directory) or {}) do
+		if type(asset) == "table" and type(asset.Rarity) == "table" then
+			local label = tostring(asset.DisplayName or category)
+			if state.Categories[string.lower(label)] then label ..= " [" .. tostring(category) .. "]" end
+			state.Categories[string.lower(label)] = tostring(category)
+			table.insert(state.EggOptions, label)
+		end
+	end
+	table.sort(state.EggOptions)
+	local function canonical(value)
+		return mutationIds[string.lower(tostring(value or "")):match("^%s*(.-)%s*$")]
+	end
+	local function mutations(record)
+		local result = {}
+		local function add(value)
+			local id = canonical(value)
+			if id then result[id] = true end
+		end
+		add(record.BaseMutation)
+		add(record.Mutation)
+		if type(record.Mutations) == "table" then
+			for key, value in pairs(record.Mutations) do
+				if type(value) == "table" then add(value.Id or value.Name or value.Label)
+				elseif type(value) == "boolean" or type(value) == "number" then
+					if value ~= false and value ~= 0 then add(key) end
+				else add(value) end
+			end
+		elseif type(record.Mutations) == "string" then
+			for value in record.Mutations:gmatch("[^,]+") do add(value) end
+		end
+		return result
+	end
+	local function tools()
+		local result = {}
+		for _, container in pairs({ LocalPlayer.Character, LocalPlayer:FindFirstChildOfClass("Backpack") }) do
+			for _, tool in ipairs(container:GetChildren()) do
+				if tool:IsA("Tool") and tool:GetAttribute("ItemType") == "MutationConsumable" then
+					local id = canonical(tool:GetAttribute("MutationId") or tool:GetAttribute("MutationTemplate") or "Boss")
+					local uses = tonumber(tool:GetAttribute("Uses")) or tonumber(tool.Name:match("%[[Xx](%d+)%]")) or 1
+					if id and uses > 0 and not result[id] then result[id] = tool end
+				end
+			end
+		end
+		return result
+	end
+	local function ownedEggs()
+		SetElevated8()
+		if not EggStateModule or type(EggStateModule.ReadOwnerEggs) ~= "function" then return nil end
+		local ok, result = pcall(EggStateModule.ReadOwnerEggs, LocalPlayer.UserId)
+		return ok and type(result) == "table" and result or nil
+	end
+	local function eggPosition(uid)
+		local folder = Workspace:FindFirstChild("AreaEggSlotsClient")
+		local model = folder and folder:FindFirstChild(tostring(uid))
+		if not model or not (model:IsA("Model") or model:IsA("BasePart")) then return nil end
+		local ok, pivot = pcall(model.GetPivot, model)
+		return ok and typeof(pivot) == "CFrame" and pivot.Position or nil
+	end
+	local function eligible(record, uid, bag)
+		if type(record) ~= "table" or record.Placement == nil then return nil end
+		local category = tostring(record.AssetCategory or record.Category or "")
+		if next(FarmConfig.Mutate_Targets) ~= nil and not FarmConfig.Mutate_Targets[category] then return nil end
+		local asset = AssetsModule and AssetsModule.Directory and AssetsModule.Directory[category]
+		local rarity = type(asset) == "table" and asset.Rarity
+		local tier = type(rarity) == "table" and tonumber(rarity.RarityNumber or rarity.Rank)
+		if not tier or tier < FarmConfig.Mutate_MinRarity then return nil end
+		local income = CalculateEggIncome(record)
+		if income ~= income or income < FarmConfig.Mutate_MinIncome or income >= math.huge then return nil end
+		local existing, now = mutations(record), os.clock()
+		for _, id in ipairs(mutationOrder) do
+			local key = tostring(uid) .. ":" .. id
+			if FarmConfig.Mutate_Use[id] and bag[id] and not existing[id]
+				and (state.Refused[key] or 0) <= now and (state.Awaiting[key] or 0) <= now then
+				local position = eggPosition(uid)
+				if position then return { Uid = uid, Mutation = id, Tool = bag[id], Position = position,
+					Tier = tier, Income = income, Scale = tonumber(record.AssetScale) or 0 } end
+			end
+		end
+		return nil
+	end
+	local function pick()
+		local records, bag, best = ownedEggs(), tools(), nil
+		if not records then return nil end
+		for key, record in pairs(records) do
+			local uid = type(record) == "table" and (record.Uid or key) or key
+			local candidate = eligible(record, uid, bag)
+			if candidate then
+				local priority = FarmConfig.Mutate_Priority
+				local score = priority == "Best Rarity" and candidate.Tier * 1000 + candidate.Scale
+					or priority == "Biggest Size" and candidate.Scale or candidate.Income
+				if not best or score > best.Score or (score == best.Score and tostring(uid) < tostring(best.Uid)) then
+					candidate.Score, best = score, candidate
+				end
+			end
+		end
+		return best
+	end
+	local function fresh(job)
+		local records, bag = ownedEggs(), tools()
+		for key, record in pairs(records or {}) do
+			local uid = type(record) == "table" and (record.Uid or key) or key
+			if tostring(uid) == tostring(job.Uid) then
+				local candidate = eligible(record, uid, bag)
+				if candidate and candidate.Mutation == job.Mutation and candidate.Tool == job.Tool then return candidate end
+				return nil
+			end
+		end
+		return nil
+	end
+	local function raceWanted()
+		return RaceOwnsCharacter() or (Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal()) == true
+	end
+	local function carrying()
+		local carry = engine and engine.State
+		return (carry and (carry.Carrying or carry.SignalCarrying or carry.WeldCarrying))
+			or (engine and engine.AutoCarry and engine.AutoCarry.Carrying)
+			or IsActivelyCarryingEgg() or GetEquippedEggTool() ~= nil
+	end
+	local function busy()
+		return not engine or RuntimeState.IsExecuting or engine.AutoCycle
+			or state.InventoryActions > 0 or os.clock() < state.HatchSettleUntil
+			or engine.Guard.Active or engine.Guard.Busy or carrying()
+			or Tasks.TreadmillState.Busy or Tasks.TreadmillState.WearBusy or Tasks.TreadmillState.Exiting
+			or LocalPlayer:GetAttribute("InScrambleArena") == true
+	end
+	local function higherTask()
+		if raceWanted() then return true end -- Race always goes first, even if Essence is ranked above it.
+		local rank = Tasks.PriorityRank("Essence")
+		if engine.Movement.PlaceWanted and Tasks.PriorityRank("Place") < rank then return true end
+		if FarmConfig.AutoTreadmill and Tasks.PriorityRank("Treadmill") < rank then return true end
+		if os.clock() >= (state.ScanAt or 0) then
+			state.ScanAt, state.FarmFirst = os.clock() + 0.75, false
+			local ok, candidates = pcall(engine.CollectCandidates, false, not FarmConfig.Defense_InstantSteal)
+			if not ok then state.FarmFirst = true; return true end
+			if FarmConfig.AutoStealAll or FarmConfig.AutoStealSelected or FarmConfig.AutoScrambleSteal or FarmConfig.Index_PrioritizeMissing then
+				for _, candidate in ipairs(candidates or {}) do
+					local key = candidate.IsScramble and "StealLab" or candidate.IsIndex and "StealIndex" or "StealFilter"
+					if Tasks.PriorityRank(key) < rank then state.FarmFirst = true; break end
+				end
+			end
+		end
+		return state.FarmFirst == true
+	end
+	function Tasks.MutateSettingsChanged()
+		state.Generation += 1
+		state.Wanted = false
+		state.SettleUntil = os.clock() + 3
+		state.ScanAt = 0
+	end
+	local function run(job)
+		if busy() or higherTask() or not FarmConfig.Mutate_Auto or state.Disposed then return end
+		local owner = engine.Movement.Owner
+		if owner ~= nil and owner ~= "treadmill" then return end
+		if not engine.ClaimMovement("essence") then return end
+		state.Lease, state.Busy, state.Wanted = true, true, true
+		engine.Movement.EssenceWanted = true
+		local generation, character = state.Generation, LocalPlayer.Character
+		local previousTool = character and character:FindFirstChildWhichIsA("Tool")
+		local humanoid, root
+		local function cancelled()
+			return state.Disposed or LibraryLoader.Unloaded or generation ~= state.Generation or not FarmConfig.Mutate_Auto
+				or LocalPlayer.Character ~= character or engine.Movement.Owner ~= "essence" or raceWanted()
+				or (humanoid and (humanoid.Parent ~= character or humanoid.Health <= 0))
+				or (root and (root.Parent ~= character or character:FindFirstChild("HumanoidRootPart") ~= root))
+				or (character and character:GetAttribute("InvisApplied") == true)
+		end
+		local ok, failure = pcall(function()
+			SetElevated8()
+			Tasks.ExitTreadmill()
+			if cancelled() then return end
+			-- Reuse N3's own rig restoration; never import another swap or change defense toggles.
+			if engine.ReleaseAutoShield then engine.ReleaseAutoShield(true) end
+			if RuntimeState.OriginalHumanoid then RestoreCharacter() end
+			if cancelled() then return end
+			humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			root = character and character:FindFirstChild("HumanoidRootPart")
+			if not humanoid or not root then return end
+			local candidate = fresh(job)
+			if not candidate or cancelled() then return end
+			-- Finite native MoveTo, not the steal-only FlyToPosition or a second fly/swap controller.
+			local deadline = os.clock() + 12
+			while (root.Position - candidate.Position).Magnitude > 6 do
+				if cancelled() or higherTask() or os.clock() >= deadline then return end
+				humanoid:MoveTo(candidate.Position)
+				task.wait(0.1)
+				local position = eggPosition(job.Uid)
+				if not position then return end
+				candidate.Position = position
+			end
+			if cancelled() or higherTask() then return end
+			humanoid:MoveTo(root.Position)
+			candidate = fresh(job)
+			if not candidate or cancelled() then return end
+			if job.Tool.Parent ~= character then humanoid:EquipTool(job.Tool); task.wait(0.3) end
+			if cancelled() or job.Tool.Parent ~= character then return end
+			candidate = fresh(job)
+			if not candidate or cancelled() or higherTask() or (root.Position - candidate.Position).Magnitude > 6 then return end
+			local remote = FindRemote("RF/BossMastery/AskUseMutationConsumable")
+			if not remote or not remote:IsA("RemoteFunction") then
+				state.NextAt = os.clock() + 10
+				if os.clock() >= state.NoticeAt then
+					state.NoticeAt = os.clock() + 30
+					LibraryLoader:Notify("Mutation remote unavailable", 4)
+				end
+				return
+			end
+			if cancelled() then return end
+			state.Status = "Applying"
+			local answered, reply = pcall(remote.InvokeServer, remote, job.Uid)
+			if cancelled() then return end -- A sent consumable RPC cannot be recalled.
+			local key = tostring(job.Uid) .. ":" .. job.Mutation
+			if not answered or type(reply) ~= "table" then
+				state.Status, state.NextAt = "No server answer", os.clock() + 10
+			elseif reply.Success == true then
+				state.Failures = 0
+				if reply.Mutated == true then
+					state.Status, state.Awaiting[key] = "Applied", os.clock() + 3
+				elseif reply.Mutated == false then state.Status = "Roll failed"
+				else state.Status, state.NextAt = "Unknown result", os.clock() + 10 end
+			else
+				state.Status = tostring(reply.Message or "Refused")
+				state.Refused[key] = os.clock() + 120
+				state.Failures += 1
+				if state.Failures >= 3 then state.Failures, state.NextAt = 0, os.clock() + 15 end
+			end
+		end)
+		-- Touch tools/locomotion only if this job still owns this same character.
+		pcall(function()
+			if engine.Movement.Owner == "essence" and LocalPlayer.Character == character and not RaceOwnsCharacter() then
+				if humanoid and humanoid.Parent == character and root and root.Parent == character then
+					humanoid:MoveTo(root.Position)
+					if not raceWanted() and character:FindFirstChildWhichIsA("Tool") == job.Tool then
+						if previousTool and previousTool ~= job.Tool
+							and (previousTool.Parent == character or previousTool.Parent == LocalPlayer:FindFirstChildOfClass("Backpack")) then
+							humanoid:EquipTool(previousTool)
+						elseif previousTool ~= job.Tool then humanoid:UnequipTools() end
+					end
+				end
+			end
+		end)
+		engine.Movement.EssenceWanted = false
+		engine.ReleaseMovement("essence")
+		state.Lease, state.Busy, state.Wanted = false, false, false
+		state.NextAt = math.max(state.NextAt, os.clock() + FarmConfig.Mutate_Delay)
+		if engine.AutoWake then engine.AutoWake() end
+		if not ok then state.Status, state.LastError, state.NextAt = "Stopped", tostring(failure), os.clock() + 3 end
+	end
+	-- Layer adapters after Race so the live-confirmed race body remains byte-identical.
+	local nativeYield, nativeCanRun = Tasks.PriorityStealYield, Tasks.PriorityCanRun
+	local nativeShield, nativeDodge = engine.AutoShieldWanted, engine.TriggerGuardDodge
+	local nativeDeposit, nativeHatch = Tasks.ExecuteDepositEggs, ExecuteAutoHatch
+	local yieldAdapter, canRunAdapter, shieldAdapter, dodgeAdapter, depositAdapter, hatchAdapter
+	yieldAdapter = function() return state.Lease or nativeYield() end
+	canRunAdapter = function(key)
+		if key == "Essence" then return not state.Disposed and FarmConfig.Mutate_Auto and state.Lease end
+		return nativeCanRun(key)
+	end
+	shieldAdapter = function() return not state.Lease and nativeShield() end
+	dodgeAdapter = function(...)
+		if state.Lease then return end
+		return nativeDodge(...)
+	end
+	local function inventoryAction(action, hatch, ...)
+		if state.Lease then return 0 end
+		state.InventoryActions += 1
+		local reply = table.pack(pcall(action, ...))
+		state.InventoryActions -= 1
+		if not reply[1] then error(reply[2], 0) end
+		-- Native Hatch dispatches asynchronous finish calls; allow their normal delay.
+		-- A server call already in flight is still not cancellable or an atomic transaction.
+		if hatch and type(reply[2]) == "number" and reply[2] > 0 then state.HatchSettleUntil = os.clock() + 1.5 end
+		return table.unpack(reply, 2, reply.n)
+	end
+	depositAdapter = function(...) return inventoryAction(nativeDeposit, false, ...) end
+	hatchAdapter = function(...) return inventoryAction(nativeHatch, true, ...) end
+	Tasks.PriorityStealYield, Tasks.PriorityCanRun = yieldAdapter, canRunAdapter
+	engine.AutoShieldWanted, engine.TriggerGuardDodge = shieldAdapter, dodgeAdapter
+	Tasks.ExecuteDepositEggs, ExecuteAutoHatch = depositAdapter, hatchAdapter
+	function Tasks.BuildAutoMutateUI(group)
+		group:AddToggle("Toggle_Mutate_Auto", { Text = "Auto Mutate", Default = false, Tooltip = "Placed eggs only.", Callback = function(value)
+			FarmConfig.Mutate_Auto = value == true
+			Tasks.MutateSettingsChanged()
+		end })
+		group:AddDropdown("Dropdown_Mutate_Use", { Text = "Mutations", Values = { "Fractured", "Scrambled", "Enchanted", "Nitro" },
+			Multi = true, AllowNull = true, Default = { "Fractured", "Scrambled", "Enchanted", "Nitro" }, Callback = function(value)
+				local selected = {}
+				for label in pairs(ParseMultiDropdownSelection(value)) do
+					local id = canonical(label)
+					if id then selected[id] = true end
+				end
+				FarmConfig.Mutate_Use = selected
+				Tasks.MutateSettingsChanged()
+			end })
+		group:AddDropdown("Dropdown_Mutate_MinRarity", { Text = "Min Rarity", Values = RarityNumberedList, Default = RarityNumberedList[1], AllowNull = false,
+			Callback = function(value)
+				FarmConfig.Mutate_MinRarity = tonumber(tostring(value):match("^(%d+)")) or 1
+				Tasks.MutateSettingsChanged()
+			end })
+		group:AddInput("Input_Mutate_MinIncome", { Text = "Income Above", Default = "0", Numeric = true, Finished = true, Tooltip = "$/s. 0 = off.",
+			Callback = function(value)
+				local number = tonumber(value) or 0
+				FarmConfig.Mutate_MinIncome = number == number and number < math.huge and math.max(0, number) or 0
+				Tasks.MutateSettingsChanged()
+			end })
+		group:AddDropdown("Dropdown_Mutate_Targets", { Text = "Target Eggs", Values = state.EggOptions, Multi = true, AllowNull = true, Default = {}, Searchable = true,
+			Tooltip = "Empty = all placed eggs.", Callback = function(value)
+				local selected = {}
+				for label in pairs(ParseMultiDropdownSelection(value)) do
+					local category = state.Categories[label]
+					if category then selected[category] = true end
+				end
+				FarmConfig.Mutate_Targets = selected
+				Tasks.MutateSettingsChanged()
+			end })
+		group:AddDropdown("Dropdown_Mutate_Priority", { Text = "Priority", Values = { "Highest Value", "Best Rarity", "Biggest Size" },
+			Default = "Highest Value", AllowNull = false, Callback = function(value)
+				FarmConfig.Mutate_Priority = value
+				Tasks.MutateSettingsChanged()
+			end })
+		group:AddSlider("Slider_Mutate_Delay", { Text = "Delay", Min = 1, Max = 10, Default = 1, Rounding = 0, Callback = function(value)
+			FarmConfig.Mutate_Delay = math.clamp(tonumber(value) or 1, 1, 10)
+			Tasks.MutateSettingsChanged()
+		end })
+		if state.Started then return end
+		state.Started = true
+		task.spawn(function()
+			while not state.Disposed and not LibraryLoader.Unloaded do
+				if FarmConfig.Mutate_Auto and os.clock() >= math.max(state.NextAt, state.SettleUntil) then
+					local ok, failure = pcall(function()
+						for key, untilAt in pairs(state.Refused) do if untilAt <= os.clock() then state.Refused[key] = nil end end
+						for key, untilAt in pairs(state.Awaiting) do if untilAt <= os.clock() then state.Awaiting[key] = nil end end
+						if busy() or higherTask() then state.Wanted = false; return end
+						local job = pick()
+						state.Wanted = job ~= nil
+						if job then run(job) end
+					end)
+					if not ok then state.Wanted, state.LastError, state.NextAt = false, tostring(failure), os.clock() + 3 end
+				end
+				task.wait(0.5)
+			end
+		end)
+	end
+	LibraryLoader:OnUnload(function()
+		state.Disposed, state.Wanted = true, false
+		state.Generation += 1
+		-- Keep an in-flight job's lease until its own cleanup; never clear shared IsExecuting.
+		if not state.Busy then engine.ReleaseMovement("essence") end
+		if Tasks.PriorityStealYield == yieldAdapter then Tasks.PriorityStealYield = nativeYield end
+		if Tasks.PriorityCanRun == canRunAdapter then Tasks.PriorityCanRun = nativeCanRun end
+		if engine.AutoShieldWanted == shieldAdapter then engine.AutoShieldWanted = nativeShield end
+		if engine.TriggerGuardDodge == dodgeAdapter then engine.TriggerGuardDodge = nativeDodge end
+		if Tasks.ExecuteDepositEggs == depositAdapter then Tasks.ExecuteDepositEggs = nativeDeposit end
+		if ExecuteAutoHatch == hatchAdapter then ExecuteAutoHatch = nativeHatch end
+	end)
+end
+-- END AUTO MUTATE CONTROLLER
+
 Tasks.BuildMainInterface()
 Tasks.Loading:SetMessage("Verifying")
 Tasks.Loading:SetCurrentStep(5)

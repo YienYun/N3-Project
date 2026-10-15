@@ -3,11 +3,12 @@ from pathlib import Path
 import hashlib
 import re
 from lab_stock_scope import strip_lab_stock
+from mutate_scope import strip_auto_mutate
 from steal_visual_scope import strip_builtin_visual
 
 ROOT = Path(__file__).resolve().parents[1]
 s = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
-assert hashlib.sha256(strip_builtin_visual(strip_lab_stock(s)).encode()).hexdigest() == (
+assert hashlib.sha256(strip_builtin_visual(strip_lab_stock(strip_auto_mutate(s))).encode()).hexdigest() == (
     'f2345282fdfdd7d47fcfb34863a2108698bf91f52a91c46e9c8d617aa138f66d'
 ), 'Changes escaped the four reviewed stock insertion sites / 9badf26 baseline'
 a = s.index('-- BEGIN LAB STOCK CONTROLLER')

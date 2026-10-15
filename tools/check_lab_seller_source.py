@@ -4,6 +4,7 @@ import hashlib
 import re
 from steal_visual_scope import strip_builtin_visual
 from lab_stock_scope import strip_lab_stock
+from mutate_scope import strip_auto_mutate
 
 ROOT = Path(__file__).resolve().parents[1]
 runtime = (ROOT / "Games/Steal-An-Egg.lua").read_text()
@@ -29,7 +30,7 @@ assert 'AddRightGroupbox("Scramble Lab"' not in runtime
 assert 'local CustomGroup = WebhookTab:AddGroupbox({' in runtime
 assert 'local CustomTabbox = CustomGroup:AddTabbox({' in runtime
 previous = (runtime[:first] + runtime[last:]).replace(ordinary_guard, '').replace(new_ui, old_ui)
-assert hashlib.sha256(strip_builtin_visual(strip_lab_stock(previous)).encode()).hexdigest() == (
+assert hashlib.sha256(strip_builtin_visual(strip_lab_stock(strip_auto_mutate(previous))).encode()).hexdigest() == (
     '0d5a4e4e8211efd0456d200812e9c1425ee922b96b855f966a8de6ec9e2ce218'
 ), 'Changes escaped the Lab seller scope; do not update its reviewed baseline'
 
