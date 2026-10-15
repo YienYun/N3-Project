@@ -217,6 +217,7 @@ local FarmConfig = {
 	AutoStealEnabled = false,
 	StealSettleWait = 6.5,
 	TweenSpeed = 600,
+	AutoTweenSpeed = 400,
 	AntiTreadmill = false,
 	AutoEquipBestPet = false,
 	AutoStealAll = false,
@@ -2737,6 +2738,9 @@ RuntimeState.StealEngine = (function()
 		return true
 	end
 	Engine.TriggerGuardDodge = function(force)
+		if Engine.AutoCycle then
+			return
+		end
 		local guard = Engine.Guard
 		if not guard.Enabled or guard.Active then
 			return
@@ -2855,6 +2859,9 @@ local function RefreshStealState()
 	end
 	local Engine = RuntimeState.StealEngine
 	if Engine then
+		if Engine.AutoCycle then
+			Engine.StopAutoHop(Engine.AutoCycle)
+		end
 		Engine.CurrentTarget = nil
 		Engine.Guard.StealActive = false
 		Engine.Guard.Busy = false
@@ -3933,6 +3940,9 @@ function Tasks.EnsureDefenseRigSyncOff()
 	return true
 end
 function Tasks.ApplyDefenseAntiRagdoll()
+	if RuntimeState.StealEngine and RuntimeState.StealEngine.AutoCycle then
+		return
+	end
 	Tasks.EnsureDefenseRigSyncOff()
 	local Character = LocalPlayer.Character
 	local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
@@ -5256,6 +5266,436 @@ local GetScrambleTradeStatusFn = nil
 		end
 		return result == true
 	end
+	Engine.AutoStatus = "Idle"
+	Engine.AutoLastDeliveredAt = 0
+	Engine.AutoCycle = nil
+	Engine.AutoSpeed = function()
+		return math.clamp(tonumber(FarmConfig.AutoTweenSpeed) or 400, 100, 1000)
+	end
+	Engine.AutoHeld = function(uid)
+		if uid == nil then
+			return Engine.State.Carrying or IsActivelyCarryingEgg()
+		end
+		return IsActivelyCarryingEgg(uid)
+			or (Engine.State.CarryUid == uid and (Engine.State.SignalCarrying or Engine.State.WeldCarrying))
+	end
+	Engine.AutoValid = function(cycle)
+		return Engine.AutoCycle == cycle
+			and not Engine.Cancelled(cycle.Session)
+			and RuntimeState.StealCancel == cycle.Cancel
+			and LocalPlayer.Character == cycle.Character
+			and not FarmConfig.Defense_InstantSteal
+			and not Engine.IsNight()
+			and not Engine.WallSealed()
+			and cycle.Character.Parent ~= nil
+			and cycle.Humanoid.Parent ~= nil
+			and cycle.Humanoid.Health > 0
+	end
+	Engine.StopAutoHop = function(cycle)
+		if cycle and cycle.Hop then
+			if cycle.Hop.Link then
+				cycle.Hop.Link:Disconnect()
+				cycle.Hop.Link = nil
+			end
+			cycle.Hop = nil
+		end
+	end
+	Engine.AutoNoclip = function(cycle, enabled)
+		cycle.Parts = cycle.Parts or {}
+		if enabled then
+			for _, part in ipairs(cycle.Character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					if cycle.Parts[part] == nil then
+						cycle.Parts[part] = part.CanCollide
+					end
+					part.CanCollide = false
+				end
+			end
+		else
+			for part, collision in pairs(cycle.Parts) do
+				pcall(function()
+					part.CanCollide = collision
+				end)
+			end
+			table.clear(cycle.Parts)
+		end
+	end
+	Engine.AutoMove = function(destination, cycle, carrying, timeout)
+		local function finish(result)
+			Engine.AutoNoclip(cycle, false)
+			return result
+		end
+		local elapsed, stalled, mark = 0, 0, nil
+		while Engine.AutoValid(cycle) and elapsed < (timeout or 25) do
+			local root = Engine.Root()
+			if not root then
+				return finish(false)
+			end
+			if carrying and not Engine.AutoHeld(carrying) then
+				return finish(false)
+			end
+			local dt = RunService.PreSimulation:Wait()
+			if not Engine.AutoValid(cycle) then
+				return finish(false)
+			end
+			root = Engine.Root()
+			if not root then
+				return finish(false)
+			end
+			elapsed = elapsed + dt
+			local delta = destination - root.Position
+			local distance = delta.Magnitude
+			if distance <= 0.5 then
+				Engine.StopVelocity()
+				return finish(true)
+			end
+			local speed = Engine.AutoSpeed()
+			local step = math.max(dt, 1 / 240)
+			Engine.AutoNoclip(cycle, true)
+			root.AssemblyLinearVelocity = delta.Unit * math.min(speed, distance / step)
+				+ Vector3.new(0, Workspace.Gravity * step * 0.5, 0)
+			root.AssemblyAngularVelocity = Vector3.zero
+			mark = mark or distance
+			stalled = stalled + dt
+			if stalled >= 0.4 then
+				if mark - distance < speed * 0.1 then
+					root.CFrame = root.CFrame + delta.Unit * math.min(distance, speed * step)
+				end
+				mark, stalled = distance, 0
+			end
+		end
+		return finish(false)
+	end
+	Engine.AutoFindEgg = function(uid)
+		for _, egg in ipairs(Engine.CollectAllFieldEggs()) do
+			if tostring(egg.Uid) == tostring(uid) then
+				local state = string.lower(tostring(egg.State))
+				if state == "slot" or state == "dropped" then
+					return egg
+				end
+				return nil
+			end
+		end
+		return nil
+	end
+	Engine.AutoStarter = function(target)
+		local root = Engine.Root()
+		if not root then
+			return nil
+		end
+		local best, nearest = nil, math.huge
+		local prefix = "FirstAreaEgg_" .. tostring(LocalPlayer.UserId)
+		for _, egg in ipairs(Engine.CollectAllFieldEggs()) do
+			local state = string.lower(tostring(egg.State))
+			local available = state == "slot" or state == "dropped"
+			local starter = string.sub(tostring(egg.Uid), 1, #prefix) == prefix
+			local blocked = Engine.State.BlockList[egg.Uid]
+			if available and egg.Uid ~= target.Uid and (not blocked or blocked <= os.clock())
+				and (starter or Engine.GuardSleeping(egg.AreaId)) then
+				local distance = (egg.Position - root.Position).Magnitude
+				if distance < nearest then
+					best, nearest = egg, distance
+				end
+			end
+		end
+		return best
+	end
+	Engine.AutoDrop = function(cycle)
+		if EggStateModule and type(EggStateModule.DropFieldEgg) == "function" then
+			pcall(EggStateModule.DropFieldEgg, "PlayerRequest")
+		end
+		local elapsed = 0
+		while Engine.AutoValid(cycle) and elapsed < 1.5 do
+			if not Engine.State.Carrying and not IsActivelyCarryingEgg() then
+				return true
+			end
+			elapsed = elapsed + RunService.Heartbeat:Wait()
+		end
+		return false
+	end
+	Engine.AutoGrab = function(egg, cycle)
+		local elapsed, lastAttempt = 0, -1
+		while Engine.AutoValid(cycle) and elapsed < 6 do
+			if cycle.Hop and cycle.Hop.Landed then
+				return true
+			end
+			if Engine.AutoHeld(egg.Uid) then
+				Engine.State.Carrying = true
+				Engine.State.CarryUid = egg.Uid
+				Engine.State.CarryAreaId = egg.AreaId
+				Engine.State.GrabFails = 0
+				return true
+			end
+			if Engine.State.Carrying and Engine.State.CarryUid and Engine.State.CarryUid ~= egg.Uid then
+				return false
+			end
+			if elapsed - lastAttempt >= 0.1 then
+				lastAttempt = elapsed
+				local prompt = Engine.FindCarryPrompt(egg.Uid, egg.Position, Engine.Carry.PromptRange)
+				if prompt then
+					Engine.FirePrompt(prompt)
+				end
+				if not Engine.AutoRequestOwner then
+					Engine.AutoRequestOwner = cycle
+					task.spawn(function()
+						if Engine.AutoValid(cycle) then
+							local prefix = "FirstAreaEgg_" .. tostring(LocalPlayer.UserId)
+							local slot = string.sub(tostring(egg.Uid), 1, #prefix) == prefix
+								and string.match(egg.Uid, "_([%w ]+:Slot_%d+)$")
+							if slot and EggStateModule and type(EggStateModule.CarryFieldEgg) == "function" then
+								pcall(EggStateModule.CarryFieldEgg, egg.Uid, slot)
+							elseif EggStateModule and type(EggStateModule.CarryFieldEgg) == "function" then
+								pcall(EggStateModule.CarryFieldEgg, egg.Uid)
+							elseif Remotes.RemoteCarryEgg then
+								pcall(function()
+									if Remotes.RemoteCarryEgg:IsA("RemoteFunction") then
+										Remotes.RemoteCarryEgg:InvokeServer({ Uid = egg.Uid })
+									else
+										Remotes.RemoteCarryEgg:FireServer({ Uid = egg.Uid })
+									end
+								end)
+							end
+						end
+						if Engine.AutoRequestOwner == cycle then
+							Engine.AutoRequestOwner = nil
+						end
+					end)
+				end
+			end
+			elapsed = elapsed + RunService.Heartbeat:Wait()
+		end
+		return false
+	end
+	Engine.AutoGuardHop = function(starter, target, cycle)
+		local destination = target.Position + Vector3.new(0, 3, 0)
+		cycle.Hop = { Landed = false }
+		local hop = cycle.Hop
+		hop.Link = LocalPlayer:GetAttributeChangedSignal("RagdollEndTime"):Connect(function()
+			if hop.Landed or not Engine.AutoValid(cycle) then
+				return
+			end
+			local endTime = tonumber(LocalPlayer:GetAttribute("RagdollEndTime"))
+			if not endTime or endTime <= Workspace:GetServerTimeNow() then
+				return
+			end
+			local root = Engine.Root()
+			if root then
+				hop.Landed = true
+				Engine.StopHold()
+				root.CFrame = CFrame.new(destination) * root.CFrame.Rotation
+				Engine.StopVelocity()
+			end
+		end)
+		Engine.AutoStatus = "Taking starter egg"
+		if not Engine.AutoGrab(starter, cycle) then
+			Engine.StopAutoHop(cycle)
+			return false
+		end
+		local guard = Engine.FindGuard(starter.AreaId) or Engine.FindGuard("Forest")
+		local guardRoot = guard and guard:FindFirstChild("HumanoidRootPart")
+		if not hop.Landed and Remotes.RemoteForestStrike and Remotes.RemoteForestStrike:IsA("RemoteEvent") and guardRoot then
+			pcall(function()
+				Remotes.RemoteForestStrike:FireServer({ EggUid = starter.Uid, GuardCFrame = guardRoot.CFrame })
+			end)
+		end
+		Engine.AutoStatus = "Waiting for guard hit"
+		local elapsed, lostAt = 0, nil
+		while not hop.Landed and Engine.AutoValid(cycle) and elapsed < 20 do
+			if not Engine.State.Carrying and not IsActivelyCarryingEgg() then
+				lostAt = lostAt or elapsed
+				if elapsed - lostAt > 1 then
+					break
+				end
+			end
+			elapsed = elapsed + RunService.Heartbeat:Wait()
+		end
+		local landed = hop.Landed
+		Engine.StopAutoHop(cycle)
+		if not landed then
+			return false
+		end
+		Engine.AutoStatus = "Recovering at target"
+		elapsed = 0
+		while Engine.AutoValid(cycle) and Engine.IsRagdolled() and elapsed < 6 do
+			local root = Engine.Root()
+			if not root then
+				return false
+			end
+			root.CFrame = CFrame.new(destination) * root.CFrame.Rotation
+			Engine.StopVelocity()
+			elapsed = elapsed + RunService.Heartbeat:Wait()
+		end
+		if not Engine.AutoValid(cycle) or Engine.IsRagdolled() then
+			return false
+		end
+		if Engine.AutoHeld(target.Uid) then
+			return true
+		end
+		if (Engine.State.Carrying or IsActivelyCarryingEgg()) and not Engine.AutoDrop(cycle) then
+			return false
+		end
+		return Engine.AutoValid(cycle)
+	end
+	Engine.DeliverAutoEgg = function(cycle, uid)
+		if not uid or not Engine.AutoValid(cycle) or not Engine.AutoHeld(uid) then
+			return false
+		end
+		Engine.AutoStatus = "Flying home"
+		local root = Engine.Root()
+		if not root then
+			return false
+		end
+		local started = os.clock()
+		local home = Engine.GetBaseSafeSpot()
+		local height = math.max(root.Position.Y, home.Y) + 27.4
+		local ascent = Vector3.new(root.Position.X + (home.X - root.Position.X) * 0.25,
+			root.Position.Y + (height - root.Position.Y) * 0.7,
+			root.Position.Z + (home.Z - root.Position.Z) * 0.25)
+		for _, destination in ipairs({ ascent, Vector3.new(home.X, height, home.Z), home }) do
+			if not Engine.AutoMove(destination, cycle, uid) then
+				if not Engine.AutoValid(cycle) then
+					return false
+				end
+				local current = Engine.Root()
+				if Engine.State.LastDelivered >= started then
+					return true
+				end
+				if not current or (current.Position - home).Magnitude > 15 then
+					return false
+				end
+				break
+			end
+		end
+		Engine.StopVelocity()
+		Engine.AutoStatus = "Confirming delivery"
+		if Engine.State.LastDelivered >= started then
+			return true
+		end
+		if Engine.AutoHeld(uid) then
+			Engine.AutoDrop(cycle)
+		end
+		local elapsed = 0
+		while Engine.AutoValid(cycle) and elapsed < 3 do
+			if Engine.State.LastDelivered >= started then
+				return true
+			end
+			if Engine.State.LastFailed >= started then
+				return false
+			end
+			elapsed = elapsed + RunService.Heartbeat:Wait()
+		end
+		return false
+	end
+	Engine.RunAutoStealCycle = function(sessionId, recovering)
+		if Engine.AutoCycle or Engine.AutoRequestOwner or Engine.Cancelled(sessionId) then
+			return false
+		end
+		local character = LocalPlayer.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not humanoid or humanoid.Health <= 0 or not Engine.ClaimMovement("steal") then
+			return false
+		end
+		local cycle = { Session = sessionId, Cancel = RuntimeState.StealCancel, Character = character, Humanoid = humanoid }
+		Engine.AutoCycle = cycle
+		humanoid.Sit = false
+		humanoid.PlatformStand = false
+		Engine.Guard.StealActive = true
+		Engine.SetAntiGuard(false)
+		Engine.AutoStatus = "Finding target"
+		local ok, delivered = pcall(function()
+			if recovering then
+				return Engine.DeliverAutoEgg(cycle, Engine.State.CarryUid)
+			end
+			pcall(UnequipAllTools)
+			local candidates = Engine.CollectCandidates()
+			if not Engine.AutoValid(cycle) then
+				return false
+			end
+			local target = candidates[1]
+			if not target then
+				Engine.AutoStatus = "No egg matches"
+				return false
+			end
+			Engine.CurrentTarget = target.Uid
+			RuntimeState.currentTargetModel = target.PhysicalModel
+			if RuntimeState.OnTreadmill then
+				ExitTreadmill()
+			end
+			local root = Engine.Root()
+			if not root then
+				return false
+			end
+			local nearby = (root.Position - target.Position).Magnitude <= 20
+				or (target.AreaId ~= nil and LocalPlayer:GetAttribute("AreaId") == target.AreaId)
+			local starter = not nearby and Engine.AutoStarter(target) or nil
+			if starter then
+				Engine.AutoStatus = "Approaching sleeping guard egg"
+				if not Engine.AutoMove(starter.Position + Vector3.new(0, 3, 0), cycle) then
+					return false
+				end
+				if not Engine.AutoGuardHop(starter, target, cycle) then
+					Engine.State.BlockList[starter.Uid] = os.clock() + 5
+					if not Engine.AutoValid(cycle) or Engine.IsRagdolled() then
+						return false
+					end
+					if (Engine.State.Carrying or IsActivelyCarryingEgg()) and not Engine.AutoDrop(cycle) then
+						return false
+					end
+				end
+			end
+			if not Engine.AutoValid(cycle) then
+				return false
+			end
+			if not Engine.AutoHeld(target.Uid) then
+				Engine.CollectRawFieldEggs(true)
+				local live = Engine.AutoFindEgg(target.Uid)
+				if not live then
+					Engine.AutoStatus = "Target no longer available"
+					return false
+				end
+				target = live
+				Engine.AutoStatus = "Approaching target"
+				if not Engine.AutoMove(target.Position + Vector3.new(0, 3, 0), cycle) then
+					return false
+				end
+				Engine.AutoStatus = "Taking target egg"
+				if not Engine.AutoGrab(target, cycle) then
+					Engine.State.GrabFails = (Engine.State.GrabFails or 0) + 1
+					Engine.State.BlockList[target.Uid] = os.clock() + 5
+					return false
+				end
+			end
+			if not Engine.AutoValid(cycle) or not Engine.AutoHeld(target.Uid) then
+				return false
+			end
+			return Engine.DeliverAutoEgg(cycle, target.Uid)
+		end)
+		Engine.StopAutoHop(cycle)
+		Engine.AutoNoclip(cycle, false)
+		if Engine.AutoCycle == cycle then
+			Engine.AutoCycle = nil
+			Engine.StopVelocity()
+			Engine.StopHold()
+			Engine.Guard.StealActive = false
+			Engine.CurrentTarget = nil
+			RuntimeState.currentTargetModel = nil
+			Engine.ReleaseMovement("steal")
+			Engine.SetAntiGuard(FarmConfig.Defense_AntiGuard == true and not FarmConfig.Defense_InstantSteal)
+			if delivered == true and ok then
+				Engine.AutoLastDeliveredAt = os.clock()
+				Engine.State.LastFinishedAt = Engine.AutoLastDeliveredAt
+				Engine.AutoStatus = "Delivered"
+			elseif not ok then
+				Engine.AutoStatus = "Auto steal error"
+				warn("[N3 HUB] Auto steal: " .. tostring(delivered))
+			elseif Engine.Cancelled(sessionId) or FarmConfig.Defense_InstantSteal then
+				Engine.AutoStatus = "Stopped"
+			elseif Engine.AutoStatus ~= "No egg matches" and Engine.AutoStatus ~= "Target no longer available" then
+				Engine.AutoStatus = "Retrying after failed attempt"
+			end
+		end
+		return ok and delivered == true
+	end
 	local DeliverEggToBase
 	Engine.DeliverEggToBaseSafe = function(sessionId)
 		local prev = Engine.Carry.LineDrop
@@ -5265,6 +5705,9 @@ local GetScrambleTradeStatusFn = nil
 		return ok and res == true
 	end
 	DeliverEggToBase = function(sessionId)
+		if not FarmConfig.Defense_InstantSteal and not Engine.Carry.LineDrop then
+			return Engine.RunAutoStealCycle(sessionId, true)
+		end
 		local carry = Engine.Carry
 		local home = Engine.GetBaseSafeSpot()
 		local sepX = Engine.GetSeparationX()
@@ -5461,6 +5904,9 @@ local GetScrambleTradeStatusFn = nil
 	end
 	Engine.DeliverEggToBase = DeliverEggToBase
 	local function RunStealCycle(sessionId)
+		if not FarmConfig.Defense_InstantSteal then
+			return Engine.RunAutoStealCycle(sessionId)
+		end
 		if not IsStealActive() then
 			return
 		end
@@ -10323,7 +10769,8 @@ function Tasks.BuildMainInterface()
 				if RuntimeState.OnTreadmill then
 					status = "Training on Treadmill"
 				elseif RuntimeState.IsExecuting then
-					status = "Stealing / Moving"
+					local Engine = RuntimeState.StealEngine
+					status = Engine and Engine.AutoCycle and Engine.AutoStatus or "Stealing / Moving"
 				end
 				Lbl_MainStatus:SetText('<font color="#D946EF"><b>Status:</b></font> ' .. status)
 			end)
@@ -10356,6 +10803,17 @@ function Tasks.BuildMainInterface()
 				end
 			end
 			RefreshStealState()
+		end,
+	})
+	FarmEggGroup:AddSlider("Slider_Farm_TweenSpeed", {
+		Text = "Tween Speed",
+		Min = 100,
+		Max = 1000,
+		Default = 400,
+		Rounding = 0,
+		Tooltip = "Auto steal approach and delivery speed (studs/s). Does not change Instant Steal.",
+		Callback = function(Value)
+			FarmConfig.AutoTweenSpeed = math.clamp(tonumber(Value) or 400, 100, 1000)
 		end,
 	})
 	InstToggle = FarmEggGroup:AddToggle("Toggle_Farm_InstantSteal", {
@@ -13777,7 +14235,8 @@ function DrScramble.IsInsideArena()
 end
 function Tasks.StealLoop()
 	while true do
-		if IsStealActive() and not RuntimeState.IsExecuting then
+		if IsStealActive() and not RuntimeState.IsExecuting
+			and not (RuntimeState.StealEngine and RuntimeState.StealEngine.AutoCycle) then
 			local Character = LocalPlayer.Character
 			local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
 			local Engine = RuntimeState.StealEngine
@@ -13845,8 +14304,9 @@ function Tasks.StealLoop()
 						Engine.RunStealCycle(CurrentSession)
 					end)
 				end
-				local idleFor = (Engine.State.LastFinishedAt > 0) and (os.clock() - Engine.State.LastFinishedAt)
-					or math.huge
+				local finishedAt = FarmConfig.Defense_InstantSteal and Engine.State.LastFinishedAt
+					or Engine.AutoLastDeliveredAt
+				local idleFor = (finishedAt and finishedAt > 0) and (os.clock() - finishedAt) or math.huge
 				if idleFor < 2 then
 					Engine.State.GrabFails = 0
 				else
@@ -13947,6 +14407,9 @@ task.spawn(function()
 	end
 end)
 function Tasks.MobilityRecoveryHeartbeat()
+	if RuntimeState.StealEngine and RuntimeState.StealEngine.AutoCycle then
+		return
+	end
 	local Character = LocalPlayer.Character
 	local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
 	local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
