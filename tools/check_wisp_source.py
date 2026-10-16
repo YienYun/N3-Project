@@ -13,7 +13,7 @@ a, b = s.index('-- BEGIN WISP CONTROLLER'), s.index('-- END WISP CONTROLLER')
 w = s[a:b]
 for contract in (
     'FarmConfig.Wisp_Auto = false', 'FarmConfig.Wisp_Auto == true', 'Name = "Quests"', 'IconName = "scroll-text"',
-    ':AddTab("Wisp", "ghost")', 'Text = "Auto Wisp", Default = false', 'Tooltip = "Complete the Wisp quest."',
+    'local wisp = group', 'Text = "Auto Wisp", Default = false', 'Tooltip = "Complete the Wisp quest."',
     'FindFirstChild("WispQuests")', 'config.List', 'config.StageCount', 'config.RequiredSpeedPower',
     'data.WispCompanion', 'record.Progress', 'record.Claimed', 'record.Returning', 'record.Unlocked',
     '"EnchantedForestZoneRevealed"', '50000000000', '"WispSpawn"', '"WispAnchor"',

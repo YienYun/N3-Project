@@ -2,16 +2,16 @@
 from pathlib import Path
 import hashlib
 import re
-from banjo_scope import strip_banjo, QUEST_TABS
+from banjo_scope import strip_banjo, QUEST_GROUP, QUEST_CONTROLS
 
 ROOT = Path(__file__).resolve().parents[1]
 s = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
-assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == '693a7d99189757fedfff69a579da5ed46c32806fd80de28fb3e16ea986bb424d', 'Changes escaped Banjo controller / exact shared-tab replacement (7591d6f)'
+assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == '693a7d99189757fedfff69a579da5ed46c32806fd80de28fb3e16ea986bb424d', 'Changes escaped Banjo controller / exact shared-group additions (7591d6f)'
 assert hashlib.sha256((ROOT / 'Games/Source/StealAnEgg/ChiliSourceV2.lua').read_bytes()).hexdigest() == '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d'
 a, b = s.index('-- BEGIN BANJO CONTROLLER'), s.index('-- END BANJO CONTROLLER')
 n = s[a:b]
 for contract in (
-    'FarmConfig.Banjo_Auto = false', 'FarmConfig.Banjo_Auto == true', 'AddTab("Banjo", "music")',
+    'FarmConfig.Banjo_Auto = false', 'FarmConfig.Banjo_Auto == true',
     'Text = "Auto Banjo Cricket", Default = false', 'Tooltip = "Repeat the mushroom melody."',
     'FindFirstChild("BanjoCricket")', 'FindFirstChild("BanjoCricketFlags")', 'config.Stages:Get()',
     'state.Data.PlaybackSeconds', 'count * 0.65 + 0.5', 'data.BanjoCricket', 'data.Claimed == true',
@@ -48,8 +48,16 @@ for contract in (
     assert contract in n, f'Missing Banjo contract: {contract}'
 assert n.count('task.spawn(') == 1, 'One Banjo job worker, no competing puzzle/movement workers'
 assert s.count('"Toggle_Banjo_Auto"') == 1
-assert s.count(QUEST_TABS) == 1
-assert 'Tasks.BuildBanjoUI(questTabs)' in QUEST_TABS
+assert s.count(QUEST_GROUP) == 1 and s.count(QUEST_CONTROLS) == 1
+assert 'Tasks.BuildBanjoUI(group)' in QUEST_CONTROLS
+ui = s[s.index('function Tasks.BuildWispUI(tab)'):s.index('\n\tLibraryLoader:OnUnload', s.index('function Tasks.BuildWispUI(tab)'))]
+assert ui.count(':AddGroupbox(') == 1 and 'Name = "Quests"' in ui
+assert ':AddTabbox(' not in ui and ':AddTab(' not in ui
+assert 'local wisp = group' in QUEST_GROUP
+assert ui.index('wisp:AddToggle(') < ui.index('wisp:AddLabel(') < ui.index('Tasks.BuildBanjoUI(group)')
+banjo_ui = n[n.index('function Tasks.BuildBanjoUI(group)'):]
+assert ':AddTab(' not in banjo_ui and ':AddTabbox(' not in banjo_ui and ':AddGroupbox(' not in banjo_ui
+assert 'group:AddToggle("Toggle_Banjo_Auto"' in banjo_ui
 assert re.findall(r'Text = "([^"]+)"', n) == ['Auto Banjo Cricket']
 assert 'RunPace(' not in n and 'FlyToPosition(' not in n
 assert 'transit:RagdollTravel(' in n, 'TreeTrip must retain the source long-distance dependency'
@@ -63,8 +71,8 @@ assert n.index('state.Status, state.ClaimPending =') < n.index('pcall(request.In
 ref = (ROOT / 'Games/Source/StealAnEgg/ChiliSourceV2.lua').read_text()
 for coords in re.findall(r'Vector3.new\((\d[\d.]+), ([\d.]+), ([\d.]+)\)', n):
     assert 'Vector3.new(' + ', '.join(coords) + ')' in ref, f'Invented room coordinate: {coords}'
-print('PASS: transport repair normalization + two Banjo sites reverse exactly to published Wisp 7591d6f.')
-print('PASS: one Banjo subtab in the same Home Quests group; safe OFF default and one worker.')
+print('PASS: transport repair normalization + reviewed Banjo sites reverse exactly to published Wisp 7591d6f.')
+print('PASS: Wisp and Banjo controls in one Home Quests group, without subtabs; safe OFF default and one worker.')
 print('PASS: source tree/room/bat protocol, real server Playback/Note acknowledgements and Save-verified claim.')
 print('PASS: native ownership/arbitration, source-backed aerial quest route, race cancellation and guarded cleanup.')
 print('Static/compile checks only; no Roblox puzzle execution, reward claim or FPS evidence.')

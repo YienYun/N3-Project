@@ -1,11 +1,14 @@
 # Auto Wisp — Home / farm quest
 
-Wisp is a **quest, not an Event**. UI: **Home → Quests → Wisp**. The explicit
-collapsible outer Quests group has one icon and a nested Wisp tab with its own
-icon, like the approved Lab/Custom structure. One OFF-by-default **Auto Wisp**
-toggle and one short live status row. The delivered [Banjo quest](banjo-quest.md)
-now shares this same tabbox as a separate subtab, not a second outer group.
-Server Hop is excluded at the user's request.
+Wisp is a **quest, not an Event**. UI: **Home → Quests**, one named/icon,
+collapsible group. The latest user instruction removes the Wisp/Banjo subtabs:
+show **Auto Wisp → its status → divider → Auto Banjo Cricket → its status** in
+this same group. Both toggles default OFF. No nested tabbox or second group.
+Server Hop remains a deferred separate module.
+
+The user accepted the `c620126` Forest-door correction and moved on to UI / next
+features. This presentation-only change preserves that transport and all quest
+logic byte-for-byte; it is not an agent-observed server/reward/FPS test.
 
 ## Chili source map
 

@@ -5,7 +5,7 @@ from banjo_scope import strip_banjo
 LABELS = ('CONTROLLER', 'UI', 'CANDIDATE', 'FLAGS', 'SORT', 'FUSE WRAP', 'FUSE RETURN')
 
 def strip_wisp(runtime):
-    # Keep every historical fingerprint unchanged after the two-site Banjo addition.
+    # Keep every historical fingerprint unchanged after the reviewed Banjo additions.
     if "-- BEGIN BANJO" in runtime:
         runtime = strip_banjo(runtime)
     for label in LABELS:

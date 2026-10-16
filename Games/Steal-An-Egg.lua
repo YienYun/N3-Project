@@ -19793,11 +19793,9 @@ do
 	function Tasks.BuildWispUI(tab)
 		local group = tab:AddGroupbox({ Name = "Quests", IconName = "scroll-text", Side = 2,
 			Collapsed = false, DisableCollapsing = false })
-		-- BEGIN BANJO QUEST TABS
-		local questTabs = group:AddTabbox({ Name = "Quest Tabs" })
-		local wisp = questTabs:AddTab("Wisp", "ghost")
-		Tasks.BuildBanjoUI(questTabs)
-		-- END BANJO QUEST TABS
+		-- BEGIN BANJO QUEST GROUP
+		local wisp = group
+		-- END BANJO QUEST GROUP
 		wisp:AddToggle("Toggle_Wisp_Auto", { Text = "Auto Wisp", Default = false, Tooltip = "Complete the Wisp quest.", Callback = function(value)
 			FarmConfig.Wisp_Auto = value == true
 			state.Generation += 1
@@ -19806,6 +19804,10 @@ do
 			if engine.AutoWake then engine.AutoWake() end
 		end })
 		local label = wisp:AddLabel("Status: Off", true)
+		-- BEGIN BANJO QUEST CONTROLS
+		group:AddDivider()
+		Tasks.BuildBanjoUI(group)
+		-- END BANJO QUEST CONTROLS
 		task.spawn(function()
 			while not state.Disposed and not LibraryLoader.Unloaded do
 				local ok, failure = pcall(function()
@@ -20322,8 +20324,7 @@ do
 	Tasks.PriorityStealYield, Tasks.PriorityCanRun = yieldAdapter, canRunAdapter
 	engine.AutoShieldWanted, engine.TriggerGuardDodge, engine.ClaimMovement = shieldAdapter, dodgeAdapter, claimAdapter
 	Tasks.WispNativeAction = actionAdapter
-	function Tasks.BuildBanjoUI(tabs)
-		local group = tabs:AddTab("Banjo", "music")
+	function Tasks.BuildBanjoUI(group)
 		group:AddToggle("Toggle_Banjo_Auto", { Text = "Auto Banjo Cricket", Default = false, Tooltip = "Repeat the mushroom melody.", Callback = function(value)
 			FarmConfig.Banjo_Auto = value == true
 			state.Generation += 1

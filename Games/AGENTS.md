@@ -178,11 +178,12 @@ Read this before changing `Steal-An-Egg.lua`.
 
 ## Wisp quest (not an Event)
 
-- See `../docs/wisp-quest.md`. User explicitly requires Home/farm → a new Quests
-  outer group, nested Wisp tab, distinct header/tab icons. Never put Wisp in Event.
-  Default OFF; one short toggle/status. Banjo is now delivered in the same tabbox
-  (see below), not a placeholder or second outer group.
-  Server Hop/tools are deferred for a separate manager module, not part of this work.
+- See `../docs/wisp-quest.md`. Latest user instruction supersedes the old tabs:
+  Home -> ONE named/icon/collapsible Quests group, NO Wisp/Banjo subtabs.
+  Auto Wisp + status, divider, Auto Banjo Cricket + status, both default OFF.
+  Never move quests into Event or create a second outer group.
+  User accepted c620126 and moved on: preserve its Forest-door transport.
+  Server Hop/tools remain deferred as a separate manager module.
 - Follow Chili 41403–42256. Read WispQuests/Save and real area DropTables; do not
   invent quest stages, recipes, remote payloads or target coordinates. Use raw UIDs.
 - One quest worker, native normal/Instant steal input/sorting adapters; preserve
@@ -208,9 +209,10 @@ Read this before changing `Steal-An-Egg.lua`.
 
 ## Banjo Cricket quest
 
-- See `../docs/banjo-quest.md`. Home → Quests → Wisp / Banjo, one existing
-  named/icon/collapsible group and one shared tabbox. Banjo uses a distinct music
-  icon, one default-OFF toggle and status. No Butterfly or server tools import.
+- See `../docs/banjo-quest.md`. Home -> Quests, the SAME existing group as
+  Wisp. No AddTabbox/AddTab in quest UI; append Banjo's default-OFF toggle/status
+  after Wisp's controls with a divider. Do not change quest workers or movement
+  for this presentation adjustment. No Butterfly or server tools import.
 - Follow immutable Chili V2 14644–15798 and the scoped TreeTrip dependency through
   72421. Official BanjoCricket data/flags/save and Effect/Aim/AskClaim only;
   listen to server Notes, activate a real bat and require matching new Note acks.
@@ -234,7 +236,7 @@ Read this before changing `Steal-An-Egg.lua`.
   and must not travel/restore tools after race takeover or unload.
 - Success requires authoritative Save.BanjoCricket.Claimed. Keep ambiguous claim
   dispatch pending across OFF/ON rather than issuing duplicate reward calls.
-- Run all ten current source checkers + full production Luau compile. Two marked
+- Run all ten current source checkers + full production Luau compile. Reviewed marked
   sites reverse byte-for-byte to published Wisp 7591d6f (SHA256 in checker).
   `wisp_scope.strip_wisp` strips Banjo first so historical expected hashes stay
   unchanged. Library, loader and bundled references remain untouched.

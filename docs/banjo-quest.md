@@ -6,9 +6,12 @@ Latest instruction: **Forest egg held → immediate door TP**, superseding the
 older no-TP instruction. The current correction is not live-confirmed; read the
 [transport/dependency mapping](quest-ragdoll-transport.md), not old success claims.
 
-UI remains **Home → Quests → Wisp / Banjo**, one collapsible/icon group and one
-nested tabbox. Banjo has a music icon, one default-OFF toggle and one status row.
-No Butterfly automation or server tools are included.
+Latest UI instruction: **Home → Quests**, one named/icon/collapsible group,
+**no subtabs**. Wisp toggle/status comes first, then a divider and Banjo Cricket
+toggle/status in the same group. Both default OFF; no duplicate group or worker.
+The user accepted `c620126` and requested this presentation change; preserve its
+Forest-door behavior and all puzzle/claim logic. No Butterfly or server tools
+are included by the UI change.
 
 ## Actual source flow and destinations
 
