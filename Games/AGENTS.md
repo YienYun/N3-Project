@@ -51,6 +51,30 @@ Read this before changing `Steal-An-Egg.lua`.
   User defense preferences must not be overwritten by automation.
 - Never install a second race worker or copy decompiler names into the runtime.
 - Run `python tools/check_race_source.py` and compile the complete game file.
+
+- Race Rally UI lives in `Event -> Race Rally` as a flat `LeftGroupbox`
+  with no nested dependency boxes. Order:
+  `Status:` / `Tokens: N` / `Win: N` / `Race: <name>` (each row is a
+  separate `AddLabel` with a `Purple = { "Keyword" }` flag, so the
+  keyword + colon is N3 purple and the value is default white),
+  then `Auto Race` / `Auto Use Power Up` / `Auto Claim Race Reward` /
+  `Race Speed` / `Auto Equip Race` / `Racer` (dropdown) /
+  `Auto Buy Race` / `Race Shop Items` (multi-select dropdown).
+  Every control is visible without first turning its parent toggle
+  ON; do not reintroduce the `RaceDriveOptions` /
+  `RaceEquipOptions` / `RaceShopOptions` `AddDependencyBox` wrappers.
+- `PublishRaceStatus()` outputs one short token only: `Off`
+  (Auto Race OFF), `Racing` (RaceId set, user is already in a race),
+  `End In M:SS` (race window open, will end in N) or
+  `Spawn In M:SS` (no race scheduled, next opening in N). The
+  composite `"Racing Event open, 1:20 to join  |  Next Racing Event
+  in 1:20"` text is removed; the label still renders as
+  `Status: <token>` with the keyword-only purple accent.
+- `Lbl_RaceStatus` / `Lbl_RaceTokens` / `Lbl_RaceWin` /
+  `Lbl_RaceName` are the four `AddLabel` instances; the combined
+  `Lbl_RaceStats` row is gone. `check_race_source.py` looks for
+  the four `Lbl_* :SetText(` call sites to verify the live display
+  hooks survived a UI refresh.
   This checker protects pre-race Sena/Instant/swap/filter/movement fingerprints.
 
 ## Built-in safe-zone steal visual
@@ -283,6 +307,11 @@ Read this before changing `Steal-An-Egg.lua`.
   group, containing a nested tabbox: Catch (bug) and Workshop (flower-2).
   No duplicate Home workshop. All OFF by default; preserve IDs/callbacks and the
   user's separate flat one-group Wisp/Banjo Quests UI (no quest subtabs).
+- Shooting Star group order: `Status:` / `Caught:` labels first (each with a
+  `Purple = { "Keyword" }` flag so the keyword + colon is N3 purple and the
+  value is default white), then the `Auto Catch Star` toggle at the bottom.
+  Same purple pattern as the Butterfly Catch tab — only the keyword + colon
+  is wrapped, the value/separator is left default.
 - Catch sub-tab order: `Status:` / `Total Caught:` / `Live:` labels first (the
   three live status rows, with the keyword + colon prefix in N3 purple
   `#D946EF` and the value/separator in default white — implemented via the

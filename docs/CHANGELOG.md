@@ -148,6 +148,55 @@ source contract holds.  No checker is a live Roblox/server/FPS test.
   (the keyword list and `show()` body changed the post-strip text).
   All other source checkers unchanged.
 
+## Shooting Star + Race Rally UI refresh
+
+- Shooting Star (`Event -> Shooting Star`): the live `Status:` and
+  `Caught:` labels were already using a static purple `Status:` /
+  `Caught:` prefix, but the `Auto Catch Star` toggle sat ABOVE the
+  labels. Reorder so the labels are first and the toggle is last.
+  Both labels now go through the same `Purple` keyword-list
+  mechanism used by the Butterfly Catch tab, so the `Status` /
+  `Caught` prefixes are keyword-only purple and the value
+  (`Off`, `0`, etc.) stays in default white.
+- Race Rally (`Event -> Race Rally`): the combined `Tokens / Wins /
+  Racer` line on a single row was split into three separate
+  labels so each value sits on its own line:
+    `Status:` (purple keyword, status text in default white)
+    `Tokens: 334` (purple keyword, value in default white)
+    `Win: N` (purple keyword, value in default white)
+    `Race: <name>` (purple keyword, value in default white)
+    `Auto Race` (toggle)
+    `Auto Use Power Up` (toggle, no longer hidden behind Auto Race)
+    `Auto Claim Race Reward` (toggle, no longer hidden)
+    `Race Speed` (slider, no longer hidden)
+    `Auto Equip Race` (toggle, renamed from `Auto Equip Racer`)
+    `Racer` (dropdown, no longer hidden behind Auto Equip)
+    `Auto Buy Race` (toggle, renamed from `Auto Buy Race Shop`)
+    `Race Shop Items` (multi-select dropdown, no longer hidden)
+- All three `RaceDriveOptions` / `RaceEquipOptions` /
+  `RaceShopOptions` `AddDependencyBox` wrappers are dropped so every
+  Race Rally control is visible without first turning its parent
+  toggle ON.
+- `PublishRaceStatus()`: the long composite status text
+  (`"Racing Event open, 1:20 to join  |  Next Racing Event in 1:20"`)
+  is replaced with a single short token: `Off` (toggle OFF),
+  `Racing` (already in a race), `End In M:SS` (race window open
+  and will end in N), or `Spawn In M:SS` (no race currently
+  scheduled, next opening in N). The label still shows
+  `Status: <token>` with the keyword-only purple accent.
+- Checker updates: butterfly_ui, admin, capture, bloom_star, banjo,
+  quest_transit, wisp, nitro_refill, auto_mutate, lab_stock,
+  lab_seller, treadmill_lab and steal_visual hashes all advanced
+  because the Race Rally UI text and the `show()` /
+  `PublishRaceStatus()` strings are inside the bodies those scope
+  checks measure. `check_race_source.py` was updated to look for
+  `Lbl_RaceStatus / Lbl_RaceTokens / Lbl_RaceWin / Lbl_RaceName`
+  (the new split labels) and to slice the speed slider via the
+  `RaceRallyGroup:AddSlider("Slider_Race_Speed", {` call now that
+  the `RaceDriveOptions` dependency box is gone.
+  `check_steal_source.py` adds the two new checker files to its
+  allowed-change set.
+
 
 ## Butterfly Bloom + Shooting Star
 

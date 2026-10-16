@@ -13696,12 +13696,11 @@ function Tasks.BuildMainInterface()
 	end)
 	local RaceRallyGroup = EventTab:AddLeftGroupbox("Race Rally", "flag")
 	local Lbl_RaceStatus = RaceRallyGroup:AddLabel('<font color="#D946EF"><b>Status:</b></font> Off', true)
-	local Lbl_RaceStats = RaceRallyGroup:AddLabel(
-		'<font color="#D946EF"><b>Tokens:</b></font> 0   <font color="#D946EF"><b>Wins:</b></font> 0   <font color="#D946EF"><b>Racer:</b></font> Ostrich',
-		true
-	)
+	local Lbl_RaceTokens = RaceRallyGroup:AddLabel('<font color="#D946EF"><b>Tokens:</b></font> 0', true)
+	local Lbl_RaceWin = RaceRallyGroup:AddLabel('<font color="#D946EF"><b>Win:</b></font> 0', true)
+	local Lbl_RaceName = RaceRallyGroup:AddLabel('<font color="#D946EF"><b>Race:</b></font> Ostrich', true)
 	task.spawn(function()
-		local LastS, LastT = nil, nil
+		local LastS, LastT, LastW, LastN = nil, nil, nil, nil
 		while not LibraryLoader.Unloaded do
 			task.wait(1)
 			pcall(function()
@@ -13714,15 +13713,20 @@ function Tasks.BuildMainInterface()
 					LastS = S
 					Lbl_RaceStatus:SetText(S)
 				end
-				local T = string.format(
-					'<font color="#D946EF"><b>Tokens:</b></font> %s   <font color="#D946EF"><b>Wins:</b></font> %s   <font color="#D946EF"><b>Racer:</b></font> %s',
-					tostring(St.Tokens or "0"),
-					tostring(St.Wins or "0"),
-					tostring(St.Racer or "Ostrich")
-				)
+				local T = '<font color="#D946EF"><b>Tokens:</b></font> ' .. tostring(St.Tokens or "0")
 				if T ~= LastT then
 					LastT = T
-					Lbl_RaceStats:SetText(T)
+					Lbl_RaceTokens:SetText(T)
+				end
+				local W = '<font color="#D946EF"><b>Win:</b></font> ' .. tostring(St.Wins or "0")
+				if W ~= LastW then
+					LastW = W
+					Lbl_RaceWin:SetText(W)
+				end
+				local N = '<font color="#D946EF"><b>Race:</b></font> ' .. tostring(St.Racer or "Ostrich")
+				if N ~= LastN then
+					LastN = N
+					Lbl_RaceName:SetText(N)
 				end
 			end)
 		end
@@ -13738,9 +13742,23 @@ function Tasks.BuildMainInterface()
 			end
 		end,
 	})
-	local RaceDriveOptions = RaceRallyGroup:AddDependencyBox()
-	RaceDriveOptions:SetupDependencies({ { RaceAutoToggle, true } })
-	RaceDriveOptions:AddSlider("Slider_Race_Speed", {
+	RaceRallyGroup:AddToggle("Toggle_Race_PowerUps", {
+		Text = "Auto Use Power Up",
+		Default = true,
+		Tooltip = "Grab & use powerups",
+		Callback = function(State)
+			FarmConfig.Race_PowerUps = State == true
+		end,
+	})
+	RaceRallyGroup:AddToggle("Toggle_Race_AutoClaim", {
+		Text = "Auto Claim Race Reward",
+		Default = false,
+		Tooltip = "Auto claim rewards",
+		Callback = function(State)
+			FarmConfig.Race_AutoClaim = State == true
+		end,
+	})
+	RaceRallyGroup:AddSlider("Slider_Race_Speed", {
 		Text = "Race Speed",
 		Min = 100,
 		Max = 144,
@@ -13754,24 +13772,8 @@ function Tasks.BuildMainInterface()
 			end
 		end,
 	})
-	RaceDriveOptions:AddToggle("Toggle_Race_PowerUps", {
-		Text = "Auto Use Power-Ups",
-		Default = true,
-		Tooltip = "Grab & use powerups",
-		Callback = function(State)
-			FarmConfig.Race_PowerUps = State == true
-		end,
-	})
-	RaceRallyGroup:AddToggle("Toggle_Race_AutoClaim", {
-		Text = "Auto Claim Race Rewards",
-		Default = false,
-		Tooltip = "Auto claim rewards",
-		Callback = function(State)
-			FarmConfig.Race_AutoClaim = State == true
-		end,
-	})
-	local RaceEquipToggle = RaceRallyGroup:AddToggle("Toggle_Race_AutoEquip", {
-		Text = "Auto Equip Racer",
+	RaceRallyGroup:AddToggle("Toggle_Race_AutoEquip", {
+		Text = "Auto Equip Race",
 		Default = true,
 		Tooltip = "Auto equip racer",
 		Callback = function(State)
@@ -13781,9 +13783,7 @@ function Tasks.BuildMainInterface()
 			end
 		end,
 	})
-	local RaceEquipOptions = RaceRallyGroup:AddDependencyBox()
-	RaceEquipOptions:SetupDependencies({ { RaceEquipToggle, true } })
-	Tasks.RaceRacerDropdown = RaceEquipOptions:AddDropdown("Dropdown_Race_Racer", {
+	Tasks.RaceRacerDropdown = RaceRallyGroup:AddDropdown("Dropdown_Race_Racer", {
 		Text = "Racer",
 		Values = { "Best Owned", "Ostrich" },
 		Default = "Best Owned",
@@ -13797,17 +13797,15 @@ function Tasks.BuildMainInterface()
 			end
 		end,
 	})
-	local RaceBuyToggle = RaceRallyGroup:AddToggle("Toggle_Race_AutoBuy", {
-		Text = "Auto Buy Race Shop",
+	RaceRallyGroup:AddToggle("Toggle_Race_AutoBuy", {
+		Text = "Auto Buy Race",
 		Default = false,
 		Tooltip = "Auto buy shop items",
 		Callback = function(State)
 			FarmConfig.Race_AutoBuy = State == true
 		end,
 	})
-	local RaceShopOptions = RaceRallyGroup:AddDependencyBox()
-	RaceShopOptions:SetupDependencies({ { RaceBuyToggle, true } })
-	RaceShopOptions:AddDropdown("Dropdown_Race_ShopItems", {
+	RaceRallyGroup:AddDropdown("Dropdown_Race_ShopItems", {
 		Text = "Race Shop Items",
 		Values = { "Nitro Mutation", "Cash Booster", "Speed Boost", "Treadmill Boost", "Racing Bat" },
 		Default = {},
@@ -17936,7 +17934,7 @@ do
 		end
 		local scheduleText
 		if RaceJoinOpen() then
-			scheduleText = "Racing Event open, " .. duration(joinEnds - now) .. " to join"
+			scheduleText = "End In " .. duration(joinEnds - now)
 		else
 			local schedule = LoadRaceModule({ "Shared", "Util", "RaceRallySchedule" })
 			local ok, nextOpening = false, nil
@@ -17946,17 +17944,14 @@ do
 			if not ok or type(nextOpening) ~= "number" then
 				nextOpening = (math.floor(now / 1800) + 1) * 1800
 			end
-			scheduleText = (
-				Workspace:GetAttribute("RaceRallyRunning") == true and "Racing Event running, next in "
-				or "Next Racing Event in "
-			) .. duration(nextOpening - now)
+			scheduleText = "Spawn In " .. duration(nextOpening - now)
 		end
 		if LocalPlayer:GetAttribute("RaceId") ~= nil then
-			race.Status = race.Action
+			race.Status = "Racing"
 		elseif FarmConfig.Race_AutoRace ~= true then
-			race.Status = "Off  |  " .. scheduleText
+			race.Status = "Off"
 		elseif race.Action ~= "Off" and race.Action ~= "" then
-			race.Status = race.Action .. "  |  " .. scheduleText
+			race.Status = race.Action
 		else
 			race.Status = scheduleText
 		end
@@ -22398,11 +22393,11 @@ end
 	end
 	function Tasks.BuildBloomStarUI(events)
 		local starGroup = events:AddGroupbox({ Name = "Shooting Star", IconName = "star", Side = 2, Collapsed = false, DisableCollapsing = false })
+		labels.Star = { Label = starGroup:AddLabel("Status: Off", true), Purple = { "Status" } }
+		labels.Caught = { Label = starGroup:AddLabel("Caught: 0", true), Purple = { "Caught" } }
 		starGroup:AddToggle("Toggle_Star_Auto", { Text = "Auto Catch Star", Default = false, Tooltip = "Catch your landed star.", Callback = function(value)
 			FarmConfig.Star_Auto = value == true; settingsChanged(star)
 		end })
-		labels.Star = { Label = starGroup:AddLabel("Status: Off", true) }
-		labels.Caught = { Label = starGroup:AddLabel("Caught: 0", true) }
 		local butterflyGroup = events:AddGroupbox({ Name = "Butterfly Bloom", IconName = "bug", Side = 1, Collapsed = false, DisableCollapsing = false })
 		local butterflyTabs = butterflyGroup:AddTabbox({ Name = "Butterfly Tabs" })
 		local catchGroup = butterflyTabs:AddTab("Catch", "bug")

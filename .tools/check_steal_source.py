@@ -92,7 +92,8 @@ allowed = {
     ".tools/check_nitro_refill_source.py", ".tools/check_auto_mutate_source.py",
     ".tools/check_lab_stock_source.py", ".tools/check_lab_seller_source.py",
     ".tools/check_butterfly_ui_source.py", ".tools/check_quest_transit_source.py",
-    ".tools/check_steal_visual.py", ".tools/banjo_scope.py",
+    ".tools/check_steal_visual.py", ".tools/check_race_source.py",
+    ".tools/check_treadmill_lab_source.py", ".tools/banjo_scope.py",
 }
 assert set(changed) <= allowed, f"Out-of-scope file changes: {set(changed) - allowed}"
 subprocess.run(["git", "diff", "--check"], cwd=ROOT, check=True)

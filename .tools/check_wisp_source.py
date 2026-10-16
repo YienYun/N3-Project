@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 s = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
 if '-- BEGIN ADMIN CONTROLLER' in s:
     s = strip_admin(s)
-assert hashlib.sha256(strip_wisp(s).encode()).hexdigest() == '5acc071d087ef7074909b4a851f54ebd2fae7682b9ad026df4fdf76dabaddae3', 'Changes escaped seven Wisp insertion sites / published 3748a3e'
+assert hashlib.sha256(strip_wisp(s).encode()).hexdigest() == '74312ae3208e9ec0926ad4bbccd2086938e7a21683e329ad93a2a9a76c58c1d8', 'Changes escaped seven Wisp insertion sites / published 3748a3e'
 reference = ROOT / 'Games/Source/StealAnEgg/ChiliSourceV2.lua'
 assert hashlib.sha256(reference.read_bytes()).hexdigest() == '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d'
 a, b = s.index('-- BEGIN WISP CONTROLLER'), s.index('-- END WISP CONTROLLER')

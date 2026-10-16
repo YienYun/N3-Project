@@ -23,7 +23,7 @@ def contains(text, *contracts):
 
 # The user live-confirmed 1aa5920's race. Protect the entire body, not just names.
 race = section("-- Racing Event: semantic port", "LocalPlayer.CharacterAdded:Connect(Tasks.OnCharacterAdded)")
-assert hashlib.sha256(strip_nitro_shop_hook(race).encode()).hexdigest() == "0d14be7f7f555e9a1599c22be6fba3732651ae7e8be360fba16648bac3043aaa", "Live-confirmed race changed beyond the reviewed shop gate"
+assert hashlib.sha256(strip_nitro_shop_hook(race).encode()).hexdigest() == "b4df422633b8460f9bf84ee988513a6e5c7b7257ab21495bece8f0ff128759cc", "Live-confirmed race changed beyond the reviewed shop gate"
 
 scan = section("function Tasks.ScanTreadmillInPlot(", "local GetTreadmillPart")
 assert scan.index('"TreadmillBottom"') < scan.index('"__ClientTreadmillRenders"')

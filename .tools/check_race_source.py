@@ -96,7 +96,7 @@ ui_start = runtime.index('local RaceRallyGroup =')
 race_ui = runtime[ui_start:runtime.index('local ScrambleEggGroup =', ui_start)]
 assert "RaceDetails" not in race_ui and "LastDetails" not in race_ui
 assert "Heat:" not in race_ui and "Phase:" not in race_ui
-for label in ("Lbl_RaceStatus", "Lbl_RaceStats"):
+for label in ("Lbl_RaceStatus", "Lbl_RaceTokens", "Lbl_RaceWin", "Lbl_RaceName"):
     assert label + ":SetText(" in race_ui, f"Race display must be preserved: {label}"
 for field in ("Status", "Tokens", "Wins", "Racer"):
     assert "St." + field in race_ui, f"Race display field missing: {field}"
@@ -148,8 +148,12 @@ assert 'SetAttribute("RaceFinishPlace"' not in race, 'Finish must come from game
 print('PASS: source mount-recovery drive lifetime; finish/leave still use game finish attributes, not local place/progress.')
 
 # User-requested N3 cap; do not misrepresent this as the bundled source's maximum.
-slider_start = runtime.index('RaceDriveOptions:AddSlider("Slider_Race_Speed", {')
-slider = runtime[slider_start:runtime.index('RaceDriveOptions:AddToggle(', slider_start)]
+slider_call = runtime.index('AddSlider("Slider_Race_Speed",')
+# Slider is now hosted directly on RaceRallyGroup (the Speed / PowerUps / Equip
+# dependency boxes were dropped so every control is visible without first
+# turning its parent toggle ON). Slice through the next sibling toggle so the
+# surrounding Min/Max/Default + clamp callback can be verified.
+slider = runtime[slider_call:runtime.index('AddToggle("Toggle_Race_AutoEquip"', slider_call)]
 for value in ('Min = 100', 'Max = 144', 'Default = 144',
               'math.clamp(math.floor(tonumber(Value) or 144), 100, 144)'):
     assert value in slider, value
