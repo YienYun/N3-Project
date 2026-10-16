@@ -12585,19 +12585,6 @@ function Tasks.BuildMainInterface()
 		end,
 	})
 	-- END BUILTIN VISUAL UI
-	FarmEggGroup:AddSlider("Slider_Farm_TweenSpeed", {
-		Text = "Tween Speed",
-		Min = 100,
-		Max = 1000,
-		Default = 400,
-		Rounding = 0,
-		Tooltip = "Normal approach speed cap (N3 pace). Does not change Instant Steal or Sena deposit movement.",
-		Callback = function(Value)
-			FarmConfig.AutoTweenSpeed = math.clamp(tonumber(Value) or 400, 100, 1000)
-            local Engine = RuntimeState.StealEngine
-            if Engine and Engine.UpdateAutoStealSpeed then Engine.UpdateAutoStealSpeed() end
-		end,
-	})
 	InstToggle = FarmEggGroup:AddToggle("Toggle_Farm_InstantSteal", {
 		Text = "Instant Steal",
 		Default = false,
