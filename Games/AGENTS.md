@@ -275,9 +275,15 @@ Read this before changing `Steal-An-Egg.lua`.
 - Read ../docs/butterfly-shooting-star.md and source dependencies, not only UI names.
   Source 19664–20342 / 49077–49316 (Star); 71401–73412 + 40119–40233 /
   42455–42623 (Butterfly, TreeTrip, flight and health). Keep semantic names.
-- Event -> Shooting Star / Butterfly Bloom for catching. Home -> Butterfly
-  Workshop for trade/smart trade/craft. All OFF by default, named/icon groups,
-  no extra tabs/subtabs. Preserve the user's one-group Wisp/Banjo UI.
+- Event -> Shooting Star stays separate. The latest user request unifies all
+  Butterfly controls in ONE named/icon/collapsible Event -> Butterfly Bloom
+  group, containing a nested tabbox: Catch (bug) and Workshop (flower-2).
+  No duplicate Home workshop. All OFF by default; preserve IDs/callbacks and the
+  user's separate flat one-group Wisp/Banjo Quests UI (no quest subtabs).
+- tools/check_butterfly_ui_source.py reverses four exact presentation edits to
+  a815629 (SHA256 d4c01e1236479c77375239022bcdf3363ea48cdb9bbf5ad32a079636845deaa6).
+  Keep this frozen along with historical hashes. Run it plus the prior eleven
+  source checks and full production Luau compile after this UI revision.
 - Do not add a speculative butterfly catch/swing remote. Source equips the actual
   net and uses game net capture; observe Saved Butterflies for counts. Star uses
   exact payload feeds / Hold / Catch and increments only on matching Claimed.

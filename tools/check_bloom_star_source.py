@@ -89,16 +89,17 @@ for name in ('Toggle_Star_Auto', 'Toggle_Butterfly_Auto', 'Toggle_Butterfly_Trad
     assert s.count('"' + name + '"') == 1
 assert 'events:AddGroupbox({ Name = "Shooting Star"' in c
 assert 'events:AddGroupbox({ Name = "Butterfly Bloom"' in c
-assert 'home:AddGroupbox({ Name = "Butterfly Workshop"' in c
-assert ':AddTab(' not in c and ':AddTabbox(' not in c
-assert s.count('Tasks.BuildBloomStarUI(HomeTab, EventTab)') == 1
+assert 'local workshop = butterflyTabs:AddTab("Workshop", "flower-2")' in c
+assert c.count(':AddTab(') == 2 and c.count(':AddTabbox(') == 1
+assert 'local catchGroup = butterflyTabs:AddTab("Catch", "bug")' in c
+assert s.count('Tasks.BuildBloomStarUI(EventTab)') == 1
 for key in ('Star_Auto', 'Butterfly_Auto', 'Butterfly_Trade', 'Butterfly_Craft'):
     assert 'FarmConfig.' + key in c
 assert 'star.Wanted = enabled("Star_Auto") and not raceWanted()' in c
 assert 'bloom.Wanted = not raceWanted()' in c
 print('PASS: full frozen 7e9549a reversal; existing Forest quests, normal/Instant, race and prior gameplay preserved.')
 print('PASS: semantic Chili Star payload/hold/catch/claim, Butterfly swarm/net/modes/flags and trade/smart/craft protocols.')
-print('PASS: Event catch groups + Home workshop; default OFF, one shared job worker, native leases, race-first and owned cleanup.')
+print('PASS: Event Butterfly Catch/Workshop subtabs + separate Star; default OFF, one shared job worker, native leases, race-first and owned cleanup.')
 print('PASS: server-event counts / save-confirmed consumption, pending RPC protection and no invented butterfly catch remote.')
 print('Static source/compile evidence only. No Roblox event, reward, route, death or FPS success is claimed.')
 

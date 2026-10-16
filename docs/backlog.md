@@ -17,8 +17,9 @@ work. Utilities/HUD and server tooling still need their own detailed breakdown.
 - Native normal/Instant steal and optional safe-zone visual.
 - Race Rally, treadmill / Scramble Lab fixes, Lab stock and Lab seller.
 - Auto Mutate and optional Nitro replenishment.
-- Butterfly Bloom catching + Workshop manual/smart trade and essence crafting;
-  Shooting Star fall/hold/catch workflow. See `butterfly-shooting-star.md` for
+- Butterfly Bloom catching + Workshop manual/smart trade and essence crafting,
+  unified under Event → Butterfly Bloom → Catch / Workshop (no duplicate Home
+  group); Shooting Star remains its own Event group with fall/hold/catch workflow. See `butterfly-shooting-star.md` for
   exact source mapping, native adaptations and unverified live acceptance.
 - Wisp and Banjo Cricket. The user accepted Forest-door correction `c620126`
   and moved on to further features. Latest UI request flattens both into one

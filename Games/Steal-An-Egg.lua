@@ -12733,7 +12733,7 @@ function Tasks.BuildMainInterface()
 	Tasks.BuildWispUI(HomeTab)
 	-- END WISP UI
 	-- BEGIN BLOOM STAR UI
-	Tasks.BuildBloomStarUI(HomeTab, EventTab)
+	Tasks.BuildBloomStarUI(EventTab)
 	-- END BLOOM STAR UI
 	local IndexGroup = HomeTab:AddRightGroupbox("Pet Index & Codex", "book-open")
 	IndexGroup:AddDropdown("Dropdown_Index_PriorityOrder", {
@@ -21470,14 +21470,16 @@ end
 		show("Counts", string.format("Emerald %d | Sapphire %d | Amethyst %d | Radiant %d | Essence %d",
 			bloom.Counts.Green or 0, bloom.Counts.Blue or 0, bloom.Counts.Purple or 0, bloom.Counts.Golden or 0, bloom.Essence))
 	end
-	function Tasks.BuildBloomStarUI(home, events)
+	function Tasks.BuildBloomStarUI(events)
 		local starGroup = events:AddGroupbox({ Name = "Shooting Star", IconName = "star", Side = 2, Collapsed = false, DisableCollapsing = false })
 		starGroup:AddToggle("Toggle_Star_Auto", { Text = "Auto Catch Star", Default = false, Tooltip = "Catch your landed star.", Callback = function(value)
 			FarmConfig.Star_Auto = value == true; settingsChanged(star)
 		end })
 		labels.Star = { Label = starGroup:AddLabel("Status: Off", true) }
 		labels.Caught = { Label = starGroup:AddLabel("Caught: 0", true) }
-		local catchGroup = events:AddGroupbox({ Name = "Butterfly Bloom", IconName = "bug", Side = 1, Collapsed = false, DisableCollapsing = false })
+		local butterflyGroup = events:AddGroupbox({ Name = "Butterfly Bloom", IconName = "bug", Side = 1, Collapsed = false, DisableCollapsing = false })
+		local butterflyTabs = butterflyGroup:AddTabbox({ Name = "Butterfly Tabs" })
+		local catchGroup = butterflyTabs:AddTab("Catch", "bug")
 		local catchToggle = catchGroup:AddToggle("Toggle_Butterfly_Auto", { Text = "Auto Butterfly", Default = false, Tooltip = "Catch during Butterfly Bloom.", Callback = function(value)
 			FarmConfig.Butterfly_Auto = value == true; settingsChanged(bloom)
 		end })
@@ -21501,7 +21503,7 @@ end
 		labels.Bloom = { Label = catchGroup:AddLabel("Status: Off", true) }
 		labels.ButterflyCaught = { Label = catchGroup:AddLabel("Total caught: waiting for save", true) }
 		labels.Schedule = { Label = catchGroup:AddLabel("Waiting for bloom", true) }
-		local workshop = home:AddGroupbox({ Name = "Butterfly Workshop", IconName = "flower-2", Side = 2, Collapsed = false, DisableCollapsing = false })
+		local workshop = butterflyTabs:AddTab("Workshop", "flower-2")
 		local tradeToggle = workshop:AddToggle("Toggle_Butterfly_Trade", { Text = "Auto Trade Up", Default = false, Tooltip = "Trade at the tree machine.", Callback = function(value)
 			FarmConfig.Butterfly_Trade = value == true; settingsChanged(bloom)
 		end })

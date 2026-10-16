@@ -3,16 +3,33 @@
 ## UI by purpose
 
 - **Event → Shooting Star**: Auto Catch Star, status, server-confirmed session count.
-- **Event → Butterfly Bloom**: Auto Butterfly, Stand / Chase / Circle / Patrol,
-  Rarest / Nearest chase priority, selected chase tiers, speed 100–600/default 320,
-  status and real event / schedule countdown.
-- **Home → Butterfly Workshop**: Auto Trade Up, selected conversions, Smart Trade
-  for Essence, Auto Craft Essence, status and saved butterfly/essence counts.
+- **Event → Butterfly Bloom**: one named/icon/collapsible outer group with two
+  distinct-icon inner tabs, following the user's latest grouping request:
+  - **Catch** (`bug`): Auto Butterfly, Stand / Chase / Circle / Patrol,
+    Rarest / Nearest chase priority, selected chase tiers, speed 100–600/default 320,
+    status, saved total caught and real event / schedule countdown.
+  - **Workshop** (`flower-2`): Auto Trade Up, selected conversions, Smart Trade
+    for Essence, Auto Craft Essence, status and saved butterfly/essence counts.
 
-Every toggle defaults **OFF**. No quest subtabs, extra outer Quests group, new
-Event tab or Library changes. Trade/craft **consume saved butterflies**; they
-require the tree unlocked through Wisp and actual machine proximity. Catching
-and resource processing are placed separately because their purposes differ.
+Every toggle defaults **OFF**. The earlier Home workshop was not a second
+Butterfly mechanic: it processed catches from the same event. It is now moved
+into the same Event group; no duplicate Home workshop remains. Shooting Star is
+an independent event, not a butterfly tier. Entries in farm Priority select task
+order; they do not create extra event controllers. Wisp/Banjo stay in one flat
+Home Quests group with no subtabs. No Library changes.
+
+Trade/craft **consume saved butterflies**; they require the tree unlocked through
+Wisp and actual machine proximity. Catching requires the actual bloom to be live;
+workshop visits normally start outside bloom. The bundled game reference includes
+ButterflyCatalog, ButterflyFlags, ButterflyBloom.Swarm and machine/net RPCs. That
+is source evidence of the mechanic, not confirmation of availability/schedule in
+any particular current live server. Schedule values come from game flags.
+
+The four UI-only replacements reverse exactly to published `a815629` via
+`tools/butterfly_ui_scope.py`, checked by `check_butterfly_ui_source.py` against
+SHA256 `d4c01e1236479c77375239022bcdf3363ea48cdb9bbf5ad32a079636845deaa6`.
+All settings IDs, callbacks, defaults, movement/consumption logic and worker counts
+are byte-identical after that reversal.
 
 ## Immutable source mapping
 
@@ -30,7 +47,7 @@ and resource processing are placed separately because their purposes differ.
 | 71966–72009: real free net claim | `claimNet`, exact AskClaimNet with no invented arguments |
 | 72010–72421: saved counts, TreeTrip, settling, prompt/entry, machine reach/exit | `enterWorkshopTree`, `reachMachine`, `walkTo`, `leaveWorkshopTree` |
 | 72433–72754: machine RPC proximity, manual reserve, smart recipe planner, trades/craft | `smartPlan`, `workshopNeeded`, `machineRequest`, `runWorkshop` |
-| 72755–73412: mode/chase lock/velocity, scheduler and source controls | `catchButterflies`, common scheduler, purpose-separated N3 controls |
+| 72755–73412: mode/chase lock/velocity, scheduler and source controls | `catchButterflies`, common scheduler, unified N3 Catch/Workshop controls |
 | 40119–40233 / 42455–42623: flight, collision/state and health service | Existing owned transit + `BeginControl` / `Control`, private per-job health capture/restore |
 | 38854–39060: exclusive event / priority arbitration | `Tasks.BloomStarOver`, availability adapters and cooperative cancellation hooks |
 
@@ -128,7 +145,7 @@ more conservative than Chili's immediate true-reply shortcut.
 
 ## Verification / live acceptance still required
 
-Run **check_bloom_star_source.py + all ten previous source checkers**, full
+Run **check_butterfly_ui_source.py + check_bloom_star_source.py + all ten previous source checkers**, full
 production Luau compile, immutable identities and git diff --check. Reversing
 exactly the nine new marked scopes reproduces published `7e9549a` byte-for-byte
 (SHA256 `29637582c16bc01ec2d250fa504042979b7b40964de7853266f126db4a4f1b7d`).
