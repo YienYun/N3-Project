@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 s = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
 if '-- BEGIN ADMIN CONTROLLER' in s:
     s = strip_admin(s)
-assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == '9fabcc48fc2680987c3dbf388920ca16151a8e2b8e373b35c55a8115cd48c5d3', 'Changes escaped Banjo controller / exact shared-group additions (7591d6f)'
+assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == '77de6e654f916cf9699465657bcea288cc73e8550e5ba8c55100874c936aef55', 'Changes escaped Banjo controller / exact shared-group additions (7591d6f)'
 assert hashlib.sha256((ROOT / 'Games/Source/StealAnEgg/ChiliSourceV2.lua').read_bytes()).hexdigest() == '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d'
 a, b = s.index('-- BEGIN BANJO CONTROLLER'), s.index('-- END BANJO CONTROLLER')
 n = s[a:b]

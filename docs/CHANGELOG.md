@@ -223,6 +223,22 @@ source contract holds.  No checker is a live Roblox/server/FPS test.
   used to leak into the new attempt. Toggling the toggle (or
   re-running the script) now gives a clean retry.
 
+## Drop Training live-status label
+
+- The user wanted the `Progress -> Training` group to drop the
+  four-row live status block (`Status:` / `Treadmill:` / `Speed:`
+  / `Timer:`). The `Lbl_TrainingStatus` AddLabel, the
+  `task.spawn` updater that wrote to it, and the now-orphaned
+  helpers (`ParseSpeedText`, `GetHudSpeedText`,
+  `GetTreadmillRateTextRaw`, `GetTreadmillRateText`,
+  `IsOnTreadmill`, `SPEED_UNITS`, `TREADMILL_STEPS_PER_SECOND`,
+  `_HudSpeedValue`, `_HudSpeedScanAt`, `_RateText`, `_RateTextAt`,
+  `TrainSession`, `LastStatusText`) are all removed. The Training
+  group now contains only the five toggles and the Cash Reserve
+  input. No treadmill worker / mount / state was changed; the
+  underlying `IsPlayerRunningOnTreadmill` predicate that the
+  treadmill worker uses is still in place.
+
 
 ## Butterfly Bloom + Shooting Star
 
