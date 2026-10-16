@@ -179,9 +179,11 @@ Read this before changing `Steal-An-Egg.lua`.
 ## Wisp quest (not an Event)
 
 - See `../docs/wisp-quest.md`. Latest user instruction supersedes the old tabs:
-  Home -> ONE named/icon/collapsible Quests group, NO Wisp/Banjo subtabs.
-  Auto Wisp + status, divider, Auto Banjo Cricket + status, both default OFF.
-  Never move quests into Event or create a second outer group.
+  Progress -> ONE named/icon/collapsible Quests group, NO Wisp/Banjo subtabs.
+  Order in the group: `Wisp:` status, `Banjo:` status, `Auto Wisp` toggle,
+  `Auto Banjo Cricket` toggle. No divider between the two quests. Both
+  default OFF. Never move quests back into Home or Event or create a
+  second outer group.
   User accepted c620126 and moved on: preserve its Forest-door transport.
   Server Hop/tools remain deferred as a separate manager module.
 - Follow source 41403–42256. Read WispQuests/Save and real area DropTables; do not
@@ -209,10 +211,11 @@ Read this before changing `Steal-An-Egg.lua`.
 
 ## Banjo Cricket quest
 
-- See `../docs/banjo-quest.md`. Home -> Quests, the SAME existing group as
-  Wisp. No AddTabbox/AddTab in quest UI; append Banjo's default-OFF toggle/status
-  after Wisp's controls with a divider. Do not change quest workers or movement
-  for this presentation adjustment. No Butterfly or server tools import.
+- See `../docs/banjo-quest.md`. Progress -> Quests, the SAME existing group as
+  Wisp. No AddTabbox/AddTab in quest UI. Layout: `Wisp:` status, `Banjo:` status,
+  `Auto Wisp` toggle, `Auto Banjo Cricket` toggle (no divider, status lines on top).
+  Do not change quest workers or movement for this presentation adjustment.
+  No Butterfly or server tools import.
 - Follow immutable source V2 14644–15798 and the scoped TreeTrip dependency through
   72421. Official BanjoCricket data/flags/save and Effect/Aim/AskClaim only;
   listen to server Notes, activate a real bat and require matching new Note acks.

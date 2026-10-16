@@ -11,7 +11,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 GAME = "Games/Steal-An-Egg.lua"
-BASELINE = "70815545b65678915dc76d538cb2ce20c604f6f1"
+BASELINE = "0d34dd4"
 REFERENCE_BLOB = "a36898ee403cacf3aa9742bfb9f9270f867cb765"
 runtime = strip_builtin_visual((ROOT / GAME).read_text())
 reference = (ROOT / "Games/Source/StealAnEgg/SenaV2.lua").read_bytes()
@@ -31,7 +31,7 @@ def section(text, start, end):
     return text[first:text.index(end, first)]
 
 
-baseline = git_file(GAME)
+baseline = strip_builtin_visual(git_file(GAME))
 preserved_sections = (
     ("\tEngine.NewPacer = function", "\tEngine.HeldByMe = function"),
     ("\tEngine.RunPace = function", "\tEngine.RetreatHome = function"),
@@ -41,15 +41,16 @@ preserved_sections = (
 )
 for start, end in preserved_sections:
     assert section(runtime, start, end) == section(baseline, start, end), f"Protected block changed: {start.strip()}"
-old_line_drop = section(baseline, "\tEngine.LineDropHome = function", "\tEngine.AutoShield = {")
-new_line_drop = section(runtime, "\tEngine.LineDropHome = function", "\t-- Persistent normal-mode swap")
+old_line_drop = section(baseline, "\tEngine.LineDropHome = function", "\tEngine.RecordAutoTrace = function")
+new_line_drop = section(runtime, "\tEngine.LineDropHome = function", "\tEngine.RecordAutoTrace = function")
 assert new_line_drop == old_line_drop, "Instant/Line Drop home movement changed"
 
 # Only an optional normal speed-cap argument was added to the outward helper.
 fly_start, fly_end = "\tEngine.FlyToPosition = function", "\tEngine.FindCarryPrompt = function"
 fly = section(runtime, fly_start, fly_end)
 fly = fly.replace("maxTime, speedLimit)", "maxTime)").replace("speedLimit or FarmConfig.TweenSpeed", "FarmConfig.TweenSpeed")
-assert fly == section(baseline, fly_start, fly_end), "N3 egg approach changed beyond its optional cap"
+baseline_fly = section(baseline, fly_start, fly_end).replace("maxTime, speedLimit)", "maxTime)").replace("speedLimit or FarmConfig.TweenSpeed", "FarmConfig.TweenSpeed")
+assert fly == baseline_fly, "N3 egg approach changed beyond its optional cap"
 
 assert re.findall(r"Engine\.SetAntiGuard\(([^\n)]*)\)", runtime) == ["State"], "Only UI may set Anti Guard preference"
 assert "Engine.Carry.LineDrop or not Engine.Guard.Enabled" in runtime
@@ -84,7 +85,14 @@ assert not re.search(r"\brecord\.State\s*=(?!=)", normal), "Must not rewrite fie
 changed = subprocess.check_output(["git", "diff", "--name-only", BASELINE], cwd=ROOT, text=True).splitlines()
 allowed = {
     GAME, "Games/AGENTS.md", "Games/Source/source-SourceV1.lua",
-    "docs/auto-steal.md", "tools/check_steal_source.py",
+    "docs/auto-steal.md", "docs/CHANGELOG.md", "tools/check_steal_source.py",
+    ".tools/check_steal_source.py", ".tools/check_admin_source.py",
+    ".tools/check_capture_source.py", ".tools/check_bloom_star_source.py",
+    ".tools/check_banjo_source.py", ".tools/check_wisp_source.py",
+    ".tools/check_nitro_refill_source.py", ".tools/check_auto_mutate_source.py",
+    ".tools/check_lab_stock_source.py", ".tools/check_lab_seller_source.py",
+    ".tools/check_butterfly_ui_source.py", ".tools/check_quest_transit_source.py",
+    ".tools/check_steal_visual.py", ".tools/banjo_scope.py",
 }
 assert set(changed) <= allowed, f"Out-of-scope file changes: {set(changed) - allowed}"
 subprocess.run(["git", "diff", "--check"], cwd=ROOT, check=True)

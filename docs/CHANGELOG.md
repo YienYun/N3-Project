@@ -68,12 +68,48 @@ source contract holds.  No checker is a live Roblox/server/FPS test.
 
 ## Wisp / Banjo — Forest only
 
-- Both quests sit in one flat Home → Quests group, no subtabs.
+- Both quests sit in one flat Progress → Quests group, no subtabs.
+- Group order: `Wisp:` status, `Banjo:` status, `Auto Wisp` toggle,
+  `Auto Banjo Cricket` toggle. No divider between the two quests; the
+  status rows sit on top of the toggles.
 - Forest-only selection (the user's explicit correction).
 - Forest-held egg → door TP (Forest-door correction `c620126`,
   live-confirmed).
 - Live failures `36128e6` (ragdoll-port), `47e1483` (Wisp tween), `4d2db61`
   (Banjo water/reset) remain recorded; this build is not live-confirmed.
+
+## Refine Index Group
+
+- Label simplified from "Index: .../X (Y%) Pets" to
+  `Index: <collected>/<target>`. Removed the `(Y%)` percent and the
+  trailing "Pets" suffix, plus the standalone `Lbl_IndexRewards` row.
+- Toggle renamed `Auto Claim Index Rewards` → `Auto Claim Index`.
+- Auto-claim worker unchanged; only the cosmetic claim-text path is
+  gone.
+
+## Drop Anti Treadmill, Instan Prom toggle, Steal Selected
+
+- `Anti Treadmill` toggle and its `ApplyTreadmillShield(...)` logic
+  fully removed. The `Treadmill` watchdog still runs but no longer
+  tries to push a protective shield; it just exposes the ready/taken
+  helpers.
+- `Instan Prom` toggle removed; the instant-interact prompt-bind is
+  now default behavior (no toggle needed). Sibling UI key
+  `Toggle_InstanProm` and `FarmConfig.InstantPrompt` field gone.
+- `Steal Selected` toggle and `AutoStealSelected` config field removed.
+  The `Auto Steal` (formerly `Auto Steal All`) worker now branches on
+  a `hasFilter` predicate:
+  - no `SelectedZones` / `SelectedEggs` / `SelectedRarities` /
+    `SelectedMutations` entry → priority-best egg in the zone
+    (ranked upstream by `RecordPriority`).
+  - any of those populated → strict zone + category + rarity +
+    mutation match; if no match in the zone the worker does not
+    steal.
+- Sibling UI key `Toggle_StealSelected` and the
+  `FarmConfig.AutoStealSelected` field stripped from
+  `FarmConfig`/`DefaultFarmConfig` and from the `SaveManager` defaults
+  so old saved JSONs are silently ignored.
+
 
 ## Butterfly Bloom + Shooting Star
 

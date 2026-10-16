@@ -49,7 +49,8 @@ for contract in (
 ):
     assert contract in w, f'Missing Wisp source/lifecycle contract: {contract}'
 assert w.count('task.spawn(') == 1, 'Only one quest worker; use the native normal/Instant steal workers'
-assert s.count('Tasks.BuildWispUI(HomeTab)') == 1
+assert s.count('Tasks.BuildWispUI(ProgressTab)') == 1
+assert 'Tasks.BuildWispUI(HomeTab)' not in s
 assert 'Tasks.BuildWispUI(EventTab)' not in s
 assert s.count('"Toggle_Wisp_Auto"') == 1
 assert 'AddTab("Banjo"' not in w, 'No unfinished Banjo placeholder'

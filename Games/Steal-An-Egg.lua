@@ -12657,7 +12657,7 @@ function Tasks.BuildMainInterface()
 		end,
 	})
 	-- BEGIN WISP UI
-	Tasks.BuildWispUI(HomeTab)
+	Tasks.BuildWispUI(ProgressTab)
 	-- END WISP UI
 	-- BEGIN BLOOM STAR UI
 	Tasks.BuildBloomStarUI(EventTab)
@@ -19816,6 +19816,10 @@ do
 		-- BEGIN BANJO QUEST GROUP
 		local wisp = group
 		-- END BANJO QUEST GROUP
+		local label = wisp:AddLabel("Wisp: Off", true)
+		-- BEGIN BANJO QUEST CONTROLS
+		Tasks.BuildBanjoUI(group)
+		-- END BANJO QUEST CONTROLS
 		wisp:AddToggle("Toggle_Wisp_Auto", { Text = "Auto Wisp", Default = false, Tooltip = "Complete the Wisp quest.", Callback = function(value)
 			FarmConfig.Wisp_Auto = value == true
 			state.Generation += 1
@@ -19823,11 +19827,6 @@ do
 			state.ConfigUntil = os.clock() + 3
 			if engine.AutoWake then engine.AutoWake() end
 		end })
-		local label = wisp:AddLabel("Status: Off", true)
-		-- BEGIN BANJO QUEST CONTROLS
-		group:AddDivider()
-		Tasks.BuildBanjoUI(group)
-		-- END BANJO QUEST CONTROLS
 		task.spawn(function()
 			while not state.Disposed and not LibraryLoader.Unloaded do
 				local ok, failure = pcall(function()
@@ -19849,7 +19848,7 @@ do
 					state.Valid, state.StealWanted, state.Status, state.LastError = false, false, "Waiting for quest data", tostring(failure)
 					if os.clock() >= (state.NoticeAt or 0) then state.NoticeAt = os.clock() + 30; warn("[N3 HUB] Auto Wisp: " .. tostring(failure)) end
 				end
-				local text = "Status: " .. tostring(state.Status):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+				local text = "Wisp: " .. tostring(state.Status):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
 				if state.Shown ~= text then pcall(label.SetText, label, text); state.Shown = text end
 				task.wait(1)
 			end
@@ -20348,19 +20347,19 @@ do
 	engine.AutoShieldWanted, engine.TriggerGuardDodge, engine.ClaimMovement = shieldAdapter, dodgeAdapter, claimAdapter
 	Tasks.WispNativeAction = actionAdapter
 	function Tasks.BuildBanjoUI(group)
+		local label = group:AddLabel("Banjo: Off", true)
 		group:AddToggle("Toggle_Banjo_Auto", { Text = "Auto Banjo Cricket", Default = false, Tooltip = "Repeat the mushroom melody.", Callback = function(value)
 			FarmConfig.Banjo_Auto = value == true
 			state.Generation += 1
 			state.ConfigUntil, state.NextAt, state.PriorityAt = os.clock() + 3, 0, 0
 		end })
-		local label = group:AddLabel("Status: Off", true)
 		-- A separate label refresh keeps the status live during this bounded, single quest job.
 		local connection, elapsed = nil, 0
 		connection = RunService.Heartbeat:Connect(function(dt)
 			elapsed += dt
 			if elapsed < 0.5 then return end
 			elapsed = 0
-			local text = "Status: " .. tostring(state.Status):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+			local text = "Banjo: " .. tostring(state.Status):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
 			if text ~= state.Shown then pcall(label.SetText, label, text); state.Shown = text end
 		end)
 		state.LabelConnection = connection

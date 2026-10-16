@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 s = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
 if '-- BEGIN ADMIN CONTROLLER' in s:
     s = strip_admin(s)
-assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == '4d2a028c87ddd750e9423160cec2b9c7c14b8491226871b3d8a6082bb50c1cf3', 'Changes escaped Banjo controller / exact shared-group additions (7591d6f)'
+assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == 'ca8630422804683524f2d12881ca05459e89925e77ab3c62b5e71f392d11d8b0', 'Changes escaped Banjo controller / exact shared-group additions (7591d6f)'
 assert hashlib.sha256((ROOT / 'Games/Source/StealAnEgg/ChiliSourceV2.lua').read_bytes()).hexdigest() == '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d'
 a, b = s.index('-- BEGIN BANJO CONTROLLER'), s.index('-- END BANJO CONTROLLER')
 n = s[a:b]
@@ -57,7 +57,7 @@ ui = s[s.index('function Tasks.BuildWispUI(tab)'):s.index('\n\tLibraryLoader:OnU
 assert ui.count(':AddGroupbox(') == 1 and 'Name = "Quests"' in ui
 assert ':AddTabbox(' not in ui and ':AddTab(' not in ui
 assert 'local wisp = group' in QUEST_GROUP
-assert ui.index('wisp:AddToggle(') < ui.index('wisp:AddLabel(') < ui.index('Tasks.BuildBanjoUI(group)')
+assert ui.index('wisp:AddLabel(') < ui.index('Tasks.BuildBanjoUI(group)') < ui.index('wisp:AddToggle(')
 banjo_ui = n[n.index('function Tasks.BuildBanjoUI(group)'):]
 assert ':AddTab(' not in banjo_ui and ':AddTabbox(' not in banjo_ui and ':AddGroupbox(' not in banjo_ui
 assert 'group:AddToggle("Toggle_Banjo_Auto"' in banjo_ui

@@ -10,7 +10,6 @@ QUEST_GROUP = """\
 """
 QUEST_CONTROLS = """\
 		-- BEGIN BANJO QUEST CONTROLS
-		group:AddDivider()
 		Tasks.BuildBanjoUI(group)
 		-- END BANJO QUEST CONTROLS
 """
