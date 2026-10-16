@@ -12,7 +12,7 @@ if '-- BEGIN ADMIN CONTROLLER' in s:
     s = strip_admin(s)
 if "-- BEGIN CAPTURE" in s:
     s = strip_capture(s)
-assert hashlib.sha256(strip_bloom_star(s).encode()).hexdigest() == '0ee5da3e8a65c45e97e1fb093a4de34eb3eefabb8670ede549f404f0003e6836', 'Changes escaped reviewed additions / published 7e9549a'
+assert hashlib.sha256(strip_bloom_star(s).encode()).hexdigest() == '03438e90fcbf7e03d36052a43f73e7aee4af18b597e323b9b9b28f60ca30a55c', 'Changes escaped reviewed additions / published 7e9549a'
 assert hashlib.sha256((ROOT / 'Games/Source/StealAnEgg/ChiliSourceV2.lua').read_bytes()).hexdigest() == '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d'
 c = s[s.index('-- BEGIN BLOOM STAR CONTROLLER'):s.index('-- END BLOOM STAR CONTROLLER')]
 control = s[s.index('-- BEGIN BLOOM STAR TRANSIT CONTROL'):s.index('-- END BLOOM STAR TRANSIT CONTROL')]

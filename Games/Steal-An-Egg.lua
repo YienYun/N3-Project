@@ -12692,10 +12692,9 @@ function Tasks.BuildMainInterface()
 			FarmConfig.Index_SelectedZones = ParseMultiDropdownSelection(Selected)
 		end,
 	})
-	local Lbl_IndexProgress = IndexGroup:AddLabel("Index Progress: Loading...", true)
-	local Lbl_IndexRewards = IndexGroup:AddLabel('<font color="#8A8AA2">Checking unclaimed rewards...</font>', true)
+	local Lbl_IndexProgress = IndexGroup:AddLabel("Index: Loading...", true)
 	IndexGroup:AddToggle("Toggle_Index_AutoClaim", {
-		Text = "Auto Claim Index Rewards",
+		Text = "Auto Claim Index",
 		Default = false,
 		Tooltip = "Auto claim index",
 		Callback = function(State)
@@ -12735,19 +12734,11 @@ function Tasks.BuildMainInterface()
 				local unlocked, total, pct, unclaimed = GetIndexStatistics()
 				Lbl_IndexProgress:SetText(
 					string.format(
-						'<b>Index Progress:</b> <font color="#57F287"><b>%d/%d Pets (%d%%)</b></font>',
+						'<font color="#D946EF"><b>Index:</b></font> <font color="#FFFFFF"><b>%d/%d</b></font>',
 						unlocked,
-						total,
-						pct
+						total
 					)
 				)
-				if unclaimed > 0 then
-					Lbl_IndexRewards:SetText(
-						string.format('<font color="#FFAA00"><b>%d Reward(s) ready to claim!</b></font>', unclaimed)
-					)
-				else
-					Lbl_IndexRewards:SetText('<font color="#8A8AA2">All unlocked rewards claimed.</font>')
-				end
 				if FarmConfig.Index_AutoClaim and unclaimed > 0 then
 					ClaimIndexRewards(true)
 				end

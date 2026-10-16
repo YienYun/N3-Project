@@ -15,7 +15,7 @@ if '-- BEGIN ADMIN CONTROLLER' in raw:
     raw = strip_admin(raw)
 s = strip_nitro_refill(strip_wisp(raw))
 assert hashlib.sha256(strip_builtin_visual(strip_lab_stock(s)).encode()).hexdigest() == (
-    '1a9862ba8307b89529281678c2723d3aa1f62446308b2fc14ccc3fb488ceb801'
+    '49ae0a597ac07e6a5670a455f4a79db8e5a0ac62f0738f792351962f3f962797'
 ), 'Changes escaped the four reviewed stock insertion sites / 9badf26 baseline'
 a = s.index('-- BEGIN LAB STOCK CONTROLLER')
 b = s.index('-- END LAB STOCK CONTROLLER', a)

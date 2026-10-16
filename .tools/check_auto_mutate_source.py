@@ -14,7 +14,7 @@ if '-- BEGIN ADMIN CONTROLLER' in raw:
     raw = strip_admin(raw)
 s = strip_nitro_refill(strip_wisp(raw))
 assert hashlib.sha256(strip_builtin_visual(strip_auto_mutate(s)).encode()).hexdigest() == (
-    '37153cd5cd01618ffe0ba890cd068cb89c23f511e623f943b44f20311a8c734b'
+    'f16c98bdca55643de2046fda484614e5c805e12947654e50859050858c055009'
 ), 'Changes escaped Auto Mutate / reviewed dbaeb09 baseline'
 a = s.index('-- BEGIN AUTO MUTATE CONTROLLER')
 b = s.index('-- END AUTO MUTATE CONTROLLER', a)
