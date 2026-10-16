@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GAME = ROOT / 'Games/Steal-An-Egg.lua'
 s = GAME.read_text()
 
-baseline_hash = '177427af5a79a383cbb1899219a09b386cf5c20e8b5af68eeb84f33771f7bd47'
+baseline_hash = '863097104b5b9db616e3d29deb438a8380f265a4550476c4b3e4b15202fe53ca'
 stripped_hash = hashlib.sha256(strip_admin(s).encode()).hexdigest()
 assert stripped_hash == baseline_hash, 'Admin block must be the only delta vs 75883b2 baseline'
 
@@ -57,7 +57,7 @@ assert 'Toggle_Admin_AutoTreadmill' in ui
 assert 'Toggle_Admin_InstantV3' in ui
 assert 'Toggle_Admin_Minigame' in ui
 assert '"Auto Use Admin Treadmill"' in ui
-assert '"Auto Steal V3 (Admin Treadmill)"' in ui
+assert '"Auto Steal V3"' in ui
 assert '"Auto Steal Minigame Egg"' in ui
 assert re.search(r'AddToggle\("Toggle_Admin_AutoTreadmill",\s*\{[^}]*Default\s*=\s*true', ui, re.S)
 assert re.search(r'AddToggle\("Toggle_Admin_InstantV3",\s*\{[^}]*Default\s*=\s*false', ui, re.S)

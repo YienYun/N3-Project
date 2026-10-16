@@ -20774,7 +20774,7 @@ end
 	end
 	function Tasks.BuildCaptureUI(tab)
 		local group = tab:AddLeftGroupbox("Capture The Egg", "flag")
-		local auto = group:AddToggle("Toggle_Capture_Auto", { Text = "Auto Capture Event Egg", Default = false, Tooltip = "Grab and hold the event egg.", Callback = function(value)
+		local auto = group:AddToggle("Toggle_Capture_Auto", { Text = "Auto Capture Egg", Default = false, Tooltip = "Grab and hold the event egg.", Callback = function(value)
 			FarmConfig.Capture_Auto = value == true; state.Generation += 1; state.ConfigUntil = os.clock() + 3
 			if engine.AutoWake then engine.AutoWake() end
 		end })
@@ -20782,7 +20782,7 @@ end
 		options:AddToggle("Toggle_Capture_TakeHolder", { Text = "Take From Holder", Default = true, Tooltip = "Use a bat to take the egg.", Callback = function(value) FarmConfig.Capture_TakeHolder = value == true end })
 		options:AddSlider("Slider_Capture_Height", { Text = "Hold Height", Min = 20, Max = 120, Default = 45, Rounding = 0, Callback = function(value) state.Height = math.clamp(tonumber(value) or 45, 20, 120); state.Hover = nil end })
 		options:AddSlider("Slider_Capture_KeepAway", { Text = "Keep Away Distance", Min = 20, Max = 150, Default = 45, Rounding = 0, Callback = function(value) state.KeepAway = math.clamp(tonumber(value) or 45, 20, 150); state.Hover = nil end })
-		labels.Status, labels.Standing = group:AddLabel("Status: Off", true), group:AddLabel("Held: — | Rank: —", true)
+		labels.Status = group:AddLabel("Status: Off", true)
 		bindStandings()
 		local elapsed, retryAt, lastUid = 0, 0, nil
 		table.insert(state.Links, RunService.Heartbeat:Connect(function(dt)
@@ -20802,11 +20802,9 @@ end
 					elseif raceWanted() then state.Status = "Paused for Auto Race"
 					elseif not uid or not readEgg(uid) then state.Status = eventRunning() and "Event starting; waiting for egg" or "Waiting for Capture The Egg"
 					else state.Status = "Waiting for current movement / carry" end
-				end
-				local status = ("Status: " .. state.Status):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
-				local standing = string.format("Held: %s | Rank: %s", state.Seconds and string.format("%.1fs", state.Seconds) or "—", state.Rank and tostring(state.Rank) or "—")
-				if status ~= state.ShownStatus then labels.Status:SetText(status); state.ShownStatus = status end
-				if standing ~= state.ShownStanding then labels.Standing:SetText(standing); state.ShownStanding = standing end
+			end
+			local status = ("Status: " .. state.Status):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+			if status ~= state.ShownStatus then labels.Status:SetText(status); state.ShownStatus = status end
 			end)
 			if not ok then state.LastError = tostring(failure) end
 		end))
@@ -20833,7 +20831,7 @@ local function BuildAdminUI(tab)
 		Callback = function(value) FarmConfig.Admin_AutoTreadmill = value == true; state.Generation += 1 end,
 	})
 	AdminGroup:AddToggle("Toggle_Admin_InstantV3", {
-		Text = "Auto Steal V3 (Admin Treadmill)",
+		Text = "Auto Steal V3",
 		Default = false,
 		Tooltip = "The admin event's built-in V3 instant-steal path. Only takes effect while Auto Use Admin Treadmill is on and an Admin Treadmill is live.",
 		Callback = function(value) FarmConfig.Admin_InstantV3 = value == true; state.Generation += 1 end,
@@ -20845,12 +20843,11 @@ local function BuildAdminUI(tab)
 		Callback = function(value) FarmConfig.Admin_Minigame = value == true; state.Generation += 1 end,
 	})
 	local StatusGroup = tab:AddRightGroupbox("Admin Status", "activity")
-	StatusGroup:AddLabel("Status: Off", true)
-	StatusGroup:AddLabel("Boosts: —", true)
-	StatusGroup:AddLabel("Capture: —", true)
-	StatusGroup:AddLabel("Treadmill: —", true)
-	StatusGroup:AddLabel("V3: —", true)
-	StatusGroup:AddLabel("Minigame: —", true)
+	StatusGroup:AddLabel("Status: ???", true)
+	StatusGroup:AddLabel("Boost: ???", true)
+	StatusGroup:AddLabel("Capture: ???", true)
+	StatusGroup:AddLabel("Treadmill: ???", true)
+	StatusGroup:AddLabel("Minigame: ???", true)
 	-- END ADMIN UI
 end
 function Tasks.BuildAdminUI(tab) BuildAdminUI(tab) end
@@ -20988,11 +20985,10 @@ do
 		for name in pairs(BoostMap) do
 			local text = boostDisplay(name); if text then table.insert(boosts, name .. " " .. text) end
 		end
-		out[1] = "Boosts: " .. (#boosts > 0 and table.concat(boosts, ", ") or "—")
+		out[1] = "Boost: " .. (#boosts > 0 and table.concat(boosts, ", ") or "???")
 		out[2] = "Capture: " .. statusCapture()
 		out[3] = "Treadmill: " .. statusTreadmill()
-		out[4] = "V3: " .. statusV3()
-		out[5] = "Minigame: " .. statusMinigame()
+		out[4] = "Minigame: " .. statusMinigame()
 		return out
 	end
 	function Tasks.AdminStatusHeader()

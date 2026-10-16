@@ -61,7 +61,7 @@ for clause in (
     'state.Steering = steering', 'Tasks.StopCaptureSteering()',
     'tab:AddLeftGroupbox("Capture The Egg", "flag")',
     'FarmConfig.Capture_Auto, FarmConfig.Capture_TakeHolder = false, true',
-    'Text = "Auto Capture Event Egg", Default = false', 'Text = "Take From Holder", Default = true',
+    'Text = "Auto Capture Egg", Default = false', 'Text = "Take From Holder", Default = true',
     'Min = 20, Max = 120, Default = 45', 'Min = 20, Max = 150, Default = 45',
 ):
     assert clause in c, f'Missing Capture source/lifecycle contract: {clause}'

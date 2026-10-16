@@ -239,6 +239,36 @@ source contract holds.  No checker is a live Roblox/server/FPS test.
   underlying `IsPlayerRunningOnTreadmill` predicate that the
   treadmill worker uses is still in place.
 
+## Admin Abuse: trim UI labels and drop V3 status row
+
+- `Event -> Admin Abuse -> Capture The Egg`:
+  - `Auto Capture Event Egg` toggle renamed to `Auto Capture Egg`
+    (shorter, the `Event` prefix is implicit from the parent tab).
+  - The `Held: - | Rank: -` status label is dropped. Only the
+    `Status:` label is kept.
+  - The now-orphaned `standing` build + `ShownStanding` write in
+    the observer loop are removed. `state.Seconds` / `state.Rank`
+    are still written by `bindStandings()` (cheap, harmless) but
+    no longer rendered.
+- `Event -> Admin Abuse -> Admin Abuse`:
+  - `Auto Steal V3 (Admin Treadmill)` toggle renamed to
+    `Auto Steal V3` (the `Admin Treadmill` suffix is redundant
+    once it lives in the Admin Abuse tab).
+- `Event -> Admin Abuse -> Admin Status`:
+  - The `V3: -` row is dropped. The row was redundant with the
+    `Auto Steal V3` toggle text and the underlying `statusV3()`
+    helper output is no longer rendered, so the
+    `out[4] = "V3: " .. statusV3()` line in
+    `Tasks.AdminStatusRows()` is removed. The remaining rows
+    reindex as `Boost=1, Capture=2, Treadmill=3, Minigame=4`.
+  - Every "no value" default is now `???` instead of the em-dash
+    `-`. The static `StatusGroup:AddLabel("Boost: -", true)` etc.
+    placeholders in `BuildAdminUI` and the `Boost: ... or "-"`
+    fallback in `Tasks.AdminStatusRows()` are both updated.
+- No behavior change to the underlying controllers; only labels
+  are touched. All 15/15 static scope checkers and the Luau WASM
+  compile pass.
+
 
 ## Butterfly Bloom + Shooting Star
 
