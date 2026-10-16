@@ -269,26 +269,31 @@ source contract holds.  No checker is a live Roblox/server/FPS test.
   are touched. All 15/15 static scope checkers and the Luau WASM
   compile pass.
 
-## Misc tab: collapse Performance + Utility into one Misc group
+## Settings tab: fold in Performance + Utility from the old Misc tab
 
-- `Event -> Misc` previously had two side-by-side groupboxes:
-  `Performance` (left) and `Utility` (right).  Both are dropped
-  and replaced with a single new `Misc` groupbox at the top of the
-  tab, with the `wrench` icon.
-- All `PerfGroup:*` and `UtilGroup:*` calls now target the new
-  `MiscGroup` directly, so the existing `Toggle_Perf_*`,
-  `Slider_Perf_*`, `Toggle_Util_AntiAFK`, `Toggle_Util_AutoRejoin`
-  and the `Rejoin Server Now` button all live under one Misc
-  group.  No item was removed or reordered.
-- The `Community` groupbox (Discord + Website buttons, added by
-  `AddDiscordBox(MiscTab)`) is preserved exactly as before.
-- The `AddTab("Misc", "gauge", "Performance & Utility")` description
-  is shortened to `Misc` to match the new layout.
+- The standalone `Misc` tab is removed. The `MainWindow:AddTab("Misc", ...)`
+  declaration and its local `MiscTab` reference are dropped.
+- The two groupboxes that used to live inside the Misc tab are
+  recreated inside the `Settings` tab (the tab that also hosts
+  `ThemeManager:ApplyToTab` and `SaveManager:BuildConfigSection`):
+  - `PerfGroup = SettingsTab:AddLeftGroupbox("Performance", "gauge")`
+  - `UtilGroup = SettingsTab:AddRightGroupbox("Utility", "wrench")`
+  - `AddDiscordBox(SettingsTab)` (the Community group with the
+    Discord + Website buttons) is also moved alongside.
+- All `PerfGroup:*` and `UtilGroup:*` calls inside the moved block
+  now target `SettingsTab`'s groupboxes, so the existing
+  `Toggle_Perf_*`, `Slider_Perf_*`, `Toggle_Util_AntiAFK`,
+  `Toggle_Util_AutoRejoin` and `Rejoin Server Now` button all live
+  under the Settings tab. No item is removed, renamed or
+  reordered.
+- The `local TeleportService` / `local LocalPlayer` cache that used
+  to sit at the top of the Misc block is preserved (TeleportService
+  is used by the Rejoin button + Auto Rejoin worker).
 - No behavior change to the underlying controllers (FPS cap,
   Optimizer, FPS/Ping overlay, Disable 3D, No Fog, Full Bright,
   Anti AFK, Auto Rejoin, Rejoin button are all wired the same
-  way).  All 15/15 static scope checkers and the Luau WASM
-  compile pass.
+  way). All 15/15 static scope checkers and the Luau WASM compile
+  pass.
 
 
 ## Butterfly Bloom + Shooting Star

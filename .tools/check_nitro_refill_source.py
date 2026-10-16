@@ -13,7 +13,7 @@ if '-- BEGIN ADMIN CONTROLLER' in raw:
     raw = strip_admin(raw)
 s = strip_wisp(raw)
 assert hashlib.sha256(strip_builtin_visual(strip_nitro_refill(s)).encode()).hexdigest() == (
-    '0f5f4a19770e87994e70810fa529cb1df3b17fb76970ce945fed3061fae3919f'
+    '30840eb4b87e229fa501a779288015815f589441f831a4f4e111c4bdaf00fb46'
 ), 'Changes escaped Nitro refill / live-confirmed Auto Mutate 1043562 baseline'
 a = s.index('-- BEGIN NITRO REFILL CONTROLLER')
 b = s.index('-- END NITRO REFILL CONTROLLER', a)

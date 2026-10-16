@@ -26,7 +26,7 @@ assert hashlib.sha1(blob).hexdigest() == "a36898ee403cacf3aa9742bfb9f9270f867cb7
 # is also fingerprinted after stripping only the Nitro shop hook. Nitro itself
 # reverses to 1043562 (check_nitro_refill_source.py); no baseline hash replacement.
 normalized = strip_builtin_visual(strip_nitro_refill(runtime))
-assert hashlib.sha256(normalized.encode()).hexdigest() == "0f5f4a19770e87994e70810fa529cb1df3b17fb76970ce945fed3061fae3919f", (
+assert hashlib.sha256(normalized.encode()).hexdigest() == "30840eb4b87e229fa501a779288015815f589441f831a4f4e111c4bdaf00fb46", (
     "Gameplay outside the reviewed visual additions changed; review before updating this baseline"
 )
 assert not (ROOT / "Games/Steal-An-Egg-V2.lua").exists(), "Retire the standalone tester"

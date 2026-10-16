@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GAME = ROOT / 'Games/Steal-An-Egg.lua'
 s = GAME.read_text()
 
-baseline_hash = '8a3ab89de1d5ec0b706542fed9cea0a6df579eac124f88ba8c1707e615fef6fb'
+baseline_hash = 'c41637240237c08a6e080a8d2bd4a279ed2bb1c8020bfcc6d9fb0037702cfbb0'
 stripped_hash = hashlib.sha256(strip_admin(s).encode()).hexdigest()
 assert stripped_hash == baseline_hash, 'Admin block must be the only delta vs 75883b2 baseline'
 

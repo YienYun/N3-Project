@@ -19,6 +19,3 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
-
-# Local scratch (one-off recompute helpers)
-/.tmp_*.py

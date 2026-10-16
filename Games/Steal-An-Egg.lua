@@ -14859,16 +14859,16 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 		local UserInputService = game:GetService("UserInputService")
 		local TeleportService = game:GetService("TeleportService")
 		local LocalPlayer = Players.LocalPlayer
-		local MiscTab = MainWindow:AddTab("Misc", "gauge", "Misc")
-		local MiscGroup = MiscTab:AddLeftGroupbox("Misc", "wrench")
-		AddDiscordBox(MiscTab)
+		local PerfGroup = SettingsTab:AddLeftGroupbox("Performance", "gauge")
+		local UtilGroup = SettingsTab:AddRightGroupbox("Utility", "wrench")
+		AddDiscordBox(SettingsTab)
 		local function ApplyFpsCap(n)
 			n = math.clamp(math.floor(tonumber(n) or 240), 30, 1000)
 			if type(setfpscap) == "function" then
 				pcall(setfpscap, n)
 			end
 		end
-		MiscGroup:AddSlider("Slider_Perf_FpsCap", {
+		PerfGroup:AddSlider("Slider_Perf_FpsCap", {
 			Text = "FPS Cap",
 			Min = 30,
 			Max = 1000,
@@ -15091,7 +15091,7 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 			end
 			RestoreOpt()
 		end
-		MiscGroup:AddToggle("Toggle_Perf_Optimizer", {
+		PerfGroup:AddToggle("Toggle_Perf_Optimizer", {
 			Text = "Optimizer",
 			Default = FarmConfig.Perf_Optimizer == true,
 			Tooltip = "FPS boost mode",
@@ -15319,7 +15319,7 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 				end)
 			)
 		end
-		MiscGroup:AddToggle("Toggle_Perf_FpsPing", {
+		PerfGroup:AddToggle("Toggle_Perf_FpsPing", {
 			Text = "FPS and Ping",
 			Default = FarmConfig.Perf_FpsPing ~= false,
 			Tooltip = "FPS/Ping overlay",
@@ -15332,7 +15332,7 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 				end
 			end,
 		})
-		MiscGroup:AddSlider("Slider_Perf_FpsPingSize", {
+		PerfGroup:AddSlider("Slider_Perf_FpsPingSize", {
 			Text = "FPS and Ping Size",
 			Min = 60,
 			Max = 160,
@@ -15373,7 +15373,7 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 				R3D.Gui = Gui
 			end
 		end
-		MiscGroup:AddToggle("Toggle_Perf_Disable3D", {
+		PerfGroup:AddToggle("Toggle_Perf_Disable3D", {
 			Text = "Disable 3D Render",
 			Default = FarmConfig.Perf_Disable3D == true,
 			Tooltip = "Black screen FPS",
@@ -15402,7 +15402,7 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 				Fog.Saved = nil
 			end
 		end
-		MiscGroup:AddToggle("Toggle_Perf_NoFog", {
+		PerfGroup:AddToggle("Toggle_Perf_NoFog", {
 			Text = "No Fog",
 			Default = FarmConfig.Perf_NoFog == true,
 			Tooltip = "No fog",
@@ -15437,7 +15437,7 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 				Bright.Saved = nil
 			end
 		end
-		MiscGroup:AddToggle("Toggle_Perf_FullBright", {
+		PerfGroup:AddToggle("Toggle_Perf_FullBright", {
 			Text = "Full Bright",
 			Default = FarmConfig.Perf_FullBright == true,
 			Tooltip = "Full bright",
@@ -15562,7 +15562,7 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 			end
 			table.clear(Afk.Hijacked)
 		end
-		MiscGroup:AddToggle("Toggle_Util_AntiAFK", {
+		UtilGroup:AddToggle("Toggle_Util_AntiAFK", {
 			Text = "Anti AFK",
 			Default = FarmConfig.Util_AntiAFK ~= false,
 			Tooltip = "Anti idle kick",
@@ -15639,7 +15639,7 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 				Rj.Conn = nil
 			end
 		end
-		MiscGroup:AddToggle("Toggle_Util_AutoRejoin", {
+		UtilGroup:AddToggle("Toggle_Util_AutoRejoin", {
 			Text = "Auto Rejoin",
 			Default = FarmConfig.Util_AutoRejoin == true,
 			Tooltip = "Auto rejoin",
@@ -15648,7 +15648,7 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 				SetAutoRejoin(State == true)
 			end,
 		})
-		MiscGroup:AddButton({
+		UtilGroup:AddButton({
 			Text = "Rejoin Server Now",
 			Func = function()
 				pcall(function()
