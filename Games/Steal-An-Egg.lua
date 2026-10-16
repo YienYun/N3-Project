@@ -12411,6 +12411,7 @@ function Tasks.BuildMainInterface()
 	local PetsTab = MainWindow:AddTab("Pets", "paw-print", "Pets Management, Fuse & Auto Sell")
 	local ProgressTab = MainWindow:AddTab("Progress", "trending-up", "Treadmill Training, Trails & Rewards")
 	local EventTab = MainWindow:AddTab("Event", "sparkles", "Rift Events & Special Automation")
+	local AdminTab = MainWindow:AddTab("Admin Abuse", "flag", "Saturday/Sunday Admin Abuse Automation")
 	local PredictorTab = MainWindow:AddTab("Predictor", "hourglass", "Live Egg & Rift Predictions")
 	local ESPTab = MainWindow:AddTab("ESP", "eye", "Visual Trackers & Plot Monitoring")
 	local SettingsTab = MainWindow:AddTab("Settings", "settings", "System & Configuration")
@@ -12734,11 +12735,13 @@ function Tasks.BuildMainInterface()
 	Tasks.BuildCaptureUI(HomeTab)
 	Tasks.BuildWispUI(HomeTab)
 	-- END CAPTURE UI
-	Tasks.BuildAdminUI(HomeTab)
 	-- END WISP UI
 	-- BEGIN BLOOM STAR UI
 	Tasks.BuildBloomStarUI(EventTab)
 	-- END BLOOM STAR UI
+	-- BEGIN ADMIN UI
+	Tasks.BuildAdminUI(AdminTab)
+	-- END ADMIN UI
 	local IndexGroup = HomeTab:AddRightGroupbox("Pet Index & Codex", "book-open")
 	IndexGroup:AddDropdown("Dropdown_Index_PriorityOrder", {
 		Text = "Missing Steal Order",
@@ -21112,9 +21115,9 @@ end)();
 -- Source-backed adaptation: one scheduler, reuse existing N3 treadmill mount, no parallel workers,
 -- no invented remotes. Boost detector scans the same BottomUI Holder used by the native client.
 -- Logging follows the source contract: skipped silently when the executor lacks writefile/isfile.
-local function BuildAdminUI(home)
+local function BuildAdminUI(tab)
 	-- BEGIN ADMIN UI
-	local AdminGroup = home:AddGroupbox({ Name = "Admin Abuse", IconName = "flag", Side = 2, Collapsed = false, DisableCollapsing = false })
+	local AdminGroup = tab:AddLeftGroupbox("Admin Abuse", "flag")
 	AdminGroup:AddToggle("Toggle_Admin_AutoTreadmill", {
 		Text = "Auto Use Admin Treadmill",
 		Default = true,
@@ -21133,13 +21136,13 @@ local function BuildAdminUI(home)
 		Tooltip = "Targets Red Light Green Light and T-Rex Run event eggs (chili v2 76810).",
 		Callback = function(value) FarmConfig.Admin_Minigame = value == true; state.Generation += 1 end,
 	})
-	AdminGroup:AddDivider()
-	AdminGroup:AddLabel("Status: Off", true)
-	AdminGroup:AddLabel("Boosts: —", true)
-	AdminGroup:AddLabel("Capture: —", true)
-	AdminGroup:AddLabel("Treadmill: —", true)
-	AdminGroup:AddLabel("V3: —", true)
-	AdminGroup:AddLabel("Minigame: —", true)
+	local StatusGroup = tab:AddRightGroupbox("Admin Status", "activity")
+	StatusGroup:AddLabel("Status: Off", true)
+	StatusGroup:AddLabel("Boosts: —", true)
+	StatusGroup:AddLabel("Capture: —", true)
+	StatusGroup:AddLabel("Treadmill: —", true)
+	StatusGroup:AddLabel("V3: —", true)
+	StatusGroup:AddLabel("Minigame: —", true)
 	-- END ADMIN UI
 end
 function Tasks.BuildAdminUI(tab) BuildAdminUI(tab) end

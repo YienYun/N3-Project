@@ -7,7 +7,9 @@ second steal cycle. It reuses Tasks.MountTreadmill, Tasks.TreadmillMayRun,
 Tasks.ExitTreadmill and the existing leaderstats Speed read.
 
 The published 75883b2 baseline is preserved when the admin block is stripped; this
-checker enforces that the admin block is the only delta against 75883b2.
+checker enforces that the admin block is the only delta against 75883b2.  The
+admin UI now lives in its own top-level tab (next to EventTab) instead of a
+groupbox in the Home tab.
 """
 from pathlib import Path
 import hashlib
@@ -30,17 +32,27 @@ for filename, expected in {
 }.items():
     assert hashlib.sha256((ROOT / filename).read_bytes()).hexdigest() == expected, filename
 
-# The two controller markers must be present exactly once; the inner UI markers too.
+# The controller marker pair is present exactly once.
 assert s.count('-- BEGIN ADMIN CONTROLLER\n') == 1, 'controller begin'
 assert s.count('-- END ADMIN CONTROLLER\n') == 1, 'controller end'
-assert s.count('-- BEGIN ADMIN UI\n') == 1, 'ui begin'
-assert s.count('-- END ADMIN UI\n') == 1, 'ui end'
+# The outer UI scaffold around the Tasks.BuildAdminUI(AdminTab) call.
+assert s.count('\t-- BEGIN ADMIN UI\n') == 2, 'UI begin total'
+assert s.count('\t-- END ADMIN UI\n') == 2, 'UI end total'
 
-# Slice out the admin block for content-level assertions.
-ctrl = s[s.index('-- BEGIN ADMIN CONTROLLER'):s.index('-- END ADMIN CONTROLLER')]
+# Top-level AdminTab declaration next to the other tabs.
+assert 'local AdminTab = MainWindow:AddTab("Admin Abuse"' in s
 
-# Defaults must follow Chili V2 76576-76600: Auto Treadmill ON, V3 OFF, Minigame OFF.
-ui = s[s.index('-- BEGIN ADMIN UI'):s.index('-- END ADMIN UI')]
+# Slice the inner UI for content-level assertions (the one inside the controller block).
+inner_start = s.index('-- BEGIN ADMIN CONTROLLER')
+inner_end = s.index('-- END ADMIN CONTROLLER', inner_start)
+inner = s[inner_start:inner_end]
+ui_match = re.search(r'-- BEGIN ADMIN UI\n(.*?)\n\t-- END ADMIN UI\n', inner, re.S)
+assert ui_match, 'inner UI block'
+ui = ui_match.group(1)
+
+# The two groups: Admin Abuse (toggles) and Admin Status (status rows).
+assert re.search(r':AddLeftGroupbox\("Admin Abuse", "flag"\)', ui)
+assert re.search(r':AddRightGroupbox\("Admin Status", "activity"\)', ui)
 assert 'Toggle_Admin_AutoTreadmill' in ui
 assert 'Toggle_Admin_InstantV3' in ui
 assert 'Toggle_Admin_Minigame' in ui
@@ -51,15 +63,15 @@ assert re.search(r'AddToggle\("Toggle_Admin_AutoTreadmill",\s*\{[^}]*Default\s*=
 assert re.search(r'AddToggle\("Toggle_Admin_InstantV3",\s*\{[^}]*Default\s*=\s*false', ui, re.S)
 assert re.search(r'AddToggle\("Toggle_Admin_Minigame",\s*\{[^}]*Default\s*=\s*false', ui, re.S)
 
-# BuildAdminUI must be registered into Tasks and called once from the Wisp/Capture UI section.
-assert 'function Tasks.BuildAdminUI(tab)' in ctrl
-assert '\tTasks.BuildAdminUI(HomeTab)\n' in s
-# The call must be placed near -- END WISP UI for the Home group layout convention.
+# BuildAdminUI must be registered into Tasks and called once from the top-level UI section.
+assert 'function Tasks.BuildAdminUI(tab)' in s
+assert '\tTasks.BuildAdminUI(AdminTab)\n' in s
 wisp_end = s.index('\t-- END WISP UI\n')
-build_call = s.index('\tTasks.BuildAdminUI(HomeTab)\n')
-assert -200 < build_call - wisp_end < 200, 'BuildAdminUI must be called in the Wisp/Capture UI section'
+build_call = s.index('\tTasks.BuildAdminUI(AdminTab)\n')
+assert 0 < build_call - wisp_end < 600, 'BuildAdminUI must be called in the top-level UI section'
 
 # Source contract: only the six boost attributes and the two minigame flags.
+ctrl = s[s.index('-- BEGIN ADMIN CONTROLLER'):s.index('-- END ADMIN CONTROLLER')]
 for attr in (
     'AdminBoost_Speed', 'AdminBoost_Treadmill', 'AdminBoost_Earnings',
     'AdminBoost_EggSize', 'AdminBoost_EggLuck', 'AdminBoost_Mutation',
@@ -80,7 +92,7 @@ for reuse in (
     'Tasks.TreadmillState', 'Tasks.RequestRespawn',
 ):
     assert reuse in ctrl, reuse
-# No task.spawn of a fresh action worker, no second RemoteWearTreadmill invoke.
+# No task.spawn of a fresh action worker.
 assert ctrl.count('task.spawn') == 0, 'no parallel action worker'
 
 # Race-first: the controller must consult RaceShouldYieldSteal before mounting.
@@ -110,7 +122,7 @@ assert 'state.AdminFails' in ctrl
 assert 'AdminSpeedSeen' in ctrl
 assert 'leaderstats' in ctrl
 
-print('PASS: one Home Admin Abuse group, Auto Treadmill ON default, V3/Minigame OFF defaults.')
+print('PASS: top-level Admin Abuse tab with Auto Treadmill ON default, V3/Minigame OFF defaults.')
 print('PASS: six Chili boost attributes, two minigame flags, no invented remotes.')
 print('PASS: reuses Tasks.MountTreadmill / TreadmillMayRun / ExitTreadmill; no parallel worker.')
 print('PASS: race-first, BottomUI boost detector, AssignedBeltShifted bind, AskDoff recovery, Capture row reused.')

@@ -28,11 +28,12 @@ breakdown.
 - Wisp and Banjo Cricket. The user accepted Forest-door correction `c620126`
   and moved on to further features. Latest UI request flattens both into one
   Home / Quests group without subtabs; no movement/quest logic changes.
-- Admin Abuse in Home/farm: Auto Use Admin Treadmill, Instant Steal V3 and
-  Auto Steal Minigame Egg toggles, plus boost attribute detector, treadmill
-  recovery watchdog and shared Capture row. See `admin-abuse.md` for source
-  mapping, scoped dependencies and live checklist. Installed + static/compile
-  checked does not mean live event/reward acceptance.
+- Admin Abuse as a top-level Home tab: Auto Use Admin Treadmill, Instant
+  Steal V3 and Auto Steal Minigame Egg toggles, plus boost attribute
+  detector, treadmill recovery watchdog and shared Capture row.  See
+  `admin-abuse.md` for source mapping, scoped dependencies and live
+  checklist.  Installed + static/compile checked does not mean live
+  event/reward acceptance.
 
 Implementation and user acceptance of a particular fix are not proof that every
 quest, reward, event edge case or device has been live-tested. Preserve confirmed

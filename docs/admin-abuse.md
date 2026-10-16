@@ -9,10 +9,18 @@ a second steal cycle.  It reuses the existing N3 `Tasks.MountTreadmill`,
 `Tasks.TreadmillMayRun`, `Tasks.ExitTreadmill`, and the leaderstats `Speed` read
 that the N3 treadmill path already watches.
 
-## Home group
+## Home tab
 
-`Home → Admin Abuse` (one named/icon/collapsible outer group, **no subtabs** —
-same convention as Quests).  Default values mirror Chili V2 76576–76600:
+`Admin Abuse` is a **top-level tab** in `MainWindow`, sitting next to
+`Event`, `Predictor`, `ESP`, `Settings`, `Webhook`, `Misc`.  Inside the tab we
+have two groupboxes, no subtabs:
+
+| Group | Toggles / rows |
+|---|---|
+| Admin Abuse (left) | Auto Use Admin Treadmill, Instant Steal V3, Auto Steal Minigame Egg. |
+| Admin Status (right) | Status, Boosts, Capture, Treadmill, V3, Minigame. |
+
+Default values mirror Chili V2 76576–76600:
 
 | Toggle | Default | Notes |
 |---|---|---|
@@ -20,9 +28,10 @@ same convention as Quests).  Default values mirror Chili V2 76576–76600:
 | Instant Steal V3 | OFF | Chili V3 path; only meaningful while the admin treadmill stays on. |
 | Auto Steal Minigame Egg | OFF | Red Light Green Light + T-Rex Run detectors. |
 
-The group is registered next to the Wisp/Capture UI section so it sits below
-`Farm Eggs` and the existing right-side groups.  The published `75883b2` baseline
-is unchanged after admin stripping (`strip_admin` reproduces the exact hash).
+The tab is registered next to the Event tab in `Tasks.BuildMainInterface` and
+populated by `Tasks.BuildAdminUI(AdminTab)` from the controller block.  The
+published `75883b2` baseline is unchanged after admin stripping
+(`strip_admin` reproduces the exact hash).
 
 ## Source protocol (no invented remotes)
 

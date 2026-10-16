@@ -1,32 +1,38 @@
 """Reverse exact reviewed Admin Abuse insertions to the published 75883b2 baseline.
 
-The 75883b2 baseline had no admin controller and no BuildAdminUI call.  Stripping
-removes the controller block (between -- BEGIN/END ADMIN CONTROLLER markers), the
-nested UI block (between -- BEGIN/END ADMIN UI markers inside the function body),
-and the Tasks.BuildAdminUI(HomeTab) call injected next to the Wisp/Capture UI.
+The 75883b2 baseline had no admin controller, no Admin Abuse tab, and no
+BuildAdminUI call.  Stripping removes the controller block (between
+-- BEGIN/END ADMIN CONTROLLER markers), the inner UI block (between
+-- BEGIN/END ADMIN UI markers inside the function body), the AdminTab
+declaration, and the Tasks.BuildAdminUI(AdminTab) call injected next to
+the Wisp/Capture UI block.
 """
 import re
 
-UI_ORIGINAL = '\tlocal AdminGroup = home:AddGroupbox({ Name = "Admin Abuse", IconName = "flag", Side = 2, Collapsed = false, DisableCollapsing = false })\n'
-CALL_ORIGINAL = '\tTasks.BuildAdminUI(HomeTab)\n'
+CTRL_BEGIN = '-- BEGIN ADMIN CONTROLLER'
+CTRL_END = '-- END ADMIN CONTROLLER'
+UI_BEGIN = '\t-- BEGIN ADMIN UI'
+UI_END = '\t-- END ADMIN UI'
 
-ORIGINALS = {'UI': UI_ORIGINAL, 'CONTROLLER': ''}
+TAB_ORIGINAL = '\tlocal AdminTab = MainWindow:AddTab("Admin Abuse", "flag", "Saturday/Sunday Admin Abuse Automation")\n'
+CALL_ORIGINAL = '\tTasks.BuildAdminUI(AdminTab)\n'
+
+ORIGINALS = {'UI': TAB_ORIGINAL, 'CONTROLLER': ''}
 
 
 def strip_admin(runtime):
-    # Remove the controller block.  The pattern includes the surrounding blank line.
+    # Remove the AdminTab declaration next to the other top-level tabs.
+    if TAB_ORIGINAL in runtime:
+        runtime = runtime.replace(TAB_ORIGINAL, '', 1)
+    # Remove the controller block.
     pattern_ctrl = r'\n-- BEGIN ADMIN CONTROLLER\n.*?-- END ADMIN CONTROLLER\n'
     runtime, count_ctrl = re.subn(pattern_ctrl, '', runtime, flags=re.M | re.S)
     assert count_ctrl == 1, f'Expected one reviewed Admin controller, got {count_ctrl}'
-    # Remove the inner UI block: replaces with the original single line.
-    pattern_ui = r'^[\t ]*-- BEGIN ADMIN UI\n.*?^[\t ]*-- END ADMIN UI\n'
-    # Note: at this point the controller is already gone, so the UI markers must be
-    # the local call we added next to the Wisp UI; if the markers survived stripping
-    # the controller, they were an inner block we need to leave blank.
-    if '-- BEGIN ADMIN UI' in runtime:
-        runtime, count_ui = re.subn(pattern_ui, lambda m: '\n', runtime, flags=re.M | re.S)
-        assert count_ui == 1, f'Expected one reviewed Admin UI, got {count_ui}'
-    # Drop the Tasks.BuildAdminUI(HomeTab) call from the Wisp/Capture UI section.
-    if CALL_ORIGINAL in runtime:
-        runtime = runtime.replace(CALL_ORIGINAL, '', 1)
+    # Drop the outer admin UI scaffold (BEGIN/END markers + the call) so the file
+    # returns to the original 75883b2 line layout.  We replace the matched block
+    # (without the leading newline) with empty so the trailing newline that
+    # followed -- END BLOOM STAR UI stays put.
+    outer = '\t-- BEGIN ADMIN UI\n\tTasks.BuildAdminUI(AdminTab)\n\t-- END ADMIN UI\n'
+    if outer in runtime:
+        runtime = runtime.replace(outer, '', 1)
     return runtime
