@@ -30,7 +30,7 @@ ORIGINALS = {'TRANSIT OWNER': '\t\tassert(owner == "wisp" or owner == "banjo" or
           '\t\tif activeJob and owner ~= activeJob.Owner and owner ~= "race" then return false end\n',
  'WORKER': '\t\t\t\t\tlocal doStar = star.Wanted and (not bloom.Wanted or Tasks.PriorityRank("Star") <= '
            'Tasks.PriorityRank("Butterfly"))\n',
- 'UI': '\tTasks.BuildWispUI(HomeTab)\n',
+ 'UI': '',
  'CONTROLLER': '',
  'HELD GUARD': '\tlocal activeAdapter = function() return activeJob == nil and nativeActive() end\n',
  'HELD YIELD': '\tlocal yieldAdapter = function()\n\t\tif activeJob then return true end\n',

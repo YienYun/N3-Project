@@ -336,13 +336,17 @@ Read this before changing `Steal-An-Egg.lua`.
   seconds increment. OFF/end may descend only through same living actor/owner;
   race/takeover/unload forbids cleanup motion. Pending RPC cancellation releases
   movement and disconnects chase; late replies cannot move the cancelled actor.
-- tools/capture_scope.py reverses reviewed scopes exactly to 6d4af13, SHA256
-  51f6c97c5f7eff2808726749e6d36c6cb2a373e23768604bca9068393cb7551d.
+- `.tools/capture_scope.py` reverses reviewed scopes exactly to 6d4af13,
+  SHA256 `51f6c97c5f7eff2808726749e6d36c6cb2a373e23768604bca9068393cb7551d`.
   Historical normalization strips Capture first without updating frozen hashes.
-  Run all fourteen source checks, full production Luau compile, diff/identity
-  checks. No live event, score/reward, route/death or FPS claim from static tests.
-- tools/admin_scope.py reverses the Admin Abuse block to 75883b2, SHA256
-  07f2ce6ece5e3941adec79f64a561cb5c847ae49c229facd139453fa9a48aedf. The
-  inner -- BEGIN/END ADMIN UI markers scope the UI body inside the function.
-  Run tools/check_admin_source.py with the rest; preserve Chili V2 8950-9330
-  dependencies and the existing N3 Treadmill mount reuse.
+  Run all fourteen source checks (`.tools/check_*_source.py`), full production
+  Luau compile, diff/identity checks. No live event, score/reward, route/death
+  or FPS claim from static tests.  The single change log lives at
+  `docs/CHANGELOG.md`.
+- `.tools/admin_scope.py` reverses the Admin Abuse block to the new
+  pre-admin baseline SHA256 `7c68d364b5ee7d24a9d274dcdbef64390496ad8dde71c35f0b49f9142d1fa562`.
+  The inner `-- BEGIN/END ADMIN UI` markers scope the UI body inside the
+  function.  Run `.tools/check_admin_source.py` with the rest; preserve Chili
+  V2 8950-9330 dependencies and the existing N3 Treadmill mount reuse.
+  Admin Abuse is a top-level tab; Capture The Egg now lives inside it
+  instead of as a Home group.

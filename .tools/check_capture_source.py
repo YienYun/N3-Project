@@ -6,10 +6,9 @@ from capture_scope import strip_capture, ORIGINALS
 from admin_scope import strip_admin
 
 root = Path(__file__).resolve().parents[1]
-s = (root / 'Games/Steal-An-Egg.lua').read_text()
+raw = (root / 'Games/Steal-An-Egg.lua').read_text()
 # Strip any newer Admin Abuse block so the historical 6d4af13 baseline is reached.
-if '-- BEGIN ADMIN CONTROLLER' in s:
-    s = strip_admin(s)
+s = strip_admin(raw) if '-- BEGIN ADMIN CONTROLLER' in raw else raw
 assert hashlib.sha256(strip_capture(s).encode()).hexdigest() == '51f6c97c5f7eff2808726749e6d36c6cb2a373e23768604bca9068393cb7551d', 'Changes escaped reviewed Capture additions / published 6d4af13'
 for filename, expected in {
     'Games/Source/StealAnEgg/ChiliSourceV2.lua': '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d',
@@ -60,7 +59,7 @@ for clause in (
     'tonumber(entry.UserId) == LocalPlayer.UserId', 'tonumber(entry.Seconds), tonumber(entry.Rank) or index',
     'if not enabled() or raceWanted()', 'state.Disposed, state.Generation',
     'state.Steering = steering', 'Tasks.StopCaptureSteering()',
-    'home:AddGroupbox({ Name = "Capture The Egg", IconName = "flag"',
+    'tab:AddLeftGroupbox("Capture The Egg", "flag")',
     'FarmConfig.Capture_Auto, FarmConfig.Capture_TakeHolder = false, true',
     'Text = "Auto Capture Event Egg", Default = false', 'Text = "Take From Holder", Default = true',
     'Min = 20, Max = 120, Default = 45', 'Min = 20, Max = 150, Default = 45',
@@ -71,7 +70,8 @@ assert c.count('RunService.PreSimulation:Connect') == 1 and c.count('RunService.
 assert ':AddTab(' not in c and 'events:AddGroupbox' not in c
 for control in ('Toggle_Capture_Auto', 'Toggle_Capture_TakeHolder', 'Slider_Capture_Height', 'Slider_Capture_KeepAway'):
     assert s.count('"' + control + '"') == 1, control
-assert s.count('Tasks.BuildCaptureUI(HomeTab)') == 1
+assert raw.count('Tasks.BuildCaptureUI(AdminTab)') == 1
+assert raw.count('function Tasks.BuildCaptureUI(') == 1
 assert 'runOwned("capture", "Capture", state, allowed, action)' in s
 assert 'if Tasks.CaptureWanted and Tasks.CaptureWanted() then Tasks.RunCapture(); updateDemand() end' in s
 assert 'if key == "Capture" then return false end' in s

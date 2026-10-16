@@ -12731,17 +12731,17 @@ function Tasks.BuildMainInterface()
 		end,
 	})
 	-- BEGIN WISP UI
-	-- BEGIN CAPTURE UI
-	Tasks.BuildCaptureUI(HomeTab)
 	Tasks.BuildWispUI(HomeTab)
-	-- END CAPTURE UI
 	-- END WISP UI
 	-- BEGIN BLOOM STAR UI
 	Tasks.BuildBloomStarUI(EventTab)
 	-- END BLOOM STAR UI
+	-- BEGIN CAPTURE UI
 	-- BEGIN ADMIN UI
 	Tasks.BuildAdminUI(AdminTab)
+	Tasks.BuildCaptureUI(AdminTab)
 	-- END ADMIN UI
+	-- END CAPTURE UI
 	local IndexGroup = HomeTab:AddRightGroupbox("Pet Index & Codex", "book-open")
 	IndexGroup:AddDropdown("Dropdown_Index_PriorityOrder", {
 		Text = "Missing Steal Order",
@@ -21064,8 +21064,8 @@ end
 			end
 		end))
 	end
-	function Tasks.BuildCaptureUI(home)
-		local group = home:AddGroupbox({ Name = "Capture The Egg", IconName = "flag", Side = 2, Collapsed = false, DisableCollapsing = false })
+	function Tasks.BuildCaptureUI(tab)
+		local group = tab:AddLeftGroupbox("Capture The Egg", "flag")
 		local auto = group:AddToggle("Toggle_Capture_Auto", { Text = "Auto Capture Event Egg", Default = false, Tooltip = "Grab and hold the event egg.", Callback = function(value)
 			FarmConfig.Capture_Auto = value == true; state.Generation += 1; state.ConfigUntil = os.clock() + 3
 			if engine.AutoWake then engine.AutoWake() end
@@ -21125,9 +21125,9 @@ local function BuildAdminUI(tab)
 		Callback = function(value) FarmConfig.Admin_AutoTreadmill = value == true; state.Generation += 1 end,
 	})
 	AdminGroup:AddToggle("Toggle_Admin_InstantV3", {
-		Text = "Instant Steal V3",
+		Text = "Auto Steal V3 (Admin Treadmill)",
 		Default = false,
-		Tooltip = "Chili V3 path; runs only while Auto Use Admin Treadmill stays on.",
+		Tooltip = "Chili's V3 instant-steal path that ships with the Admin Treadmill event. Only takes effect while Auto Use Admin Treadmill is on and an Admin Treadmill is live.",
 		Callback = function(value) FarmConfig.Admin_InstantV3 = value == true; state.Generation += 1 end,
 	})
 	AdminGroup:AddToggle("Toggle_Admin_Minigame", {

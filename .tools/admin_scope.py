@@ -1,11 +1,9 @@
 """Reverse exact reviewed Admin Abuse insertions to the published 75883b2 baseline.
 
-The 75883b2 baseline had no admin controller, no Admin Abuse tab, and no
-BuildAdminUI call.  Stripping removes the controller block (between
--- BEGIN/END ADMIN CONTROLLER markers), the inner UI block (between
--- BEGIN/END ADMIN UI markers inside the function body), the AdminTab
-declaration, and the Tasks.BuildAdminUI(AdminTab) call injected next to
-the Wisp/Capture UI block.
+The 75883b2 baseline had no admin controller, no Admin Abuse tab, no
+BuildAdminUI call, and no BuildCaptureUI in admin.  Stripping removes the
+controller block, the AdminTab declaration, the outer admin UI scaffold
+(BEGIN/END markers + BuildAdminUI + BuildCaptureUI calls).
 """
 import re
 
@@ -15,7 +13,6 @@ UI_BEGIN = '\t-- BEGIN ADMIN UI'
 UI_END = '\t-- END ADMIN UI'
 
 TAB_ORIGINAL = '\tlocal AdminTab = MainWindow:AddTab("Admin Abuse", "flag", "Saturday/Sunday Admin Abuse Automation")\n'
-CALL_ORIGINAL = '\tTasks.BuildAdminUI(AdminTab)\n'
 
 ORIGINALS = {'UI': TAB_ORIGINAL, 'CONTROLLER': ''}
 
@@ -28,11 +25,12 @@ def strip_admin(runtime):
     pattern_ctrl = r'\n-- BEGIN ADMIN CONTROLLER\n.*?-- END ADMIN CONTROLLER\n'
     runtime, count_ctrl = re.subn(pattern_ctrl, '', runtime, flags=re.M | re.S)
     assert count_ctrl == 1, f'Expected one reviewed Admin controller, got {count_ctrl}'
-    # Drop the outer admin UI scaffold (BEGIN/END markers + the call) so the file
-    # returns to the original 75883b2 line layout.  We replace the matched block
-    # (without the leading newline) with empty so the trailing newline that
-    # followed -- END BLOOM STAR UI stays put.
-    outer = '\t-- BEGIN ADMIN UI\n\tTasks.BuildAdminUI(AdminTab)\n\t-- END ADMIN UI\n'
+    # Drop the outer admin UI scaffold (BEGIN/END markers + the BuildAdminUI and
+    # BuildCaptureUI calls) so the file returns to the original 75883b2 line
+    # layout.  The match starts at the tab indent and ends after the closing
+    # marker; the leading newline that separated it from -- END BLOOM STAR UI
+    # is preserved.
+    outer = '\t-- BEGIN ADMIN UI\n\tTasks.BuildAdminUI(AdminTab)\n\tTasks.BuildCaptureUI(AdminTab)\n\t-- END ADMIN UI\n'
     if outer in runtime:
         runtime = runtime.replace(outer, '', 1)
     return runtime
