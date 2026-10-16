@@ -96,8 +96,12 @@ ui_start = runtime.index('local RaceRallyGroup =')
 race_ui = runtime[ui_start:runtime.index('local ScrambleEggGroup =', ui_start)]
 assert "RaceDetails" not in race_ui and "LastDetails" not in race_ui
 assert "Heat:" not in race_ui and "Phase:" not in race_ui
-for label in ("Lbl_RaceStatus", "Lbl_RaceTokens", "Lbl_RaceWin", "Lbl_RaceName"):
+for label in ("Lbl_RaceStatus",):
     assert label + ":SetText(" in race_ui, f"Race display must be preserved: {label}"
+# The four rows (Status / Tokens / Win / Race) used to be four separate
+# AddLabel instances; they were collapsed into one multi-line label so the
+# vertical spacing between rows matches the user's preferred tight layout.
+# All four field references must still appear in the live updater.
 for field in ("Status", "Tokens", "Wins", "Racer"):
     assert "St." + field in race_ui, f"Race display field missing: {field}"
 assert runtime.count('"Slider_Race_Speed"') == 1

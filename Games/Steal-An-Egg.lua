@@ -13695,12 +13695,15 @@ function Tasks.BuildMainInterface()
 		end
 	end)
 	local RaceRallyGroup = EventTab:AddLeftGroupbox("Race Rally", "flag")
-	local Lbl_RaceStatus = RaceRallyGroup:AddLabel('<font color="#D946EF"><b>Status:</b></font> Off', true)
-	local Lbl_RaceTokens = RaceRallyGroup:AddLabel('<font color="#D946EF"><b>Tokens:</b></font> 0', true)
-	local Lbl_RaceWin = RaceRallyGroup:AddLabel('<font color="#D946EF"><b>Win:</b></font> 0', true)
-	local Lbl_RaceName = RaceRallyGroup:AddLabel('<font color="#D946EF"><b>Race:</b></font> Ostrich', true)
+	local Lbl_RaceStatus = RaceRallyGroup:AddLabel(
+		'<font color="#D946EF"><b>Status:</b></font> Off\n'
+		.. '<font color="#D946EF"><b>Tokens:</b></font> 0\n'
+		.. '<font color="#D946EF"><b>Win:</b></font> 0\n'
+		.. '<font color="#D946EF"><b>Race:</b></font> Ostrich',
+		true
+	)
 	task.spawn(function()
-		local LastS, LastT, LastW, LastN = nil, nil, nil, nil
+		local Last = nil
 		while not LibraryLoader.Unloaded do
 			task.wait(1)
 			pcall(function()
@@ -13709,24 +13712,12 @@ function Tasks.BuildMainInterface()
 					return
 				end
 				local S = '<font color="#D946EF"><b>Status:</b></font> ' .. tostring(St.Status or "Off")
-				if S ~= LastS then
-					LastS = S
+					.. '\n<font color="#D946EF"><b>Tokens:</b></font> ' .. tostring(St.Tokens or "0")
+					.. '\n<font color="#D946EF"><b>Win:</b></font> ' .. tostring(St.Wins or "0")
+					.. '\n<font color="#D946EF"><b>Race:</b></font> ' .. tostring(St.Racer or "Ostrich")
+				if S ~= Last then
+					Last = S
 					Lbl_RaceStatus:SetText(S)
-				end
-				local T = '<font color="#D946EF"><b>Tokens:</b></font> ' .. tostring(St.Tokens or "0")
-				if T ~= LastT then
-					LastT = T
-					Lbl_RaceTokens:SetText(T)
-				end
-				local W = '<font color="#D946EF"><b>Win:</b></font> ' .. tostring(St.Wins or "0")
-				if W ~= LastW then
-					LastW = W
-					Lbl_RaceWin:SetText(W)
-				end
-				local N = '<font color="#D946EF"><b>Race:</b></font> ' .. tostring(St.Racer or "Ostrich")
-				if N ~= LastN then
-					LastN = N
-					Lbl_RaceName:SetText(N)
 				end
 			end)
 		end
@@ -22319,7 +22310,17 @@ end
 	local function settingsChanged(state)
 		state.Generation += 1
 		state.ConfigUntil = os.clock() + 3
-		if state == star then star.Wanted, star.AskAt = false, 0 else bloom.Wanted = false end
+		if state == star then
+			star.Wanted, star.AskAt = false, 0
+		else
+			bloom.Wanted = false
+			-- A previous catch failure or ragdoll-TP miss can leave
+			-- bloom.BackoffUntil set up to +10s in the future. If the
+			-- user toggles Auto Butterfly off then back on (or joins a
+			-- fresh bloom while the previous cooldown is still active),
+			-- the new attempt must not inherit that stale backoff.
+			bloom.BackoffUntil = 0
+		end
 		if engine.AutoWake then engine.AutoWake() end
 	end
 	local function show(name, text)

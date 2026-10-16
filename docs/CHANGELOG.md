@@ -197,6 +197,32 @@ source contract holds.  No checker is a live Roblox/server/FPS test.
   `check_steal_source.py` adds the two new checker files to its
   allowed-change set.
 
+## Race Rally: collapse to a single multi-line label
+
+- The user reported visible vertical gaps between the four separate
+  Race Rally rows (`Status:` / `Tokens:` / `Win:` / `Race:`) on
+  account of the N3V3 library injecting default padding between
+  consecutive `AddLabel` instances. The four rows are now collapsed
+  into a single `AddLabel` whose text is joined with `\n` so the
+  rows render tight (no extra blank line between them). The live
+  updater writes the four lines in one
+  `Lbl_RaceStatus:SetText(...)` call.
+- `check_race_source.py` now only looks for the single
+  `Lbl_RaceStatus:SetText(` call site; the four `St.Status`,
+  `St.Tokens`, `St.Wins`, `St.Racer` field references are still
+  enforced so the live display is still hooked up.
+
+## Auto Butterfly: clear stale BackoffUntil on toggle
+
+- `settingsChanged(bloom)` now also resets `bloom.BackoffUntil = 0`.
+  The user reported Auto Butterfly failing to start when they join
+  the game mid-bloom. The catch worker can leave `BackoffUntil`
+  set up to 10 seconds in the future after a ragdoll-TP miss or
+  similar transient failure; if the user toggles Auto Butterfly
+  off then on (or the script is reloaded) that stale backoff
+  used to leak into the new attempt. Toggling the toggle (or
+  re-running the script) now gives a clean retry.
+
 
 ## Butterfly Bloom + Shooting Star
 
