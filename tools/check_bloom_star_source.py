@@ -1,4 +1,5 @@
 """Static source/lifecycle contracts, not a Roblox simulation or live acceptance test."""
+from capture_scope import strip_capture
 from pathlib import Path
 import hashlib
 import re
@@ -6,6 +7,8 @@ from bloom_star_scope import strip_bloom_star, LABELS
 
 ROOT = Path(__file__).resolve().parents[1]
 s = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
+if "-- BEGIN CAPTURE" in s:
+    s = strip_capture(s)
 assert hashlib.sha256(strip_bloom_star(s).encode()).hexdigest() == '29637582c16bc01ec2d250fa504042979b7b40964de7853266f126db4a4f1b7d', 'Changes escaped reviewed additions / published 7e9549a'
 assert hashlib.sha256((ROOT / 'Games/Source/StealAnEgg/ChiliSourceV2.lua').read_bytes()).hexdigest() == '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d'
 c = s[s.index('-- BEGIN BLOOM STAR CONTROLLER'):s.index('-- END BLOOM STAR CONTROLLER')]

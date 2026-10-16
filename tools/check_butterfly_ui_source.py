@@ -1,10 +1,13 @@
 """Presentation-only contracts; not a Roblox rendering or gameplay test."""
+from capture_scope import strip_capture
 from pathlib import Path
 import hashlib
 from butterfly_ui_scope import strip_combined_butterfly_ui
 
 root = Path(__file__).resolve().parents[1]
 s = (root / 'Games/Steal-An-Egg.lua').read_text()
+if "-- BEGIN CAPTURE" in s:
+    s = strip_capture(s)
 assert hashlib.sha256(strip_combined_butterfly_ui(s).encode()).hexdigest() == 'd4c01e1236479c77375239022bcdf3363ea48cdb9bbf5ad32a079636845deaa6', 'Changes escaped the four reviewed UI-only replacements against a815629'
 c = s[s.index('-- BEGIN BLOOM STAR CONTROLLER'):s.index('-- END BLOOM STAR CONTROLLER')]
 assert c.count('events:AddGroupbox(') == 2  # Star and one unified Butterfly outer group.

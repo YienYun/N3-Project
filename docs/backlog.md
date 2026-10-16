@@ -1,22 +1,24 @@
 # Remaining Chili gap audit — working backlog
 
 This is the recorded backlog, **not an exhaustive feature-by-feature re-audit**.
-Count **five remaining broad scopes**, not a toggle count or a fixed estimate of remaining
+Count **four remaining broad scopes**, not a toggle count or a fixed estimate of remaining
 work. Utilities/HUD and server tooling still need their own detailed breakdown.
 
-1. **Capture The Egg** — complete event flow. Existing reward filters / capture
-   UID exclusions / movement hooks are partial integrations, not completion.
-2. **Admin events** — audit and port the actual source workflows separately.
-3. **Minigame events** — audit and port the actual source workflows separately.
-4. **Auto Hop / server tools** — explicitly deferred, separate manager module
-   like SaveManager/ThemeManager, not bundled into quest changes.
-5. **Remaining utilities / HUD** — umbrella scope; enumerate before estimating.
+1. **Admin events** — audit and port the actual source workflows separately.
+2. **Minigame events** — audit and port the actual source workflows separately.
+3. **Auto Hop / server tools** — explicitly deferred, separate manager module
+   like SaveManager/ThemeManager, not bundled into farm changes.
+4. **Remaining utilities / HUD** — umbrella scope; enumerate before estimating.
 
 ## Already integrated; do not count as missing controllers
 
 - Native normal/Instant steal and optional safe-zone visual.
 - Race Rally, treadmill / Scramble Lab fixes, Lab stock and Lab seller.
 - Auto Mutate and optional Nitro replenishment.
+- Capture The Egg in Home/farm: actual event UID/carry, holder/bat combat, field
+  holding/threat positioning and server standings. See `capture-the-egg.md` for
+  source mapping, scoped dependencies, Race-first differences and live checklist.
+  Installed + static/compile checked does not mean live event/reward acceptance.
 - Butterfly Bloom catching + Workshop manual/smart trade and essence crafting,
   unified under Event → Butterfly Bloom → Catch / Workshop (no duplicate Home
   group); Shooting Star remains its own Event group with fall/hold/catch workflow. See `butterfly-shooting-star.md` for

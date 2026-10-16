@@ -309,3 +309,35 @@ Read this before changing `Steal-An-Egg.lua`.
   Three cancellation hooks are exact tiny insertions; native gameplay blocks and
   all historical expected hashes stay frozen. Run all eleven source checks plus
   full production Luau compile; no live/server/FPS success without actual tests.
+
+
+## Capture The Egg
+
+- User authorized after discussing source mechanics; Home (farm) -> Capture The
+  Egg, not Event. One named/icon/collapsible group. Auto OFF, dependent holder
+  taking ON per source, height 20–120/default 45, KeepAway 20–150/default 45,
+  status + server standings. See ../docs/capture-the-egg.md for full mapping.
+- Read Chili 4430–5959 plus combat 35555–36235 / 38664–38705, not just UI labels.
+  UID/carrier possession, actual prompts/raw carry, generic non-event starter
+  ragdoll, holding footprint/threat geometry, real bat prediction/steer/trigger.
+  No fabricated hit/score, reward claim or depositing the event egg in a base.
+- Race always preempts. Do not set CaptureUntil or force Movement.Owner; source
+  capture precedence is only over non-race tasks when actual UID/record exists.
+  Let an unrelated existing carry finish. A held event egg must not be adopted
+  by normal/Instant banking, even after Capture OFF.
+- Use the existing shared runOwned/callOwned worker and transit registry. No
+  second action worker/swap/rig. ControlGround holds/glides with normal body
+  flags; chase uses Control flight. Close whole-job health service for Capture;
+  scoped ragdoll/chase protection remains. Preserve Forest-only Wisp/Banjo.
+- Exact bat trigger(player, trace); real equipped bat, cooldown/range, target
+  eligibility/PvP and still-holder recheck. Preserve source lead/feedback/wall
+  logic, including current-target Z projection. No imported PvP aura/swap UI.
+- Standings only from RE/EggCapture/StandingsRefreshed, matched UserId; no local
+  seconds increment. OFF/end may descend only through same living actor/owner;
+  race/takeover/unload forbids cleanup motion. Pending RPC cancellation releases
+  movement and disconnects chase; late replies cannot move the cancelled actor.
+- tools/capture_scope.py reverses reviewed scopes exactly to 6d4af13, SHA256
+  51f6c97c5f7eff2808726749e6d36c6cb2a373e23768604bca9068393cb7551d.
+  Historical normalization strips Capture first without updating frozen hashes.
+  Run all thirteen source checks, full production Luau compile, diff/identity
+  checks. No live event, score/reward, route/death or FPS claim from static tests.

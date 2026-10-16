@@ -12730,7 +12730,10 @@ function Tasks.BuildMainInterface()
 		end,
 	})
 	-- BEGIN WISP UI
+	-- BEGIN CAPTURE UI
+	Tasks.BuildCaptureUI(HomeTab)
 	Tasks.BuildWispUI(HomeTab)
+	-- END CAPTURE UI
 	-- END WISP UI
 	-- BEGIN BLOOM STAR UI
 	Tasks.BuildBloomStarUI(EventTab)
@@ -18986,7 +18989,9 @@ do
 	end
 	function Tasks.NewQuestTransit(owner, character, humanoid, root, valid)
 		-- BEGIN BLOOM STAR TRANSIT OWNER
-		assert(owner == "wisp" or owner == "banjo" or owner == "butterfly" or owner == "star", "Owned transport owner required")
+		-- BEGIN CAPTURE TRANSIT OWNER
+		assert(owner == "wisp" or owner == "banjo" or owner == "butterfly" or owner == "star" or owner == "capture", "Owned transport owner required")
+		-- END CAPTURE TRANSIT OWNER
 		-- END BLOOM STAR TRANSIT OWNER
 		local transit = { Active = false }
 		local heartbeat, stepped, parts, savedPlatform
@@ -19012,14 +19017,39 @@ do
 					if part:IsDescendantOf(character) and not FarmConfig.Movement_Noclip then part.CanCollide = true end
 				end
 			end
+			-- BEGIN CAPTURE GROUND CLEANUP
+			self.Ground = false
 			self.Active = false
 			parts = nil
+			-- END CAPTURE GROUND CLEANUP
 			if active == self then active = nil end
 		end
+		-- BEGIN CAPTURE GROUND CONTROL
+		function transit:ControlGround(position, velocity, rotation)
+			assert(owner == "capture", "Capture ground-control owner required")
+			if not self.Owns() or LibraryLoader.Unloaded or not valid() then return false end
+			if self.Ragdoll then
+				-- Arrival pickup reuses the existing ragdoll registry; never nest another controller.
+				if not self.Active then return false end
+			elseif not self.Ground then
+				self:Stop()
+				assert(active == nil, "Owned transport already active")
+				savedPlatform, parts = humanoid.PlatformStand, {}
+				self.Active, self.Ground, active = true, true, self
+			end
+			if position then root.CFrame = CFrame.new(position) * (rotation or root.CFrame.Rotation)
+			elseif rotation then root.CFrame = CFrame.new(root.Position) * rotation end
+			engine.SetVelocity(root, velocity or Vector3.zero)
+			return true
+		end
+		-- END CAPTURE GROUND CONTROL
 		-- BEGIN BLOOM STAR TRANSIT CONTROL
 		-- Chili BeginFlight/GodMode/health (40119-40233, 42455-42623).
 		-- Dynamic event motion uses this SAME transit ownership/cleanup, not another rig.
+		-- BEGIN CAPTURE GROUND FLIGHT
 		function transit:BeginControl()
+			if self.Ground then self:Stop() end
+		-- END CAPTURE GROUND FLIGHT
 			if self.Active then return self.Owns() and valid() end
 			if not self.Owns() or LibraryLoader.Unloaded or not valid() then return false end
 			assert(active == nil, "Owned transport already active")
@@ -19180,11 +19210,16 @@ do
 				if type(uid) ~= "string" or excluded[uid] or typeof(record.BottomCFrame) ~= "CFrame"
 					or (tonumber(record.CarrierUserId) or 0) > 0
 					or not (record.State == nil or record.State == "Slot" or record.State == "Dropped") then continue end
+				-- BEGIN CAPTURE TRAVEL EXCLUSION
+				if owner == "capture" and uid == Workspace:GetAttribute("Event_CaptureTheEggUid") then continue end
 				local slot = forestSlot(record, uid)
+				-- END CAPTURE TRAVEL EXCLUSION
 				local guard = slot and engine.FindGuard("Forest")
 				-- BEGIN BLOOM STAR TRANSIT SELECTION
 				-- Chili's event selector is generic; the approved quest Forest policy stays unchanged.
-				if owner == "star" or owner == "butterfly" then
+				-- BEGIN CAPTURE TRAVEL SELECTOR
+				if owner == "star" or owner == "butterfly" or owner == "capture" then
+				-- END CAPTURE TRAVEL SELECTOR
 					local ownPrefix = "FirstAreaEgg_" .. LocalPlayer.UserId
 					slot = nil
 					if string.sub(uid, 1, 13) == "FirstAreaEgg_" then
@@ -19329,8 +19364,14 @@ do
 				strikeConnection:Disconnect(); strikeConnection = nil
 				dropTaken()
 				if not landed then return false, "the guard strike did not land" end
+				-- BEGIN CAPTURE TRAVEL ARRIVAL
+				if owner == "capture" and self.CaptureArrival then self.CaptureArrival() end
 				if report then report("At destination; finishing Forest TP") end
+				-- END CAPTURE TRAVEL ARRIVAL
+				-- BEGIN CAPTURE TRAVEL FINISH
+				if owner == "capture" and Tasks.CaptureOwnsEgg and Tasks.CaptureOwnsEgg() then return true, "event egg held" end
 				while (tonumber(LocalPlayer:GetAttribute("RagdollEndTime")) or 0) > Workspace:GetServerTimeNow() and not stopped() do
+				-- END CAPTURE TRAVEL FINISH
 					local destination = target()
 					if destination then snap(destination) end
 					RunService.Heartbeat:Wait()
@@ -20475,6 +20516,596 @@ do
 end
 -- END BANJO CONTROLLER
 
+-- BEGIN CAPTURE CONTROLLER
+-- Chili V2 4430-5959; combat dependency 35555-36235. No second action worker.
+(function()
+	local engine = RuntimeState.StealEngine
+	local state = { Generation = 0, Status = "Off", Busy = false, Height = 45, KeepAway = 45,
+		Bounds = {}, BoundsAt = 0, HoverAt = 0, JumpAt = 0, EquipAt = 0, LastFire = 0, Trace = 0,
+		Links = {}, Tracks = setmetatable({}, { __mode = "k" }), WallsAt = 0, Walls = {},
+		WallSides = setmetatable({}, { __mode = "k" }), PendingHits = {}, Stats = {} }
+	Tasks.CaptureState = state
+	FarmConfig.Capture_Auto, FarmConfig.Capture_TakeHolder = false, true
+	local leadOptions = { 0.12, 0.2, 0.28, 0.36, 0.46, 0.6 }
+	for index = 1, #leadOptions do state.Stats[index] = { Hits = 0, Shots = 0 } end
+	local labels, gears, standingsBound = {}, nil, false
+	function Tasks.StopCaptureSteering()
+		if state.Steering then state.Steering:Disconnect(); state.Steering = nil end
+	end
+	local function captureRemote(name)
+		local packages = ReplicatedStorage:FindFirstChild("Packages")
+		local network = packages and packages:FindFirstChild("Networking")
+		return network and network:FindFirstChild(name)
+	end
+	local function raceWanted()
+		return RaceOwnsCharacter() or (Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal()) == true
+	end
+	local function enabled() return not state.Disposed and not LibraryLoader.Unloaded and FarmConfig.Capture_Auto == true end
+	local function eventUid()
+		local uid = Workspace:GetAttribute("Event_CaptureTheEggUid")
+		return type(uid) == "string" and uid ~= "" and uid or nil
+	end
+	local function eventRunning()
+		for _, key in ipairs({ "Event_CaptureTheEgg", "Event_CaptureTheEggGameplay" }) do
+			local value = Workspace:GetAttribute(key)
+			if value ~= nil and value ~= false and value ~= 0 and value ~= "" then return true end
+		end
+		return false
+	end
+	local function readEgg(uid)
+		if not uid or not EggStateModule then return nil end
+		if type(EggStateModule.ReadFieldEgg) == "function" then
+			local ok, value = pcall(EggStateModule.ReadFieldEgg, uid)
+			if ok and type(value) == "table" then return value end
+		end
+		if type(EggStateModule.ReadFieldEggs) == "function" then
+			local ok, snapshot = pcall(EggStateModule.ReadFieldEggs)
+			local records = ok and type(snapshot) == "table" and snapshot.Records
+			if type(records) == "table" then
+				if type(records[uid]) == "table" then return records[uid] end
+				for _, record in pairs(records) do if type(record) == "table" and record.Uid == uid then return record end end
+			end
+		end
+	end
+	local function heldByMe(uid, record)
+		return uid ~= nil and ((engine.State.Carrying and engine.State.CarryUid == uid)
+			or (record and tonumber(record.CarrierUserId) == LocalPlayer.UserId)) or false
+	end
+	function Tasks.CaptureOwnsEgg() local uid = eventUid(); return heldByMe(uid, readEgg(uid)) end
+	function Tasks.CaptureWanted()
+		if not enabled() or raceWanted() or os.clock() < (state.ConfigUntil or 0) then return false end
+		local uid = eventUid()
+		if not uid or not readEgg(uid) then return false end
+		-- A native carry must finish; our own event egg is not a bank/deposit task.
+		return state.Busy or Tasks.CaptureOwnsEgg() or not (IsActivelyCarryingEgg() or GetEquippedEggTool()
+			or engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying
+			or (engine.AutoCarry and engine.AutoCarry.Carrying))
+	end
+	local function worldAreas()
+		local world = Workspace:FindFirstChild("World") or Workspace:FindFirstChild("__OBJECTS")
+		return world and world:FindFirstChild("Areas"), world
+	end
+	local function pivot(model)
+		if model and model:IsA("Model") then return model:GetPivot().Position end
+	end
+	local function eggPosition(uid, record)
+		local slots = Workspace:FindFirstChild("AreaEggSlotsClient")
+		local at = pivot(slots and slots:FindFirstChild(uid)) or pivot(Workspace:FindFirstChild(uid))
+		if at then return at end
+		if record and typeof(record.BottomCFrame) == "CFrame" then return record.BottomCFrame.Position end
+		local areas = worldAreas()
+		for _, name in ipairs({ "CaptureTheEggSpawn", "AdminAbuseEggSpawn" }) do
+			local part = areas and areas:FindFirstChild(name)
+			if part and part:IsA("BasePart") then return part.Position end
+		end
+	end
+	local function carryBounds()
+		if os.clock() < state.BoundsAt then return state.Bounds end
+		state.BoundsAt, state.Bounds = os.clock() + 5, {}
+		local areas = worldAreas()
+		local folder = areas and areas:FindFirstChild("EggCarryBounds")
+		for _, part in ipairs(folder and folder:GetChildren() or {}) do
+			if part:IsA("BasePart") and part.Name ~= "SafeZone" and part.Position.Y > 0 and part.Size.X > 60 and part.Size.Z > 60 then
+				local box = { MinX = math.huge, MaxX = -math.huge, MinZ = math.huge, MaxZ = -math.huge, Y = part.Position.Y + part.Size.Y / 2 }
+				for _, x in ipairs({ -1, 1 }) do for _, z in ipairs({ -1, 1 }) do
+					local point = part.CFrame:PointToWorldSpace(Vector3.new(part.Size.X * x / 2, 0, part.Size.Z * z / 2))
+					box.MinX, box.MaxX = math.min(box.MinX, point.X), math.max(box.MaxX, point.X)
+					box.MinZ, box.MaxZ = math.min(box.MinZ, point.Z), math.max(box.MaxZ, point.Z)
+				end end
+				table.insert(state.Bounds, box)
+			end
+		end
+		return state.Bounds
+	end
+	local function footprint(point, margin)
+		for _, box in ipairs(carryBounds()) do
+			if point.X >= box.MinX + margin and point.X <= box.MaxX - margin and point.Z >= box.MinZ + margin and point.Z <= box.MaxZ - margin then return box end
+		end
+	end
+	local function threats()
+		local players, guards = {}, {}
+		for _, player in ipairs(Players:GetPlayers()) do
+			local character = player.Character
+			local root, humanoid = character and character:FindFirstChild("HumanoidRootPart"), character and character:FindFirstChildOfClass("Humanoid")
+			if player ~= LocalPlayer and root and humanoid and humanoid.Health > 0 then table.insert(players, root.Position) end
+		end
+		local areas = worldAreas()
+		local folder = areas and areas:FindFirstChild("GuardAreas")
+		for _, area in ipairs(folder and folder:GetChildren() or {}) do
+			local guard = area:FindFirstChild("Guard")
+			local root = guard and guard:FindFirstChild("HumanoidRootPart", true)
+			local at = root and root:IsA("BasePart") and root.Position or pivot(guard)
+			if at then table.insert(guards, at) end
+		end
+		return players, guards
+	end
+	local function clearance(point, players, guards)
+		local score = math.huge
+		for _, at in ipairs(players) do score = math.min(score, (at - point).Magnitude) end
+		for _, at in ipairs(guards) do score = math.min(score, Vector3.new(at.X - point.X, 0, at.Z - point.Z).Magnitude * state.KeepAway / 32) end
+		return score
+	end
+	local function chooseHover(current)
+		local players, guards = threats()
+		local closest, distance, fallback, best, fallbackDistance = nil, math.huge, nil, -math.huge, math.huge
+		for _, box in ipairs(carryBounds()) do
+			local middle = (box.MinZ + box.MaxZ) / 2
+			local spread = math.min(40, math.max(0, (box.MaxZ - box.MinZ) / 2 - 14))
+			for x = box.MinX + 14, box.MaxX - 14, 50 do
+				for _, z in ipairs({ middle - spread, middle, middle + spread }) do
+					local point = Vector3.new(x, box.Y + state.Height, z)
+					local score, travel = clearance(point, players, guards), (point - current).Magnitude
+					if score >= state.KeepAway + 10 and travel < distance then closest, distance = point, travel end
+					if score > best or score == best and travel < fallbackDistance then fallback, best, fallbackDistance = point, score, travel end
+				end
+			end
+		end
+		return closest or fallback
+	end
+	local function updateHover(root)
+		if not state.Hover or os.clock() - state.HoverAt >= 0.25 then
+			state.HoverAt = os.clock()
+			local players, guards = threats()
+			if not state.Hover or not footprint(state.Hover, 13) or clearance(state.Hover, players, guards) < state.KeepAway then state.Hover = chooseHover(root.Position) end
+		end
+		if not state.Hover then
+			local box = footprint(root.Position, 0)
+			if box then state.Hover = Vector3.new(root.Position.X, box.Y + state.Height, root.Position.Z) end
+		end
+		return state.Hover
+	end
+	-- Combat dependency: same source eligibility, wall sides, prediction, UCB leads and real bat trigger.
+	local function targetParts(player)
+		local character = player and player.Character
+		local root, humanoid = character and character:FindFirstChild("HumanoidRootPart"), character and character:FindFirstChildOfClass("Humanoid")
+		if root and humanoid and humanoid.Health > 0 then return character, root end
+	end
+	local function hittable(player)
+		if not player or player == LocalPlayer or player.Parent ~= Players then return false end
+		local character, root = targetParts(player)
+		return character ~= nil and character:GetAttribute("IsTrapped") ~= true and not player:GetAttribute("InBossArena") and not engine.InsideBase(root.Position)
+	end
+	local function ragdollTime(player) return tonumber(player:GetAttribute("RagdollEndTime")) or 0 end
+	local function gearData(tool)
+		local directory = gears and gears.Directory
+		return type(directory) == "table" and directory[tostring(tool:GetAttribute("GearName") or tool.Name)]
+	end
+	local function batBonus(tool)
+		local record = gearData(tool)
+		return type(record) == "table" and type(record.BatControllerData) == "table" and tonumber(record.BatControllerData.RangeBonus) or 0
+	end
+	local function isBat(tool)
+		if not tool:IsA("Tool") then return false end
+		if tool:GetAttribute("IsBat") == true then return true end
+		if type(tool:GetAttribute("GearName")) == "string" then
+			local record = gearData(tool)
+			return type(record) == "table" and record.BatControllerData ~= nil
+		end
+		if tool:GetAttribute("ItemType") ~= nil then return false end
+		for _, name in ipairs({ "bat", "katana", "axe", "staff", "club", "hammer", "sword", "blade" }) do
+			if string.find(string.lower(tool.Name), name, 1, true) then return true end
+		end
+		return false
+	end
+	local function pickBat(character)
+		local equipped = character:FindFirstChildWhichIsA("Tool")
+		if equipped and isBat(equipped) then return equipped end
+		local result = {}
+		for _, container in pairs({ character, LocalPlayer:FindFirstChildOfClass("Backpack") }) do
+			for _, tool in ipairs(container:GetChildren()) do if isBat(tool) then table.insert(result, tool) end end
+		end
+		table.sort(result, function(a, b) if batBonus(a) ~= batBonus(b) then return batBonus(a) > batBonus(b) end; return a.Name < b.Name end)
+		return result[1]
+	end
+	local function batRange(tool) return (17 + batBonus(tool)) * (Workspace:GetAttribute("DragonEggEventActive") == true and 2.5 or 1) end
+	local function walls()
+		if os.clock() < state.WallsAt then return state.Walls end
+		state.WallsAt, state.Walls = os.clock() + 5, {}
+		local _, world = worldAreas()
+		local build = world and world:FindFirstChild("Build")
+		for _, child in ipairs(build and build:GetChildren() or {}) do
+			local collisions = child:FindFirstChild("COLLISIONS")
+			local folder = collisions and collisions:FindFirstChild("GUARD NO COLLIDE")
+			for _, wall in ipairs(folder and folder:GetChildren() or {}) do
+				if wall.Name == "WALL LEFT" or wall.Name == "WALL RIGHT" then
+					if wall:IsA("BasePart") then table.insert(state.Walls, wall) end
+					for _, part in ipairs(wall:GetDescendants()) do if part:IsA("BasePart") then table.insert(state.Walls, part) end end
+				end
+			end
+		end
+		return state.Walls
+	end
+	local function pushOffWall(from, goal)
+		for _, wall in ipairs(walls()) do if wall.Parent then
+			local size, frame = wall.Size, wall.CFrame
+			local thin = size.X <= size.Y and size.X <= size.Z and "X" or (size.Y <= size.Z and "Y" or "Z")
+			local vertical = math.abs(frame.RightVector.Y) >= math.abs(frame.UpVector.Y) and math.abs(frame.RightVector.Y) >= math.abs(frame.LookVector.Y) and "X"
+				or (math.abs(frame.UpVector.Y) >= math.abs(frame.LookVector.Y) and "Y" or "Z")
+			local half, at, origin = size / 2, frame:PointToObjectSpace(goal), frame:PointToObjectSpace(from)
+			local overlaps = true
+			for _, axis in ipairs({ "X", "Y", "Z" }) do if axis ~= thin and axis ~= vertical and math.abs(at[axis]) > half[axis] + 6 then overlaps = false end end
+			if overlaps then
+				local side = state.WallSides[wall]
+				if math.abs(origin[thin]) >= half[thin] + 3 or side == nil and math.abs(origin[thin]) >= half[thin] then side = origin[thin] >= 0 and 1 or -1; state.WallSides[wall] = side end
+				side = side or (origin[thin] >= 0 and 1 or -1)
+				if at[thin] * side < half[thin] + 6 then
+					local components = { X = at.X, Y = at.Y, Z = at.Z }; components[thin] = side * (half[thin] + 6)
+					goal = frame:PointToWorldSpace(Vector3.new(components.X, components.Y, components.Z))
+				end
+			end
+		end end
+		return goal
+	end
+	local function keepOffWalls(from, goal)
+		local result = pushOffWall(from, goal)
+		local delta, cursor = result - from, from
+		if delta.Magnitude > 6 then for step = 1, 6 do
+			local point = from + delta * (step / 6)
+			local adjusted = pushOffWall(cursor, point)
+			if (adjusted - point).Magnitude > 0.01 then return pushOffWall(from, adjusted) end
+			cursor = adjusted
+		end end
+		return result
+	end
+	local floorParams = RaycastParams.new()
+	floorParams.FilterType = Enum.RaycastFilterType.Exclude
+	pcall(function() floorParams.RespectCanCollide = true end)
+	local function aboveFloor(point)
+		local excluded = {}
+		for _, player in ipairs(Players:GetPlayers()) do if player.Character then table.insert(excluded, player.Character) end end
+		floorParams.FilterDescendantsInstances = excluded
+		local hit = Workspace:Raycast(point + Vector3.new(0, 60, 0), Vector3.new(0, -400, 0), floorParams)
+		return hit and point.Y < hit.Position.Y + 3 and Vector3.new(point.X, hit.Position.Y + 3, point.Z) or point
+	end
+	local function settleHitFeedback()
+		for index = #state.PendingHits, 1, -1 do
+			local pending = state.PendingHits[index]
+			local stats = state.Stats[pending.Option]
+			if ragdollTime(pending.Target) > pending.RagdollBefore + 0.01 then
+				stats.Hits, stats.Shots = stats.Hits + 1, stats.Shots + 1; table.remove(state.PendingHits, index)
+			elseif os.clock() - pending.At > pending.Wait then
+				if (tonumber(pending.Tool:GetAttribute("CooldownEndTime")) or 0) > pending.CooldownBefore + 0.01 then stats.Shots += 1 end
+				table.remove(state.PendingHits, index)
+			end
+		end
+	end
+	local function combatPlan(player, ownRoot, tool)
+		local _, root = targetParts(player)
+		if not root then return nil end
+		local track = state.Tracks[player]
+		if not track then track = { Samples = {} }; state.Tracks[player] = track end
+		local now, samples = os.clock(), track.Samples
+		table.insert(samples, { Time = now, Position = root.Position })
+		while #samples > 2 and now - samples[1].Time > 0.12 do table.remove(samples, 1) end
+		local raw, elapsed = root.AssemblyLinearVelocity, now - samples[1].Time
+		local velocity = raw
+		if elapsed >= 0.03 then
+			local measured = (root.Position - samples[1].Position) / elapsed
+			if measured.Magnitude <= 1500 and raw.Magnitude <= measured.Magnitude * 1.4 then velocity = measured end
+		end
+		local horizontal = Vector3.new(velocity.X, 0, velocity.Z)
+		track.Smooth = track.Smooth and track.Smooth:Lerp(horizontal, 0.25) or horizontal
+		local smooth = track.Smooth
+		if smooth.Magnitude > 1 then
+			local heading = track.Heading and track.Heading:Lerp(smooth.Unit, 0.25) or smooth.Unit
+			track.Heading = heading.Magnitude > 0.01 and heading.Unit or smooth.Unit
+		end
+		settleHitFeedback()
+		local total = 0
+		for _, stats in ipairs(state.Stats) do total += stats.Shots end
+		local option, score = 3, -math.huge
+		for index, stats in ipairs(state.Stats) do
+			local value = (stats.Hits + 1) / (stats.Shots + 2) + math.sqrt(2 * math.log(total + 2) / (stats.Shots + 1)) * 0.35
+			if value > score then option, score = index, value end
+		end
+		local ok, ping = pcall(LocalPlayer.GetNetworkPing, LocalPlayer)
+		ping = math.clamp(ok and tonumber(ping) or 0, 0, 1)
+		local horizon = leadOptions[option]
+		local historical = root.Position + velocity * math.max(0, horizon + ping - math.clamp(ping + 0.05, 0.05, 0.35))
+		local current = root.Position + velocity * (horizon + ping)
+		local heading = track.Heading
+		if not heading then local delta = Vector3.new(ownRoot.Position.X - root.Position.X, 0, ownRoot.Position.Z - root.Position.Z); heading = delta.Magnitude > 0.1 and delta.Unit or Vector3.new(0, 0, 1) end
+		local predicted = root.Position + smooth * (ping + horizon + 0.18 - 0.275) + (smooth.Magnitude > 1 and smooth.Unit * 6 * 0.6 or Vector3.zero)
+		local sweep = math.max(5, math.min(batRange(tool) * 0.7, 6 + smooth.Magnitude * 0.07)) * 0.6
+		local along = (math.sin(now * 2 * math.pi / 1.1) * 0.5 + 0.5) * sweep
+		local side = Vector3.new(-heading.Z, 0, heading.X)
+		if side:Dot(ownRoot.Position - predicted) < 0 then side = -side end
+		local goal = predicted + heading * along + side * (horizontal.Magnitude < 35 and 3 or 1.5) + Vector3.new(0, math.sin(now * 2 * math.pi / 0.8) * 2.5, 0)
+		-- Preserve the source's target-current Z projection, rather than inventing another intercept.
+		goal = keepOffWalls(ownRoot.Position, aboveFloor(Vector3.new(goal.X, goal.Y, root.Position.Z)))
+		return { Goal = goal, Velocity = smooth, Face = current, Current = current, Historical = historical, Option = option, Ping = ping }
+	end
+	local function tryHit(job, player, plan, tool)
+		if job.Cancelled() or Workspace:GetAttribute("PvPDisabled") == true or not hittable(player) or ragdollTime(player) > Workspace:GetServerTimeNow() then return end
+		if tool.Parent ~= job.Character then
+			if os.clock() - state.EquipAt < 0.2 then return end
+			state.EquipAt = os.clock(); job.Humanoid:EquipTool(tool)
+			if tool.Parent ~= job.Character or job.Cancelled() then return end
+		end
+		local previous = job.Root.Position - job.Root.AssemblyLinearVelocity * 0.18
+		if (plan.Historical - previous).Magnitude > batRange(tool) - 1 and (plan.Current - previous).Magnitude > batRange(tool) - 1 then return end
+		local cooldown = tonumber(tool:GetAttribute("CooldownEndTime")) or 0
+		if Workspace:GetServerTimeNow() < cooldown - plan.Ping * 0.5 or os.clock() - state.LastFire < math.max(0.12, plan.Ping * 1.5) then return end
+		local trigger = captureRemote("RE/BatSwing/Trigger")
+		if not trigger or not trigger:IsA("RemoteEvent") or job.Cancelled() or tool.Parent ~= job.Character then return end
+		local current = readEgg(eventUid())
+		if not current or tonumber(current.CarrierUserId) ~= player.UserId then return end
+		state.LastFire, state.Trace = os.clock(), state.Trace + 1
+		table.insert(state.PendingHits, { Target = player, Tool = tool, Option = plan.Option, At = os.clock(), Wait = math.max(0.5, plan.Ping * 2 + 0.3), RagdollBefore = ragdollTime(player), CooldownBefore = cooldown })
+		pcall(trigger.FireServer, trigger, player, string.format("%d:%d:%d", LocalPlayer.UserId, state.Trace, math.floor(Workspace:GetServerTimeNow() * 1000)))
+	end
+	local function steer(job, plan, dt)
+		dt = math.max(dt, 1 / 240)
+		local at = job.Root.Position
+		local velocity = plan.Velocity + (plan.Goal - at) / math.max(0.12, dt)
+		local cap = math.min(400 + plan.Velocity.Magnitude, 750)
+		if velocity.Magnitude > cap then velocity = velocity.Unit * cap end
+		local adjusted = keepOffWalls(at, at + velocity * dt)
+		if (adjusted - (at + velocity * dt)).Magnitude > 0.01 then velocity = (adjusted - at) / dt end
+		local unstuck = keepOffWalls(at, at)
+		if (unstuck - at).Magnitude > 0.01 then velocity = (unstuck - at) / math.max(0.12, dt) end
+		velocity += Vector3.new(0, Workspace.Gravity * dt * 0.5, 0)
+		local face = Vector3.new(plan.Face.X - at.X, 0, plan.Face.Z - at.Z)
+		return job.Transit:Control(nil, velocity, face.Magnitude > 0.05 and CFrame.lookAt(Vector3.zero, face.Unit) or nil)
+	end
+	local function glide(job, goal, speed, dt)
+		if not goal or job.Cancelled() then return false end
+		local at, delta = job.Root.Position, goal - job.Root.Position
+		local nextAt = delta.Magnitude <= math.max(speed * dt, 0.05) and goal or at + delta.Unit * speed * dt
+		local facing = Vector3.new(delta.X, 0, delta.Z)
+		return job.Transit:ControlGround(nextAt, Vector3.zero, facing.Magnitude > 0.5 and CFrame.lookAt(Vector3.zero, facing.Unit) or nil)
+	end
+	local function carryPrompt(uid, at)
+		local best, part, distance = nil, nil, 14
+		for _, child in ipairs(Workspace:GetChildren()) do
+			if child.Name == "SmartPromptPart" and child:IsA("BasePart") then
+				local prompt = child:FindFirstChild("CarryAreaEgg")
+				local gap = Vector3.new(child.Position.X - at.X, 0, child.Position.Z - at.Z).Magnitude
+				if prompt and prompt:IsA("ProximityPrompt") and gap < distance then best, part, distance = prompt, child, gap end
+			end
+		end
+		if not best then return nil end
+		local slots = Workspace:FindFirstChild("AreaEggSlotsClient")
+		for _, model in ipairs(slots and slots:GetChildren() or {}) do
+			local point = model.Name ~= uid and pivot(model)
+			if point and Vector3.new(point.X - part.Position.X, 0, point.Z - part.Position.Z).Magnitude + 1.5 < distance then return nil end
+		end
+		return best
+	end
+	local function grabEgg(job, uid)
+		if job.Cancelled() then return false end
+		job.Humanoid:UnequipTools()
+		local deadline, requestedAt = os.clock() + 1.4, -math.huge
+		while not job.Cancelled() and os.clock() < deadline do
+			local record = readEgg(uid)
+			if heldByMe(uid, record) then return true end
+			local carrier = record and tonumber(record.CarrierUserId) or 0
+			if carrier > 0 and carrier ~= LocalPlayer.UserId then return false end
+			local at = eggPosition(uid, record)
+			if at and os.clock() - requestedAt >= 0.08 then
+				requestedAt = os.clock()
+				if not job.Transit:ControlGround(at + Vector3.new(0, 2.5, 0), Vector3.zero) then return false end
+				local prompt = carryPrompt(uid, at)
+				if job.Cancelled() then return false end
+				if prompt then
+					local duration = prompt.HoldDuration
+					local ok, failure = pcall(function()
+						prompt.HoldDuration = 0
+						if type(fireproximityprompt) == "function" then fireproximityprompt(prompt) end
+					end)
+					if prompt.Parent then pcall(function() prompt.HoldDuration = duration end) end
+					if not ok then state.LastError = tostring(failure) end
+				elseif EggStateModule and type(EggStateModule.CarryFieldEgg) == "function" then
+					local slot = record and type(record.AreaId) == "string" and type(record.NestId) == "string" and record.AreaId .. ":" .. record.NestId or nil
+					Tasks.CaptureCallOwned(job, EggStateModule.CarryFieldEgg, uid, slot)
+				end
+			end
+			task.wait()
+		end
+		return heldByMe(uid, readEgg(uid))
+	end
+	local function captureJob(job, uid)
+		-- Holding/free-egg glide is not flight/GodMode in Chili. Ragdoll/chase own protection separately.
+		job.HealthStop()
+		local plan, target, mode
+		local steering = RunService.PreSimulation:Connect(function(dt)
+			if mode == "chase" and plan and target and not job.Cancelled() and hittable(target)
+				and ragdollTime(LocalPlayer) <= Workspace:GetServerTimeNow() then
+				local ok, failure = pcall(steer, job, plan, dt)
+				if not ok then mode, plan = nil, nil; state.LastError = tostring(failure); job.Transit:Stop() end
+			end
+		end)
+		state.Steering = steering
+		job.Finally = function()
+			steering:Disconnect()
+			if state.Steering == steering then state.Steering = nil end
+			mode, plan, target, state.Hover = nil, nil, nil, nil
+			if not job.Safe() then return end
+			local box = footprint(job.Root.Position, -4)
+			if not box or job.Root.Position.Y <= box.Y + 8 then return end
+			job.Finishing = true
+			job.Transit:Stop()
+			local goal, elapsed = Vector3.new(job.Root.Position.X, box.Y + 3.5, job.Root.Position.Z), 0
+			while elapsed < 1.5 and job.Safe() do
+				local dt = RunService.Heartbeat:Wait(); elapsed += dt
+				if not job.Safe() then break end
+				local delta = goal - job.Root.Position
+				local at = delta.Magnitude <= 160 * dt and goal or job.Root.Position + delta.Unit * 160 * dt
+				if not job.Transit:ControlGround(at, Vector3.zero) or delta.Magnitude < 1 then break end
+			end
+		end
+		job.Transit.CaptureArrival = function()
+			-- After real ragdoll arrival, pickup uses the existing snap scope without nesting flight.
+			local ok, failure = pcall(function()
+				local deadline = os.clock() + 8
+				while os.clock() < deadline and not job.Cancelled() do
+					local record = readEgg(uid)
+					local carrier = record and tonumber(record.CarrierUserId) or 0
+					if not record or heldByMe(uid, record) or carrier > 0 and carrier ~= LocalPlayer.UserId then break end
+					if grabEgg(job, uid) then state.Hover = nil; break end
+				end
+			end)
+			if not ok then error(failure, 0) end
+		end
+		local holdUid = uid
+		while not job.Cancelled() do
+			local dt = RunService.Heartbeat:Wait()
+			if job.Cancelled() then break end
+			local record = readEgg(holdUid)
+			if not record then break end
+			if ragdollTime(LocalPlayer) > Workspace:GetServerTimeNow() then mode, plan = nil, nil; continue end
+			if heldByMe(uid, record) then
+				mode, plan, target = nil, nil, nil
+				local goal = updateHover(job.Root)
+				if goal then glide(job, goal, 220, dt); state.Status = "Holding the event egg"
+				else job.Transit:Stop(); state.Status = "Holding egg; waiting for carry bounds" end
+			else
+				local carrierId = tonumber(record.CarrierUserId) or 0
+				local holder = carrierId > 0 and Players:GetPlayerByUserId(carrierId) or nil
+				if holder and holder ~= LocalPlayer then
+					local tool = pickBat(job.Character)
+					if FarmConfig.Capture_TakeHolder and tool and hittable(holder) then
+						mode, target, state.Hover = "chase", holder, nil
+						plan = combatPlan(holder, job.Root, tool)
+						if plan then tryHit(job, holder, plan, tool) end
+						state.Status = Workspace:GetAttribute("PvPDisabled") == true and "PvP disabled; waiting for drop" or "Taking egg from " .. holder.DisplayName
+					else
+						mode, plan, target = nil, nil, nil
+						local at = eggPosition(uid, record)
+						if at and footprint(at, 0) then glide(job, at + Vector3.new(0, 25, 0), 400, dt) else job.Transit:Stop() end
+						state.Status = holder.DisplayName .. (FarmConfig.Capture_TakeHolder and not tool and " has egg; needs a bat" or " has egg; waiting")
+					end
+				elseif record.State == "Carried" then mode, plan, target = nil, nil, nil; job.Transit:Stop(); state.Status = "Someone has the event egg"
+				else
+					mode, plan, target, state.Hover = nil, nil, nil, nil
+					local at = eggPosition(uid, record)
+					if not at then state.Status = "Looking for the event egg"; job.Transit:Stop(); continue end
+					local distance = Vector3.new(at.X - job.Root.Position.X, 0, at.Z - job.Root.Position.Z).Magnitude
+					local blocked = job.Root.Position.X < engine.GetSeparationX() and (engine.WallSealed() or engine.IsNight())
+					if distance > 220 and not blocked and os.clock() >= state.JumpAt then
+						state.JumpAt = os.clock() + 4
+						job.Transit:Stop()
+						local landed, message = Tasks.CaptureCallOwned(job, job.Transit.RagdollTravel, job.Transit,
+							function()
+								local fresh = readEgg(uid)
+								local carrier = fresh and tonumber(fresh.CarrierUserId) or 0
+								if carrier > 0 and carrier ~= LocalPlayer.UserId then return nil end
+								local point = fresh and eggPosition(uid, fresh)
+								return point and point + Vector3.new(0, 3, 0)
+							end,
+							job.Cancelled, function(text) state.Status = text end)
+						if landed then state.JumpAt = os.clock() + 2 end
+						state.Status = "Ragdoll jump: " .. tostring(message)
+					elseif job.Root.Position.X < engine.GetSeparationX() and at.X >= engine.GetSeparationX() then
+						if blocked then job.Transit:Stop(); state.Status = "Field wall is up; waiting"
+						else
+							job.Transit:Stop(); state.Status = "Leaving base for the event egg"
+							job.Transit:Approach(at + Vector3.new(0, 2.5, 0), job.Cancelled, function() return heldByMe(uid, readEgg(uid)) end)
+						end
+					elseif distance <= 220 then
+						job.Transit:Stop(); state.Status = "Grabbing the event egg"
+						if grabEgg(job, uid) then state.Status = "Got event egg; confirmed carry" end
+					else glide(job, at + Vector3.new(0, 2.5, 0), 400, dt); state.Status = "Going for the event egg" end
+				end
+			end
+		end
+	end
+	function Tasks.RunCapture()
+		if not gears and os.clock() >= (state.ModuleAt or 0) then
+			state.ModuleAt = os.clock() + 5
+			local data = ReplicatedStorage:FindFirstChild("Data")
+			local source = data and data:FindFirstChild("Gears")
+			if source and source:IsA("ModuleScript") then
+				local loaded, value = pcall(require, source)
+				if loaded and type(value) == "table" then gears = value end
+			end
+		end
+		local uid = eventUid()
+		if not uid then return end
+		Tasks.RunCaptureOwned(state, function() return enabled() and eventUid() == uid and readEgg(uid) ~= nil end,
+			function(job) captureJob(job, uid) end)
+	end
+	local function bindStandings()
+		if standingsBound then return end
+		local remote = captureRemote("RE/EggCapture/StandingsRefreshed")
+		if not remote or not remote:IsA("RemoteEvent") then return end
+		standingsBound = true
+		table.insert(state.Links, remote.OnClientEvent:Connect(function(payload)
+			if state.Disposed or LibraryLoader.Unloaded then return end
+			local entries = type(payload) == "table" and (payload.Entries or payload.Standings or payload)
+			if type(entries) ~= "table" then return end
+			state.Seconds, state.Rank = nil, nil
+			for index, entry in ipairs(entries) do
+				if type(entry) == "table" and tonumber(entry.UserId) == LocalPlayer.UserId then state.Seconds, state.Rank = tonumber(entry.Seconds), tonumber(entry.Rank) or index; break end
+			end
+		end))
+	end
+	function Tasks.BuildCaptureUI(home)
+		local group = home:AddGroupbox({ Name = "Capture The Egg", IconName = "flag", Side = 2, Collapsed = false, DisableCollapsing = false })
+		local auto = group:AddToggle("Toggle_Capture_Auto", { Text = "Auto Capture Event Egg", Default = false, Tooltip = "Grab and hold the event egg.", Callback = function(value)
+			FarmConfig.Capture_Auto = value == true; state.Generation += 1; state.ConfigUntil = os.clock() + 3
+			if engine.AutoWake then engine.AutoWake() end
+		end })
+		local options = group:AddDependencyBox(); options:SetupDependencies({ { auto, true } })
+		options:AddToggle("Toggle_Capture_TakeHolder", { Text = "Take From Holder", Default = true, Tooltip = "Use a bat to take the egg.", Callback = function(value) FarmConfig.Capture_TakeHolder = value == true end })
+		options:AddSlider("Slider_Capture_Height", { Text = "Hold Height", Min = 20, Max = 120, Default = 45, Rounding = 0, Callback = function(value) state.Height = math.clamp(tonumber(value) or 45, 20, 120); state.Hover = nil end })
+		options:AddSlider("Slider_Capture_KeepAway", { Text = "Keep Away Distance", Min = 20, Max = 150, Default = 45, Rounding = 0, Callback = function(value) state.KeepAway = math.clamp(tonumber(value) or 45, 20, 150); state.Hover = nil end })
+		labels.Status, labels.Standing = group:AddLabel("Status: Off", true), group:AddLabel("Held: — | Rank: —", true)
+		bindStandings()
+		local elapsed, retryAt, lastUid = 0, 0, nil
+		table.insert(state.Links, RunService.Heartbeat:Connect(function(dt)
+			elapsed += dt
+			if elapsed < 0.5 or state.Disposed or LibraryLoader.Unloaded then return end
+			elapsed = 0
+			local ok, failure = pcall(function()
+				SetElevated8()
+				local uid = eventUid()
+				if uid ~= lastUid then state.Seconds, state.Rank, state.Hover, state.JumpAt = nil, nil, nil, 0; lastUid = uid end
+				if os.clock() >= retryAt then
+					retryAt = os.clock() + 5; bindStandings()
+
+				end
+				if not state.Busy then
+					if not enabled() then state.Status = "Off"
+					elseif raceWanted() then state.Status = "Paused for Auto Race"
+					elseif not uid or not readEgg(uid) then state.Status = eventRunning() and "Event starting; waiting for egg" or "Waiting for Capture The Egg"
+					else state.Status = "Waiting for current movement / carry" end
+				end
+				local status = ("Status: " .. state.Status):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+				local standing = string.format("Held: %s | Rank: %s", state.Seconds and string.format("%.1fs", state.Seconds) or "—", state.Rank and tostring(state.Rank) or "—")
+				if status ~= state.ShownStatus then labels.Status:SetText(status); state.ShownStatus = status end
+				if standing ~= state.ShownStanding then labels.Standing:SetText(standing); state.ShownStanding = standing end
+			end)
+			if not ok then state.LastError = tostring(failure) end
+		end))
+	end
+	LibraryLoader:OnUnload(function()
+		state.Disposed, state.Generation = true, state.Generation + 1
+		Tasks.StopCaptureSteering()
+		for _, link in ipairs(state.Links) do link:Disconnect() end
+	end)
+end)();
+-- END CAPTURE CONTROLLER
 -- BEGIN BLOOM STAR CONTROLLER
 -- Chili V2 Shooting Star 19664-20342; Butterfly 71401-73412.
 -- Semantic source adaptation: one scheduler, native leases, shared owned transit.
@@ -20496,7 +21127,9 @@ end
 	local farm = { At = 0, Rank = 99 }
 	-- Compatibility facade; both APIs use the same active registry and captured cleanup.
 	function Tasks.NewEventTransit(owner, character, humanoid, root, valid)
-		assert(owner == "star" or owner == "butterfly", "Event transport owner required")
+		-- BEGIN CAPTURE EVENT OWNER
+		assert(owner == "star" or owner == "butterfly" or owner == "capture", "Event transport owner required")
+		-- END CAPTURE EVENT OWNER
 		return Tasks.NewQuestTransit(owner, character, humanoid, root, valid)
 	end
 	local tierOrder = { "Green", "Blue", "Purple", "Golden" }
@@ -20640,7 +21273,10 @@ end
 		end
 		return false
 	end
+	-- BEGIN CAPTURE DEMAND
 	local function updateDemand()
+		if Tasks.CaptureWanted and Tasks.CaptureWanted() then star.Wanted, bloom.Wanted = false, false; return end
+	-- END CAPTURE DEMAND
 		if activeJob and activeJob.Aborted then star.Wanted, bloom.Wanted = false, false; return end
 		local now = Workspace:GetServerTimeNow()
 		local payload = star.Payload
@@ -20666,11 +21302,17 @@ end
 	end
 	function Tasks.BloomStarOver(key)
 		if disposed or LibraryLoader.Unloaded or raceWanted() then return false end
+		-- BEGIN CAPTURE PRIORITY
+		if Tasks.CaptureWanted and Tasks.CaptureWanted() then return key ~= "Capture" end
 		local rank = Tasks.PriorityRank(key)
 		return (star.Wanted and Tasks.PriorityRank("Star") < rank) or (bloom.Wanted and Tasks.PriorityRank("Butterfly") < rank)
+		-- END CAPTURE PRIORITY
 	end
+	-- BEGIN CAPTURE PREEMPTION
 	local function higherTask(key)
 		if raceWanted() then return true end
+		if key == "Capture" then return false end
+	-- END CAPTURE PREEMPTION
 		local rank = Tasks.PriorityRank(key)
 		if farm.Rank < rank or Tasks.BloomStarOver(key) then return true end
 		if engine.Movement.PlaceWanted and Tasks.PriorityRank("Place") < rank then return true end
@@ -20679,11 +21321,15 @@ end
 		local wisp = Tasks.WispState
 		return wisp and wisp.Valid and (wisp.StealWanted or wisp.Busy) and Tasks.PriorityRank("Wisp") < rank or false
 	end
-	local function nativeIdle()
+	-- BEGIN CAPTURE IDLE SIGNATURE
+	local function nativeIdle(owner)
+	-- END CAPTURE IDLE SIGNATURE
 		local wisp, banjo, mutate, belt = Tasks.WispState, Tasks.BanjoState, Tasks.MutateState, Tasks.TreadmillState
 		return not RuntimeState.IsExecuting and not engine.AutoCycle and not engine.Guard.Active and not engine.Guard.Busy
-			and not IsActivelyCarryingEgg() and not GetEquippedEggTool()
-			and not (engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying)
+			-- BEGIN CAPTURE CARRY ADMISSION
+			and ((owner == "capture" and Tasks.CaptureOwnsEgg()) or (not IsActivelyCarryingEgg() and not GetEquippedEggTool()
+				and not (engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying)))
+			-- END CAPTURE CARRY ADMISSION
 			and not (wisp and (wisp.Lease or wisp.Busy or wisp.NativeCalls > 0 or os.clock() < wisp.SettleUntil))
 			and not (banjo and (banjo.Lease or banjo.Busy))
 			and not (mutate and (mutate.Lease or mutate.InventoryActions > 0 or os.clock() < mutate.HatchSettleUntil))
@@ -20691,7 +21337,9 @@ end
 			and LocalPlayer:GetAttribute("InScrambleArena") ~= true
 	end
 	local function runOwned(owner, key, state, allowed, action)
-		if activeJob or not allowed() or higherTask(key) or not nativeIdle() then return end
+		-- BEGIN CAPTURE JOB ADMISSION
+		if activeJob or not allowed() or higherTask(key) or not nativeIdle(owner) then return end
+		-- END CAPTURE JOB ADMISSION
 		local generation = state.Generation
 		if not allowed() or generation ~= state.Generation or not engine.ClaimMovement(owner) then return end
 		local job = { Owner = owner, State = state, Character = LocalPlayer.Character }
@@ -20721,7 +21369,10 @@ end
 		job.ReleasePending = function()
 			if job.Aborted then return end
 			if job.Transit then pcall(job.Transit.Stop, job.Transit) end
+			-- BEGIN CAPTURE PENDING STEERING
+			if owner == "capture" and Tasks.StopCaptureSteering then Tasks.StopCaptureSteering() end
 			if owner == "star" and job.Finally then pcall(job.Finally) end
+			-- END CAPTURE PENDING STEERING
 			if job.HealthStop then pcall(job.HealthStop) end
 			job.Aborted = true
 			engine.ReleaseMovement(owner)
@@ -20731,7 +21382,9 @@ end
 		end
 		local ok, failure = pcall(function()
 			SetElevated8()
-			if cancelled() or not nativeIdle() then return end
+			-- BEGIN CAPTURE JOB PREPARE
+			if cancelled() or not nativeIdle(owner) then return end
+			-- END CAPTURE JOB PREPARE
 			Tasks.ExitTreadmill()
 			if cancelled() then return end
 			if engine.ReleaseAutoShield then engine.ReleaseAutoShield(true) end
@@ -20798,7 +21451,13 @@ end
 		end
 		if engine.AutoWake then engine.AutoWake() end
 	end
+	-- BEGIN CAPTURE JOB API
+	function Tasks.RunCaptureOwned(state, allowed, action)
+		return runOwned("capture", "Capture", state, allowed, action)
+	end
+	Tasks.CaptureCallOwned = callOwned
 	-- Shooting Star: authoritative payloads, visual/leg interpolation, hold/catch handshake.
+	-- END CAPTURE JOB API
 	local function acceptStar(payload)
 		if type(payload) ~= "table" or payload.Id == nil then return end
 		if not star.Payload or star.Payload.Id ~= payload.Id then star.Slipped = 0; star.RagdollTried = {} end
@@ -21371,12 +22030,20 @@ end
 	-- Compose with existing adapters; no farm toggle writes, no lease stealing.
 	local nativeActive, nativeYield, nativeCanRun = IsStealActive, Tasks.PriorityStealYield, Tasks.PriorityCanRun
 	local nativeShield, nativeDodge, nativeClaim, nativeAction = engine.AutoShieldWanted, engine.TriggerGuardDodge, engine.ClaimMovement, Tasks.WispNativeAction
-	local activeAdapter = function() return activeJob == nil and nativeActive() end
+	-- BEGIN CAPTURE HELD GUARD
+	local activeAdapter = function() return not Tasks.CaptureOwnsEgg() and activeJob == nil and nativeActive() end
+	-- END CAPTURE HELD GUARD
+	-- BEGIN CAPTURE RANK
 	local function bestEventRank()
+		if Tasks.CaptureWanted and Tasks.CaptureWanted() then return 0 end
+	-- END CAPTURE RANK
 		return math.min(star.Wanted and Tasks.PriorityRank("Star") or 99, bloom.Wanted and Tasks.PriorityRank("Butterfly") or 99)
 	end
+	-- BEGIN CAPTURE HELD YIELD
 	local yieldAdapter = function()
+		if Tasks.CaptureOwnsEgg() then return true end
 		if activeJob then return true end
+	-- END CAPTURE HELD YIELD
 		if bestEventRank() < farm.Rank and not RuntimeState.IsExecuting and not engine.AutoCycle
 			and not (engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying) then return true end
 		return nativeYield()
@@ -21388,8 +22055,12 @@ end
 	end
 	local shieldAdapter = function() return activeJob == nil and nativeShield() end
 	local dodgeAdapter = function(...) if not activeJob then return nativeDodge(...) end end
+	-- BEGIN CAPTURE CLAIM
 	local claimAdapter = function(owner, ...)
+		if owner == "steal" and Tasks.CaptureOwnsEgg() then return false end
+		if owner ~= "capture" and owner ~= "race" and Tasks.CaptureWanted and Tasks.CaptureWanted() then return false end
 		if activeJob and owner ~= activeJob.Owner and owner ~= "race" then return false end
+	-- END CAPTURE CLAIM
 		if owner ~= "race" and owner ~= "star" and owner ~= "butterfly" then
 			local key = ({ wisp = "Wisp", banjo = "Wisp", essence = "Essence", place = "Place", treadmill = "Treadmill", scramble = "StealLab" })[owner]
 			if key and Tasks.BloomStarOver(key) then return false end
@@ -21543,7 +22214,10 @@ end
 					if enabled("Star_Auto") then askStarState() end
 					if enabled("Butterfly_Auto") or enabled("Butterfly_Trade") or enabled("Butterfly_Craft") then loadButterflyModules() end
 					updateDemand()
+					-- BEGIN CAPTURE WORKER
+					if Tasks.CaptureWanted and Tasks.CaptureWanted() then Tasks.RunCapture(); updateDemand() end
 					local doStar = star.Wanted and (not bloom.Wanted or Tasks.PriorityRank("Star") <= Tasks.PriorityRank("Butterfly"))
+					-- END CAPTURE WORKER
 					if doStar then
 						local payload = star.Payload
 						runOwned("star", "Star", star, function() return enabled("Star_Auto") and star.Payload == payload

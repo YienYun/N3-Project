@@ -1,4 +1,5 @@
 """Reverse only reviewed Butterfly/Star insertions; never replace historical hashes."""
+from capture_scope import strip_capture
 import re
 
 LABELS = ('CONTROLLER', 'UI', 'TRANSIT OWNER', 'TRANSIT CLEANUP', 'TRANSIT CONTROL',
@@ -7,6 +8,8 @@ ORIGINAL_OWNER = '\t\tassert(owner == "wisp" or owner == "banjo", "Quest transpo
 
 
 def strip_bloom_star(runtime):
+    if "-- BEGIN CAPTURE" in runtime:
+        runtime = strip_capture(runtime)
     for label in LABELS:
         pattern = (r'^[\t ]*-- BEGIN BLOOM STAR ' + label + r'\n.*?'
                    r'^[\t ]*-- END BLOOM STAR ' + label + r'\n')

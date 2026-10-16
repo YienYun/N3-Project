@@ -110,7 +110,7 @@ Lab stock targets, Auto Mutate and optional Nitro replenishment are integrated
 separately (see their feature docs). Wisp **and Banjo** are now integrated too;
 the old mention of Banjo as missing is superseded.
 
-See [the current backlog](backlog.md): five broad remaining scopes, not seven
+See [the current backlog](backlog.md): four broad remaining scopes, not seven
 small toggles or a guaranteed complete feature count. Existing event names,
 reward-category filters and priority hooks are not complete Chili workflows.
 Continue one source-backed feature per change.
