@@ -101,7 +101,7 @@ contains(place, "pcall(GetScrambleTradeStatusFn)", "elseif not ShouldHoldBackScr
          "ShouldHoldBackScrambleEgg(Category, ToolUid)")
 contains(runtime, "local isReady = info.SlotPicks[i] ~= nil", "Unlocked = state.Unlocked == true,",
          "or Tasks.TreadmillState.Busy or RuntimeState.OnTreadmill",
-         "ApplyTreadmillShield(FarmConfig.AntiTreadmill and not State)")
+         "ApplyTreadmillShield(not State)")
 print("PASS: source identity; live race byte-identical after excluding only the reviewed shop gate; single-flight/cancellable treadmill and correct tier payload.")
 print("PASS: unique raw Lab UIDs, placed exclusion, normal/small preference, boolean missing targets, stale-state clearing.")
 print("PASS: one gated Lab action lane, pending reward ordering, independent free reroll, slot-correct UI and Auto Place holdback.")

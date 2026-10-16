@@ -226,7 +226,6 @@ local FarmConfig = {
 	AntiTreadmill = false,
 	AutoEquipBestPet = false,
 	AutoStealAll = false,
-	AutoStealSelected = false,
 	StealAllMode = false,
 	SelectedZones = {},
 	SelectedEggs = {},
@@ -301,7 +300,6 @@ local FarmConfig = {
 	Race_Racer = "Best Owned",
 	Race_AutoBuy = false,
 	Race_ShopItems = {},
-	InstanInteract = false,
 	Index_AutoClaim = false,
 	Index_AutoClaimLimited = false,
 	Index_PrioritizeMissing = false,
@@ -363,7 +361,7 @@ local function IsStealActive()
 	if Tasks.PriorityStealYield and Tasks.PriorityStealYield() then
 		return false
 	end
-	return FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll or FarmConfig.AutoStealSelected
+	return FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll
 end
 local SafeBaseLineX = 525
 local SafeCorridorZ = -360
@@ -4095,13 +4093,7 @@ function InstanUtility:Unbind()
 end
 local InstanInteractActive = false
 function Tasks.SetupInstanInteract()
-	local WantActive = FarmConfig.InstanInteract == true
-	if InstanInteractActive == WantActive then
-		return
-	end
-	InstanInteractActive = WantActive
-	if not WantActive then
-		InstanUtility:Unbind()
+	if InstanInteractActive then
 		return
 	end
 	local PromptService = game:GetService("ProximityPromptService")
@@ -4115,6 +4107,7 @@ function Tasks.SetupInstanInteract()
 	end)
 	InstanInteractActive = Bound ~= nil
 end
+Tasks.SetupInstanInteract();
 (function()
 	local Engine = RuntimeState.StealEngine
 	local RawCache = {}
@@ -4390,22 +4383,20 @@ end
 					canSelect = MatchZone(zone)
 				elseif indexMissing then
 					canSelect = true
-				elseif regularOk then
-					if FarmConfig.StealAllMode or FarmConfig.AutoStealAll then
-						canSelect = MatchZone(zone)
-					elseif FarmConfig.AutoStealSelected then
-						local hasFilter = (next(FarmConfig.SelectedZones) ~= nil)
-							or (next(FarmConfig.SelectedEggs) ~= nil)
-							or (next(FarmConfig.SelectedRarities) ~= nil)
-							or (next(FarmConfig.SelectedMutations) ~= nil)
-						if hasFilter then
-							canSelect = MatchZone(zone)
-								and MatchEggCategory(cat)
-								and MatchRarity(rarityName)
-								and MatchMutation(rec)
-						end
-					end
+			elseif regularOk then
+				local hasFilter = (next(FarmConfig.SelectedZones) ~= nil)
+					or (next(FarmConfig.SelectedEggs) ~= nil)
+					or (next(FarmConfig.SelectedRarities) ~= nil)
+					or (next(FarmConfig.SelectedMutations) ~= nil)
+				if hasFilter then
+					canSelect = MatchZone(zone)
+						and MatchEggCategory(cat)
+						and MatchRarity(rarityName)
+						and MatchMutation(rec)
+				else
+					canSelect = MatchZone(zone)
 				end
+			end
 			end
 			-- BEGIN WISP CANDIDATE
 			local nativeSelected = canSelect
@@ -5336,7 +5327,7 @@ end
 		Engine.AutoShieldWanted = function()
 			return not disposed
 				and not FarmConfig.Defense_InstantSteal
-				and (FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll or FarmConfig.AutoStealSelected) == true
+				and (FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll) == true
 		end
 		Engine.AutoShieldReady = function()
 			local character = LocalPlayer.Character
@@ -10913,7 +10904,6 @@ function InstanUtility.Webhook:BuildSummary()
 	local Active = RuntimeState.IsExecuting == true
 		or FarmConfig.AutoStealEnabled == true
 		or FarmConfig.AutoStealAll == true
-		or FarmConfig.AutoStealSelected == true
 	if FarmConfig.Webhook_Field_EventTarget ~= false then
 		Add("🎯 Current target", {
 			Line("Target:", Target, "orange"),
@@ -12341,7 +12331,7 @@ do
 		if Key == "Race" then
 			return (Tasks.RacePriority and Tasks.RacePriority()) == true
 		elseif Key == "StealFilter" then
-			return FarmConfig.AutoStealAll == true or FarmConfig.AutoStealSelected == true
+			return FarmConfig.AutoStealAll == true
 		elseif Key == "StealIndex" then
 			return FarmConfig.Index_PrioritizeMissing == true
 		elseif Key == "StealLab" then
@@ -12526,7 +12516,7 @@ function Tasks.BuildMainInterface()
 			pcall(function()
 				local status = "Idle"
 				if Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal()
-					and (FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll or FarmConfig.AutoStealSelected) then
+					and (FarmConfig.AutoStealEnabled or FarmConfig.AutoStealAll) then
 					status = "Paused for Auto Race"
 				elseif RuntimeState.OnTreadmill then
 					status = "Training on Treadmill"
@@ -12538,32 +12528,14 @@ function Tasks.BuildMainInterface()
 			end)
 		end
 	end)
-	local TogStealAll, TogStealSelected
+	local TogStealAll
 	TogStealAll = FarmEggGroup:AddToggle("Toggle_AutoStealAll", {
-		Text = "Auto Steal All",
+		Text = "Auto Steal",
 		Default = false,
-		Tooltip = "Steal best eggs",
+		Tooltip = "Steal best eggs. Filter with Zone/Egg/Rarity/Mutation dropdowns to limit scope.",
 		Callback = function(State)
 			FarmConfig.AutoStealAll = State
 			FarmConfig.StealAllMode = State
-			if State and TogStealSelected and TogStealSelected.Value then
-				TogStealSelected:SetValue(false)
-			end
-			RefreshStealState()
-		end,
-	})
-	TogStealSelected = FarmEggGroup:AddToggle("Toggle_AutoStealSelected", {
-		Text = "Auto Steal Selected",
-		Default = false,
-		Tooltip = "Steal filtered eggs",
-		Callback = function(State)
-			FarmConfig.AutoStealSelected = State
-			if State then
-				FarmConfig.StealAllMode = false
-				if TogStealAll and TogStealAll.Value then
-					TogStealAll:SetValue(false)
-				end
-			end
 			RefreshStealState()
 		end,
 	})
@@ -12616,39 +12588,6 @@ function Tasks.BuildMainInterface()
 			end,
 		})
 	end
-	Tasks.TogAntiTreadmill = FarmEggGroup:AddToggle("Toggle_AntiTreadmill", {
-		Text = "Anti Treadmill",
-		Default = false,
-		Tooltip = "Anti treadmill pull",
-		Callback = function(State)
-			FarmConfig.AntiTreadmill = State
-			if State then
-				if not RuntimeState.ForceAntiTreadmill then
-					FarmConfig.AutoTreadmill = false
-				end
-				ApplyTreadmillShield(true)
-				if IsPlayerRunningOnTreadmill() then
-					ExitTreadmill()
-					local char = LocalPlayer.Character
-					local hrp = char and char:FindFirstChild("HumanoidRootPart")
-					if hrp and not RaceOwnsCharacter() and not RuntimeState.IsExecuting then
-						hrp.CFrame = hrp.CFrame * CFrame.new(0, 1, 6)
-						hrp.AssemblyLinearVelocity = Vector3.zero
-					end
-				end
-			else
-				ApplyTreadmillShield(false)
-			end
-		end,
-	})
-	FarmEggGroup:AddToggle("Toggle_Farm_InstanInteract", {
-		Text = "Instant Interact",
-		Default = false,
-		Tooltip = "Instant interact",
-		Callback = function(State)
-			FarmConfig.InstanInteract = State
-		end,
-	})
 	local EggLifecycleGroup = ProgressTab:AddRightGroupbox("Egg Lifecycle", "box")
 	EggLifecycleGroup:AddDropdown("Dropdown_PlaceTargetEgg", {
 		Text = "Categories",
@@ -13352,7 +13291,7 @@ function Tasks.BuildMainInterface()
 		Tooltip = "Auto treadmill",
 		Callback = function(State)
 			FarmConfig.AutoTreadmill = State
-			ApplyTreadmillShield(FarmConfig.AntiTreadmill and not State)
+			ApplyTreadmillShield(not State)
 			if State then
 				task.spawn(MountTreadmill)
 			else
@@ -15933,20 +15872,6 @@ function Tasks.BuildMainInterface()
 	SaveManager:BuildConfigSection(SettingsTab)
 end
 SetElevated8()
-function Tasks.OnTreadmillPartAdded(desc)
-	if FarmConfig.AntiTreadmill and not FarmConfig.AutoTreadmill then
-		if
-			desc:IsA("BasePart")
-			and (desc.Name:find("Treadmill") or (desc.Parent and desc.Parent.Name:find("Treadmill")))
-		then
-			pcall(function()
-				desc.CanTouch = false
-				desc.CanQuery = false
-			end)
-		end
-	end
-end
-Workspace.DescendantAdded:Connect(Tasks.OnTreadmillPartAdded)
 function Tasks.MobilityLoop()
 	while not LibraryLoader.Unloaded do
 		task.wait(1.5)
@@ -15954,17 +15879,6 @@ function Tasks.MobilityLoop()
 			if RaceOwnsCharacter() then return end
             local Engine = RuntimeState.StealEngine
             if Engine and Engine.AutoCycle then return end
-			if FarmConfig.AntiTreadmill and not FarmConfig.AutoTreadmill then
-				if IsPlayerRunningOnTreadmill() then
-					ExitTreadmill()
-					local char = LocalPlayer.Character
-					local hrp = char and char:FindFirstChild("HumanoidRootPart")
-					if hrp and not RaceOwnsCharacter() and not RuntimeState.IsExecuting then
-						hrp.CFrame = hrp.CFrame * CFrame.new(0, 1, 6)
-						hrp.AssemblyLinearVelocity = Vector3.zero
-					end
-				end
-			end
 			if FarmConfig.AutoEquipBestPet and Remotes.RemoteWearBest then
 				if os.clock() - LastBestPetEquip >= 15 then
 					LastBestPetEquip = os.clock()
@@ -16321,13 +16235,6 @@ function Tasks.DefenseHeartbeat()
 	end
 end
 RunService.Heartbeat:Connect(Tasks.DefenseHeartbeat)
-function Tasks.InstanInteractLoop()
-	while true do
-		task.wait(0.2)
-		Tasks.SetupInstanInteract()
-	end
-end
-task.spawn(Tasks.InstanInteractLoop)
 function Tasks.EspRenderLoop()
 	while true do
 		task.wait(0.35)
@@ -18586,7 +18493,7 @@ do
 			state.ScanAt, state.FarmFirst = os.clock() + 0.75, false
 			local ok, candidates = pcall(engine.CollectCandidates, false, not FarmConfig.Defense_InstantSteal)
 			if not ok then state.FarmFirst = true; return true end
-			if FarmConfig.AutoStealAll or FarmConfig.AutoStealSelected or FarmConfig.AutoScrambleSteal or FarmConfig.Index_PrioritizeMissing then
+			if FarmConfig.AutoStealAll or FarmConfig.AutoScrambleSteal or FarmConfig.Index_PrioritizeMissing then
 				for _, candidate in ipairs(candidates or {}) do
 					local key = candidate.IsScramble and "StealLab" or candidate.IsIndex and "StealIndex" or "StealFilter"
 					if Tasks.PriorityRank(key) < rank then state.FarmFirst = true; break end
@@ -21371,11 +21278,9 @@ do
 		if state.Minigame.TurnedSteal then return end
 		state.Minigame.Saved = {
 			AutoStealAll = FarmConfig.AutoStealAll,
-			Selected = FarmConfig.AutoStealSelected,
 			Enabled = FarmConfig.AutoStealEnabled,
 		}
 		if FarmConfig.AutoStealAll ~= nil then FarmConfig.AutoStealAll = false end
-		if FarmConfig.AutoStealSelected ~= nil then FarmConfig.AutoStealSelected = false end
 		if FarmConfig.AutoStealEnabled ~= nil then FarmConfig.AutoStealEnabled = false end
 		state.Minigame.TurnedSteal = true
 	end
@@ -21384,7 +21289,6 @@ do
 		local s = state.Minigame.Saved
 		if s then
 			FarmConfig.AutoStealAll = s.AutoStealAll
-			FarmConfig.AutoStealSelected = s.Selected
 			FarmConfig.AutoStealEnabled = s.Enabled
 		end
 		state.Minigame.TurnedSteal = false
