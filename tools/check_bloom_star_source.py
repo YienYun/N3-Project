@@ -4,9 +4,12 @@ from pathlib import Path
 import hashlib
 import re
 from bloom_star_scope import strip_bloom_star, LABELS
+from admin_scope import strip_admin
 
 ROOT = Path(__file__).resolve().parents[1]
 s = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
+if '-- BEGIN ADMIN CONTROLLER' in s:
+    s = strip_admin(s)
 if "-- BEGIN CAPTURE" in s:
     s = strip_capture(s)
 assert hashlib.sha256(strip_bloom_star(s).encode()).hexdigest() == '29637582c16bc01ec2d250fa504042979b7b40964de7853266f126db4a4f1b7d', 'Changes escaped reviewed additions / published 7e9549a'

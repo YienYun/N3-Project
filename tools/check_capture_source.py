@@ -3,9 +3,13 @@ from pathlib import Path
 import hashlib
 import re
 from capture_scope import strip_capture, ORIGINALS
+from admin_scope import strip_admin
 
 root = Path(__file__).resolve().parents[1]
 s = (root / 'Games/Steal-An-Egg.lua').read_text()
+# Strip any newer Admin Abuse block so the historical 6d4af13 baseline is reached.
+if '-- BEGIN ADMIN CONTROLLER' in s:
+    s = strip_admin(s)
 assert hashlib.sha256(strip_capture(s).encode()).hexdigest() == '51f6c97c5f7eff2808726749e6d36c6cb2a373e23768604bca9068393cb7551d', 'Changes escaped reviewed Capture additions / published 6d4af13'
 for filename, expected in {
     'Games/Source/StealAnEgg/ChiliSourceV2.lua': '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d',

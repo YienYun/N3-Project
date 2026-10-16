@@ -7,9 +7,13 @@ import re
 from steal_visual_scope import strip_builtin_visual
 from lab_stock_scope import strip_lab_stock
 from mutate_scope import strip_auto_mutate
+from admin_scope import strip_admin
 
 ROOT = Path(__file__).resolve().parents[1]
-runtime = strip_nitro_refill(strip_wisp((ROOT / "Games/Steal-An-Egg.lua").read_text()))
+raw = (ROOT / "Games/Steal-An-Egg.lua").read_text()
+if '-- BEGIN ADMIN CONTROLLER' in raw:
+    raw = strip_admin(raw)
+runtime = strip_nitro_refill(strip_wisp(raw))
 start = '-- BEGIN SCRAMBLE LAB SELLER'
 end = '-- END SCRAMBLE LAB SELLER\n\n'
 assert runtime.count(start) == runtime.count(end) == 1

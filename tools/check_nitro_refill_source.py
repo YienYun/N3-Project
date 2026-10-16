@@ -5,9 +5,13 @@ import hashlib
 import re
 from nitro_scope import strip_nitro_refill
 from steal_visual_scope import strip_builtin_visual
+from admin_scope import strip_admin
 
 ROOT = Path(__file__).resolve().parents[1]
-s = strip_wisp((ROOT / 'Games/Steal-An-Egg.lua').read_text())
+raw = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
+if '-- BEGIN ADMIN CONTROLLER' in raw:
+    raw = strip_admin(raw)
+s = strip_wisp(raw)
 assert hashlib.sha256(strip_builtin_visual(strip_nitro_refill(s)).encode()).hexdigest() == (
     '04700b83dc3033b34536299e533b87bca688fe63aacf26930206b1438d2ff233'
 ), 'Changes escaped Nitro refill / live-confirmed Auto Mutate 1043562 baseline'

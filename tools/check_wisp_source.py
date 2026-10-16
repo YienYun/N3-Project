@@ -3,9 +3,12 @@ from pathlib import Path
 import hashlib
 import re
 from wisp_scope import strip_wisp, LABELS
+from admin_scope import strip_admin
 
 ROOT = Path(__file__).resolve().parents[1]
 s = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
+if '-- BEGIN ADMIN CONTROLLER' in s:
+    s = strip_admin(s)
 assert hashlib.sha256(strip_wisp(s).encode()).hexdigest() == '646409f11d80360d8fd7961164338c387d04a051e1070152c252fcd0baf48106', 'Changes escaped seven Wisp insertion sites / published 3748a3e'
 reference = ROOT / 'Games/Source/StealAnEgg/ChiliSourceV2.lua'
 assert hashlib.sha256(reference.read_bytes()).hexdigest() == '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d'

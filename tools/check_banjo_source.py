@@ -3,9 +3,12 @@ from pathlib import Path
 import hashlib
 import re
 from banjo_scope import strip_banjo, QUEST_GROUP, QUEST_CONTROLS
+from admin_scope import strip_admin
 
 ROOT = Path(__file__).resolve().parents[1]
 s = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
+if '-- BEGIN ADMIN CONTROLLER' in s:
+    s = strip_admin(s)
 assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == '693a7d99189757fedfff69a579da5ed46c32806fd80de28fb3e16ea986bb424d', 'Changes escaped Banjo controller / exact shared-group additions (7591d6f)'
 assert hashlib.sha256((ROOT / 'Games/Source/StealAnEgg/ChiliSourceV2.lua').read_bytes()).hexdigest() == '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d'
 a, b = s.index('-- BEGIN BANJO CONTROLLER'), s.index('-- END BANJO CONTROLLER')

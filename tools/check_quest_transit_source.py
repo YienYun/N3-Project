@@ -4,9 +4,12 @@ from bloom_star_scope import strip_bloom_star
 import hashlib
 from banjo_scope import strip_banjo
 from quest_transit_scope import strip_quest_transit, FOREST_DOOR_SCOPES
+from admin_scope import strip_admin
 
 root = Path(__file__).resolve().parents[1]
 s = (root / 'Games/Steal-An-Egg.lua').read_text()
+if '-- BEGIN ADMIN CONTROLLER' in s:
+    s = strip_admin(s)
 if '-- BEGIN BLOOM STAR' in s:
     s = strip_bloom_star(s)
 # Frozen pre-Banjo baseline: only reviewed quest transport scopes may be normalized.

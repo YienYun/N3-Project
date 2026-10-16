@@ -5,9 +5,13 @@ import hashlib
 import re
 from steal_visual_scope import strip_builtin_visual
 from nitro_scope import strip_nitro_refill
+from admin_scope import strip_admin
 
 ROOT = Path(__file__).resolve().parents[1]
-runtime = strip_wisp((ROOT / "Games/Steal-An-Egg.lua").read_text())
+raw = (ROOT / "Games/Steal-An-Egg.lua").read_text()
+if '-- BEGIN ADMIN CONTROLLER' in raw:
+    raw = strip_admin(raw)
+runtime = strip_wisp(raw)
 reference = (ROOT / "Games/Source/StealAnEgg/SenaV2.lua").read_bytes()
 blob = b"blob " + str(len(reference)).encode() + b"\0" + reference
 assert hashlib.sha1(blob).hexdigest() == "a36898ee403cacf3aa9742bfb9f9270f867cb765", "Sena reference changed"

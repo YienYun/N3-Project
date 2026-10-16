@@ -12734,6 +12734,7 @@ function Tasks.BuildMainInterface()
 	Tasks.BuildCaptureUI(HomeTab)
 	Tasks.BuildWispUI(HomeTab)
 	-- END CAPTURE UI
+	Tasks.BuildAdminUI(HomeTab)
 	-- END WISP UI
 	-- BEGIN BLOOM STAR UI
 	Tasks.BuildBloomStarUI(EventTab)
@@ -21106,6 +21107,268 @@ end
 	end)
 end)();
 -- END CAPTURE CONTROLLER
+-- BEGIN ADMIN CONTROLLER
+-- Chili V2 8950-9330 (AdminAbuse), 76573-76860 (UI), 10390-10730 (treadmill recovery).
+-- Source-backed adaptation: one scheduler, reuse existing N3 treadmill mount, no parallel workers,
+-- no invented remotes. Boost detector scans the same BottomUI Holder used by the native client.
+-- Logging follows the source contract: skipped silently when the executor lacks writefile/isfile.
+local function BuildAdminUI(home)
+	-- BEGIN ADMIN UI
+	local AdminGroup = home:AddGroupbox({ Name = "Admin Abuse", IconName = "flag", Side = 2, Collapsed = false, DisableCollapsing = false })
+	AdminGroup:AddToggle("Toggle_Admin_AutoTreadmill", {
+		Text = "Auto Use Admin Treadmill",
+		Default = true,
+		Tooltip = "Mount the Admin Treadmill when Chili assigns one (Speed/Treadmill/Earnings/EggSize/EggLuck/Mutation boosts).",
+		Callback = function(value) FarmConfig.Admin_AutoTreadmill = value == true; state.Generation += 1 end,
+	})
+	AdminGroup:AddToggle("Toggle_Admin_InstantV3", {
+		Text = "Instant Steal V3",
+		Default = false,
+		Tooltip = "Chili V3 path; runs only while Auto Use Admin Treadmill stays on.",
+		Callback = function(value) FarmConfig.Admin_InstantV3 = value == true; state.Generation += 1 end,
+	})
+	AdminGroup:AddToggle("Toggle_Admin_Minigame", {
+		Text = "Auto Steal Minigame Egg",
+		Default = false,
+		Tooltip = "Targets Red Light Green Light and T-Rex Run event eggs (chili v2 76810).",
+		Callback = function(value) FarmConfig.Admin_Minigame = value == true; state.Generation += 1 end,
+	})
+	AdminGroup:AddDivider()
+	AdminGroup:AddLabel("Status: Off", true)
+	AdminGroup:AddLabel("Boosts: —", true)
+	AdminGroup:AddLabel("Capture: —", true)
+	AdminGroup:AddLabel("Treadmill: —", true)
+	AdminGroup:AddLabel("V3: —", true)
+	AdminGroup:AddLabel("Minigame: —", true)
+	-- END ADMIN UI
+end
+function Tasks.BuildAdminUI(tab) BuildAdminUI(tab) end
+do
+	local engine = RuntimeState.StealEngine
+	local state = { Generation = 0, Status = "Off", Disposed = false, Links = {}, Bound = false,
+		Boost = { Speed = nil, Treadmill = nil, Earnings = nil, EggSize = nil, EggLuck = nil, Mutation = nil },
+		BoostText = {}, Live = false, OldSpeed = 400, OldRunning = false, AdminSpeedSeen = nil, AdminFails = 0,
+		OnAdmin = false, WasAdmin = false, AssignedAt = 0, BeltScanAt = 0, LastText = nil,
+		Minigame = { Event = nil, Status = "Off", Carrier = nil, PushedAt = 0, Handle = nil, EventName = "Minigame Egg" } }
+	Tasks.AdminState = state
+	-- Defaults; only the *Auto Use Admin Treadmill* is on by default to mirror Chili.
+	FarmConfig.Admin_AutoTreadmill, FarmConfig.Admin_InstantV3, FarmConfig.Admin_Minigame = true, false, false
+	-- Boost attribute -> display name/icon. Matches the chili source map 8960-8961.
+	local BoostMap = {
+		Speed = { Attr = "AdminBoost_Speed", Icon = "rbxassetid://128234882192727", Display = "Speed" },
+		Treadmill = { Attr = "AdminBoost_Treadmill", Icon = "rbxassetid://116351329433541", Display = "Admin Treadmill" },
+		Earnings = { Attr = "AdminBoost_Earnings", Icon = "rbxassetid://76142478352917", Display = "Earnings" },
+		EggSize = { Attr = "AdminBoost_EggSize", Icon = "rbxassetid://110266675537739", Display = "Egg Size" },
+		EggLuck = { Attr = "AdminBoost_EggLuck", Icon = "rbxassetid://108988481469824", Display = "Egg Luck" },
+		Mutation = { Attr = "AdminBoost_Mutation", Icon = "rbxassetid://85288683002868", Display = "Mutation" },
+	}
+	local MinigameList = {
+		{ Flag = "Event_RedLightGreenLight", Prefix = "RLGL", Name = "Red Light Green Light" },
+		{ Flag = "Event_TrexRun", Prefix = "TrexRun", Name = "T-Rex Run" },
+	}
+	local function enabled(key) return not state.Disposed and not LibraryLoader.Unloaded and FarmConfig[key] == true end
+	local function raceWanted()
+		return RaceOwnsCharacter() or (Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal()) == true
+	end
+	local function remote(name, kind)
+		local packages = ReplicatedStorage:FindFirstChild("Packages")
+		local network = packages and packages:FindFirstChild("Networking")
+		local value = network and network:FindFirstChild(name)
+		return value and value:IsA(kind) and value or nil
+	end
+	local function adminBelt() return workspace:FindFirstChild("AdminTreadmill") end
+	local function adminLive()
+		if adminBelt() then return true end
+		for name, info in pairs(BoostMap) do
+			local raw = workspace:GetAttribute(info.Attr)
+			if type(raw) == "number" and raw == raw and raw > 1 then return true end
+		end
+		return false
+	end
+	local function findHolder(name)
+		local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+		local bottom = pg and pg:FindFirstChild("BottomUI")
+		local frame = bottom and bottom:FindFirstChild("BottomFrame")
+		local holder = frame and frame:FindFirstChild("Holder")
+		return holder and holder:FindFirstChild(name) or nil
+	end
+	local function boostValue(name)
+		-- Source 9007-9030: read the attribute first, then read the BottomUI Value/Timer text only as
+		-- confirmation. The attribute is authoritative; UI text is purely informational.
+		local info = BoostMap[name]
+		if not info then return nil end
+		local raw = workspace:GetAttribute(info.Attr)
+		local attrValue = (type(raw) == "number" and raw == raw and raw > 1) and raw or nil
+		local node = findHolder(name)
+		local label, timer = nil, nil
+		if node and node:IsA("GuiObject") and node.Visible then
+			local value = node:FindFirstChild("Value")
+			local timerNode = node:FindFirstChild("Timer")
+			if value and value:IsA("TextLabel") then label = value.Text end
+			if timerNode and timerNode:IsA("TextLabel") and timerNode.Text ~= "" then timer = timerNode.Text end
+		end
+		local visible = node and node:IsA("GuiObject") and node.Visible
+		return attrValue or visible == true, attrValue, timer
+	end
+	local function boostDisplay(name)
+		local active, value, timer = boostValue(name)
+		state.Boost[name] = active == true or nil
+		state.BoostText[name] = nil
+		if active == true then
+			local formatted = value and string.format("x%s", tostring(math.floor(value * 100 + 0.5) / 100)) or "on"
+			state.BoostText[name] = timer and (formatted .. ", " .. timer) or formatted
+		end
+		return state.BoostText[name]
+	end
+	local function bindAssigned()
+		if state.Bound then return end
+		local signal = remote("RE/Treadmill/AssignedBeltShifted", "RemoteEvent")
+		if not signal then return end
+		state.Bound = true
+		table.insert(state.Links, signal.OnClientEvent:Connect(function(_, admin)
+			state.OnAdmin = admin == true
+			state.AssignedAt = os.clock()
+			state.WasAdmin = state.OnAdmin
+		end))
+	end
+	local function statusCapture()
+		local view = Tasks.CaptureView
+		if type(view) == "table" and type(view.Status) == "function" then
+			local ok, value = pcall(view.Status); if ok and value then return tostring(value) end
+		end
+		return Tasks.CaptureOwnsEgg and Tasks.CaptureOwnsEgg() and "Holding the egg" or "Off"
+	end
+	local function statusTreadmill()
+		if not enabled("Admin_AutoTreadmill") then return "Off" end
+		if adminBelt() then return "Admin Treadmill live" end
+		if not state.OnAdmin then return "Waiting for the Admin Treadmill" end
+		return "Mounted on the Admin Treadmill"
+	end
+	local function statusV3()
+		if not enabled("Admin_InstantV3") then return "Off" end
+		if not enabled("Admin_AutoTreadmill") then return "Needs Auto Use Admin Treadmill" end
+		if not adminBelt() and not state.OnAdmin then return "Waiting for the Admin Treadmill" end
+		return "V3 path armed (manual start, see Chili notes)"
+	end
+	local function detectMinigame()
+		for _, info in ipairs(MinigameList) do
+			if workspace:GetAttribute(info.Flag) == true then return info end
+			if typeof(workspace:GetAttribute(info.Prefix .. "_EggPosition")) == "Vector3" then return info end
+		end
+		return nil
+	end
+	local function minigameCarrier(event)
+		return workspace:GetAttribute(event.Prefix .. "_CarrierUserId")
+	end
+	local function statusMinigame()
+		if not enabled("Admin_Minigame") then return "Off" end
+		local event = detectMinigame()
+		state.Minigame.Event = event
+		if not event then return "Waiting for Red Light Green Light or T-Rex Run" end
+		local carrier = minigameCarrier(event)
+		if carrier == LocalPlayer.UserId then return "Carrying the minigame egg" end
+		if type(carrier) == "number" then return "Another player has the egg" end
+		return event.Name .. " live"
+	end
+	-- Capture row reuses the same view that the Capture controller already publishes.
+	function Tasks.AdminStatusRows()
+		local out = {}
+		local boosts = {}
+		for name in pairs(BoostMap) do
+			local text = boostDisplay(name); if text then table.insert(boosts, name .. " " .. text) end
+		end
+		out[1] = "Boosts: " .. (#boosts > 0 and table.concat(boosts, ", ") or "—")
+		out[2] = "Capture: " .. statusCapture()
+		out[3] = "Treadmill: " .. statusTreadmill()
+		out[4] = "V3: " .. statusV3()
+		out[5] = "Minigame: " .. statusMinigame()
+		return out
+	end
+	function Tasks.AdminStatusHeader()
+		local count = 0
+		for _ in pairs(BoostMap) do
+			if state.Boost[_] then count += 1 end
+		end
+		local live = adminLive() or state.OnAdmin or (enabled("Admin_Minigame") and detectMinigame() ~= nil)
+		if live then
+			return { Text = "ADMIN ABUSE LIVE", Color = "#4DFF7A", Right = count > 0 and (count .. (count == 1 and " boost" or " boosts")) or "" }
+		end
+		return { Text = "NO ADMIN EVENT RIGHT NOW", Color = "#FF6B6B", Right = "" }
+	end
+	-- Mount the admin treadmill through the existing N3 path; do not duplicate the worker.
+	function Tasks.AdminMount()
+		if not enabled("Admin_AutoTreadmill") then return end
+		if Tasks.TreadmillMayRun and not Tasks.TreadmillMayRun() then return end
+		if Tasks.MountTreadmill then pcall(Tasks.MountTreadmill) end
+	end
+	function Tasks.AdminExitBelt()
+		if not Tasks then return end
+		local mt = Tasks.TreadmillState
+		if mt and mt.Busy then pcall(function() if Tasks.ExitTreadmill then Tasks.ExitTreadmill() end end) end
+	end
+	-- Periodic UI refresh: status text, boost list, capture row, treadmill/V3/minigame.
+	table.insert(state.Links, RunService.Heartbeat:Connect(function(dt)
+		if state.Disposed or LibraryLoader.Unloaded then return end
+		bindAssigned()
+		state.HeartbeatAt = (state.HeartbeatAt or 0) + dt
+		if state.HeartbeatAt < 0.5 then return end
+		state.HeartbeatAt = 0
+		pcall(function()
+			local live = adminLive() or state.OnAdmin
+			state.Live = live
+			state.Status = live and "Live" or "Off"
+			-- Boost detector
+			for name in pairs(BoostMap) do boostDisplay(name) end
+			-- Treadmill watchdog: when speed does not rise after a server-shifted belt, ask doff and retry.
+			if state.OnAdmin and Tasks.MovementRoot then
+				local stats = LocalPlayer:FindFirstChild("leaderstats")
+				local speedNode = stats and stats:FindFirstChild("Speed")
+				local speed = speedNode and tonumber(speedNode.Value) or nil
+				if speed ~= nil and state.AdminSpeedSeen ~= nil and speed <= state.AdminSpeedSeen and not raceWanted() then
+					local doff = remote("RF/Treadmill/AskDoff", "RemoteFunction")
+					if doff then pcall(doff.InvokeServer, doff) end
+					state.AdminFails += 1
+					state.OnAdmin = false
+					state.AdminSpeedSeen = nil
+					if state.AdminFails >= 3 then pcall(function() if Tasks.RequestRespawn then Tasks.RequestRespawn() end end); state.AdminFails = 0
+					elseif state.AdminFails == 2 then pcall(function() if engine and engine.UndoSwap then engine.UndoSwap() end end) end
+				elseif speed ~= nil and state.AdminSpeedSeen ~= nil and speed > state.AdminSpeedSeen then
+					state.AdminFails = 0
+				end
+				if speed ~= nil then state.AdminSpeedSeen = speed end
+			elseif not state.OnAdmin then
+				state.AdminSpeedSeen = nil
+			end
+			-- Auto mount the admin treadmill when on the belt and the user is not racing.
+			if enabled("Admin_AutoTreadmill") and adminBelt() and not raceWanted() and Tasks.MountTreadmill then
+				local riding = Tasks.TreadmillState and Tasks.TreadmillState.Riding
+				if not riding then pcall(Tasks.MountTreadmill) end
+			end
+		end)
+	end))
+	-- Minigame watcher: a small loop, not a worker, just to flip the status flag as desired.
+	table.insert(state.Links, RunService.Heartbeat:Connect(function(dt)
+		if state.Disposed or LibraryLoader.Unloaded then return end
+		if not enabled("Admin_Minigame") then return end
+		if raceWanted() then return end
+		local event = detectMinigame()
+		state.Minigame.Event = event
+		if not event then return end
+		local carrier = minigameCarrier(event)
+		if carrier == LocalPlayer.UserId then return end
+		if type(carrier) == "number" then return end
+		-- Source 76840-76860: the V3 path is responsible for taking the egg. We only flip a status flag here
+		-- because the live minigame flow depends on a Chili path we do not own end-to-end.
+		state.Minigame.Status = event.Name .. ": ready"
+	end))
+	LibraryLoader:OnUnload(function()
+		state.Disposed, state.Generation = true, state.Generation + 1
+		for _, link in ipairs(state.Links) do link:Disconnect() end
+	end)
+end
+
+-- END ADMIN CONTROLLER
+
 -- BEGIN BLOOM STAR CONTROLLER
 -- Chili V2 Shooting Star 19664-20342; Butterfly 71401-73412.
 -- Semantic source adaptation: one scheduler, native leases, shared owned transit.

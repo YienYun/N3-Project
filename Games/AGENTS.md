@@ -339,5 +339,10 @@ Read this before changing `Steal-An-Egg.lua`.
 - tools/capture_scope.py reverses reviewed scopes exactly to 6d4af13, SHA256
   51f6c97c5f7eff2808726749e6d36c6cb2a373e23768604bca9068393cb7551d.
   Historical normalization strips Capture first without updating frozen hashes.
-  Run all thirteen source checks, full production Luau compile, diff/identity
+  Run all fourteen source checks, full production Luau compile, diff/identity
   checks. No live event, score/reward, route/death or FPS claim from static tests.
+- tools/admin_scope.py reverses the Admin Abuse block to 75883b2, SHA256
+  07f2ce6ece5e3941adec79f64a561cb5c847ae49c229facd139453fa9a48aedf. The
+  inner -- BEGIN/END ADMIN UI markers scope the UI body inside the function.
+  Run tools/check_admin_source.py with the rest; preserve Chili V2 8950-9330
+  dependencies and the existing N3 Treadmill mount reuse.

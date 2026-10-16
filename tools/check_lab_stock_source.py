@@ -7,9 +7,13 @@ import re
 from lab_stock_scope import strip_lab_stock
 from mutate_scope import strip_auto_mutate
 from steal_visual_scope import strip_builtin_visual
+from admin_scope import strip_admin
 
 ROOT = Path(__file__).resolve().parents[1]
-s = strip_nitro_refill(strip_wisp((ROOT / 'Games/Steal-An-Egg.lua').read_text()))
+raw = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
+if '-- BEGIN ADMIN CONTROLLER' in raw:
+    raw = strip_admin(raw)
+s = strip_nitro_refill(strip_wisp(raw))
 assert hashlib.sha256(strip_builtin_visual(strip_lab_stock(strip_auto_mutate(s))).encode()).hexdigest() == (
     'f2345282fdfdd7d47fcfb34863a2108698bf91f52a91c46e9c8d617aa138f66d'
 ), 'Changes escaped the four reviewed stock insertion sites / 9badf26 baseline'

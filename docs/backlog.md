@@ -1,14 +1,16 @@
 # Remaining Chili gap audit — working backlog
 
 This is the recorded backlog, **not an exhaustive feature-by-feature re-audit**.
-Count **four remaining broad scopes**, not a toggle count or a fixed estimate of remaining
-work. Utilities/HUD and server tooling still need their own detailed breakdown.
+Count **three remaining broad scopes**, not a toggle count or a fixed estimate of
+remaining work. Utilities/HUD and server tooling still need their own detailed
+breakdown.
 
-1. **Admin events** — audit and port the actual source workflows separately.
-2. **Minigame events** — audit and port the actual source workflows separately.
-3. **Auto Hop / server tools** — explicitly deferred, separate manager module
+1. **Minigame events** — audit and port the actual source workflows separately
+   (Auto Steal Minigame Egg is currently a status detector; the actual pickup
+   flow still needs the live Chili path validated).
+2. **Auto Hop / server tools** — explicitly deferred, separate manager module
    like SaveManager/ThemeManager, not bundled into farm changes.
-4. **Remaining utilities / HUD** — umbrella scope; enumerate before estimating.
+3. **Remaining utilities / HUD** — umbrella scope; enumerate before estimating.
 
 ## Already integrated; do not count as missing controllers
 
@@ -26,6 +28,11 @@ work. Utilities/HUD and server tooling still need their own detailed breakdown.
 - Wisp and Banjo Cricket. The user accepted Forest-door correction `c620126`
   and moved on to further features. Latest UI request flattens both into one
   Home / Quests group without subtabs; no movement/quest logic changes.
+- Admin Abuse in Home/farm: Auto Use Admin Treadmill, Instant Steal V3 and
+  Auto Steal Minigame Egg toggles, plus boost attribute detector, treadmill
+  recovery watchdog and shared Capture row. See `admin-abuse.md` for source
+  mapping, scoped dependencies and live checklist. Installed + static/compile
+  checked does not mean live event/reward acceptance.
 
 Implementation and user acceptance of a particular fix are not proof that every
 quest, reward, event edge case or device has been live-tested. Preserve confirmed
