@@ -1,11 +1,14 @@
 """Static repair contracts, NOT a simulated route or live Roblox acceptance test."""
 from pathlib import Path
+from bloom_star_scope import strip_bloom_star
 import hashlib
 from banjo_scope import strip_banjo
 from quest_transit_scope import strip_quest_transit, FOREST_DOOR_SCOPES
 
 root = Path(__file__).resolve().parents[1]
 s = (root / 'Games/Steal-An-Egg.lua').read_text()
+if '-- BEGIN BLOOM STAR' in s:
+    s = strip_bloom_star(s)
 # Frozen pre-Banjo baseline: only reviewed quest transport scopes may be normalized.
 assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == '693a7d99189757fedfff69a579da5ed46c32806fd80de28fb3e16ea986bb424d'
 normalized = strip_quest_transit(s)

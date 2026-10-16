@@ -1,5 +1,6 @@
 """Reverse the Banjo controller and exact shared-quest-group presentation additions only."""
 import re
+from bloom_star_scope import strip_bloom_star
 from quest_transit_scope import strip_quest_transit
 
 QUEST_GROUP = """\
@@ -17,6 +18,8 @@ ORIGINAL_TABS = '\t\tlocal wisp = group:AddTabbox({ Name = "Quest Tabs" }):AddTa
 
 
 def strip_banjo(runtime):
+    if "-- BEGIN BLOOM STAR" in runtime:
+        runtime = strip_bloom_star(runtime)
     if "-- BEGIN QUEST TRANSIT" in runtime:
         runtime = strip_quest_transit(runtime)
     for label, block in (('GROUP', QUEST_GROUP), ('CONTROLS', QUEST_CONTROLS)):

@@ -268,3 +268,38 @@ Read this before changing `Steal-An-Egg.lua`.
   preserving that carry during tool prep. Frozen historical hashes stay unchanged.
   Run all ten source checkers + full production Luau compile. All three preceding
   live failures remain recorded. No live death/glitch/server/FPS success claim.
+
+
+## Butterfly Bloom / Shooting Star
+
+- Read ../docs/butterfly-shooting-star.md and source dependencies, not only UI names.
+  Source 19664–20342 / 49077–49316 (Star); 71401–73412 + 40119–40233 /
+  42455–42623 (Butterfly, TreeTrip, flight and health). Keep semantic names.
+- Event -> Shooting Star / Butterfly Bloom for catching. Home -> Butterfly
+  Workshop for trade/smart trade/craft. All OFF by default, named/icon groups,
+  no extra tabs/subtabs. Preserve the user's one-group Wisp/Banjo UI.
+- Do not add a speculative butterfly catch/swing remote. Source equips the actual
+  net and uses game net capture; observe Saved Butterflies for counts. Star uses
+  exact payload feeds / Hold / Catch and increments only on matching Claimed.
+- Reuse owned transit via NewEventTransit; no parallel swap/rig/flight controller.
+  Only star/butterfly get source generic travel eggs; approved Forest-only quest
+  behavior remains. Capture and clean up private health/flight state through the
+  same living actor/owner; never write over race or a replacement character.
+- One event job worker + one single-flight read-only AskState query. Race-first,
+  native cycle/inventory completion, no forced Movement.Owner stealing, no user
+  farm/defense flag changes. External held eggs must not deadlock event admission.
+- Workshop consumes butterflies. Keep raw tier-only/no-argument machine RPCs,
+  actual tree/machine proximity, recipe reserves, source smart planning and saved
+  consumption confirmation. Unknown outcomes remain pending across OFF/ON.
+- Pending RPC cancellation releases owned movement/health without clearing the
+  dispatched request or spawning a second action worker; allow Race to claim.
+  The event/inventory lane still waits for the reply. Actor identity + Aborted
+  must stop a late callback from moving the cancelled job, including tree exit.
+- Source adaptation deliberately waits for externally applied invisibility;
+  don't import another global preference/controller. Do not fake success from
+  proximity, movement return, a sent remote or compilation.
+- tools/bloom_star_scope.py reverses nine marked additions to exact 7e9549a
+  (SHA256 29637582c16bc01ec2d250fa504042979b7b40964de7853266f126db4a4f1b7d).
+  Three cancellation hooks are exact tiny insertions; native gameplay blocks and
+  all historical expected hashes stay frozen. Run all eleven source checks plus
+  full production Luau compile; no live/server/FPS success without actual tests.

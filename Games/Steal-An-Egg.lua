@@ -12732,6 +12732,9 @@ function Tasks.BuildMainInterface()
 	-- BEGIN WISP UI
 	Tasks.BuildWispUI(HomeTab)
 	-- END WISP UI
+	-- BEGIN BLOOM STAR UI
+	Tasks.BuildBloomStarUI(HomeTab, EventTab)
+	-- END BLOOM STAR UI
 	local IndexGroup = HomeTab:AddRightGroupbox("Pet Index & Codex", "book-open")
 	IndexGroup:AddDropdown("Dropdown_Index_PriorityOrder", {
 		Text = "Missing Steal Order",
@@ -18579,6 +18582,9 @@ do
 	end
 	local function higherTask()
 		if raceWanted() then return true end -- Race always goes first, even if Essence is ranked above it.
+		-- BEGIN BLOOM STAR MUTATE PRIORITY
+		if Tasks.BloomStarOver and Tasks.BloomStarOver("Essence") then return true end
+		-- END BLOOM STAR MUTATE PRIORITY
 		local rank = Tasks.PriorityRank("Essence")
 		if engine.Movement.PlaceWanted and Tasks.PriorityRank("Place") < rank then return true end
 		if FarmConfig.AutoTreadmill and Tasks.PriorityRank("Treadmill") < rank then return true end
@@ -18979,7 +18985,9 @@ do
 		end
 	end
 	function Tasks.NewQuestTransit(owner, character, humanoid, root, valid)
-		assert(owner == "wisp" or owner == "banjo", "Quest transport owner required")
+		-- BEGIN BLOOM STAR TRANSIT OWNER
+		assert(owner == "wisp" or owner == "banjo" or owner == "butterfly" or owner == "star", "Owned transport owner required")
+		-- END BLOOM STAR TRANSIT OWNER
 		local transit = { Active = false }
 		local heartbeat, stepped, parts, savedPlatform
 		function transit.ActorMatches()
@@ -18992,6 +19000,9 @@ do
 		function transit.Owns() return transit.ActorMatches() and humanoid.Health > 0 end
 		function transit:Stop()
 			if self.Ragdoll then if self.RagdollStop then self.RagdollStop() end; return end
+			-- BEGIN BLOOM STAR TRANSIT CLEANUP
+			if self.ControlStop then self.ControlStop(); self.ControlStop = nil end
+			-- END BLOOM STAR TRANSIT CLEANUP
 			if heartbeat then heartbeat:Disconnect(); heartbeat = nil end
 			if stepped then stepped:Disconnect(); stepped = nil end
 			if self.Active and self.Owns() then
@@ -19005,6 +19016,68 @@ do
 			parts = nil
 			if active == self then active = nil end
 		end
+		-- BEGIN BLOOM STAR TRANSIT CONTROL
+		-- Chili BeginFlight/GodMode/health (40119-40233, 42455-42623).
+		-- Dynamic event motion uses this SAME transit ownership/cleanup, not another rig.
+		function transit:BeginControl()
+			if self.Active then return self.Owns() and valid() end
+			if not self.Owns() or LibraryLoader.Unloaded or not valid() then return false end
+			assert(active == nil, "Owned transport already active")
+			savedPlatform, parts = humanoid.PlatformStand, {}
+			for _, part in ipairs(character:GetDescendants()) do
+				if part:IsA("BasePart") and part.CanCollide then table.insert(parts, part) end
+			end
+			local saved = { BreakJointsOnDeath = humanoid.BreakJointsOnDeath, RequiresNeck = humanoid.RequiresNeck, States = {} }
+			for _, stateType in ipairs({ Enum.HumanoidStateType.Dead, Enum.HumanoidStateType.FallingDown,
+				Enum.HumanoidStateType.Ragdoll, Enum.HumanoidStateType.Physics, Enum.HumanoidStateType.Seated,
+				Enum.HumanoidStateType.PlatformStanding }) do
+				saved.States[stateType] = humanoid:GetStateEnabled(stateType)
+			end
+			local links, healing = {}, false
+			self.Active, active = true, self
+			local function protect()
+				if healing or not self.Active or LibraryLoader.Unloaded or not self.ActorMatches() then return end
+				healing = true
+				pcall(function()
+					humanoid.BreakJointsOnDeath, humanoid.RequiresNeck = false, false
+					for stateType in pairs(saved.States) do humanoid:SetStateEnabled(stateType, false) end
+					if humanoid.MaxHealth > 0 and humanoid.MaxHealth < math.huge and humanoid.Health < humanoid.MaxHealth then
+						humanoid.Health = humanoid.MaxHealth
+					end
+				end)
+				healing = false
+			end
+			self.ControlStop = function()
+				for _, link in ipairs(links) do link:Disconnect() end
+				if self.Owns() then pcall(function()
+					humanoid.BreakJointsOnDeath, humanoid.RequiresNeck = saved.BreakJointsOnDeath, saved.RequiresNeck
+					for stateType, enabled in pairs(saved.States) do humanoid:SetStateEnabled(stateType, enabled) end
+				end) end
+			end
+			protect()
+			table.insert(links, humanoid.HealthChanged:Connect(protect))
+			table.insert(links, humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(protect))
+			humanoid:Move(Vector3.zero, false)
+			humanoid.PlatformStand = true
+			humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+			local elapsed = 0
+			stepped = RunService.Stepped:Connect(function(_, dt)
+				if not self.Owns() or LibraryLoader.Unloaded or not valid() then self:Stop(); return end
+				for _, part in ipairs(parts or {}) do if part:IsDescendantOf(character) then part.CanCollide = false end end
+				humanoid.PlatformStand = true
+				elapsed += dt
+				if elapsed >= 0.5 then elapsed = 0; protect() end
+			end)
+			return true
+		end
+		function transit:Control(position, velocity, rotation)
+			if not self:BeginControl() or not self.Owns() or LibraryLoader.Unloaded or not valid() then return false end
+			if position then root.CFrame = CFrame.new(position) * (rotation or root.CFrame.Rotation)
+			elseif rotation then root.CFrame = CFrame.new(root.Position) * rotation end
+			engine.SetVelocity(root, velocity or Vector3.zero)
+			return true
+		end
+		-- END BLOOM STAR TRANSIT CONTROL
 		function transit:FlyTo(position, speed, cancel, arrived, mode, seconds, face, onLeg)
 			if not self.Owns() or LibraryLoader.Unloaded or not valid() or (cancel and cancel()) then return false end
 			if not self.Owns() or not valid() then return false end -- a priority read above may yield
@@ -19109,6 +19182,20 @@ do
 					or not (record.State == nil or record.State == "Slot" or record.State == "Dropped") then continue end
 				local slot = forestSlot(record, uid)
 				local guard = slot and engine.FindGuard("Forest")
+				-- BEGIN BLOOM STAR TRANSIT SELECTION
+				-- Chili's event selector is generic; the approved quest Forest policy stays unchanged.
+				if owner == "star" or owner == "butterfly" then
+					local ownPrefix = "FirstAreaEgg_" .. LocalPlayer.UserId
+					slot = nil
+					if string.sub(uid, 1, 13) == "FirstAreaEgg_" then
+						if string.sub(uid, 1, #ownPrefix) == ownPrefix then slot = string.match(uid, "_([%w ]+:Slot_%d+)$") end
+					elseif type(record.AreaId) == "string" and type(record.NestId) == "string" then
+						slot = record.AreaId .. ":" .. record.NestId
+					end
+					guard = slot and engine.FindGuard(record.AreaId)
+					if slot and not guard and string.sub(uid, 1, #ownPrefix) == ownPrefix then guard = engine.FindGuard("Forest") end
+				end
+				-- END BLOOM STAR TRANSIT SELECTION
 				local guardRoot = guard and guard:FindFirstChild("HumanoidRootPart", true)
 				if not slot or not guardRoot or not guardRoot:IsA("BasePart") then continue end
 				local at, model = record.BottomCFrame.Position, models and models:FindFirstChild(uid)
@@ -19515,6 +19602,9 @@ do
 	end
 	local function higherTask()
 		if raceWanted() then return true end
+		-- BEGIN BLOOM STAR WISP PRIORITY
+		if Tasks.BloomStarOver and Tasks.BloomStarOver("Wisp") then return true end
+		-- END BLOOM STAR WISP PRIORITY
 		local rank = Tasks.PriorityRank("Wisp")
 		if engine.Movement.PlaceWanted and Tasks.PriorityRank("Place") < rank then return true end
 		if FarmConfig.AutoTreadmill and Tasks.PriorityRank("Treadmill") < rank then return true end
@@ -19975,6 +20065,9 @@ do
 	end
 	local function higherTask()
 		if raceWanted() then return true end
+		-- BEGIN BLOOM STAR BANJO PRIORITY
+		if Tasks.BloomStarOver and Tasks.BloomStarOver("Wisp") then return true end
+		-- END BLOOM STAR BANJO PRIORITY
 		if os.clock() < (state.PriorityAt or 0) then return state.Higher == true end
 		state.PriorityAt, state.Higher = os.clock() + 0.75, false
 		local rank = Tasks.PriorityRank("Wisp") -- Chili assigns Banjo to the Wisp quest lane.
@@ -20381,6 +20474,1117 @@ do
 	end)
 end
 -- END BANJO CONTROLLER
+
+-- BEGIN BLOOM STAR CONTROLLER
+-- Chili V2 Shooting Star 19664-20342; Butterfly 71401-73412.
+-- Semantic source adaptation: one scheduler, native leases, shared owned transit.
+(function()
+	local engine = RuntimeState.StealEngine
+	local disposed, activeJob, links, bound, labels = false, nil, {}, {}, {}
+	local star = { Payload = nil, Generation = 0, Revision = 0, Caught = 0, Slipped = 0,
+		Status = "Off", Wanted = false, AskAt = 0, AskBusy = false, RagdollTried = {} }
+	local bloom = { Generation = 0, Status = "Off", WorkshopStatus = "Off", Wanted = false,
+		Counts = {}, Essence = 0, TotalCaught = 0, Flights = {}, DataValid = false,
+		Interval = 1800, Offset = 900, Reach = 14, Speed = 320, Mode = "Stand", Priority = "Rarest",
+		Tiers = { Green = true, Blue = true, Purple = true, Golden = true }, Trades = {},
+		Recipe = { Green = 240, Blue = 115, Purple = 40, Golden = 1 }, TradeCost = { Green = 10, Blue = 10, Purple = 50 },
+		NextTrip = 0, BackoffUntil = 0, ModuleAt = 0 }
+	Tasks.ShootingStarState, Tasks.ButterflyState = star, bloom
+	FarmConfig.Star_Auto, FarmConfig.Butterfly_Auto = false, false
+	FarmConfig.Butterfly_Trade, FarmConfig.Butterfly_Smart, FarmConfig.Butterfly_Craft = false, false, false
+	local catalog, swarm, flags
+	local farm = { At = 0, Rank = 99 }
+	-- Compatibility facade; both APIs use the same active registry and captured cleanup.
+	function Tasks.NewEventTransit(owner, character, humanoid, root, valid)
+		assert(owner == "star" or owner == "butterfly", "Event transport owner required")
+		return Tasks.NewQuestTransit(owner, character, humanoid, root, valid)
+	end
+	local tierOrder = { "Green", "Blue", "Purple", "Golden" }
+	local tierNames = { Green = "Emerald", Blue = "Sapphire", Purple = "Amethyst", Golden = "Radiant" }
+	local rarityRank = { Green = 1, Blue = 2, Purple = 3, Golden = 4 }
+	local nextTier = { Green = "Blue", Blue = "Purple", Purple = "Golden" }
+	local function enabled(key)
+		return not disposed and not LibraryLoader.Unloaded and FarmConfig[key] == true
+	end
+	local function raceWanted()
+		return RaceOwnsCharacter() or (Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal()) == true
+	end
+	local function eventLive() return Workspace:GetAttribute("Event_ButterflyBloom") == true end
+	local function fieldClosed() return GetNightAndWallStatus().ShouldRetreat end
+	local function remote(name, kind)
+		local packages = ReplicatedStorage:FindFirstChild("Packages")
+		local network = packages and packages:FindFirstChild("Networking")
+		local value = network and network:FindFirstChild(name)
+		return value and value:IsA(kind) and value or nil
+	end
+	local function fire(name, ...)
+		local signal = remote(name, "RemoteEvent")
+		if not signal then return false end
+		return pcall(signal.FireServer, signal, ...)
+	end
+	local function invoke(name, ...)
+		local request = remote(name, "RemoteFunction")
+		if not request then return false, false, "missing remote" end
+		return pcall(request.InvokeServer, request, ...)
+	end
+	local function callOwned(job, callback, ...)
+		-- Keep the single worker pending, but never pin race movement to an unreturned RPC.
+		job.PendingCall = true
+		local result = table.pack(pcall(callback, ...))
+		job.PendingCall = false
+		if not result[1] then error(result[2], 0) end
+		return table.unpack(result, 2, result.n)
+	end
+	local function path(root, names)
+		for _, name in ipairs(names) do root = root and root:FindFirstChild(name) end
+		return root
+	end
+	local function module(names)
+		local value = path(ReplicatedStorage, names)
+		if not value or not value:IsA("ModuleScript") then return nil end
+		local ok, result = pcall(require, value)
+		return ok and type(result) == "table" and result or nil
+	end
+	local function positionOf(instance)
+		if typeof(instance) ~= "Instance" then return nil end
+		if instance:IsA("BasePart") then return instance.Position end
+		if instance:IsA("Model") then
+			local ok, value = pcall(instance.GetPivot, instance)
+			return ok and value.Position or nil
+		end
+	end
+	local function bind(name, callback)
+		if bound[name] then return end
+		local signal = remote(name, "RemoteEvent")
+		if signal then
+			bound[name] = true
+			table.insert(links, signal.OnClientEvent:Connect(function(...)
+				if not disposed and not LibraryLoader.Unloaded then callback(...) end
+			end))
+		end
+	end
+	local function readButterflySave()
+		local reader = SaveModule and (SaveModule.Get or SaveModule.Peek)
+		local ok, data = pcall(function() return type(reader) == "function" and reader() end)
+		bloom.DataValid = ok and type(data) == "table"
+		if not bloom.DataValid then return end
+		local record = type(data.Butterflies) == "table" and data.Butterflies or {}
+		local counts = type(record.Counts) == "table" and record.Counts or {}
+		for _, tier in ipairs(tierOrder) do bloom.Counts[tier] = tonumber(counts[tier]) or 0 end
+		bloom.Essence, bloom.TotalCaught = tonumber(record.Essence) or 0, tonumber(record.TotalCaught) or 0
+		bloom.NetClaimed = record.NetClaimed == true
+	end
+	local function loadButterflyModules()
+		if os.clock() < bloom.ModuleAt then return end
+		bloom.ModuleAt = os.clock() + 5
+		catalog = catalog or module({ "Shared", "Modules", "ButterflyCatalog" })
+		swarm = swarm or module({ "Controllers", "Game", "AdminAbuseClientController", "Events", "ButterflyBloom", "Swarm" })
+		flags = flags or module({ "Shared", "Flags", "ButterflyFlags" })
+		local function number(name, fallback)
+			local flag = flags and flags[name]
+			local ok, value = pcall(function() return flag and flag:Get() end)
+			value = ok and tonumber(value)
+			return value and value >= 0 and value < math.huge and (name ~= "IntervalSeconds" or value > 0) and value or fallback
+		end
+		bloom.Interval, bloom.Offset = number("IntervalSeconds", 1800), number("OffsetSeconds", 900)
+		bloom.Reach = number("NetReach", 14)
+		for tier, name in pairs({ Green = "GreenToBlueCost", Blue = "BlueToPurpleCost", Purple = "PurpleToGoldenCost" }) do
+			bloom.TradeCost[tier] = number(name, bloom.TradeCost[tier])
+		end
+		for _, tier in ipairs(tierOrder) do bloom.Recipe[tier] = number("Essence" .. tier, bloom.Recipe[tier]) end
+	end
+	local function bloomBounds() return path(Workspace, { "World", "Areas", "ButterflyBloom", "Bounds" }) end
+	local function bloomCenter()
+		local bounds = bloomBounds()
+		return bounds and bounds:IsA("BasePart") and bounds.Position + Vector3.new(0, 6, 0) or Vector3.new(6700, 74, -364)
+	end
+	local function machinePosition(name)
+		local machine = path(Workspace, { "World", "Machines", "ButterflyStation", name })
+		return machine and (positionOf(machine:FindFirstChild("Anchor")) or positionOf(machine))
+	end
+	local function netTool()
+		for _, container in pairs({ LocalPlayer.Character, LocalPlayer:FindFirstChildOfClass("Backpack") }) do
+			if container then for _, tool in ipairs(container:GetChildren()) do
+				if tool:IsA("Tool") and (tool:GetAttribute("ButterflyNet") == true
+					or tostring(tool:GetAttribute("ItemType")) == "ButterflyNet" or tool.Name == "Butterfly Net") then return tool end
+			end end
+		end
+	end
+	local function smartPlan(counts)
+		-- Source reserves complete recipes before planning Green -> Blue -> Purple trades.
+		for amount = 60, 1, -1 do
+			local purpleTrades = math.max(0, amount * bloom.Recipe.Golden - (counts.Golden or 0))
+			local blueTrades = math.max(0, amount * bloom.Recipe.Purple + bloom.TradeCost.Purple * purpleTrades - (counts.Purple or 0))
+			local greenTrades = math.max(0, amount * bloom.Recipe.Blue + bloom.TradeCost.Blue * blueTrades - (counts.Blue or 0))
+			if (counts.Green or 0) >= amount * bloom.Recipe.Green + bloom.TradeCost.Green * greenTrades then
+				return { Essence = amount, Green = greenTrades, Blue = blueTrades, Purple = purpleTrades }
+			end
+		end
+	end
+	local function canCraft()
+		for _, tier in ipairs(tierOrder) do if (bloom.Counts[tier] or 0) < bloom.Recipe[tier] then return false end end
+		return true
+	end
+	local function workshopNeeded()
+		if not bloom.DataValid or bloom.PendingMachine or LocalPlayer:GetAttribute("EnchantedTreeUnlocked") ~= true then return false end
+		if enabled("Butterfly_Trade") and enabled("Butterfly_Smart") then
+			local plan = smartPlan(bloom.Counts)
+			return plan ~= nil and (enabled("Butterfly_Craft") or plan.Green + plan.Blue + plan.Purple > 0)
+		end
+		if enabled("Butterfly_Craft") and canCraft() then return true end
+		if enabled("Butterfly_Trade") then
+			for _, tier in ipairs({ "Green", "Blue", "Purple" }) do
+				local reserve = enabled("Butterfly_Craft") and bloom.Recipe[tier] or 0
+				if bloom.Trades[tier] and (bloom.Counts[tier] or 0) - reserve >= bloom.TradeCost[tier] then return true end
+			end
+		end
+		return false
+	end
+	local function updateDemand()
+		if activeJob and activeJob.Aborted then star.Wanted, bloom.Wanted = false, false; return end
+		local now = Workspace:GetServerTimeNow()
+		local payload = star.Payload
+		-- Do not freeze the very egg-carry/deposit work that must finish before event admission.
+		local externalCarry = activeJob == nil and (IsActivelyCarryingEgg() or GetEquippedEggTool() ~= nil
+			or engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying
+			or (engine.AutoCarry and engine.AutoCarry.Carrying))
+		star.Wanted = enabled("Star_Auto") and not raceWanted() and os.clock() >= (star.ConfigUntil or 0)
+			and not externalCarry and payload ~= nil and now >= (tonumber(payload.LandAt) or now) and now < (tonumber(payload.ExpiresAt) or math.huge)
+		bloom.Wanted = not raceWanted() and not externalCarry and os.clock() >= (bloom.ConfigUntil or 0) and os.clock() >= bloom.BackoffUntil
+			and ((enabled("Butterfly_Auto") and eventLive()) or (not eventLive() and not fieldClosed()
+				and os.clock() >= bloom.NextTrip and workshopNeeded()))
+	end
+	local function refreshFarmPriority()
+		if os.clock() < farm.At or (activeJob and activeJob.Transit and activeJob.Transit.Ragdoll) then return end
+		farm.At, farm.Rank = os.clock() + 0.75, 99
+		local ok, candidates = pcall(engine.CollectCandidates, false, not FarmConfig.Defense_InstantSteal)
+		if not ok then farm.Rank = 0; return end -- Unknown native demand must not steal its movement.
+		for _, candidate in ipairs(candidates or {}) do
+			local key = candidate.WispOnly and "Wisp" or candidate.IsScramble and "StealLab" or candidate.IsIndex and "StealIndex" or "StealFilter"
+			farm.Rank = math.min(farm.Rank, Tasks.PriorityRank(key))
+		end
+	end
+	function Tasks.BloomStarOver(key)
+		if disposed or LibraryLoader.Unloaded or raceWanted() then return false end
+		local rank = Tasks.PriorityRank(key)
+		return (star.Wanted and Tasks.PriorityRank("Star") < rank) or (bloom.Wanted and Tasks.PriorityRank("Butterfly") < rank)
+	end
+	local function higherTask(key)
+		if raceWanted() then return true end
+		local rank = Tasks.PriorityRank(key)
+		if farm.Rank < rank or Tasks.BloomStarOver(key) then return true end
+		if engine.Movement.PlaceWanted and Tasks.PriorityRank("Place") < rank then return true end
+		if FarmConfig.AutoTreadmill and Tasks.PriorityRank("Treadmill") < rank then return true end
+		if Tasks.PriorityRank("Essence") < rank and Tasks.PriorityCanRun("Essence") then return true end
+		local wisp = Tasks.WispState
+		return wisp and wisp.Valid and (wisp.StealWanted or wisp.Busy) and Tasks.PriorityRank("Wisp") < rank or false
+	end
+	local function nativeIdle()
+		local wisp, banjo, mutate, belt = Tasks.WispState, Tasks.BanjoState, Tasks.MutateState, Tasks.TreadmillState
+		return not RuntimeState.IsExecuting and not engine.AutoCycle and not engine.Guard.Active and not engine.Guard.Busy
+			and not IsActivelyCarryingEgg() and not GetEquippedEggTool()
+			and not (engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying)
+			and not (wisp and (wisp.Lease or wisp.Busy or wisp.NativeCalls > 0 or os.clock() < wisp.SettleUntil))
+			and not (banjo and (banjo.Lease or banjo.Busy))
+			and not (mutate and (mutate.Lease or mutate.InventoryActions > 0 or os.clock() < mutate.HatchSettleUntil))
+			and not (belt and (belt.Busy or belt.WearBusy or belt.Exiting))
+			and LocalPlayer:GetAttribute("InScrambleArena") ~= true
+	end
+	local function runOwned(owner, key, state, allowed, action)
+		if activeJob or not allowed() or higherTask(key) or not nativeIdle() then return end
+		local generation = state.Generation
+		if not allowed() or generation ~= state.Generation or not engine.ClaimMovement(owner) then return end
+		local job = { Owner = owner, State = state, Character = LocalPlayer.Character }
+		activeJob, state.Busy = job, true
+		local character, humanoid, root, previousTool = job.Character
+		local function actorMatches()
+			return not job.Aborted and not disposed and not LibraryLoader.Unloaded and not raceWanted()
+				and LocalPlayer.Character == character and engine.Movement.Owner == owner
+				and (not humanoid or (humanoid.Parent == character and character:FindFirstChildOfClass("Humanoid") == humanoid and humanoid.Health > 0))
+				and (not root or (root.Parent == character and character:FindFirstChild("HumanoidRootPart") == root))
+		end
+		local function cancelled()
+			local stopped = not actorMatches() or generation ~= state.Generation or not allowed() or higherTask(key)
+				or (character and character:GetAttribute("InvisApplied") == true)
+			return stopped or not actorMatches() -- Revalidate after potentially yielding priority/data readers.
+		end
+		local function waitFor(seconds, check, cleanup)
+			local deadline = os.clock() + seconds
+			repeat
+				if cleanup and not actorMatches() or not cleanup and cancelled() then return false end
+				if check and check() then return true end
+				task.wait(0.05)
+			until os.clock() >= deadline
+			return check == nil or check() == true
+		end
+		job.Cancelled = cancelled
+		job.ReleasePending = function()
+			if job.Aborted then return end
+			if job.Transit then pcall(job.Transit.Stop, job.Transit) end
+			if owner == "star" and job.Finally then pcall(job.Finally) end
+			if job.HealthStop then pcall(job.HealthStop) end
+			job.Aborted = true
+			engine.ReleaseMovement(owner)
+			star.Wanted, bloom.Wanted = false, false
+			state.Status = "Paused; waiting for server reply"
+			if engine.AutoWake then engine.AutoWake() end
+		end
+		local ok, failure = pcall(function()
+			SetElevated8()
+			if cancelled() or not nativeIdle() then return end
+			Tasks.ExitTreadmill()
+			if cancelled() then return end
+			if engine.ReleaseAutoShield then engine.ReleaseAutoShield(true) end
+			if RuntimeState.OriginalHumanoid then RestoreCharacter() end
+			if cancelled() then return end
+			humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			root = character and character:FindFirstChild("HumanoidRootPart")
+			if not humanoid or not root or root.Anchored or cancelled() then state.Status = "Waiting to leave treadmill"; return end
+			previousTool = character:FindFirstChildWhichIsA("Tool")
+			-- Source health service remains active across flight, machine RPCs and tree exit.
+			local healthSaved = { BreakJointsOnDeath = humanoid.BreakJointsOnDeath, RequiresNeck = humanoid.RequiresNeck,
+				DeadEnabled = humanoid:GetStateEnabled(Enum.HumanoidStateType.Dead) }
+			local healthLinks, healing, healthClosed = {}, false, false
+			local function ownsBody()
+				return not RaceOwnsCharacter() and LocalPlayer.Character == character and humanoid.Parent == character
+					and character:FindFirstChildOfClass("Humanoid") == humanoid and root.Parent == character
+					and character:FindFirstChild("HumanoidRootPart") == root and engine.Movement.Owner == owner
+			end
+			job.HealthTick = function()
+				if healthClosed or healing or disposed or LibraryLoader.Unloaded or raceWanted() or not ownsBody() then return end
+				healing = true
+				pcall(function()
+					humanoid.BreakJointsOnDeath, humanoid.RequiresNeck = false, false
+					humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+					if humanoid.MaxHealth > 0 and humanoid.MaxHealth < math.huge and humanoid.Health < humanoid.MaxHealth then humanoid.Health = humanoid.MaxHealth end
+				end)
+				healing = false
+			end
+			job.HealthStop = function()
+				if healthClosed then return end
+				healthClosed, job.HealthTick = true, nil
+				for _, link in ipairs(healthLinks) do link:Disconnect() end
+				if ownsBody() and humanoid.Health > 0 then pcall(function()
+					humanoid.BreakJointsOnDeath, humanoid.RequiresNeck = healthSaved.BreakJointsOnDeath, healthSaved.RequiresNeck
+					humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, healthSaved.DeadEnabled)
+				end) end
+			end
+			job.HealthTick()
+			table.insert(healthLinks, humanoid.HealthChanged:Connect(job.HealthTick))
+			table.insert(healthLinks, humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(job.HealthTick))
+			table.insert(healthLinks, humanoid.StateChanged:Connect(job.HealthTick))
+			job.Transit = Tasks.NewEventTransit(owner, character, humanoid, root, function()
+				return actorMatches() and (job.Finishing or not cancelled())
+			end)
+			job.Root, job.Humanoid, job.Cancelled, job.Safe, job.Wait = root, humanoid, cancelled, actorMatches, waitFor
+			action(job)
+		end)
+		if job.Transit then pcall(job.Transit.Stop, job.Transit) end
+		if job.Finally then pcall(job.Finally) end
+		if job.Transit then pcall(job.Transit.Stop, job.Transit) end
+		if job.HealthStop then pcall(job.HealthStop) end
+		pcall(function()
+			if not actorMatches() then return end
+			humanoid:MoveTo(root.Position)
+			engine.SetVelocity(root, Vector3.zero)
+			if previousTool and previousTool.Parent and previousTool:IsDescendantOf(LocalPlayer) then humanoid:EquipTool(previousTool) end
+		end)
+		engine.ReleaseMovement(owner)
+		if activeJob == job then activeJob = nil end
+		state.Busy = false
+		if not ok then
+			state.LastError, state.Status = tostring(failure), "Paused; see event error"
+			if os.clock() >= (state.ErrorAt or 0) then state.ErrorAt = os.clock() + 30; warn("[N3 HUB] " .. key .. ": " .. tostring(failure)) end
+		end
+		if engine.AutoWake then engine.AutoWake() end
+	end
+	-- Shooting Star: authoritative payloads, visual/leg interpolation, hold/catch handshake.
+	local function acceptStar(payload)
+		if type(payload) ~= "table" or payload.Id == nil then return end
+		if not star.Payload or star.Payload.Id ~= payload.Id then star.Slipped = 0; star.RagdollTried = {} end
+		star.Payload, star.Revision = payload, star.Revision + 1
+	end
+	local function bindEvents()
+		bind("RE/ShootingStar/Fall", acceptStar)
+		bind("RE/ShootingStar/Wander", function(id, leg, noticed)
+			if star.Payload and star.Payload.Id == id and type(leg) == "table" then
+				star.Payload.Leg, star.Payload.Noticed = leg, noticed == true
+				star.Revision += 1
+			end
+		end)
+		bind("RE/ShootingStar/Slipped", function(id)
+			if star.Payload and star.Payload.Id == id then star.Slipped += 1; star.HoldStarted = nil end
+		end)
+		bind("RE/ShootingStar/Claimed", function(id)
+			if star.Payload and star.Payload.Id == id then
+				star.Caught += 1
+				star.Payload, star.Wanted, star.HoldStarted = nil, false, nil
+				star.Generation, star.Revision = star.Generation + 1, star.Revision + 1
+				star.Status = "Caught — confirmed by server"
+			end
+		end)
+		bind("RE/ShootingStar/Expired", function(id)
+			if star.Payload and star.Payload.Id == id then
+				star.Payload, star.Wanted = nil, false
+				star.Generation, star.Revision = star.Generation + 1, star.Revision + 1
+			end
+		end)
+		local function rememberFlight(flight)
+			if type(flight) == "table" and flight.Id ~= nil then bloom.Flights[flight.Id] = flight end
+		end
+		bind("RE/Butterflies/Spawned", rememberFlight)
+		bind("RE/Butterflies/Removed", function(id) bloom.Flights[id] = nil end)
+		bind("RE/Butterflies/Escaped", function(first, second) rememberFlight(type(first) == "table" and first or second) end)
+	end
+	local function askStarState()
+		if star.AskBusy or not enabled("Star_Auto") or os.clock() < star.AskAt then return end
+		star.AskBusy, star.AskAt = true, os.clock() + 15
+		local generation, revision = star.Generation, star.Revision
+		task.spawn(function()
+			if not enabled("Star_Auto") or generation ~= star.Generation then star.AskBusy = false; return end
+			local ok, payload = invoke("RF/ShootingStar/AskState")
+			star.AskBusy = false
+			if ok and enabled("Star_Auto") and generation == star.Generation and revision == star.Revision then acceptStar(payload) end
+		end)
+	end
+	local function starPosition(payload)
+		local buddy = path(Workspace, { "ShootingStarClient", "Buddy" })
+		local visual = buddy and (buddy:FindFirstChild("RootPart") or buddy.PrimaryPart)
+		if visual and visual:IsA("BasePart") then return visual.Position, nil end
+		local leg, now = payload.Leg, Workspace:GetServerTimeNow()
+		if type(leg) == "table" and typeof(leg.From) == "Vector3" and typeof(leg.To) == "Vector3" then
+			local start = tonumber(leg.StartAt) or now
+			local duration = (tonumber(leg.ArriveAt) or start) - start
+			local alpha = duration > 0 and math.clamp((now - start) / duration, 0, 1) or 1
+			local delta = leg.To - leg.From
+			local flat = Vector3.new(delta.X, 0, delta.Z)
+			return leg.From:Lerp(leg.To, alpha), alpha < 1 and flat.Magnitude > 0.5 and flat.Unit or nil
+		end
+		return typeof(payload.Landing) == "CFrame" and payload.Landing.Position or typeof(payload.Landing) == "Vector3" and payload.Landing or nil, nil
+	end
+	local function faceDirection(root, target)
+		local delta = Vector3.new(target.X - root.Position.X, 0, target.Z - root.Position.Z)
+		return delta.Magnitude > 0.05 and CFrame.lookAt(Vector3.zero, delta.Unit) or root.CFrame.Rotation
+	end
+	local function holdStarPosition(job, target, lookAt)
+		local velocity = (target - job.Root.Position) * 10
+		if velocity.Magnitude > 200 then velocity = velocity.Unit * 200 end
+		return job.Transit:Control(nil, velocity, faceDirection(job.Root, lookAt or target))
+	end
+	local function leaveStarBase(job)
+		local home = engine.GetBaseSafeSpot()
+		if home and engine.InsideBase() and (job.Root.Position - home).Magnitude > 6 then
+			local deadline = os.clock() + 20
+			while os.clock() < deadline and not job.Cancelled() do
+				local delta = home + Vector3.new(0, 3, 0) - job.Root.Position
+				if delta.Magnitude <= 4 then break end
+				star.Status = "Leaving base through safe zone"
+				local dt = RunService.Heartbeat:Wait()
+				if job.Cancelled() then return false end
+				if not job.Transit:Control(job.Root.Position + delta.Unit * math.min(250 * dt, delta.Magnitude)) then return false end
+			end
+		end
+		local waited = false
+		while engine.InsideBase() and fieldClosed() and not job.Cancelled() do
+			waited, star.Status = true, "Waiting for field to open"
+			job.Transit:Control(job.Root.Position)
+			RunService.Heartbeat:Wait()
+		end
+		if waited and not job.Wait(5) then return false end
+		return not job.Cancelled()
+	end
+	local function stepToStar(job, target)
+		-- Chili StepTo 49077-49205: horizontal hops, lift/gap and two no-progress strikes.
+		local deadline, previous, stalled = os.clock() + 30, math.huge, 0
+		while os.clock() < deadline and not job.Cancelled() do
+			local destination = target()
+			if not destination then return false end
+			local delta = Vector3.new(destination.X - job.Root.Position.X, 0, destination.Z - job.Root.Position.Z)
+			local stride = math.max(engine.GetWalkSpeed() * (tonumber(engine.Carry.HopRatio) or 1.515), 40)
+			stalled = delta.Magnitude > previous - stride * 0.5 and stalled + 1 or 0
+			if stalled >= 2 then return false end
+			previous = delta.Magnitude
+			if delta.Magnitude <= stride then
+				if not job.Transit:Control(destination) or not job.Wait(0.5) then return false end
+				return true
+			end
+			local hop = Vector3.new(job.Root.Position.X, destination.Y + (tonumber(engine.Carry.HopLift) or 42), job.Root.Position.Z) + delta.Unit * stride
+			local elapsed = 0
+			repeat
+				if job.Cancelled() or not job.Transit:Control(hop) then return false end
+				elapsed += RunService.Heartbeat:Wait()
+			until elapsed >= (tonumber(engine.Carry.HopGap) or 0.1)
+		end
+		return false
+	end
+	local function glideToStar(job, target)
+		-- Chili GlideTo 49205-49316: cursor steps with rollback pause / speed decay.
+		local deadline, cursor, pauseUntil, rollbacks = os.clock() + 40, job.Root.Position, 0, 0
+		while os.clock() < deadline and not job.Cancelled() do
+			local dt = RunService.Heartbeat:Wait()
+			if job.Cancelled() then return false end
+			local destination = target()
+			if not destination then return false end
+			if Vector3.new(destination.X - job.Root.Position.X, 0, destination.Z - job.Root.Position.Z).Magnitude <= 4 then return true end
+			if os.clock() < pauseUntil then cursor = job.Root.Position; job.Transit:Control(nil, Vector3.zero); continue end
+			if (job.Root.Position - cursor).Magnitude > 25 then
+				rollbacks += 1
+				pauseUntil, cursor = os.clock() + math.min(0.25 + 0.25 * rollbacks, 1), job.Root.Position
+				star.Status = "Lagged back; resyncing"
+				continue
+			end
+			local speed = math.clamp(tonumber(FarmConfig.AutoTweenSpeed) or 400, 100, 1000)
+				* (rollbacks < 2 and 1 or math.max(0.5, 0.8 ^ (rollbacks - 1)))
+			local delta = destination - cursor
+			cursor += delta.Magnitude <= speed * dt and delta or delta.Unit * speed * dt
+			if not job.Transit:Control(cursor, Vector3.zero, faceDirection(job.Root, destination)) then return false end
+		end
+		return false
+	end
+	local function catchStar(job, payload)
+		local function target()
+			local at = starPosition(payload)
+			return at and at + Vector3.new(0, 3, 3)
+		end
+		local function distance()
+			local at = target()
+			return at and (job.Root.Position - at).Magnitude or math.huge
+		end
+		if distance() > 12 then
+			if not leaveStarBase(job) then return end
+			if not fieldClosed() and not star.RagdollTried[payload.Id] then
+				star.RagdollTried[payload.Id] = true
+				job.Transit:Stop()
+				job.Humanoid:UnequipTools()
+				callOwned(job, job.Transit.RagdollTravel, job.Transit, target, job.Cancelled, function(message) star.Status = message end)
+			end
+			if job.Cancelled() then return end
+			if distance() > 40 then stepToStar(job, target) end
+			if job.Cancelled() then return end
+			glideToStar(job, target)
+		end
+		if job.Cancelled() or distance() > 12 then star.Status = "Star approach not confirmed"; return end
+		local ok, ping = pcall(LocalPlayer.GetNetworkPing, LocalPlayer)
+		local settleSeconds = 0.5 + math.clamp(ok and tonumber(ping) or 0, 0, 1) * 2
+		local stableAt = os.clock()
+		while os.clock() - stableAt < settleSeconds and not job.Cancelled() do
+			local at = target()
+			if not at then return end
+			local gap = (job.Root.Position - at).Magnitude
+			if gap > 25 then star.Status = "Pulled back; approaching again"; return end
+			if gap > 8 then stableAt = os.clock() end
+			star.Status = "At star; syncing with server"
+			if not holdStarPosition(job, at, starPosition(payload)) then return end
+			RunService.Heartbeat:Wait()
+		end
+		local catchAt, tries = nil, 0
+		star.HoldStarted = nil
+		job.Finally = function() if job.Holding then fire("RE/ShootingStar/Hold", payload.Id, false); job.Holding = false end end
+		while not job.Cancelled() do
+			local at, heading = starPosition(payload)
+			if not at or Vector3.new(at.X - job.Root.Position.X, 0, at.Z - job.Root.Position.Z).Magnitude > 25 then break end
+			if (tonumber(payload.ExpiresAt) or math.huge) <= Workspace:GetServerTimeNow() then break end
+			if not holdStarPosition(job, at + Vector3.new(0, 3, 0) + (heading and heading * 2 or Vector3.new(0, 0, 3)), at) then break end
+			if not star.HoldStarted then
+				if job.Cancelled() then break end
+				job.Holding = fire("RE/ShootingStar/Hold", payload.Id, true)
+				if not job.Holding then star.Status = "Hold remote unavailable"; break end
+				star.HoldStarted, star.Status = os.clock(), "Holding star"
+			elseif not catchAt and os.clock() - star.HoldStarted >= (tonumber(payload.HoldSeconds) or 1.6) + 0.3 then
+				if job.Cancelled() then break end
+				tries, catchAt = tries + 1, os.clock()
+				fire("RE/ShootingStar/Catch", payload.Id)
+				star.Status = "Catch sent; waiting for server"
+			elseif catchAt and os.clock() - catchAt >= 2 then
+				fire("RE/ShootingStar/Hold", payload.Id, false)
+				star.HoldStarted, job.Holding, catchAt = nil, false, nil
+				if tries % 3 == 0 then star.AskAt = 0; askStarState() end
+			end
+			RunService.Heartbeat:Wait()
+		end
+	end
+	-- Butterfly: Swarm.Each / Catalog.PositionAt; no invented catch remote.
+	local function butterflies()
+		local result, seen = {}, {}
+		if swarm and type(swarm.Each) == "function" then pcall(function()
+			for key, member in swarm.Each() do
+				if type(member) == "table" then
+					local flight = type(member.Flight) == "table" and member.Flight or nil
+					local id, at = flight and flight.Id or key, positionOf(member.Body)
+					if id ~= nil and at then
+						seen[id] = true
+						table.insert(result, { Id = id, Tier = tostring(flight and flight.Tier or "Green"), Position = at, Flight = flight })
+					end
+				end
+			end
+		end) end
+		if catalog and type(catalog.PositionAt) == "function" then
+			for id, flight in pairs(bloom.Flights) do
+				if not seen[id] then
+					local ok, at = pcall(catalog.PositionAt, flight, Workspace:GetServerTimeNow())
+					if ok and typeof(at) == "Vector3" then table.insert(result, { Id = id, Tier = tostring(flight.Tier or "Green"), Position = at, Flight = flight }) end
+				end
+			end
+		end
+		return result
+	end
+	local function chooseButterfly(candidates, origin)
+		local best, score
+		local bounds = bloomBounds()
+		for _, butterfly in ipairs(candidates) do
+			local inside = true
+			if bounds and bounds:IsA("BasePart") then
+				local offset = bounds.CFrame:PointToObjectSpace(butterfly.Position)
+				inside = math.abs(offset.X) <= bounds.Size.X / 2 + 80 and math.abs(offset.Z) <= bounds.Size.Z / 2 + 80 and math.abs(offset.Y) <= 120
+			end
+			if not inside or (next(bloom.Tiers) ~= nil and not bloom.Tiers[butterfly.Tier]) then continue end
+			local value = (butterfly.Position - origin).Magnitude / math.max(bloom.Speed, 1)
+			if bloom.Priority == "Rarest" then value += (5 - (rarityRank[butterfly.Tier] or 1)) * 1000 end
+			if not score or value < score then score, best = value, butterfly end
+		end
+		return best
+	end
+	local function bloomRotation()
+		local bounds = bloomBounds()
+		local forward = Vector3.new(0, 0, -1)
+		if bounds and bounds:IsA("BasePart") then
+			local direction = bounds.Size.X >= bounds.Size.Z and bounds.CFrame.LookVector or bounds.CFrame.RightVector
+			direction = Vector3.new(direction.X, 0, direction.Z)
+			if direction.Magnitude > 0.1 then forward = direction.Unit end
+		end
+		return CFrame.lookAt(Vector3.zero, forward)
+	end
+	local function groundedBloomPosition(job, target)
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		local swarmFolder = Workspace:FindFirstChild("ButterflyBloomSwarm")
+		params.FilterDescendantsInstances = swarmFolder and { job.Character, swarmFolder } or { job.Character }
+		local hit = Workspace:Raycast(target + Vector3.new(0, 25, 0), Vector3.new(0, -120, 0), params)
+		return hit and Vector3.new(target.X, hit.Position.Y + job.Humanoid.HipHeight + job.Root.Size.Y / 2, target.Z) or target
+	end
+	local function standingTarget(dt)
+		local bounds = bloomBounds()
+		if not bounds or not bounds:IsA("BasePart") or bloom.Mode == "Stand" then return bloomCenter() end
+		if bloom.Mode == "Circle" then
+			bloom.CircleAngle = ((bloom.CircleAngle or 0) + bloom.Speed / 25 * math.clamp(dt, 0, 0.1)) % (2 * math.pi)
+			local right = Vector3.new(bounds.CFrame.RightVector.X, 0, bounds.CFrame.RightVector.Z).Unit
+			local forward = Vector3.new(bounds.CFrame.LookVector.X, 0, bounds.CFrame.LookVector.Z).Unit
+			return bounds.Position + right * math.cos(bloom.CircleAngle) * 25 + forward * math.sin(bloom.CircleAngle) * 25 + Vector3.new(0, 6, 0)
+		end
+		local alongX = bounds.Size.X >= bounds.Size.Z
+		local axis = alongX and bounds.CFrame.RightVector or bounds.CFrame.LookVector
+		axis = Vector3.new(axis.X, 0, axis.Z).Unit
+		local half = math.max(20, (alongX and bounds.Size.X or bounds.Size.Z) / 2 - 30)
+		bloom.PatrolTravel = ((bloom.PatrolTravel or 0) + bloom.Speed * math.clamp(dt, 0, 0.1)) % (4 * half)
+		local offset = bloom.PatrolTravel < 2 * half and bloom.PatrolTravel - half or 3 * half - bloom.PatrolTravel
+		return bounds.Position + axis * offset + Vector3.new(0, 6, 0)
+	end
+	local function butterflyVelocity(job, destination, dt)
+		local delta = destination - job.Root.Position
+		return delta.Magnitude < 0.5 and Vector3.zero or delta.Unit * math.min(bloom.Speed, delta.Magnitude / math.max(dt, 1 / 60))
+	end
+	local function claimNet(job)
+		if netTool() then bloom.NetPending = nil; return true end
+		if bloom.NetClaimed or bloom.NetPending then bloom.Status = "Waiting for Butterfly Net tool"; return false end
+		for _, stationName in ipairs({ "NetStand", "ButterflyMachine" }) do
+			local at = machinePosition(stationName)
+			if not at then continue end
+			if job.Cancelled() then return false end
+			pcall(LocalPlayer.RequestStreamAroundAsync, LocalPlayer, at, 3)
+			if job.Cancelled() or not job.Transit:BeginControl() then return false end
+			job.Character:PivotTo(CFrame.new(at + Vector3.new(0, 3, 4)))
+			engine.SetVelocity(job.Root, Vector3.zero)
+			if not job.Wait(0.6) then return false end
+			for _ = 1, 5 do
+				if job.Cancelled() then return false end
+				if (job.Root.Position - at).Magnitude > 12 then break end
+				if not remote("RF/Butterflies/AskClaimNet", "RemoteFunction") then bloom.Status = "Net claim remote unavailable"; return false end
+				bloom.Status, bloom.NetPending = "Claiming Butterfly Net", true
+				local ok, accepted, reason = callOwned(job, invoke, "RF/Butterflies/AskClaimNet")
+				if not ok or accepted ~= false then
+					job.Wait(2, function() readButterflySave(); return netTool() ~= nil or bloom.NetClaimed end)
+					if netTool() then bloom.NetPending = nil; return true end
+					bloom.Status = "Waiting for net grant confirmation"
+					return false -- Ambiguous grant is not issued again on OFF/ON.
+				end
+				bloom.NetPending, bloom.Status = nil, "Net claim: " .. tostring(reason or "refused")
+				if not job.Wait(0.8) then return false end
+			end
+		end
+		return false
+	end
+	local function catchButterflies(job)
+		if not claimNet(job) then return end
+		local ragdollTries = 0
+		while not job.Cancelled() do
+			if (job.Root.Position - bloomCenter()).Magnitude >= 1200 then
+				if fieldClosed() then bloom.Status = "Waiting for daylight / open wall"; return end
+				if ragdollTries >= 2 then bloom.BackoffUntil, bloom.Status = os.clock() + 10, "Bloom TP not confirmed; retrying later"; return end
+				ragdollTries += 1
+				if ragdollTries == 1 and not job.Wait(1.5) then return end
+				job.Transit:Stop()
+				job.Humanoid:UnequipTools()
+				callOwned(job, job.Transit.RagdollTravel, job.Transit, bloomCenter, job.Cancelled, function(message) bloom.Status = message end)
+				if job.Cancelled() then return end
+				continue
+			end
+			ragdollTries = 0
+			local net = netTool()
+			if not net then bloom.Status = "Waiting for Butterfly Net tool"; return end
+			if net.Parent ~= job.Character then
+				if job.Cancelled() then return end
+				job.Humanoid:EquipTool(net)
+			end
+			local dt = RunService.Heartbeat:Wait()
+			if job.Cancelled() then return end
+			local candidates = butterflies()
+			local rotation = bloomRotation()
+			if bloom.Mode ~= "Chase" then
+				local at = groundedBloomPosition(job, standingTarget(dt))
+				if (job.Root.Position - at).Magnitude > 8 then
+					job.Transit:Control(nil, butterflyVelocity(job, at, dt), rotation)
+					bloom.Status = "Moving to bloom " .. string.lower(bloom.Mode)
+				else
+					job.Transit:Control(at, Vector3.zero, rotation)
+					local nearby = {}
+					for _, candidate in ipairs(candidates) do
+						if (candidate.Position - job.Root.Position).Magnitude <= bloom.Reach - 2 then table.insert(nearby, candidate) end
+					end
+					local target = chooseButterfly(nearby, job.Root.Position)
+					bloom.Status = bloom.Mode .. (target and "; " .. (tierNames[target.Tier] or target.Tier) .. " nearby" or "; net equipped") .. " — " .. #candidates .. " flying"
+				end
+			else
+				local target
+				if bloom.ChaseLock and os.clock() < bloom.ChaseLock.Until then
+					for _, candidate in ipairs(candidates) do if candidate.Id == bloom.ChaseLock.Id then target = candidate; break end end
+				end
+				if not target then
+					target = chooseButterfly(candidates, job.Root.Position)
+					if target then bloom.ChaseLock = { Id = target.Id, Until = os.clock() + 1 } end
+				end
+				if target then
+					local velocity = Vector3.zero
+					if catalog and type(catalog.VelocityAt) == "function" and type(target.Flight) == "table" then
+						local ok, value = pcall(catalog.VelocityAt, target.Flight, Workspace:GetServerTimeNow())
+						if ok and typeof(value) == "Vector3" then velocity = Vector3.new(value.X, 0, value.Z) end
+					end
+					if (target.Position - job.Root.Position).Magnitude <= 40 then
+						job.Transit:Control(target.Position, velocity, rotation)
+					else job.Transit:Control(nil, butterflyVelocity(job, target.Position, dt), rotation) end
+					bloom.Status = "Chasing " .. (tierNames[target.Tier] or target.Tier) .. " — " .. #candidates .. " flying"
+				else
+					local at = groundedBloomPosition(job, bloomCenter())
+					job.Transit:Control(nil, butterflyVelocity(job, at, dt), rotation)
+					bloom.Status = "Waiting for selected butterflies"
+				end
+			end
+			-- Source equips the real net; the game's net controller handles capture.
+			-- Do not fabricate Swing/Catch RPCs or increment inventory from proximity.
+		end
+	end
+	-- Workshop: source TreeTrip + machine proximity, trades, reserved recipes and smart plan.
+	local function inTree() return LocalPlayer:GetAttribute("InEnchantedTree") == true end
+	local function treeMarker(name)
+		return positionOf(path(Workspace, { "World", "Build", "EnchantedTreeInterior", "Markers", name }))
+	end
+	local function treePrompt()
+		local prompt = path(Workspace, { "World", "Build", "EnchantedTreeInterior", "Markers", "EnterTrigger", "EnchantedTreeEntrance", "EnchantedTreePrompt" })
+		local parent = prompt and prompt.Parent
+		local at = parent and (parent:IsA("Attachment") and parent.WorldPosition or positionOf(parent))
+		return prompt and prompt:IsA("ProximityPrompt") and prompt or nil, at
+	end
+	local function walkTo(job, at, seconds, arrived, cleanup)
+		local deadline = os.clock() + seconds
+		repeat
+			if cleanup and not job.Safe() or not cleanup and job.Cancelled() then return false end
+			if arrived and arrived() then return true end
+			if (job.Root.Position - at).Magnitude <= 6 then return true end
+			job.Humanoid:MoveTo(at)
+			task.wait(0.05)
+		until os.clock() >= deadline
+		return arrived and arrived() or (job.Root.Position - at).Magnitude <= 6
+	end
+	local function enterWorkshopTree(job)
+		if inTree() then return true end
+		local prompt, at = treePrompt()
+		if not prompt or not at then bloom.WorkshopStatus = "Tree prompt not streamed"; return false end
+		pcall(LocalPlayer.RequestStreamAroundAsync, LocalPlayer, at, 3)
+		if job.Cancelled() then return false end
+		local approach = at + Vector3.new(0, 3, -12)
+		if (job.Root.Position - at).Magnitude > 500 then
+			for _ = 1, 2 do
+				if job.Cancelled() then return false end
+				callOwned(job, job.Transit.RagdollTravel, job.Transit, function() return approach end, job.Cancelled, function(message) bloom.WorkshopStatus = message end)
+				if not job.Transit:Settle(0.5, job.Cancelled) then return false end
+				if (job.Root.Position - approach).Magnitude <= 60 then break end
+			end
+		end
+		if (job.Root.Position - approach).Magnitude > 60 then
+			if not job.Transit:Approach(approach, job.Cancelled, inTree) then return false end
+		end
+		for attempt = 1, 4 do
+			if job.Cancelled() then return false end
+			if inTree() then return job.Wait(0.5) end
+			if (job.Root.Position - at).Magnitude > 30 then
+				job.Character:PivotTo(CFrame.new(at + Vector3.new(0, 1, -12)))
+				engine.SetVelocity(job.Root, Vector3.zero)
+			end
+			if not walkTo(job, at, 3, inTree) then return false end
+			if job.Cancelled() or not prompt.Parent or not prompt.Enabled or (job.Root.Position - at).Magnitude > math.min(8, prompt.MaxActivationDistance) then return false end
+			if attempt % 2 == 1 and type(fireproximityprompt) == "function" then pcall(fireproximityprompt, prompt)
+			else
+				prompt:InputHoldBegin()
+				job.Wait(math.clamp(tonumber(prompt.HoldDuration) or 0, 0, 10) + 0.1)
+				pcall(prompt.InputHoldEnd, prompt)
+			end
+			if job.Wait(4, inTree) then return job.Wait(0.5) end
+		end
+		return inTree()
+	end
+	local function leaveWorkshopTree(job)
+		if not job.Safe() or not inTree() then return end
+		job.Finishing = true
+		local exit = treeMarker("ExitTrigger")
+		if exit then
+			job.Transit:Approach(exit, function() return not job.Safe() end, function() return not inTree() end)
+			job.Wait(3, function() return not inTree() end, true)
+			if job.Safe() and inTree() then walkTo(job, exit, 4, function() return not inTree() end, true) end
+		end
+		if job.Safe() and inTree() then
+			local _, at = treePrompt()
+			if at then
+				job.Character:PivotTo(CFrame.new(at + Vector3.new(0, 3, -30)))
+				engine.SetVelocity(job.Root, Vector3.zero)
+				job.Wait(3, function() return not inTree() end, true)
+			end
+		end
+		if job.Safe() and inTree() then bloom.WorkshopStatus = "Tree exit not confirmed" end
+	end
+	local function reachMachine(job, station, seconds)
+		local at = machinePosition(station)
+		if not at or not inTree() or job.Cancelled() then return false end
+		if not job.Transit:Settle(0.3, job.Cancelled) then return false end
+		if (job.Root.Position - at).Magnitude > 6 then
+			job.Transit:Approach(at, job.Cancelled)
+			if not job.Transit:Settle(0.5, job.Cancelled) then return false end
+		end
+		if job.Cancelled() or not inTree() then return false end
+		if (job.Root.Position - at).Magnitude > 8 then
+			local points = { at }
+			pcall(function()
+				local route = game:GetService("PathfindingService"):CreatePath({ AgentRadius = 2, AgentHeight = 5, AgentCanJump = true, WaypointSpacing = 6 })
+				route:ComputeAsync(job.Root.Position, at)
+				if route.Status == Enum.PathStatus.Success then
+					points = {}
+					for _, point in ipairs(route:GetWaypoints()) do table.insert(points, point.Position) end
+					table.insert(points, at)
+				end
+			end)
+			if job.Cancelled() then return false end
+			local exit, deadline = treeMarker("ExitTrigger"), os.clock() + (seconds or 15)
+			for _, point in ipairs(points) do
+				if job.Cancelled() or not inTree() or os.clock() >= deadline or (job.Root.Position - at).Magnitude <= 6 then break end
+				if not (exit and (point - exit).Magnitude < 14) then walkTo(job, point, math.min(3, math.max(0, deadline - os.clock())), nil) end
+			end
+			if job.Safe() then job.Humanoid:MoveTo(job.Root.Position); engine.SetVelocity(job.Root, Vector3.zero) end
+		end
+		return not job.Cancelled() and inTree() and (job.Root.Position - at).Magnitude <= 8
+	end
+	local function settleMachinePending()
+		local pending = bloom.PendingMachine
+		if not pending or not bloom.DataValid then return pending == nil end
+		local confirmed = false
+		if pending.Kind == "trade" then
+			confirmed = (bloom.Counts[pending.From] or 0) <= pending.Counts[pending.From] - pending.Cost
+				and (bloom.Counts[nextTier[pending.From]] or 0) >= pending.Counts[nextTier[pending.From]] + 1
+		else
+			confirmed = bloom.Essence >= pending.Essence + 1
+			for _, tier in ipairs(tierOrder) do confirmed = confirmed and (bloom.Counts[tier] or 0) <= pending.Counts[tier] - pending.Recipe[tier] end
+		end
+		if confirmed then bloom.PendingMachine = nil; return true end
+		return false
+	end
+	local function machineRequest(job, kind, tier)
+		if bloom.PendingMachine or not bloom.DataValid or job.Cancelled() then return false end
+		local station = kind == "trade" and "ButterflyMachine" or "MutationShrine"
+		if not reachMachine(job, station, 15) then bloom.WorkshopStatus = "Machine approach not confirmed"; return false end
+		for _ = 1, 3 do
+			if job.Cancelled() then return false end
+			readButterflySave()
+			if not bloom.DataValid then return false end
+			if kind == "trade" then
+				local reserve = enabled("Butterfly_Craft") and not enabled("Butterfly_Smart") and bloom.Recipe[tier] or 0
+				if (bloom.Counts[tier] or 0) - reserve < bloom.TradeCost[tier] then return false end
+			elseif not canCraft() then return false end
+			local requestName = kind == "trade" and "RF/Butterflies/AskTradeUp" or "RF/Butterflies/AskCraftEssence"
+			local at = machinePosition(station)
+			if job.Cancelled() or not at or not inTree() or (job.Root.Position - at).Magnitude > 8 then return false end
+			if not remote(requestName, "RemoteFunction") then bloom.WorkshopStatus = "Machine remote unavailable"; return false end
+			local pending = { Kind = kind, From = tier, Counts = table.clone(bloom.Counts), Essence = bloom.Essence,
+				Recipe = table.clone(bloom.Recipe), Cost = tier and bloom.TradeCost[tier] }
+			bloom.PendingMachine = pending -- Set BEFORE any potentially consumptive request.
+			local ok, accepted, reason
+			if kind == "trade" then ok, accepted, reason = callOwned(job, invoke, "RF/Butterflies/AskTradeUp", tier)
+			else ok, accepted, reason = callOwned(job, invoke, "RF/Butterflies/AskCraftEssence") end
+			if ok and accepted == false then
+				bloom.PendingMachine = nil
+				bloom.WorkshopStatus = tostring(reason or "Machine refused request")
+				if not string.find(string.lower(tostring(reason)), "closer", 1, true) or not reachMachine(job, station, 8) then return false end
+			else
+				job.Wait(2, function() readButterflySave(); return settleMachinePending() end)
+				if bloom.PendingMachine then bloom.WorkshopStatus = "Waiting for machine save confirmation"; return false end
+				return true
+			end
+		end
+		return false
+	end
+	local function runWorkshop(job)
+		bloom.NextTrip = os.clock() + 60
+		job.Finally = function() leaveWorkshopTree(job) end
+		if not enterWorkshopTree(job) then bloom.WorkshopStatus = "Tree entry not confirmed"; return end
+		local trades, crafted = 0, 0
+		if enabled("Butterfly_Trade") then
+			local plan = enabled("Butterfly_Smart") and smartPlan(bloom.Counts) or nil
+			for _, tier in ipairs({ "Green", "Blue", "Purple" }) do
+				local limit = plan and plan[tier] or (not enabled("Butterfly_Smart") and bloom.Trades[tier] and 400 or 0)
+				for _ = 1, limit do
+					if job.Cancelled() or not enabled("Butterfly_Trade") then break end
+					bloom.WorkshopStatus = "Trading " .. tierNames[tier]
+					if not machineRequest(job, "trade", tier) then break end
+					trades += 1
+					if not job.Wait(0.15) then break end
+				end
+				if bloom.PendingMachine then return end
+			end
+		end
+		if enabled("Butterfly_Craft") then
+			for _ = 1, 50 do
+				if job.Cancelled() or not enabled("Butterfly_Craft") or not canCraft() then break end
+				bloom.WorkshopStatus = "Crafting Enchanted Essence"
+				if not machineRequest(job, "craft") then break end
+				crafted += 1
+				if not job.Wait(0.3) then break end
+			end
+		end
+		if not bloom.PendingMachine then bloom.WorkshopStatus = string.format("Confirmed: %d trades, %d essence", trades, crafted) end
+	end
+	-- Compose with existing adapters; no farm toggle writes, no lease stealing.
+	local nativeActive, nativeYield, nativeCanRun = IsStealActive, Tasks.PriorityStealYield, Tasks.PriorityCanRun
+	local nativeShield, nativeDodge, nativeClaim, nativeAction = engine.AutoShieldWanted, engine.TriggerGuardDodge, engine.ClaimMovement, Tasks.WispNativeAction
+	local activeAdapter = function() return activeJob == nil and nativeActive() end
+	local function bestEventRank()
+		return math.min(star.Wanted and Tasks.PriorityRank("Star") or 99, bloom.Wanted and Tasks.PriorityRank("Butterfly") or 99)
+	end
+	local yieldAdapter = function()
+		if activeJob then return true end
+		if bestEventRank() < farm.Rank and not RuntimeState.IsExecuting and not engine.AutoCycle
+			and not (engine.State.Carrying or engine.State.SignalCarrying or engine.State.WeldCarrying) then return true end
+		return nativeYield()
+	end
+	local canRunAdapter = function(key)
+		if key == "Star" then return star.Wanted end
+		if key == "Butterfly" then return bloom.Wanted end
+		return nativeCanRun(key)
+	end
+	local shieldAdapter = function() return activeJob == nil and nativeShield() end
+	local dodgeAdapter = function(...) if not activeJob then return nativeDodge(...) end end
+	local claimAdapter = function(owner, ...)
+		if activeJob and owner ~= activeJob.Owner and owner ~= "race" then return false end
+		if owner ~= "race" and owner ~= "star" and owner ~= "butterfly" then
+			local key = ({ wisp = "Wisp", banjo = "Wisp", essence = "Essence", place = "Place", treadmill = "Treadmill", scramble = "StealLab" })[owner]
+			if key and Tasks.BloomStarOver(key) then return false end
+			if owner == "steal" and bestEventRank() < farm.Rank then return false end
+		end
+		return nativeClaim(owner, ...)
+	end
+	local actionAdapter = function(kind, action, ...)
+		if activeJob then if kind == "fusion" then return false end; return 0 end
+		return nativeAction(kind, action, ...)
+	end
+	IsStealActive, Tasks.PriorityStealYield, Tasks.PriorityCanRun = activeAdapter, yieldAdapter, canRunAdapter
+	engine.AutoShieldWanted, engine.TriggerGuardDodge, engine.ClaimMovement, Tasks.WispNativeAction = shieldAdapter, dodgeAdapter, claimAdapter, actionAdapter
+	local function settingsChanged(state)
+		state.Generation += 1
+		state.ConfigUntil = os.clock() + 3
+		if state == star then star.Wanted, star.AskAt = false, 0 else bloom.Wanted = false end
+		if engine.AutoWake then engine.AutoWake() end
+	end
+	local function show(name, text)
+		local item = labels[name]
+		if not item then return end
+		text = tostring(text):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+		if item.Shown ~= text then pcall(item.Label.SetText, item.Label, text); item.Shown = text end
+	end
+	local function countdown()
+		local now = Workspace:GetServerTimeNow()
+		local endsAt = tonumber(Workspace:GetAttribute("ButterflyBloomEndsAt"))
+		if eventLive() then return endsAt and "Live — " .. math.max(0, math.ceil(endsAt - now)) .. "s left" or "Bloom live" end
+		local nextAt = math.floor((now - bloom.Offset) / bloom.Interval) * bloom.Interval + bloom.Offset
+		if nextAt <= now then nextAt += bloom.Interval end
+		return "Next bloom in " .. math.max(0, math.ceil(nextAt - now)) .. "s"
+	end
+	local function observe()
+		SetElevated8()
+		readButterflySave()
+		settleMachinePending()
+		if bloom.NetClaimed or netTool() then bloom.NetPending = nil end
+		if bloom.WasLive and not eventLive() then table.clear(bloom.Flights); bloom.ChaseLock = nil end
+		bloom.WasLive = eventLive()
+		local payload, now = star.Payload, Workspace:GetServerTimeNow()
+		if payload and (tonumber(payload.ExpiresAt) or math.huge) <= now then
+			star.Payload, star.Wanted, star.Revision = nil, false, star.Revision + 1
+		end
+		if activeJob and activeJob.PendingCall and not activeJob.Aborted and activeJob.Cancelled() then
+			activeJob.ReleasePending()
+		end
+		updateDemand()
+		if enabled("Star_Auto") or enabled("Butterfly_Auto") or enabled("Butterfly_Trade") or enabled("Butterfly_Craft") then refreshFarmPriority() end
+		if activeJob and activeJob.HealthTick then activeJob.HealthTick() end
+		if not star.Busy then
+			if not enabled("Star_Auto") then star.Status = "Off"
+			elseif not star.Payload then star.Status = "Waiting for shooting star"
+			elseif now < (tonumber(star.Payload.LandAt) or now) then star.Status = "Falling — lands in " .. math.ceil(star.Payload.LandAt - now) .. "s"
+			elseif raceWanted() then star.Status = "Paused for Auto Race"
+			else star.Status = "Star landed; waiting for movement" end
+		end
+		if not bloom.Busy then
+			if not enabled("Butterfly_Auto") then bloom.Status = "Off"
+			elseif not eventLive() then bloom.Status = "Waiting for bloom"
+			elseif raceWanted() then bloom.Status = "Paused for Auto Race" end
+			if not enabled("Butterfly_Trade") and not enabled("Butterfly_Craft") then bloom.WorkshopStatus = "Off"
+			elseif bloom.PendingMachine then bloom.WorkshopStatus = "Waiting for machine save confirmation"
+			elseif LocalPlayer:GetAttribute("EnchantedTreeUnlocked") ~= true then bloom.WorkshopStatus = "Finish Wisp; open Enchanted Tree"
+			elseif eventLive() then bloom.WorkshopStatus = "Waiting for bloom to end"
+			elseif fieldClosed() then bloom.WorkshopStatus = "Waiting for daylight / open wall"
+			elseif raceWanted() then bloom.WorkshopStatus = "Paused for Auto Race"
+			elseif not workshopNeeded() then bloom.WorkshopStatus = "Waiting for selected trade/craft materials"
+			elseif os.clock() < bloom.NextTrip then bloom.WorkshopStatus = "Waiting for next machine visit"
+			else bloom.WorkshopStatus = "Ready; waiting for movement" end
+		end
+		show("Star", "Status: " .. star.Status)
+		show("Caught", "Caught: " .. star.Caught)
+		show("Bloom", "Status: " .. bloom.Status)
+		show("ButterflyCaught", bloom.DataValid and "Total caught: " .. bloom.TotalCaught or "Total caught: waiting for save")
+		show("Schedule", countdown())
+		show("Workshop", "Status: " .. bloom.WorkshopStatus)
+		show("Counts", string.format("Emerald %d | Sapphire %d | Amethyst %d | Radiant %d | Essence %d",
+			bloom.Counts.Green or 0, bloom.Counts.Blue or 0, bloom.Counts.Purple or 0, bloom.Counts.Golden or 0, bloom.Essence))
+	end
+	function Tasks.BuildBloomStarUI(home, events)
+		local starGroup = events:AddGroupbox({ Name = "Shooting Star", IconName = "star", Side = 2, Collapsed = false, DisableCollapsing = false })
+		starGroup:AddToggle("Toggle_Star_Auto", { Text = "Auto Catch Star", Default = false, Tooltip = "Catch your landed star.", Callback = function(value)
+			FarmConfig.Star_Auto = value == true; settingsChanged(star)
+		end })
+		labels.Star = { Label = starGroup:AddLabel("Status: Off", true) }
+		labels.Caught = { Label = starGroup:AddLabel("Caught: 0", true) }
+		local catchGroup = events:AddGroupbox({ Name = "Butterfly Bloom", IconName = "bug", Side = 1, Collapsed = false, DisableCollapsing = false })
+		local catchToggle = catchGroup:AddToggle("Toggle_Butterfly_Auto", { Text = "Auto Butterfly", Default = false, Tooltip = "Catch during Butterfly Bloom.", Callback = function(value)
+			FarmConfig.Butterfly_Auto = value == true; settingsChanged(bloom)
+		end })
+		local options = catchGroup:AddDependencyBox()
+		options:SetupDependencies({ { catchToggle, true } })
+		options:AddDropdown("Dropdown_Butterfly_Mode", { Text = "Catch Mode", Values = { "Stand", "Chase", "Circle", "Patrol" }, Default = 1, Callback = function(value)
+			if table.find({ "Stand", "Chase", "Circle", "Patrol" }, value) then bloom.Mode = value; bloom.ChaseLock = nil end
+		end })
+		options:AddDropdown("Dropdown_Butterfly_Priority", { Text = "Catch Priority", Values = { "Rarest", "Nearest" }, Default = 1, Tooltip = "Chase target order.", Callback = function(value)
+			bloom.Priority = value == "Nearest" and "Nearest" or "Rarest"; bloom.ChaseLock = nil
+		end })
+		options:AddDropdown("Dropdown_Butterfly_Tiers", { Text = "Catch Butterflies", Values = { "Emerald", "Sapphire", "Amethyst", "Radiant" }, Multi = true,
+			Default = { "Emerald", "Sapphire", "Amethyst", "Radiant" }, AllowNull = true, Tooltip = "Chase target tiers.", Callback = function(value)
+				local selected = ParseMultiDropdownSelection(value)
+				bloom.Tiers, bloom.ChaseLock = {}, nil
+				for tier, name in pairs(tierNames) do if selected[name] then bloom.Tiers[tier] = true end end
+			end })
+		options:AddSlider("Slider_Butterfly_Speed", { Text = "Catch Speed", Min = 100, Max = 600, Default = 320, Rounding = 0, Callback = function(value)
+			bloom.Speed = math.clamp(tonumber(value) or 320, 100, 600)
+		end })
+		labels.Bloom = { Label = catchGroup:AddLabel("Status: Off", true) }
+		labels.ButterflyCaught = { Label = catchGroup:AddLabel("Total caught: waiting for save", true) }
+		labels.Schedule = { Label = catchGroup:AddLabel("Waiting for bloom", true) }
+		local workshop = home:AddGroupbox({ Name = "Butterfly Workshop", IconName = "flower-2", Side = 2, Collapsed = false, DisableCollapsing = false })
+		local tradeToggle = workshop:AddToggle("Toggle_Butterfly_Trade", { Text = "Auto Trade Up", Default = false, Tooltip = "Trade at the tree machine.", Callback = function(value)
+			FarmConfig.Butterfly_Trade = value == true; settingsChanged(bloom)
+		end })
+		local tradeOptions = workshop:AddDependencyBox()
+		tradeOptions:SetupDependencies({ { tradeToggle, true } })
+		tradeOptions:AddDropdown("Dropdown_Butterfly_Trades", { Text = "Trade Up Tiers", Multi = true, Default = {}, AllowNull = true,
+			Values = { "Emerald to Sapphire", "Sapphire to Amethyst", "Amethyst to Radiant" }, Callback = function(value)
+				local selected = ParseMultiDropdownSelection(value)
+				bloom.Trades = { Green = selected["Emerald to Sapphire"] == true, Blue = selected["Sapphire to Amethyst"] == true, Purple = selected["Amethyst to Radiant"] == true }
+			end })
+		tradeOptions:AddToggle("Toggle_Butterfly_Smart", { Text = "Smart Trade for Essence", Default = false, Tooltip = "Reserve complete craft recipes.", Callback = function(value)
+			FarmConfig.Butterfly_Smart = value == true; settingsChanged(bloom)
+		end })
+		workshop:AddToggle("Toggle_Butterfly_Craft", { Text = "Auto Craft Essence", Default = false, Tooltip = "Craft at the mutation shrine.", Callback = function(value)
+			FarmConfig.Butterfly_Craft = value == true; settingsChanged(bloom)
+		end })
+		labels.Workshop = { Label = workshop:AddLabel("Status: Off", true) }
+		labels.Counts = { Label = workshop:AddLabel("Emerald 0 | Sapphire 0 | Amethyst 0 | Radiant 0 | Essence 0", true) }
+		bindEvents()
+		local elapsed, bindAt = 0, 0
+		table.insert(links, RunService.Heartbeat:Connect(function(dt)
+			elapsed += dt
+			if elapsed < 0.5 or disposed or LibraryLoader.Unloaded then return end
+			elapsed = 0
+			local ok, failure = pcall(observe)
+			if not ok then
+				star.Wanted, bloom.Wanted = false, false
+				star.LastError, bloom.LastError = tostring(failure), tostring(failure)
+			end
+		end))
+		-- One shared bounded/cooperative job worker, not one movement worker per option.
+		task.spawn(function()
+			while not disposed and not LibraryLoader.Unloaded do
+				local ok, failure = pcall(function()
+					SetElevated8()
+					if os.clock() >= bindAt then bindAt = os.clock() + 5; bindEvents() end
+					if enabled("Star_Auto") then askStarState() end
+					if enabled("Butterfly_Auto") or enabled("Butterfly_Trade") or enabled("Butterfly_Craft") then loadButterflyModules() end
+					updateDemand()
+					local doStar = star.Wanted and (not bloom.Wanted or Tasks.PriorityRank("Star") <= Tasks.PriorityRank("Butterfly"))
+					if doStar then
+						local payload = star.Payload
+						runOwned("star", "Star", star, function() return enabled("Star_Auto") and star.Payload == payload
+							and (tonumber(payload.ExpiresAt) or math.huge) > Workspace:GetServerTimeNow() end,
+							function(job) catchStar(job, payload) end)
+					elseif bloom.Wanted then
+						if enabled("Butterfly_Auto") and eventLive() then
+							runOwned("butterfly", "Butterfly", bloom, function() return enabled("Butterfly_Auto") and eventLive() end, catchButterflies)
+						elseif workshopNeeded() and not eventLive() then
+							runOwned("butterfly", "Butterfly", bloom, function() return not (eventLive() and enabled("Butterfly_Auto"))
+								and (enabled("Butterfly_Trade") or enabled("Butterfly_Craft")) end, runWorkshop)
+						end
+					end
+				end)
+				if not ok then
+					star.Wanted, bloom.Wanted = false, false
+					if os.clock() >= (bloom.ErrorAt or 0) then bloom.ErrorAt = os.clock() + 30; warn("[N3 HUB] Bloom/Star scheduler: " .. tostring(failure)) end
+				end
+				task.wait(0.5)
+			end
+		end)
+	end
+	LibraryLoader:OnUnload(function()
+		disposed, star.Wanted, bloom.Wanted = true, false, false
+		star.Generation, bloom.Generation = star.Generation + 1, bloom.Generation + 1
+		for _, link in ipairs(links) do link:Disconnect() end
+		if activeJob then
+			if activeJob.Transit then pcall(activeJob.Transit.Stop, activeJob.Transit) end
+			if activeJob.HealthStop then pcall(activeJob.HealthStop) end
+			if activeJob.Owner == "star" and activeJob.Finally then pcall(activeJob.Finally) end
+			engine.ReleaseMovement(activeJob.Owner)
+		end
+		-- Already-dispatched RPCs remain pending; no retry/forced owner reset on unload.
+		if IsStealActive == activeAdapter then IsStealActive = nativeActive end
+		if Tasks.PriorityStealYield == yieldAdapter then Tasks.PriorityStealYield = nativeYield end
+		if Tasks.PriorityCanRun == canRunAdapter then Tasks.PriorityCanRun = nativeCanRun end
+		if engine.AutoShieldWanted == shieldAdapter then engine.AutoShieldWanted = nativeShield end
+		if engine.TriggerGuardDodge == dodgeAdapter then engine.TriggerGuardDodge = nativeDodge end
+		if engine.ClaimMovement == claimAdapter then engine.ClaimMovement = nativeClaim end
+		if Tasks.WispNativeAction == actionAdapter then Tasks.WispNativeAction = nativeAction end
+	end)
+end)()
+-- END BLOOM STAR CONTROLLER
 
 Tasks.BuildMainInterface()
 Tasks.Loading:SetMessage("Verifying")
