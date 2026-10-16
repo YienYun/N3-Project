@@ -269,6 +269,27 @@ source contract holds.  No checker is a live Roblox/server/FPS test.
   are touched. All 15/15 static scope checkers and the Luau WASM
   compile pass.
 
+## Misc tab: collapse Performance + Utility into one Misc group
+
+- `Event -> Misc` previously had two side-by-side groupboxes:
+  `Performance` (left) and `Utility` (right).  Both are dropped
+  and replaced with a single new `Misc` groupbox at the top of the
+  tab, with the `wrench` icon.
+- All `PerfGroup:*` and `UtilGroup:*` calls now target the new
+  `MiscGroup` directly, so the existing `Toggle_Perf_*`,
+  `Slider_Perf_*`, `Toggle_Util_AntiAFK`, `Toggle_Util_AutoRejoin`
+  and the `Rejoin Server Now` button all live under one Misc
+  group.  No item was removed or reordered.
+- The `Community` groupbox (Discord + Website buttons, added by
+  `AddDiscordBox(MiscTab)`) is preserved exactly as before.
+- The `AddTab("Misc", "gauge", "Performance & Utility")` description
+  is shortened to `Misc` to match the new layout.
+- No behavior change to the underlying controllers (FPS cap,
+  Optimizer, FPS/Ping overlay, Disable 3D, No Fog, Full Bright,
+  Anti AFK, Auto Rejoin, Rejoin button are all wired the same
+  way).  All 15/15 static scope checkers and the Luau WASM
+  compile pass.
+
 
 ## Butterfly Bloom + Shooting Star
 

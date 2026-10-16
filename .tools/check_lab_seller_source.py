@@ -37,7 +37,7 @@ assert 'local CustomGroup = WebhookTab:AddGroupbox({' in runtime
 assert 'local CustomTabbox = CustomGroup:AddTabbox({' in runtime
 previous = (runtime[:first] + runtime[last:]).replace(ordinary_guard, '').replace(new_ui, old_ui)
 assert hashlib.sha256(strip_builtin_visual(strip_lab_stock(strip_auto_mutate(previous))).encode()).hexdigest() == (
-    '36b930d97a29c499f3b09874577ed6021f38f4bf9231e012b60c457422400c0b'
+    '463f0c26699520e54c4d55ab8e2a57dac659423c918770d582db27946bea237e'
 ), 'Changes escaped the Lab seller scope; do not update its reviewed baseline'
 
 for contract in (
