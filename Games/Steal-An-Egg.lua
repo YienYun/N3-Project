@@ -22331,6 +22331,7 @@ end
 		local item = labels[name]
 		if not item then return end
 		text = tostring(text):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+		if item.Purple then text = '<font color="#D946EF"><b>' .. text .. '</b></font>' end
 		if item.Shown ~= text then pcall(item.Label.SetText, item.Label, text); item.Shown = text end
 	end
 	local function countdown()
@@ -22385,7 +22386,7 @@ end
 		show("ButterflyCaught", bloom.DataValid and "Total caught: " .. bloom.TotalCaught or "Total caught: waiting for save")
 		show("Schedule", countdown())
 		show("Workshop", "Status: " .. bloom.WorkshopStatus)
-		show("Counts", string.format("Emerald %d | Sapphire %d | Amethyst %d | Radiant %d | Essence %d",
+		show("Counts", string.format("Emerald: %d - Sapphire: %d - Amethyst: %d - Radiant: %d - Essence: %d",
 			bloom.Counts.Green or 0, bloom.Counts.Blue or 0, bloom.Counts.Purple or 0, bloom.Counts.Golden or 0, bloom.Essence))
 	end
 	function Tasks.BuildBloomStarUI(events)
@@ -22398,48 +22399,44 @@ end
 		local butterflyGroup = events:AddGroupbox({ Name = "Butterfly Bloom", IconName = "bug", Side = 1, Collapsed = false, DisableCollapsing = false })
 		local butterflyTabs = butterflyGroup:AddTabbox({ Name = "Butterfly Tabs" })
 		local catchGroup = butterflyTabs:AddTab("Catch", "bug")
-		local catchToggle = catchGroup:AddToggle("Toggle_Butterfly_Auto", { Text = "Auto Butterfly", Default = false, Tooltip = "Catch during Butterfly Bloom.", Callback = function(value)
-			FarmConfig.Butterfly_Auto = value == true; settingsChanged(bloom)
-		end })
-		local options = catchGroup:AddDependencyBox()
-		options:SetupDependencies({ { catchToggle, true } })
-		options:AddDropdown("Dropdown_Butterfly_Mode", { Text = "Catch Mode", Values = { "Stand", "Chase", "Circle", "Patrol" }, Default = 1, Callback = function(value)
+		labels.Bloom = { Label = catchGroup:AddLabel("Status: Off", true), Purple = true }
+		labels.ButterflyCaught = { Label = catchGroup:AddLabel("Total caught: waiting for save", true), Purple = true }
+		labels.Schedule = { Label = catchGroup:AddLabel("Waiting for bloom", true), Purple = true }
+		catchGroup:AddDropdown("Dropdown_Butterfly_Mode", { Text = "Catch Mode", Values = { "Stand", "Chase", "Circle", "Patrol" }, Default = 1, Callback = function(value)
 			if table.find({ "Stand", "Chase", "Circle", "Patrol" }, value) then bloom.Mode = value; bloom.ChaseLock = nil end
 		end })
-		options:AddDropdown("Dropdown_Butterfly_Priority", { Text = "Catch Priority", Values = { "Rarest", "Nearest" }, Default = 1, Tooltip = "Chase target order.", Callback = function(value)
+		catchGroup:AddDropdown("Dropdown_Butterfly_Priority", { Text = "Catch Priority", Values = { "Rarest", "Nearest" }, Default = 1, Tooltip = "Chase target order.", Callback = function(value)
 			bloom.Priority = value == "Nearest" and "Nearest" or "Rarest"; bloom.ChaseLock = nil
 		end })
-		options:AddDropdown("Dropdown_Butterfly_Tiers", { Text = "Catch Butterflies", Values = { "Emerald", "Sapphire", "Amethyst", "Radiant" }, Multi = true,
+		catchGroup:AddDropdown("Dropdown_Butterfly_Tiers", { Text = "Catch Butterflies", Values = { "Emerald", "Sapphire", "Amethyst", "Radiant" }, Multi = true,
 			Default = { "Emerald", "Sapphire", "Amethyst", "Radiant" }, AllowNull = true, Tooltip = "Chase target tiers.", Callback = function(value)
 				local selected = ParseMultiDropdownSelection(value)
 				bloom.Tiers, bloom.ChaseLock = {}, nil
 				for tier, name in pairs(tierNames) do if selected[name] then bloom.Tiers[tier] = true end end
 			end })
-		options:AddSlider("Slider_Butterfly_Speed", { Text = "Catch Speed", Min = 100, Max = 600, Default = 320, Rounding = 0, Callback = function(value)
+		catchGroup:AddSlider("Slider_Butterfly_Speed", { Text = "Catch Speed", Min = 100, Max = 600, Default = 320, Rounding = 0, Callback = function(value)
 			bloom.Speed = math.clamp(tonumber(value) or 320, 100, 600)
 		end })
-		labels.Bloom = { Label = catchGroup:AddLabel("Status: Off", true) }
-		labels.ButterflyCaught = { Label = catchGroup:AddLabel("Total caught: waiting for save", true) }
-		labels.Schedule = { Label = catchGroup:AddLabel("Waiting for bloom", true) }
+		catchGroup:AddToggle("Toggle_Butterfly_Auto", { Text = "Auto Butterfly", Default = false, Tooltip = "Catch during Butterfly Bloom.", Callback = function(value)
+			FarmConfig.Butterfly_Auto = value == true; settingsChanged(bloom)
+		end })
 		local workshop = butterflyTabs:AddTab("Workshop", "flower-2")
-		local tradeToggle = workshop:AddToggle("Toggle_Butterfly_Trade", { Text = "Auto Trade Up", Default = false, Tooltip = "Trade at the tree machine.", Callback = function(value)
+		labels.Workshop = { Label = workshop:AddLabel("Status: Off", true), Purple = true }
+		labels.Counts = { Label = workshop:AddLabel("Emerald: 0 - Sapphire: 0 - Amethyst: 0 - Radiant: 0 - Essence: 0", true), Purple = true }
+		workshop:AddToggle("Toggle_Butterfly_Trade", { Text = "Auto Trade Up", Default = false, Tooltip = "Trade at the tree machine.", Callback = function(value)
 			FarmConfig.Butterfly_Trade = value == true; settingsChanged(bloom)
 		end })
-		local tradeOptions = workshop:AddDependencyBox()
-		tradeOptions:SetupDependencies({ { tradeToggle, true } })
-		tradeOptions:AddDropdown("Dropdown_Butterfly_Trades", { Text = "Trade Up Tiers", Multi = true, Default = {}, AllowNull = true,
+		workshop:AddDropdown("Dropdown_Butterfly_Trades", { Text = "Trade Up Tiers", Multi = true, Default = {}, AllowNull = true,
 			Values = { "Emerald to Sapphire", "Sapphire to Amethyst", "Amethyst to Radiant" }, Callback = function(value)
 				local selected = ParseMultiDropdownSelection(value)
 				bloom.Trades = { Green = selected["Emerald to Sapphire"] == true, Blue = selected["Sapphire to Amethyst"] == true, Purple = selected["Amethyst to Radiant"] == true }
 			end })
-		tradeOptions:AddToggle("Toggle_Butterfly_Smart", { Text = "Smart Trade for Essence", Default = false, Tooltip = "Reserve complete craft recipes.", Callback = function(value)
+		workshop:AddToggle("Toggle_Butterfly_Smart", { Text = "Smart Trade for Essence", Default = false, Tooltip = "Reserve complete craft recipes.", Callback = function(value)
 			FarmConfig.Butterfly_Smart = value == true; settingsChanged(bloom)
 		end })
 		workshop:AddToggle("Toggle_Butterfly_Craft", { Text = "Auto Craft Essence", Default = false, Tooltip = "Craft at the mutation shrine.", Callback = function(value)
 			FarmConfig.Butterfly_Craft = value == true; settingsChanged(bloom)
 		end })
-		labels.Workshop = { Label = workshop:AddLabel("Status: Off", true) }
-		labels.Counts = { Label = workshop:AddLabel("Emerald 0 | Sapphire 0 | Amethyst 0 | Radiant 0 | Essence 0", true) }
 		bindEvents()
 		local elapsed, bindAt = 0, 0
 		table.insert(links, RunService.Heartbeat:Connect(function(dt)

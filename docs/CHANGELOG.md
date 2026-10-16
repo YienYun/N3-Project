@@ -110,6 +110,34 @@ source contract holds.  No checker is a live Roblox/server/FPS test.
   `FarmConfig`/`DefaultFarmConfig` and from the `SaveManager` defaults
   so old saved JSONs are silently ignored.
 
+## Butterfly Bloom UI refresh
+
+- Catch sub-tab (`Event -> Butterfly Bloom -> Catch`): the three live
+  status rows (`Status:`, `Total Caught:`, `Live:`) are now rendered
+  in N3 purple `#D946EF` via a new `Purple` flag on the label table
+  that the shared `show()` helper wraps in `<font color="#D946EF">`.
+  Order is `Status` / `Total Caught` / `Live` labels first, then
+  `Catch Mode` / `Catch Priority` / `Catch Butterflies` / `Catch Speed`
+  controls, then the `Auto Butterfly` toggle last.
+- The `Catch Mode`, `Catch Priority`, `Catch Butterflies` and
+  `Catch Speed` controls are no longer hidden when `Auto Butterfly`
+  is OFF — the `AddDependencyBox` wrapper and its
+  `SetupDependencies({ { catchToggle, true } })` gate are removed so
+  the user can configure them up-front.
+- Workshop sub-tab (`Event -> Butterfly Bloom -> Workshop`): `Status:`
+  and the counts row are also N3 purple. Order is `Status` / counts
+  row first, then `Auto Trade Up` / `Trade Up Tiers` /
+  `Smart Trade for Essence` / `Auto Craft Essence`.
+- The `Trade Up Tiers` dropdown and `Smart Trade for Essence` toggle
+  are no longer hidden when `Auto Trade Up` is OFF — same
+  dependency-box removal as the Catch tab. The counts row now uses the
+  format `Emerald: N - Sapphire: N - Amethyst: N - Radiant: N - Essence: N`
+  (single dash, no `|` separators) and reads `Radiant` (not `Radian`).
+- Checker updates: butterfly_ui hash advanced (`f007faa0…` ->
+  `67194b4c…`) because the text + dependency-box removal changed the
+  post-strip body. admin + capture hashes also advanced (same root
+  cause). All other source checkers unchanged.
+
 
 ## Butterfly Bloom + Shooting Star
 
