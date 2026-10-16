@@ -22331,13 +22331,20 @@ end
 		local item = labels[name]
 		if not item then return end
 		text = tostring(text):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
-		if item.Purple then text = '<font color="#D946EF"><b>' .. text .. '</b></font>' end
+		if item.Purple then
+			-- item.Purple is a list of keywords. Each "Keyword:" prefix in the
+			-- rendered row gets the N3 purple accent; the value/separator that
+			-- follows stays in default white so numbers and dashes remain
+			-- readable.
+			local keys = item.Purple
+			text = text:gsub("(" .. table.concat(keys, "|") .. "):", '<font color="#D946EF"><b>%1:</b></font>')
+		end
 		if item.Shown ~= text then pcall(item.Label.SetText, item.Label, text); item.Shown = text end
 	end
 	local function countdown()
 		local now = Workspace:GetServerTimeNow()
 		local endsAt = tonumber(Workspace:GetAttribute("ButterflyBloomEndsAt"))
-		if eventLive() then return endsAt and "Live — " .. math.max(0, math.ceil(endsAt - now)) .. "s left" or "Bloom live" end
+		if eventLive() then return endsAt and "Live: " .. math.max(0, math.ceil(endsAt - now)) .. "s left" or "Live: bloom window" end
 		local nextAt = math.floor((now - bloom.Offset) / bloom.Interval) * bloom.Interval + bloom.Offset
 		if nextAt <= now then nextAt += bloom.Interval end
 		return "Next bloom in " .. math.max(0, math.ceil(nextAt - now)) .. "s"
@@ -22399,9 +22406,9 @@ end
 		local butterflyGroup = events:AddGroupbox({ Name = "Butterfly Bloom", IconName = "bug", Side = 1, Collapsed = false, DisableCollapsing = false })
 		local butterflyTabs = butterflyGroup:AddTabbox({ Name = "Butterfly Tabs" })
 		local catchGroup = butterflyTabs:AddTab("Catch", "bug")
-		labels.Bloom = { Label = catchGroup:AddLabel("Status: Off", true), Purple = true }
-		labels.ButterflyCaught = { Label = catchGroup:AddLabel("Total caught: waiting for save", true), Purple = true }
-		labels.Schedule = { Label = catchGroup:AddLabel("Waiting for bloom", true), Purple = true }
+		labels.Bloom = { Label = catchGroup:AddLabel("Status: Off", true), Purple = { "Status" } }
+		labels.ButterflyCaught = { Label = catchGroup:AddLabel("Total caught: waiting for save", true), Purple = { "Total caught" } }
+		labels.Schedule = { Label = catchGroup:AddLabel("Waiting for bloom", true), Purple = { "Live" } }
 		catchGroup:AddDropdown("Dropdown_Butterfly_Mode", { Text = "Catch Mode", Values = { "Stand", "Chase", "Circle", "Patrol" }, Default = 1, Callback = function(value)
 			if table.find({ "Stand", "Chase", "Circle", "Patrol" }, value) then bloom.Mode = value; bloom.ChaseLock = nil end
 		end })
@@ -22421,8 +22428,8 @@ end
 			FarmConfig.Butterfly_Auto = value == true; settingsChanged(bloom)
 		end })
 		local workshop = butterflyTabs:AddTab("Workshop", "flower-2")
-		labels.Workshop = { Label = workshop:AddLabel("Status: Off", true), Purple = true }
-		labels.Counts = { Label = workshop:AddLabel("Emerald: 0 - Sapphire: 0 - Amethyst: 0 - Radiant: 0 - Essence: 0", true), Purple = true }
+		labels.Workshop = { Label = workshop:AddLabel("Status: Off", true), Purple = { "Status" } }
+		labels.Counts = { Label = workshop:AddLabel("Emerald: 0 - Sapphire: 0 - Amethyst: 0 - Radiant: 0 - Essence: 0", true), Purple = { "Emerald", "Sapphire", "Amethyst", "Radiant", "Essence" } }
 		workshop:AddToggle("Toggle_Butterfly_Trade", { Text = "Auto Trade Up", Default = false, Tooltip = "Trade at the tree machine.", Callback = function(value)
 			FarmConfig.Butterfly_Trade = value == true; settingsChanged(bloom)
 		end })

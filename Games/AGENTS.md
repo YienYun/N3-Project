@@ -284,21 +284,32 @@ Read this before changing `Steal-An-Egg.lua`.
   No duplicate Home workshop. All OFF by default; preserve IDs/callbacks and the
   user's separate flat one-group Wisp/Banjo Quests UI (no quest subtabs).
 - Catch sub-tab order: `Status:` / `Total Caught:` / `Live:` labels first (the
-  three live status rows, rendered in N3 purple `#D946EF` via the shared
-  `show()` helper), then `Catch Mode` / `Catch Priority` / `Catch Butterflies`
-  / `Catch Speed` controls, then the `Auto Butterfly` toggle at the bottom.
+  three live status rows, with the keyword + colon prefix in N3 purple
+  `#D946EF` and the value/separator in default white — implemented via the
+  shared `show()` helper plus a `Purple` keyword list on the label table),
+  then `Catch Mode` / `Catch Priority` / `Catch Butterflies` /
+  `Catch Speed` controls, then the `Auto Butterfly` toggle at the bottom.
   The Mode/Priority/Butterflies/Speed controls are NOT hidden behind the
   `Auto Butterfly` toggle anymore — they stay visible so the user can
   pre-configure them without first turning the auto on. (Drop the
   `AddDependencyBox` wrapper and the `SetupDependencies({ { catchToggle, true } })`
   gate.)
-- Workshop sub-tab order: `Status:` / counts row (N3 purple) first, then
-  `Auto Trade Up` / `Trade Up Tiers` / `Smart Trade for Essence` /
+- Workshop sub-tab order: `Status:` / counts row (same keyword-only purple)
+  first, then `Auto Trade Up` / `Trade Up Tiers` / `Smart Trade for Essence` /
   `Auto Craft Essence`. The `Trade Up Tiers` dropdown and `Smart Trade`
   toggle are also no longer hidden behind the `Auto Trade Up` toggle —
   drop the second `AddDependencyBox` / `SetupDependencies` gate. Counts
   format: `Emerald: N - Sapphire: N - Amethyst: N - Radiant: N - Essence: N`
-  (single space around the dash, no `|` separators).
+  (single space around the dash, no `|` separators). Each of the five
+  resource names is purple; the numbers and dashes stay white.
+- `Purple` keyword list: each label entry that wants the keyword accent
+  carries a `Purple = { "Keyword1", "Keyword2", … }` array. The shared
+  `show()` helper runs
+  `text:gsub("(Keyword1|Keyword2|...):", '<font color="#D946EF"><b>%1:</b></font>')`,
+  so only the matched `Keyword:` prefix is wrapped. Initial `AddLabel`
+  text stays plain until the first observer tick. `countdown()` was
+  tweaked to use the colon form (`Live: Ns left` / `Live: bloom window`)
+  so the `Live` keyword matches.
 - tools/check_butterfly_ui_source.py reverses four exact presentation edits to
   a815629 (SHA256 d4c01e1236479c77375239022bcdf3363ea48cdb9bbf5ad32a079636845deaa6).
   Keep this frozen along with historical hashes. Run it plus the prior eleven
