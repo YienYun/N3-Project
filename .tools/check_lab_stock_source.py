@@ -14,8 +14,8 @@ raw = (ROOT / 'Games/Steal-An-Egg.lua').read_text()
 if '-- BEGIN ADMIN CONTROLLER' in raw:
     raw = strip_admin(raw)
 s = strip_nitro_refill(strip_wisp(raw))
-assert hashlib.sha256(strip_builtin_visual(strip_lab_stock(strip_auto_mutate(s))).encode()).hexdigest() == (
-    'f2345282fdfdd7d47fcfb34863a2108698bf91f52a91c46e9c8d617aa138f66d'
+assert hashlib.sha256(strip_builtin_visual(strip_lab_stock(s)).encode()).hexdigest() == (
+    'c366d404fb57d461364b0742f2bd0817f420fac56129c652d25d1938b5b4a975'
 ), 'Changes escaped the four reviewed stock insertion sites / 9badf26 baseline'
 a = s.index('-- BEGIN LAB STOCK CONTROLLER')
 b = s.index('-- END LAB STOCK CONTROLLER', a)

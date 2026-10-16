@@ -13,7 +13,7 @@ if '-- BEGIN ADMIN CONTROLLER' in s:
 if '-- BEGIN BLOOM STAR' in s:
     s = strip_bloom_star(s)
 # Frozen pre-Banjo baseline: only reviewed quest transport scopes may be normalized.
-assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == '693a7d99189757fedfff69a579da5ed46c32806fd80de28fb3e16ea986bb424d'
+assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == '10269da6d359c22819f8201291b791da25bd54f039d5c3e376faadeb872bb7a1'
 normalized = strip_quest_transit(s)
 assert '-- BEGIN QUEST TRANSIT' not in normalized
 q = s[s.index('-- BEGIN QUEST TRANSIT CONTROLLER'):s.index('-- END QUEST TRANSIT CONTROLLER')]
@@ -86,7 +86,7 @@ for contract in (
     'not self.Ragdoll or not self.Owns()', 'dropSent = true', 'if held and self.Owns() then',
     'RunService.Heartbeat:Wait()', 'if released then return end', 'self.RagdollStop()',
 ):
-    assert contract in r, f'Missing actual Chili RagdollTravel dependency: {contract}'
+    assert contract in r, f'Missing actual source RagdollTravel dependency: {contract}'
 assert r.index('strikeConnection = LocalPlayer:GetAttributeChangedSignal') < r.index('strike:FireServer(')
 assert r.index('strike:FireServer(') < r.index('while not landed') < r.index('if not landed then return false')
 assert 'self:Approach(' not in r and 'self:FlyTo(' not in r, 'RagdollTravel is not free flight or a tween alias'

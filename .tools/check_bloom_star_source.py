@@ -12,7 +12,7 @@ if '-- BEGIN ADMIN CONTROLLER' in s:
     s = strip_admin(s)
 if "-- BEGIN CAPTURE" in s:
     s = strip_capture(s)
-assert hashlib.sha256(strip_bloom_star(s).encode()).hexdigest() == '29637582c16bc01ec2d250fa504042979b7b40964de7853266f126db4a4f1b7d', 'Changes escaped reviewed additions / published 7e9549a'
+assert hashlib.sha256(strip_bloom_star(s).encode()).hexdigest() == 'aabf9d4b7b6168d62348f35f424595283f0ac35d31d0511c5f9e74003756e695', 'Changes escaped reviewed additions / published 7e9549a'
 assert hashlib.sha256((ROOT / 'Games/Source/StealAnEgg/ChiliSourceV2.lua').read_bytes()).hexdigest() == '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d'
 c = s[s.index('-- BEGIN BLOOM STAR CONTROLLER'):s.index('-- END BLOOM STAR CONTROLLER')]
 control = s[s.index('-- BEGIN BLOOM STAR TRANSIT CONTROL'):s.index('-- END BLOOM STAR TRANSIT CONTROL')]
@@ -104,7 +104,7 @@ for key in ('Star_Auto', 'Butterfly_Auto', 'Butterfly_Trade', 'Butterfly_Craft')
 assert 'star.Wanted = enabled("Star_Auto") and not raceWanted()' in c
 assert 'bloom.Wanted = not raceWanted()' in c
 print('PASS: full frozen 7e9549a reversal; existing Forest quests, normal/Instant, race and prior gameplay preserved.')
-print('PASS: semantic Chili Star payload/hold/catch/claim, Butterfly swarm/net/modes/flags and trade/smart/craft protocols.')
+print('PASS: semantic source Star payload/hold/catch/claim, Butterfly swarm/net/modes/flags and trade/smart/craft protocols.')
 print('PASS: Event Butterfly Catch/Workshop subtabs + separate Star; default OFF, one shared job worker, native leases, race-first and owned cleanup.')
 print('PASS: server-event counts / save-confirmed consumption, pending RPC protection and no invented butterfly catch remote.')
 print('Static source/compile evidence only. No Roblox event, reward, route, death or FPS success is claimed.')

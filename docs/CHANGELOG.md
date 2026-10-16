@@ -6,6 +6,12 @@ references (`Games/Source/StealAnEgg/ChiliSourceV2.lua`,
 `Tools/ThemeManager.lua` URL) are immutable.  The published
 `origin/main` baseline is `5c1763a` (only `ChiliSourceV2.lua`).
 
+> **Branding.**  User-facing strings (Text / Tooltip / AddLabel / status row
+> returns) never name "Chili".  Lua comments and code paths that
+> explicitly map a N3 block to the immutable reference file may keep the
+> reference name `ChiliSourceV2.lua`.  This is N3 Hub, not a reskin of
+> another script.
+
 Static scope checkers live in `.tools/`.  Each one reverses its own marked
 insertions to a frozen historical hash and refuses to advance unless every
 source contract holds.  No checker is a live Roblox/server/FPS test.
@@ -42,9 +48,9 @@ source contract holds.  No checker is a live Roblox/server/FPS test.
 
 ## Race Rally — first delivered
 
-- Source 49313–51365 (Chili V2 lifecycle) adapted to N3 with semantic names.
+- Source 49313–51365 (source V2 lifecycle) adapted to N3 with semantic names.
 - N3 caps race speed 100–144/default 144 per user request; the bundled
-  Chili default 100–160 is preserved in the reference.
+  source default 100–160 is preserved in the reference.
 - Race-first pause/resume: active carry/Instant, guards and inventory yield
   while Auto Race owns the rig.  User toggles never change.
 - Anti Ragdoll preference is preserved (N3 re-enables precisely the
@@ -86,12 +92,25 @@ source contract holds.  No checker is a live Roblox/server/FPS test.
 
 ## Admin Abuse (top-level tab)
 
-- Saturday/Sunday night around 22:00 WIB the chili admin event drops.
-- **Auto Use Admin Treadmill** ON by default (mirrors Chili V2 76576–76600).
+- Saturday/Sunday night around 22:00 WIB the admin event drops.
+- **Auto Use Admin Treadmill** ON by default (mirrors source V2 76576–76600).
 - **Auto Steal V3 (Admin Treadmill)** OFF — only takes effect while the
   admin treadmill is live; gates Auto Use Admin Treadmill.
 - **Auto Steal Minigame Egg** OFF — Red Light Green Light + T-Rex Run
-  detector; live pickup is the Chili V3 path.
+  detector. Sub-controller (mirror of source V2 76810–77070):
+  - Detect: `workspace:GetAttribute("Event_RedLightGreenLight")` /
+    `"Event_TrexRun"` flag + `RLGL_EggPosition` / `TrexRun_EggPosition`
+    Vector3 attribute.
+  - Find UID: nearest field egg (`EggStateModule.ReadFieldEggs().Records`)
+    within 40 studs, excluding `Carried` / `Claimed` / `GuardCarried` /
+    numeric carried states.
+  - Gate: stable UID for 2 s before any pickup.
+  - Pickup: route the existing N3 steal engine —
+    `Engine.CurrentTarget = uid` + `Engine.AutoWake()` — no scripted
+    pickup RPC.
+  - Save/restore: `FarmConfig.AutoStealAll / AutoStealSelected /
+    AutoStealEnabled` flipped off during the minigame takeover and
+    restored on toggle-off / unload.
 - Boost detector scans `workspace:GetAttribute("AdminBoost_*")` first
   (authoritative), then `BottomUI/BottomFrame/Holder/<Name>/Value,Timer`.
 - Treadmill recovery watchdog binds `RE/Treadmill/AssignedBeltShifted`
@@ -112,7 +131,7 @@ source contract holds.  No checker is a live Roblox/server/FPS test.
 ## Backlog — three remaining broad scopes
 
 1. Minigame events: Auto Steal Minigame Egg is currently a status
-   detector; the actual live pickup flow still needs the Chili V3 path
+   detector; the actual live pickup flow still needs the source V3 path
    validated.
 2. Auto Hop / server tools: explicitly deferred, separate manager
    module like SaveManager/ThemeManager, not bundled into farm changes.

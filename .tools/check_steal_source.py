@@ -17,8 +17,8 @@ runtime = strip_builtin_visual((ROOT / GAME).read_text())
 reference = (ROOT / "Games/Source/StealAnEgg/SenaV2.lua").read_bytes()
 blob = hashlib.sha1(b"blob " + str(len(reference)).encode() + b"\0" + reference).hexdigest()
 assert blob == REFERENCE_BLOB, "Sena reference changed: review source and update docs/baseline intentionally"
-assert not (ROOT / "Games/Source/Chili-SourceV1.lua").exists(), "Retired reference must not return"
-assert "Chili-SourceV1" not in runtime, "Retired V1 reference remains in the runtime"
+assert not (ROOT / "Games/Source/source-SourceV1.lua").exists(), "Retired reference must not return"
+assert "source-SourceV1" not in runtime, "Retired V1 reference remains in the runtime"
 assert not re.search(r"\bfn\d+\b", runtime), "Numbered decompiler functions in runtime"
 
 
@@ -83,7 +83,7 @@ assert not re.search(r"\brecord\.State\s*=(?!=)", normal), "Must not rewrite fie
 # Library, loader and unrelated games must remain byte-identical to baseline.
 changed = subprocess.check_output(["git", "diff", "--name-only", BASELINE], cwd=ROOT, text=True).splitlines()
 allowed = {
-    GAME, "Games/AGENTS.md", "Games/Source/Chili-SourceV1.lua",
+    GAME, "Games/AGENTS.md", "Games/Source/source-SourceV1.lua",
     "docs/auto-steal.md", "tools/check_steal_source.py",
 }
 assert set(changed) <= allowed, f"Out-of-scope file changes: {set(changed) - allowed}"

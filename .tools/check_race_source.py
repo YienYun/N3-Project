@@ -1,4 +1,4 @@
-"""Static checks for the scoped Chili V2 Race Rally adaptation. Never executes Roblox.
+"""Static checks for the scoped source V2 Race Rally adaptation. Never executes Roblox.
 
 Fingerprints capture the already-working N3/Sena code before the race edit.
 Intentional future changes to those protected blocks require a separate review.
@@ -12,7 +12,7 @@ from steal_visual_scope import strip_builtin_visual
 ROOT = Path(__file__).resolve().parents[1]
 runtime = strip_builtin_visual(strip_wisp((ROOT / "Games/Steal-An-Egg.lua").read_text()))
 reference = ROOT / "Games/Source/StealAnEgg/ChiliSourceV2.lua"
-assert hashlib.sha256(reference.read_bytes()).hexdigest() == "0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d", "Chili V2 reference changed"
+assert hashlib.sha256(reference.read_bytes()).hexdigest() == "0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d", "source V2 reference changed"
 
 PROTECTED = [['Sena normal lifecycle',
   '\t-- Normal Auto Steal: SenaV2',
@@ -103,7 +103,7 @@ for field in ("Status", "Tokens", "Wins", "Racer"):
 assert runtime.count('"Slider_Race_Speed"') == 1
 assert runtime.count('"Toggle_Race_AutoRace"') == 1
 
-# User override of Chili HigherFirst: race availability pauses egg logic, never toggles.
+# User override of source HigherFirst: race availability pauses egg logic, never toggles.
 yield_start = race.index('Tasks.RaceShouldYieldSteal = function()')
 yield_gate = race[yield_start:race.index('Tasks.RacePriority = function()', yield_start)]
 for requirement in ('race.Disposed', 'race.Resetting', 'InRaceNow()', 'race.Travelling',
@@ -129,23 +129,23 @@ loop = runtime[runtime.index('function Tasks.StealLoop()'):runtime.index('task.s
 assert loop.index('Engine.ReleaseMovement("steal")') < loop.index('local finishedAt =')
 assert 'This Instant worker has now unwound' in loop
 assert 'Paused for Auto Race' in runtime
-print("PASS: Chili V2 reference, race source contracts, single controller, semantic names, UI and cancellation boundaries.")
+print("PASS: source V2 reference, race source contracts, single controller, semantic names, UI and cancellation boundaries.")
 print("PASS: 8 pre-existing gameplay blocks are byte-identical after excluding reviewed presentation additions.")
 print("Static checks only: no Roblox execution, simulation, server-win or FPS claim.")
 print('PASS: race-first pause/resume, no farm toggle writes, no egg/carry starvation and Instant cleanup boundary.')
 
-# Chili 50627-50633 returns from mount recovery without tearing down its drive.
+# source 50627-50633 returns from mount recovery without tearing down its drive.
 # Match that lifetime: otherwise recovery repeatedly rebuilds/reprojects the path.
 source_mount = re.search(r'if not E and s and Z\(\) then(.*?)return true', reference.read_text(), re.S)
 assert source_mount is not None and not re.search(r'\ba\(\)', source_mount[1])
 nudge_start = race.index('if not finished and enabled and NudgeRaceMount() then')
 nudge_branch = race[nudge_start:race.index('if finished then', nudge_start)]
-assert 'StopRaceDrive()' not in nudge_branch, 'Keep the existing drive alive during mount recovery, as Chili does'
+assert 'StopRaceDrive()' not in nudge_branch, 'Keep the existing drive alive during mount recovery, as source does'
 assert 'return' in nudge_branch
 assert 'if finished then\n\t\t\t\tStopRaceDrive()' in race
 assert 'RaceFinishPlace' in race and 'LeaveRace("Finished "' in race
 assert 'SetAttribute("RaceFinishPlace"' not in race, 'Finish must come from game attributes, never local fabrication'
-print('PASS: Chili mount-recovery drive lifetime; finish/leave still use game finish attributes, not local place/progress.')
+print('PASS: source mount-recovery drive lifetime; finish/leave still use game finish attributes, not local place/progress.')
 
 # User-requested N3 cap; do not misrepresent this as the bundled source's maximum.
 slider_start = runtime.index('RaceDriveOptions:AddSlider("Slider_Race_Speed", {')

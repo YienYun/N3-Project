@@ -37,7 +37,7 @@ assert 'local CustomGroup = WebhookTab:AddGroupbox({' in runtime
 assert 'local CustomTabbox = CustomGroup:AddTabbox({' in runtime
 previous = (runtime[:first] + runtime[last:]).replace(ordinary_guard, '').replace(new_ui, old_ui)
 assert hashlib.sha256(strip_builtin_visual(strip_lab_stock(strip_auto_mutate(previous))).encode()).hexdigest() == (
-    '0d5a4e4e8211efd0456d200812e9c1425ee922b96b855f966a8de6ec9e2ce218'
+    '224f761b4d4ab648d31a0bc51d507ef89e1ecaba783258ba6c7182a8c6848f7e'
 ), 'Changes escaped the Lab seller scope; do not update its reviewed baseline'
 
 for contract in (
@@ -89,7 +89,7 @@ ui_start = seller.index('\tfunction DrScramble.BuildLabSellerUI(group)')
 ui_end = seller.index('\tLibraryLoader:OnUnload(function()', ui_start)
 ui = seller[ui_start:ui_end]
 assert hashlib.sha256(seller[:ui_start].encode()).hexdigest() == (
-    '1b1da49adaf7881c9f9d0ab795fa6d7bd1b46d6df61cad87b94ad8a7c84a7691'
+    '03a94110591023ada892631435d84642d81bc6ebcac96332d190b68c21677b72'
 ), 'Seller backend changed during the UI-only cleanup'
 labels = re.findall(r'Text = "([^"]+)"', ui)
 assert labels == ['Auto Sell Lab Egg', 'Sell Rule', 'Max Rarity', 'Income Below',

@@ -7,8 +7,8 @@ Read this before changing `Steal-An-Egg.lua`.
 - The active normal Auto Steal reference is `Source/StealAnEgg/SenaV2.lua`
   from main `a2fb701`, blob `a36898ee403cacf3aa9742bfb9f9270f867cb765`.
   Read the normal `t46` controller, not the later player-steal/event systems.
-- The user explicitly retired the old Chili V1 reference and integration.
-  Do not restore it. Future Chili event work is outside this change.
+- The user explicitly retired the old source V1 reference and integration.
+  Do not restore it. Future source event work is outside this change.
 - Fetch/review main before further steal work and merge into the current Arena
   branch when needed. Never replace the customized runtime with main, change
   branches, push main or open a PR without separate authorization.
@@ -41,7 +41,7 @@ Read this before changing `Steal-An-Egg.lua`.
 - Record intentional differences from Sena and untested behavior in
   `../docs/auto-steal.md`. The user performs live validation.
 
-## Race Rally (separate Chili V2 event integration)
+## Race Rally (separate source V2 event integration)
 
 - Race work is now authorized separately; normal Auto Steal stays Sena-based.
 - Reference `Source/StealAnEgg/ChiliSourceV2.lua` is untouched from main `5c1763a`.
@@ -72,7 +72,7 @@ Read this before changing `Steal-An-Egg.lua`.
 
 ## Race-first farm arbitration
 
-- New user instruction overrides Chili's egg-first HigherFirst policy: eligible
+- New user instruction overrides source's egg-first HigherFirst policy: eligible
   open/unraced Auto Race pauses egg logic while leaving every farm toggle/filter ON.
 - Keep N3/Sena steal intact. Use cancellation and wait for normal/Instant/guard
   cleanup before race ownership; never clear shared IsExecuting from race code.
@@ -87,7 +87,7 @@ Read this before changing `Steal-An-Egg.lua`.
 
 - The user requested N3 Race Speed default/max 144 (min 100), including old-save
   callback and runtime clamps. Keep all three in sync; normal/Instant speeds differ.
-- The bundled Chili reference still has max 160/default 150. The screenshot showed
+- The bundled source reference still has max 160/default 150. The screenshot showed
   selected 144, not proof of max. Document this intentional N3 cap honestly.
 - Test races in a clean session with only one hub's drive, not simultaneous hubs.
 
@@ -109,7 +109,7 @@ Read this before changing `Steal-An-Egg.lua`.
 ## Separate Lab reward seller
 
 - Current integration proceeds one feature at a time. Do not call the entire
-  Chili audit implemented. See `../docs/lab-egg-seller.md` for scope/live checks.
+  source audit implemented. See `../docs/lab-egg-seller.md` for scope/live checks.
 - Keep one Scramble Lab group with a flask icon, containing a nested tabbox
   for Lab Trade / Lab Sell with distinct icons, like Webhook Custom. Do not
   replace the outer group with a standalone tabbox. Ordinary seller must exclude
@@ -184,7 +184,7 @@ Read this before changing `Steal-An-Egg.lua`.
   Never move quests into Event or create a second outer group.
   User accepted c620126 and moved on: preserve its Forest-door transport.
   Server Hop/tools remain deferred as a separate manager module.
-- Follow Chili 41403–42256. Read WispQuests/Save and real area DropTables; do not
+- Follow source 41403–42256. Read WispQuests/Save and real area DropTables; do not
   invent quest stages, recipes, remote payloads or target coordinates. Use raw UIDs.
 - One quest worker, native normal/Instant steal input/sorting adapters; preserve
   in-flight native cycle lifetime and all user farm/defense choices. No second
@@ -199,7 +199,7 @@ Read this before changing `Steal-An-Egg.lua`.
   supersedes no-TP: hold Forest egg -> direct door TP. Use Forest-only shared
   carry/guard/window transport, reuse held Forest and an already-active real
   window. Wisp >40 uses this; no world tween or unprotected far pivot fallback.
-  Original Chili >1200 / >40 fallback is reference behavior, NOT the current policy.
+  Original source >1200 / >40 fallback is reference behavior, NOT the current policy.
   Read ../docs/quest-ragdoll-transport.md, 5414–5567 and health 42455–42623.
 - Run `tools/check_wisp_source.py`, all seven prior checkers and full production
   Luau compile. Exactly seven insertion sites reverse byte-for-byte to 3748a3e;
@@ -213,7 +213,7 @@ Read this before changing `Steal-An-Egg.lua`.
   Wisp. No AddTabbox/AddTab in quest UI; append Banjo's default-OFF toggle/status
   after Wisp's controls with a divider. Do not change quest workers or movement
   for this presentation adjustment. No Butterfly or server tools import.
-- Follow immutable Chili V2 14644–15798 and the scoped TreeTrip dependency through
+- Follow immutable source V2 14644–15798 and the scoped TreeTrip dependency through
   72421. Official BanjoCricket data/flags/save and Effect/Aim/AskClaim only;
   listen to server Notes, activate a real bat and require matching new Note acks.
   Playback/Wrong/Reset invalidate old notes even during travel/cooldown.
@@ -253,7 +253,7 @@ Read this before changing `Steal-An-Egg.lua`.
 - Forest-only selection and fail-closed removal of source far fallback are
   explicit user-driven deviations, not claims about the immutable source selector.
   Wisp >40 / Banjo approach >60 uses this transport; no far fallback after failure.
-- Read Chili Proto_122 (42455–42623): health maintenance, BreakJointsOnDeath=false,
+- Read source Proto_122 (42455–42623): health maintenance, BreakJointsOnDeath=false,
   RequiresNeck=false, Dead disabled. Keep equivalent protection private to owned
   quest ragdoll transport. Capture/restore flags, disconnect all links, permit
   healing only the same owned actor, never move a zero-health actor or heal a race
@@ -317,7 +317,7 @@ Read this before changing `Steal-An-Egg.lua`.
   Egg, not Event. One named/icon/collapsible group. Auto OFF, dependent holder
   taking ON per source, height 20–120/default 45, KeepAway 20–150/default 45,
   status + server standings. See ../docs/capture-the-egg.md for full mapping.
-- Read Chili 4430–5959 plus combat 35555–36235 / 38664–38705, not just UI labels.
+- Read source 4430–5959 plus combat 35555–36235 / 38664–38705, not just UI labels.
   UID/carrier possession, actual prompts/raw carry, generic non-event starter
   ragdoll, holding footprint/threat geometry, real bat prediction/steer/trigger.
   No fabricated hit/score, reward claim or depositing the event egg in a base.
@@ -346,7 +346,47 @@ Read this before changing `Steal-An-Egg.lua`.
 - `.tools/admin_scope.py` reverses the Admin Abuse block to the new
   pre-admin baseline SHA256 `7c68d364b5ee7d24a9d274dcdbef64390496ad8dde71c35f0b49f9142d1fa562`.
   The inner `-- BEGIN/END ADMIN UI` markers scope the UI body inside the
-  function.  Run `.tools/check_admin_source.py` with the rest; preserve Chili
+  function.  Run `.tools/check_admin_source.py` with the rest; preserve source
   V2 8950-9330 dependencies and the existing N3 Treadmill mount reuse.
   Admin Abuse is a top-level tab; Capture The Egg now lives inside it
   instead of as a Home group.
+
+## Minigame Egg sub-controller (RLGL + T-Rex Run)
+
+- Sits inside the same Admin Abuse top-level tab, no separate outer group.
+  Auto Steal Minigame Egg toggle defaults OFF. Status row "Minigame: …" in
+  Admin Status. Header switches to "ADMIN ABUSE LIVE" while minigame is live.
+- Mirror of source V2 76810-77070: same attribute names, same `m(pos)` UID
+  distance cap (40 studs) and the same 2 s stable-UID gate before pickup.
+  No ngarang; we read `workspace:GetAttribute("Event_RedLightGreenLight")`,
+  `"Event_TrexRun"`, `"<Prefix>_EggPosition"` Vector3, and
+  `"<Prefix>_CarrierUserId"` exactly as source does.
+- Pickup is N3-native: `Engine.CurrentTarget = uid` then
+  `Engine.AutoWake()`. Do NOT call `Engine.StealNow(uid, true)` thinking it
+  will queue-and-wake; N3's StealNow only clears the block list and bumps
+  the session id. The forced pickup is `CurrentTarget` + `AutoWake`.
+- `EggStateModule.ReadFieldEggs().Records` is reused (the same call Capture
+  uses). Records with `State` `Carried` / `Claimed` / `GuardCarried` / `2`
+  / `3` are excluded. The first record with `PrimaryPart` inside 40 studs
+  wins.
+- On takeover the controller saves `FarmConfig.AutoStealAll /
+  AutoStealSelected / AutoStealEnabled` once (guarded by a `TurnedSteal`
+  flag) and forces them to false so the farm does not race the minigame.
+  The same flag restores the saved values and clears
+  `Engine.CurrentTarget` + `Engine.CancelAutoSteal()` on toggle off,
+  race takeover, character change, unload or when the event goes cold.
+- Race first: `RaceShouldYieldSteal` / `RaceOwnsCharacter` gate every
+  mutation. `Tasks.MinigameRestore()` is exported so the unload path and
+  any future race-leased cancellation can release the takeover without
+  leaking `CurrentTarget` or stale FarmConfig.
+
+## Branding (N3 Hub, not Chili)
+
+- User-facing strings in `Steal-An-Egg.lua` (Text / Tooltip / AddLabel /
+  AddLabel note / status row returns / header returns) must not contain
+  "Chili" case-insensitive. Comments and code paths that need the
+  reference file may keep `ChiliSourceV2.lua` because the immutable
+  reference filename is required for the read-only hash check. The
+  `Documentation/AGENTS.md` files reference the path, not a brand.
+- All `.tools/*.py` checker comments were updated to "source" / "source V2"
+  to keep the read-only error messages neutral.

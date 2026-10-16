@@ -7790,7 +7790,7 @@ local function ExecuteSellSelection(petUids, eggUids)
 	end
 end
 -- BEGIN SCRAMBLE LAB SELLER
--- Chili V2 6594-6798: identify Lab rewards by banner EggSkin, not egg names.
+-- source V2 6594-6798: identify Lab rewards by banner EggSkin, not egg names.
 -- Separate from ordinary eggs; inventory-only, with the existing Lab action lock.
 do
 	local seller = {
@@ -8021,7 +8021,7 @@ do
 end
 -- END SCRAMBLE LAB SELLER
 
--- Chili V2 belt discovery: the plot's physical bottom precedes client decoration.
+-- source V2 belt discovery: the plot's physical bottom precedes client decoration.
 function Tasks.ScanTreadmillInPlot(plot)
 	if not plot then return nil end
 	local bottom = plot:FindFirstChild("TreadmillBottom", true)
@@ -8496,7 +8496,7 @@ GetScrambleTradeStatusFn = function()
 	return wanted, summary, picks, ready
 end
 -- BEGIN LAB STOCK CONTROLLER
--- Chili: StockTargets 8874+, inventory shortfall 75075+, recipe pools 36450+.
+-- source: StockTargets 8874+, inventory shortfall 75075+, recipe pools 36450+.
 -- One quota per category across banners; feed the existing N3 picker only.
 do
 	local stock = { Wanted = {}, Reserved = {}, Targets = {}, Valid = false, NextAt = 0,
@@ -8646,7 +8646,7 @@ do
 			end
 			for id in pairs(stock.Banners) do
 				if stock.Disposed or LibraryLoader.Unloaded then return end
-				-- Same official game data API and sample budget as Chili. Not a live test.
+				-- Same official game data API and sample budget as source. Not a live test.
 				local sampled, result = pcall(recipes.Simulate, id, 4000)
 				if stock.Disposed or LibraryLoader.Unloaded then return end
 				if sampled and type(result) == "table" and type(result.SlotPicks) == "table" then
@@ -8734,7 +8734,7 @@ end
 -- END LAB STOCK CONTROLLER
 
 function DrScramble.LabActionAllowed()
-	-- Like Chili, this operates on owned inventory, not the character/field carry.
+	-- Like source, this operates on owned inventory, not the character/field carry.
 	-- A busy egg farm must not starve a ready recipe; race still has user priority.
 	return not LibraryLoader.Unloaded and not RaceOwnsCharacter()
 		and not (Tasks.RaceShouldYieldSteal and Tasks.RaceShouldYieldSteal())
@@ -16694,7 +16694,7 @@ function Tasks.OnCharacterAdded(NewCharacter)
 	ApplyAntiRagdoll(NewCharacter)
 	UnequipAllTools()
 end
--- Racing Event: semantic port of ChiliSourceV2's Race Rally controller.
+-- Racing Event: semantic port of source V2's Race Rally controller.
 -- See docs/race-rally.md for source ranges and N3 integration boundaries.
 do
 	local CollectionService = game:GetService("CollectionService")
@@ -16892,7 +16892,7 @@ do
 		return race.Eligible, race.Requirement
 	end
 	local function HigherPriorityRaceTask()
-		-- Chili HigherFirst (50069-50208), adapted: Auto Race always outranks eggs.
+		-- source HigherFirst (50069-50208), adapted: Auto Race always outranks eggs.
 		-- Keep unrelated exclusive-event arbitration, never scan/finish eggs first.
 		if
 			Tasks.ShootingStarState
@@ -18139,7 +18139,7 @@ do
 			local finishPlace = LocalPlayer:GetAttribute("RaceFinishPlace")
 			local finished = type(finishPlace) == "number"
 			if not finished and enabled and NudgeRaceMount() then
-				-- Chili keeps an existing drive alive while the mount recovery runs.
+				-- source keeps an existing drive alive while the mount recovery runs.
 				SetRaceAction(
 					string.format("Not on the racer yet, moving and jumping to get back on (%d/3)", race.NudgeCount)
 				)
@@ -18446,7 +18446,7 @@ Tasks.Loading:SetMessage("Load All Requirements")
 Tasks.Loading:SetCurrentStep(4)
 Tasks.Loading:SetDescription("Building the window, tabs & all N3 Hub features...")
 -- BEGIN AUTO MUTATE CONTROLLER
--- Chili 53868-54810: equipped consumable + placed owned UID, no mutation argument.
+-- source 53868-54810: equipped consumable + placed owned UID, no mutation argument.
 do
 	local engine = RuntimeState.StealEngine
 	local state = { Generation = 0, Busy = false, Lease = false, Wanted = false, Disposed = false,
@@ -18829,7 +18829,7 @@ end
 -- END AUTO MUTATE CONTROLLER
 
 -- BEGIN NITRO REFILL CONTROLLER
--- Chili 54473-54536: no Nitro tool, affordable MutationToken, wait for tool grant.
+-- source 54473-54536: no Nitro tool, affordable MutationToken, wait for tool grant.
 -- One shared purchase lane for the existing race shop and the optional refill.
 do
 	local shop = { Busy = false, Disposed = false, Generation = 0, NextAt = {}, PendingNitro = false }
@@ -18958,7 +18958,7 @@ end
 -- END NITRO REFILL CONTROLLER
 
 -- BEGIN QUEST TRANSIT CONTROLLER
--- Shared quest-only transport: Chili FlyTo 13798-13970 / Banjo flight 14990-15210.
+-- Shared quest-only transport: source FlyTo 13798-13970 / Banjo flight 14990-15210.
 -- Runs inside the existing Wisp/Banjo job and movement lease, never a second swap/worker.
 do
 	local engine = RuntimeState.StealEngine
@@ -19048,7 +19048,7 @@ do
 		end
 		-- END CAPTURE GROUND CONTROL
 		-- BEGIN BLOOM STAR TRANSIT CONTROL
-		-- Chili BeginFlight/GodMode/health (40119-40233, 42455-42623).
+		-- source BeginFlight/GodMode/health (40119-40233, 42455-42623).
 		-- Dynamic event motion uses this SAME transit ownership/cleanup, not another rig.
 		-- BEGIN CAPTURE GROUND FLIGHT
 		function transit:BeginControl()
@@ -19160,7 +19160,7 @@ do
 					end
 					local facing = face and Vector3.new(face.X - root.Position.X, 0, face.Z - root.Position.Z) or Vector3.new(delta.X, 0, delta.Z)
 					if mode == "tween" then
-						-- Chili's FlyTo: small dt-scaled CFrame steps, not a destination PivotTo.
+						-- source's FlyTo: small dt-scaled CFrame steps, not a destination PivotTo.
 						if (root.Position - cursor).Magnitude > 6 then cursor = root.Position end
 						local difference = position - cursor
 						cursor += difference.Magnitude <= speed * dt and difference or difference.Unit * speed * dt
@@ -19181,7 +19181,7 @@ do
 			if not ok then error(failure, 0) end
 			return result == true
 		end
-		-- Chili 4470-4568, 5175-5248, 5414-5567: the actual shared RagdollTravel dependency.
+		-- source 4470-4568, 5175-5248, 5414-5567: the actual shared RagdollTravel dependency.
 		local function readTravelEgg(uid)
 			if not EggStateModule then return nil end
 			if type(EggStateModule.ReadFieldEgg) == "function" then
@@ -19220,7 +19220,7 @@ do
 				-- END CAPTURE TRAVEL EXCLUSION
 				local guard = slot and engine.FindGuard("Forest")
 				-- BEGIN BLOOM STAR TRANSIT SELECTION
-				-- Chili's event selector is generic; the approved quest Forest policy stays unchanged.
+				-- source's event selector is generic; the approved quest Forest policy stays unchanged.
 				-- BEGIN CAPTURE TRAVEL SELECTOR
 				if owner == "star" or owner == "butterfly" or owner == "capture" then
 				-- END CAPTURE TRAVEL SELECTOR
@@ -19310,10 +19310,10 @@ do
 				if active == self then active = nil end
 			end
 			local ok, result, message = pcall(function()
-				-- N3 equivalent of Chili's armed-hit exemption: allow the real game's ragdoll.
+				-- N3 equivalent of source's armed-hit exemption: allow the real game's ragdoll.
 				-- Keep preferences unchanged; suppress recovery only for this owned transport.
 				self.Active, self.Ragdoll, active = true, true, self
-				-- Chili Proto_122 health protection must survive releasing the normal steal shield.
+				-- source Proto_122 health protection must survive releasing the normal steal shield.
 				healthSaved = { BreakJointsOnDeath = humanoid.BreakJointsOnDeath, RequiresNeck = humanoid.RequiresNeck,
 					DeadEnabled = humanoid:GetStateEnabled(Enum.HumanoidStateType.Dead) }
 				protectHealth()
@@ -19412,7 +19412,7 @@ do
 			return self.Owns() and not LibraryLoader.Unloaded and valid()
 		end
 		function transit:Approach(position, cancel, arrived)
-			-- Chili FlyTo raises first, crosses at max(startY, endY)+30, then descends.
+			-- source FlyTo raises first, crosses at max(startY, endY)+30, then descends.
 			local function route(target)
 				local destination = target + Vector3.new(0, 3, 0)
 				local height = math.max(root.Position.Y, destination.Y) + 30
@@ -19439,7 +19439,7 @@ end
 -- END QUEST TRANSIT CONTROLLER
 
 -- BEGIN WISP CONTROLLER
--- Chili V2 41403-42256: WispQuests/Save, native steal inputs, fusion, claims and tree return.
+-- source V2 41403-42256: WispQuests/Save, native steal inputs, fusion, claims and tree return.
 do
 	local engine = RuntimeState.StealEngine
 	local state = { Generation = 0, Disposed = false, Busy = false, Lease = false, Valid = false,
@@ -19990,7 +19990,7 @@ end
 -- END WISP CONTROLLER
 
 -- BEGIN BANJO CONTROLLER
--- Chili V2 14662-15797 + tree-trip dependency 71960-72421. No Butterfly controller import.
+-- source V2 14662-15797 + tree-trip dependency 71960-72421. No Butterfly controller import.
 do
 	local engine = RuntimeState.StealEngine
 	local state = { Generation = 0, Busy = false, Lease = false, Disposed = false, NextAt = 0,
@@ -20115,7 +20115,7 @@ do
 		-- END BLOOM STAR BANJO PRIORITY
 		if os.clock() < (state.PriorityAt or 0) then return state.Higher == true end
 		state.PriorityAt, state.Higher = os.clock() + 0.75, false
-		local rank = Tasks.PriorityRank("Wisp") -- Chili assigns Banjo to the Wisp quest lane.
+		local rank = Tasks.PriorityRank("Wisp") -- source assigns Banjo to the Wisp quest lane.
 		if engine.Movement.PlaceWanted and Tasks.PriorityRank("Place") < rank then state.Higher = true end
 		if FarmConfig.AutoTreadmill and Tasks.PriorityRank("Treadmill") < rank then state.Higher = true end
 		if Tasks.PriorityRank("Essence") < rank and Tasks.PriorityCanRun("Essence") then state.Higher = true end
@@ -20521,7 +20521,7 @@ end
 -- END BANJO CONTROLLER
 
 -- BEGIN CAPTURE CONTROLLER
--- Chili V2 4430-5959; combat dependency 35555-36235. No second action worker.
+-- source V2 4430-5959; combat dependency 35555-36235. No second action worker.
 (function()
 	local engine = RuntimeState.StealEngine
 	local state = { Generation = 0, Status = "Off", Busy = false, Height = 45, KeepAway = 45,
@@ -20929,7 +20929,7 @@ end
 		return heldByMe(uid, readEgg(uid))
 	end
 	local function captureJob(job, uid)
-		-- Holding/free-egg glide is not flight/GodMode in Chili. Ragdoll/chase own protection separately.
+		-- Holding/free-egg glide is not flight/GodMode in source. Ragdoll/chase own protection separately.
 		job.HealthStop()
 		local plan, target, mode
 		local steering = RunService.PreSimulation:Connect(function(dt)
@@ -21111,7 +21111,7 @@ end
 end)();
 -- END CAPTURE CONTROLLER
 -- BEGIN ADMIN CONTROLLER
--- Chili V2 8950-9330 (AdminAbuse), 76573-76860 (UI), 10390-10730 (treadmill recovery).
+-- source V2 8950-9330 (AdminAbuse), 76573-76860 (UI), 10390-10730 (treadmill recovery).
 -- Source-backed adaptation: one scheduler, reuse existing N3 treadmill mount, no parallel workers,
 -- no invented remotes. Boost detector scans the same BottomUI Holder used by the native client.
 -- Logging follows the source contract: skipped silently when the executor lacks writefile/isfile.
@@ -21121,19 +21121,19 @@ local function BuildAdminUI(tab)
 	AdminGroup:AddToggle("Toggle_Admin_AutoTreadmill", {
 		Text = "Auto Use Admin Treadmill",
 		Default = true,
-		Tooltip = "Mount the Admin Treadmill when Chili assigns one (Speed/Treadmill/Earnings/EggSize/EggLuck/Mutation boosts).",
+		Tooltip = "Mount the Admin Treadmill when the admin event assigns one (Speed/Treadmill/Earnings/EggSize/EggLuck/Mutation boosts).",
 		Callback = function(value) FarmConfig.Admin_AutoTreadmill = value == true; state.Generation += 1 end,
 	})
 	AdminGroup:AddToggle("Toggle_Admin_InstantV3", {
 		Text = "Auto Steal V3 (Admin Treadmill)",
 		Default = false,
-		Tooltip = "Chili's V3 instant-steal path that ships with the Admin Treadmill event. Only takes effect while Auto Use Admin Treadmill is on and an Admin Treadmill is live.",
+		Tooltip = "The admin event's built-in V3 instant-steal path. Only takes effect while Auto Use Admin Treadmill is on and an Admin Treadmill is live.",
 		Callback = function(value) FarmConfig.Admin_InstantV3 = value == true; state.Generation += 1 end,
 	})
 	AdminGroup:AddToggle("Toggle_Admin_Minigame", {
 		Text = "Auto Steal Minigame Egg",
 		Default = false,
-		Tooltip = "Targets Red Light Green Light and T-Rex Run event eggs (chili v2 76810).",
+		Tooltip = "Targets Red Light Green Light and T-Rex Run event eggs. Native event, no scripted pickup.",
 		Callback = function(value) FarmConfig.Admin_Minigame = value == true; state.Generation += 1 end,
 	})
 	local StatusGroup = tab:AddRightGroupbox("Admin Status", "activity")
@@ -21154,9 +21154,9 @@ do
 		OnAdmin = false, WasAdmin = false, AssignedAt = 0, BeltScanAt = 0, LastText = nil,
 		Minigame = { Event = nil, Status = "Off", Carrier = nil, PushedAt = 0, Handle = nil, EventName = "Minigame Egg" } }
 	Tasks.AdminState = state
-	-- Defaults; only the *Auto Use Admin Treadmill* is on by default to mirror Chili.
+	-- Defaults; only the *Auto Use Admin Treadmill* is on by default to mirror source.
 	FarmConfig.Admin_AutoTreadmill, FarmConfig.Admin_InstantV3, FarmConfig.Admin_Minigame = true, false, false
-	-- Boost attribute -> display name/icon. Matches the chili source map 8960-8961.
+	-- Boost attribute -> display name/icon. Matches the source map 8960-8961.
 	local BoostMap = {
 		Speed = { Attr = "AdminBoost_Speed", Icon = "rbxassetid://128234882192727", Display = "Speed" },
 		Treadmill = { Attr = "AdminBoost_Treadmill", Icon = "rbxassetid://116351329433541", Display = "Admin Treadmill" },
@@ -21251,7 +21251,7 @@ do
 		if not enabled("Admin_InstantV3") then return "Off" end
 		if not enabled("Admin_AutoTreadmill") then return "Needs Auto Use Admin Treadmill" end
 		if not adminBelt() and not state.OnAdmin then return "Waiting for the Admin Treadmill" end
-		return "V3 path armed (manual start, see Chili notes)"
+		return "V3 path armed (waiting for admin event)"
 	end
 	local function detectMinigame()
 		for _, info in ipairs(MinigameList) do
@@ -21349,23 +21349,123 @@ do
 			end
 		end)
 	end))
-	-- Minigame watcher: a small loop, not a worker, just to flip the status flag as desired.
+	-- Minigame sub-controller: find the nearest field egg to the live event egg position,
+	-- require a stable UID for 2s, then route the existing N3 steal engine to that UID.
+	-- Save FarmConfig.AutoSteal* once so the farm does not race the minigame takeover.
+	local function minigameEggPosition(event)
+		local attr = workspace:GetAttribute(event.Prefix .. "_EggPosition")
+		if typeof(attr) == "Vector3" then return attr end
+		return nil
+	end
+	local function findMinigameUid(event, pos)
+		if not pos then return nil end
+		if not (EggStateModule and EggStateModule.ReadFieldEggs) then return nil end
+		local ok, snap = pcall(EggStateModule.ReadFieldEggs)
+		if not ok or type(snap) ~= "table" or type(snap.Records) ~= "table" then return nil end
+		local best, bestDist = nil, math.huge
+		for _, rec in ipairs(snap.Records) do
+			if type(rec) == "table" and rec.Uid then
+				local st = rec.State
+				if st ~= "Carried" and st ~= "Claimed" and st ~= "GuardCarried" and st ~= 2 and st ~= 3 then
+					local model = rec.PhysicalModel or rec.Model
+					local anchor = model and model:IsA("Model") and model.PrimaryPart
+					if anchor then
+						local d = (anchor.Position - pos).Magnitude
+						if d <= 40 and d < bestDist then
+							best, bestDist = rec.Uid, d
+						end
+					end
+				end
+			end
+		end
+		return best
+	end
+	local function saveFarmSteal()
+		if state.Minigame.TurnedSteal then return end
+		state.Minigame.Saved = {
+			AutoStealAll = FarmConfig.AutoStealAll,
+			Selected = FarmConfig.AutoStealSelected,
+			Enabled = FarmConfig.AutoStealEnabled,
+		}
+		if FarmConfig.AutoStealAll ~= nil then FarmConfig.AutoStealAll = false end
+		if FarmConfig.AutoStealSelected ~= nil then FarmConfig.AutoStealSelected = false end
+		if FarmConfig.AutoStealEnabled ~= nil then FarmConfig.AutoStealEnabled = false end
+		state.Minigame.TurnedSteal = true
+	end
+	local function restoreFarmSteal()
+		if not state.Minigame.TurnedSteal then return end
+		local s = state.Minigame.Saved
+		if s then
+			FarmConfig.AutoStealAll = s.AutoStealAll
+			FarmConfig.AutoStealSelected = s.Selected
+			FarmConfig.AutoStealEnabled = s.Enabled
+		end
+		state.Minigame.TurnedSteal = false
+		state.Minigame.Saved = nil
+		state.Minigame.Handle = nil
+		state.Minigame.PushedAt = 0
+		if Engine.CurrentTarget == state.Minigame.Uid then
+			Engine.CurrentTarget = nil
+			if Engine.CancelAutoSteal then pcall(Engine.CancelAutoSteal) end
+		end
+		state.Minigame.Uid = nil
+	end
+	Tasks.MinigameRestore = function() restoreFarmSteal() end
 	table.insert(state.Links, RunService.Heartbeat:Connect(function(dt)
 		if state.Disposed or LibraryLoader.Unloaded then return end
-		if not enabled("Admin_Minigame") then return end
+		if not enabled("Admin_Minigame") then
+			if state.Minigame.TurnedSteal then restoreFarmSteal() end
+			state.Minigame.Status = "Off"
+			return
+		end
 		if raceWanted() then return end
 		local event = detectMinigame()
 		state.Minigame.Event = event
-		if not event then return end
+		if not event then
+			if state.Minigame.TurnedSteal then restoreFarmSteal() end
+			state.Minigame.Status = "Waiting for Red Light Green Light or T-Rex Run"
+			return
+		end
 		local carrier = minigameCarrier(event)
-		if carrier == LocalPlayer.UserId then return end
-		if type(carrier) == "number" then return end
-		-- Source 76840-76860: the V3 path is responsible for taking the egg. We only flip a status flag here
-		-- because the live minigame flow depends on a Chili path we do not own end-to-end.
-		state.Minigame.Status = event.Name .. ": ready"
+		if carrier == LocalPlayer.UserId then
+			state.Minigame.Status = "Carrying the minigame egg"
+			return
+		end
+		if type(carrier) == "number" then
+			state.Minigame.Status = "Another player has the egg"
+			return
+		end
+		local pos = minigameEggPosition(event)
+		if not pos then
+			state.Minigame.Status = "Waiting for the egg to land"
+			return
+		end
+		local uid = findMinigameUid(event, pos)
+		if not uid then
+			state.Minigame.Status = "Looking for the nearest field egg"
+			return
+		end
+		-- Gate: UID must be stable for 2s.
+		if state.Minigame.Uid ~= uid then
+			state.Minigame.Uid, state.Minigame.PushedAt = uid, os.clock()
+			state.Minigame.Status = "Egg landed, locking target"
+			return
+		end
+		if (os.clock() - (state.Minigame.PushedAt or 0)) < 2 then
+			state.Minigame.Status = "Egg stable, preparing pickup"
+			return
+		end
+		if state.Minigame.Handle ~= uid then
+			saveFarmSteal()
+			Engine.CurrentTarget = uid
+			if Engine.AutoWake then pcall(Engine.AutoWake) end
+			state.Minigame.Handle = uid
+		end
+		state.Minigame.Status = "Going for the minigame egg"
 	end))
 	LibraryLoader:OnUnload(function()
 		state.Disposed, state.Generation = true, state.Generation + 1
+		if state.Minigame.TurnedSteal then restoreFarmSteal() end
 		for _, link in ipairs(state.Links) do link:Disconnect() end
 	end)
 end
@@ -21373,7 +21473,7 @@ end
 -- END ADMIN CONTROLLER
 
 -- BEGIN BLOOM STAR CONTROLLER
--- Chili V2 Shooting Star 19664-20342; Butterfly 71401-73412.
+-- source V2 Shooting Star 19664-20342; Butterfly 71401-73412.
 -- Semantic source adaptation: one scheduler, native leases, shared owned transit.
 (function()
 	local engine = RuntimeState.StealEngine
@@ -21819,7 +21919,7 @@ end
 		return not job.Cancelled()
 	end
 	local function stepToStar(job, target)
-		-- Chili StepTo 49077-49205: horizontal hops, lift/gap and two no-progress strikes.
+		-- source StepTo 49077-49205: horizontal hops, lift/gap and two no-progress strikes.
 		local deadline, previous, stalled = os.clock() + 30, math.huge, 0
 		while os.clock() < deadline and not job.Cancelled() do
 			local destination = target()
@@ -21843,7 +21943,7 @@ end
 		return false
 	end
 	local function glideToStar(job, target)
-		-- Chili GlideTo 49205-49316: cursor steps with rollback pause / speed decay.
+		-- source GlideTo 49205-49316: cursor steps with rollback pause / speed decay.
 		local deadline, cursor, pauseUntil, rollbacks = os.clock() + 40, job.Root.Position, 0, 0
 		while os.clock() < deadline and not job.Cancelled() do
 			local dt = RunService.Heartbeat:Wait()

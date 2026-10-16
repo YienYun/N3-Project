@@ -8,7 +8,7 @@ ORIGINAL_WISP_TRAVEL = """\
 			if daylight and GetNightAndWallStatus().ShouldRetreat then state.Status = "Waiting for daylight"; return false end
 			pcall(LocalPlayer.RequestStreamAroundAsync, LocalPlayer, position, 3)
 			if cancelled() or (daylight and GetNightAndWallStatus().ShouldRetreat) then return false end
-			-- Chili's NPC travel uses this pivot fallback; never route normal egg travel here.
+			-- source's NPC travel uses this pivot fallback; never route normal egg travel here.
 			if (root.Position - position).Magnitude > 40 then character:PivotTo(CFrame.new(position + Vector3.new(0, 3, 3))) end
 			local deadline = os.clock() + 3
 			while (root.Position - position).Magnitude > 6 do
