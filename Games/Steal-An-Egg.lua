@@ -267,7 +267,7 @@ local FarmConfig = {
 	ESP_ShowInfo = { Icon = true, Name = true, Rarity = true },
 	ESP_MinValue = 0,
 	ESP_HighlightMode = "Off",
-	ESP_MinRarity = 5,
+	ESP_MinRarity = 0,
 	Movement_WalkSpeed = 16,
 	Movement_JumpPower = 50,
 	Movement_Override = false,
@@ -13389,7 +13389,7 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 	EspGroup:AddDropdown("Dropdown_Esp_MinRarity", {
 		Text = "ESP Min Rarity",
 		Values = RarityNumberedList,
-		Default = "5. Legendary",
+		Default = "1. Common",
 		Multi = false,
 		AllowNull = false,
 		Tooltip = "Show eggs of the chosen rarity and every rarity above it.",
@@ -16132,9 +16132,10 @@ function Tasks.EspRenderLoop()
 		end
 	end
 	local function eggMatchesFilters(rec)
-		if not rec then return false end
-		local rank = RarityRankOf(tostring(rec.Rarity or ""))
-		if FarmConfig.ESP_MinRarity and FarmConfig.ESP_MinRarity > 0 and (not rank or rank < FarmConfig.ESP_MinRarity) then
+		if not rec then return true end
+		local rarity = rec.Rarity
+		local rank = rarity and RarityRankOf(tostring(rarity)) or 0
+		if FarmConfig.ESP_MinRarity and FarmConfig.ESP_MinRarity > 0 and rank > 0 and rank < FarmConfig.ESP_MinRarity then
 			return false
 		end
 		if FarmConfig.ESP_MinValue and FarmConfig.ESP_MinValue > 0 then
@@ -16163,14 +16164,12 @@ function Tasks.EspRenderLoop()
 			end
 			-- Guards
 			if FarmConfig.ESP_Guard then
-				local guardAreas = Workspace:FindFirstChild("__OBJECTS")
-					and Workspace.__OBJECTS:FindFirstChild("Areas")
-					and Workspace.__OBJECTS.Areas:FindFirstChild("GuardAreas")
+				local worldRoot = Workspace:FindFirstChild("World") or Workspace:FindFirstChild("__OBJECTS")
+				local areas = worldRoot and worldRoot:FindFirstChild("Areas")
+				local guardAreas = areas and areas:FindFirstChild("GuardAreas")
 				if guardAreas then
 					for _, area in ipairs(guardAreas:GetChildren()) do
 						local guard = area:FindFirstChild("Guard")
-							or area:FindFirstChild("ForestGuardAuthored")
-							or area:FindFirstChildWhichIsA("Model")
 						if guard and guard:IsA("Model") and within(guard:GetPivot().Position) then
 							local key = "GUARD_" .. area.Name
 							Seen[key] = true
@@ -16205,8 +16204,8 @@ function Tasks.EspRenderLoop()
 					if isOwn and not FarmConfig.ESP_OwnBase then return end
 					if (not isOwn) and not FarmConfig.ESP_OtherBase then return end
 					if not within(model:GetPivot().Position) then return end
-					if rec and not eggMatchesFilters(rec) then return end
-					local color = rec and rarityColor(rec.Rarity) or Color3.fromRGB(255, 255, 255)
+					if not eggMatchesFilters(rec) then return end
+					local color = (rec and rec.Rarity) and rarityColor(rec.Rarity) or Color3.fromRGB(255, 255, 255)
 					local key = "PLACED_" .. rawName
 					Seen[key] = true
 					ensureHighlight(key, model, color, FarmConfig.ESP_EggSize, FarmConfig.ESP_FixedSize)
@@ -16225,7 +16224,7 @@ function Tasks.EspRenderLoop()
 							if not eggMatchesFilters(rec) then
 								-- skip
 							else
-								local color = rarityColor(rec.Rarity)
+								local color = (rec.Rarity and rarityColor(rec.Rarity)) or Color3.fromRGB(255, 255, 255)
 								local adornee = egg.PhysicalModel or egg.ModelInstance or egg.Hitbox
 								if adornee then
 									local key = "WORLD_" .. tostring(egg.Uid or cf.Position)

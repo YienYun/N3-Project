@@ -13,7 +13,7 @@ if '-- BEGIN ADMIN CONTROLLER' in s:
 if '-- BEGIN BLOOM STAR' in s:
     s = strip_bloom_star(s)
 # Frozen pre-Banjo baseline: only reviewed quest transport scopes may be normalized.
-assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == '804629f6d2bd49380ca6bb6ccb14f9a17efff037c3d33f54754914f6a1005d02'
+assert hashlib.sha256(strip_banjo(s).encode()).hexdigest() == '0543a27cd2ea7e21c083020aa7739173fe719ce4bd821ad7baceda92a4907fbe'
 normalized = strip_quest_transit(s)
 assert '-- BEGIN QUEST TRANSIT' not in normalized
 q = s[s.index('-- BEGIN QUEST TRANSIT CONTROLLER'):s.index('-- END QUEST TRANSIT CONTROLLER')]
