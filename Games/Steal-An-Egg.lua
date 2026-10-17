@@ -16098,7 +16098,12 @@ end
 RunService.Heartbeat:Connect(Tasks.DefenseHeartbeat)
 function Tasks.EspRenderLoop()
 	-- Chili-style ESP: one Highlight instance per tracked instance, recycled each tick.
+	-- Highlights are parented to a Folder inside Players.LocalPlayer.PlayerGui so
+	-- they can never collide with game-owned instances and are guaranteed to render.
 	local ActiveEspHighlights = {}
+	local HighlightContainer = Instance.new("Folder")
+	HighlightContainer.Name = "N3_EspHighlights"
+	HighlightContainer.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 	local function ensureHighlight(key, adornee, color, sizeScale, fixedSize)
 		local h = ActiveEspHighlights[key]
 		if not h or not h.Parent then
@@ -16107,7 +16112,7 @@ function Tasks.EspRenderLoop()
 			h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 			h.FillTransparency = 0.78
 			h.OutlineTransparency = 0.02
-			h.Parent = CoreGui
+			h.Parent = HighlightContainer
 			ActiveEspHighlights[key] = h
 		end
 		h.Adornee = adornee
