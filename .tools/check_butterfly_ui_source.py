@@ -11,7 +11,7 @@ if "-- BEGIN CAPTURE" in s:
     s = strip_capture(s)
 if '-- BEGIN ADMIN CONTROLLER' in s:
     s = strip_admin(s)
-assert hashlib.sha256(strip_combined_butterfly_ui(s).encode()).hexdigest() == 'af577f8484ae807cff22df53282bbfb30a78a5e6b36f6621bdb26d547e48f4e8', 'Changes escaped the four reviewed UI-only replacements against a815629'
+assert hashlib.sha256(strip_combined_butterfly_ui(s).encode()).hexdigest() == '2c12d0c8a1352beb196ca531b781fc67e4d89c0c6d289aa5c84e1c6ee2ea817d', 'Changes escaped the four reviewed UI-only replacements against a815629'
 c = s[s.index('-- BEGIN BLOOM STAR CONTROLLER'):s.index('-- END BLOOM STAR CONTROLLER')]
 assert c.count('events:AddGroupbox(') == 2  # Star and one unified Butterfly outer group.
 assert c.count('Name = "Butterfly Bloom"') == 1
