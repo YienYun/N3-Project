@@ -12403,7 +12403,7 @@ function Tasks.BuildMainInterface()
 	local EventTab = MainWindow:AddTab("Event", "sparkles", "Rift Events & Special Automation")
 	local AdminTab = MainWindow:AddTab("Admin Abuse", "flag", "Saturday/Sunday Admin Abuse Automation")
 	local PredictorTab = MainWindow:AddTab("Predictor", "hourglass", "Live Egg & Rift Predictions")
-	local ESPTab = MainWindow:AddTab("ESP", "eye", "Visual Trackers & Plot Monitoring")
+	local TabPlayer = MainWindow:AddTab("TabPlayer", "user", "Visual Trackers, Movement & Self Defense")
 	local SettingsTab = MainWindow:AddTab("Settings", "settings", "System & Configuration")
 	SaveManager:SetLibrary(LibraryLoader)
 	SaveManager:SetFolder("N3Hub")
@@ -12411,41 +12411,6 @@ function Tasks.BuildMainInterface()
 	ThemeManager:SetLibrary(LibraryLoader)
 	ThemeManager:SetFolder("N3Hub")
 	SaveManager:IgnoreThemeSettings()
-	local DefenseGroup = HomeTab:AddLeftGroupbox("Defense", "shield")
-	DefenseGroup:AddToggle("Toggle_Defense_AntiTrap", {
-		Text = "Anti Trap",
-		Default = false,
-		Tooltip = "Auto escape traps",
-		Callback = function(State)
-			FarmConfig.Defense_AntiTrap = State
-		end,
-	})
-	DefenseGroup:AddToggle("Toggle_Defense_AntiRagdoll", {
-		Text = "Anti Ragdoll",
-		Default = false,
-		Tooltip = "Block ragdoll & fling",
-		Callback = function(State)
-			FarmConfig.Defense_AntiRagdoll = State
-		end,
-	})
-	DefenseAntiGuardToggle = DefenseGroup:AddToggle("Toggle_Defense_AntiGuard", {
-		Text = "Anti Guard",
-		Default = false,
-		Tooltip = "Dodge guards",
-		Callback = function(State)
-			FarmConfig.Defense_AntiGuard = State
-			local Engine = RuntimeState.StealEngine
-			if Engine and Engine.SetAntiGuard then
-				Engine.SetAntiGuard(State)
-			end
-			if State and Engine and Engine.SetLineDrop then
-				Engine.SetLineDrop(false)
-				if InstToggle and InstToggle.Set then
-					pcall(InstToggle.Set, InstToggle, false)
-				end
-			end
-		end,
-	})
 	local FarmEggGroup = HomeTab:AddLeftGroupbox("Farm Eggs", "egg")
 	FarmEggGroup:AddDropdown("Dropdown_TargetZone", {
 		Text = "Zone",
@@ -13328,7 +13293,7 @@ function Tasks.BuildMainInterface()
 		FarmConfig.CashReserve = ParseWeightInput(Value)
 	end,
 })
-local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
+local EspGroup = TabPlayer:AddLeftGroupbox("ESP", "eye")
 	EspGroup:AddToggle("Toggle_Chiyo_WorldEgg", {
 		Text = "World Egg ESP",
 		Default = false,
@@ -13454,7 +13419,7 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 			FarmConfig.ESP_HighlightMode = v
 		end,
 	})
-	local MoveGroup = ESPTab:AddRightGroupbox("Movement", "move")
+	local MoveGroup = TabPlayer:AddRightGroupbox("Movement", "move")
 	MoveGroup:AddInput("Input_Chiyo_WalkSpeed", {
 		Text = "Walk Speed",
 		Default = "16",
@@ -13532,6 +13497,41 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 			hrp.AssemblyAngularVelocity = Vector3.zero
 		end
 	end)
+	local DefenseGroup = TabPlayer:AddRightGroupbox("Defense", "shield")
+	DefenseGroup:AddToggle("Toggle_Defense_AntiTrap", {
+		Text = "Anti Trap",
+		Default = false,
+		Tooltip = "Auto escape traps",
+		Callback = function(State)
+			FarmConfig.Defense_AntiTrap = State
+		end,
+	})
+	DefenseGroup:AddToggle("Toggle_Defense_AntiRagdoll", {
+		Text = "Anti Ragdoll",
+		Default = false,
+		Tooltip = "Block ragdoll & fling",
+		Callback = function(State)
+			FarmConfig.Defense_AntiRagdoll = State
+		end,
+	})
+	DefenseGroup:AddToggle("Toggle_Defense_AntiGuard", {
+		Text = "Anti Guard",
+		Default = false,
+		Tooltip = "Dodge guards",
+		Callback = function(State)
+			FarmConfig.Defense_AntiGuard = State
+			local Engine = RuntimeState.StealEngine
+			if Engine and Engine.SetAntiGuard then
+				Engine.SetAntiGuard(State)
+			end
+			if State and Engine and Engine.SetLineDrop then
+				Engine.SetLineDrop(false)
+				if InstToggle and InstToggle.Set then
+					pcall(InstToggle.Set, InstToggle, false)
+				end
+			end
+		end,
+	})
 	local RaceRallyGroup = EventTab:AddLeftGroupbox("Race Rally", "flag")
 	local Lbl_RaceStatus = RaceRallyGroup:AddLabel(
 		'<font color="#D946EF"><b>Status:</b></font> Off\n'
