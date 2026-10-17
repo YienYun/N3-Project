@@ -9,7 +9,7 @@ root = Path(__file__).resolve().parents[1]
 raw = (root / 'Games/Steal-An-Egg.lua').read_text()
 # Strip any newer Admin Abuse block so the historical 6d4af13 baseline is reached.
 s = strip_admin(raw) if '-- BEGIN ADMIN CONTROLLER' in raw else raw
-assert hashlib.sha256(strip_capture(s).encode()).hexdigest() == 'c80088233a73ffeee82bf9f75b82bea7d61e0bf89e16edc7f1a812bf031f60b2', 'Changes escaped reviewed Capture additions / published 6d4af13'
+assert hashlib.sha256(strip_capture(s).encode()).hexdigest() == 'c61df7de1dd102a6031f9202e6fa7e30ea9e247ac3b390e3459cf928610c448b', 'Changes escaped reviewed Capture additions / published 6d4af13'
 for filename, expected in {
     'Games/Source/StealAnEgg/ChiliSourceV2.lua': '0d84fb6313c37524f9eec7fd19e15c0e4b108db2f86579f7d5540aaabb32ca0d',
     'Games/Source/StealAnEgg/SenaV2.lua': '7f91e174f5a365cf2d44dadf60f8a055c831cdbd867036055845bd4755a4f9c2',

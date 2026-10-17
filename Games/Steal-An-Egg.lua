@@ -255,19 +255,18 @@ local FarmConfig = {
 	AutoEquipBestTrail = false,
 	AutoBuyBestTrail = false,
 	AutoClaimIndexRewards = false,
+	ESP_WorldEgg = false,
+	ESP_CarriedDropped = false,
 	ESP_Guard = false,
-	ESP_GuardSize = 0.75,
-	ESP_Eggs = false,
-	ESP_FixedSize = false,
-	ESP_OwnBase = true,
-	ESP_OtherBase = false,
-	ESP_EggSize = 0.75,
+	ESP_Pet = false,
 	ESP_Player = false,
+	ESP_Machine = false,
+	ESP_Plot = false,
 	ESP_Distance = 2000,
 	ESP_ShowInfo = { Icon = true, Name = true, Rarity = true },
 	ESP_MinValue = 0,
 	ESP_HighlightMode = "Off",
-	ESP_MinRarity = 0,
+	ESP_MinRarity = 5,
 	Movement_WalkSpeed = 16,
 	Movement_JumpPower = 50,
 	Movement_Override = false,
@@ -13330,106 +13329,130 @@ function Tasks.BuildMainInterface()
 	end,
 })
 local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
-	local Toggle_EspGuards = EspGroup:AddToggle("Toggle_Esp_Guards", {
-		Text = "ESP Guards",
+	EspGroup:AddToggle("Toggle_Chiyo_WorldEgg", {
+		Text = "World Egg ESP",
 		Default = false,
-		Tooltip = "Show forest / area guards as Highlight boxes.",
-		Callback = function(State) FarmConfig.ESP_Guard = State == true end,
-	})
-	EspGroup:AddSlider("Slider_Esp_GuardSize", {
-		Text = "ESP Guard Size",
-		Min = 50,
-		Max = 200,
-		Default = 75,
-		Rounding = 0,
-		Suffix = "%",
-		Tooltip = "Highlight size scale for guards.",
-		Callback = function(Value) FarmConfig.ESP_GuardSize = (tonumber(Value) or 75) / 100 end,
-	})
-	local Toggle_EspEggs = EspGroup:AddToggle("Toggle_Esp_Eggs", {
-		Text = "ESP Eggs",
-		Default = false,
-		Tooltip = "Show field / placed eggs as Highlight boxes.",
-		Callback = function(State) FarmConfig.ESP_Eggs = State == true end,
-	})
-	EspGroup:AddToggle("Toggle_Esp_FixedSize", {
-		Text = "ESP Fixed Size",
-		Default = false,
-		Tooltip = "Lock egg highlight to a fixed size regardless of model scale.",
-		Callback = function(State) FarmConfig.ESP_FixedSize = State == true end,
-	})
-	EspGroup:AddToggle("Toggle_Esp_OwnBase", {
-		Text = "ESP Own Base Eggs",
-		Default = true,
-		Tooltip = "Also show eggs placed in your own base.",
-		Callback = function(State) FarmConfig.ESP_OwnBase = State ~= false end,
-	})
-	EspGroup:AddToggle("Toggle_Esp_OtherBase", {
-		Text = "ESP Other Base Eggs",
-		Default = false,
-		Tooltip = "Also show eggs placed in other players' bases.",
-		Callback = function(State) FarmConfig.ESP_OtherBase = State == true end,
-	})
-	EspGroup:AddSlider("Slider_Esp_EggSize", {
-		Text = "ESP Egg Size",
-		Min = 50,
-		Max = 200,
-		Default = 75,
-		Rounding = 0,
-		Suffix = "%",
-		Tooltip = "Highlight size scale for eggs.",
-		Callback = function(Value) FarmConfig.ESP_EggSize = (tonumber(Value) or 75) / 100 end,
-	})
-	EspGroup:AddToggle("Toggle_Esp_Players", {
-		Text = "ESP Players",
-		Default = false,
-		Tooltip = "Show other players as Highlight boxes.",
-		Callback = function(State) FarmConfig.ESP_Player = State == true end,
-	})
-	EspGroup:AddDropdown("Dropdown_Esp_MinRarity", {
-		Text = "ESP Min Rarity",
-		Values = RarityNumberedList,
-		Default = "1. Common",
-		Multi = false,
-		AllowNull = false,
-		Tooltip = "Show eggs of the chosen rarity and every rarity above it.",
-		Callback = function(v)
-			local rname = tostring(v):match("^%d+%.%s*(.+)$") or tostring(v)
-			FarmConfig.ESP_MinRarity = RarityRankOf(rname)
+		Tooltip = "Show wild eggs",
+		Callback = function(State)
+			FarmConfig.ESP_WorldEgg = State
 		end,
 	})
-	EspGroup:AddDropdown("Dropdown_Esp_ShowInfo", {
+	EspGroup:AddToggle("Toggle_Chiyo_CarryDrop", {
+		Text = "Carried And Dropped Egg ESP",
+		Default = false,
+		Tooltip = "Show carried eggs",
+		Callback = function(State)
+			FarmConfig.ESP_CarriedDropped = State
+		end,
+	})
+	EspGroup:AddToggle("Toggle_Chiyo_Guard", {
+		Text = "Guard ESP",
+		Default = false,
+		Tooltip = "Show guards",
+		Callback = function(State)
+			FarmConfig.ESP_Guard = State
+		end,
+	})
+	EspGroup:AddToggle("Toggle_Chiyo_Pet", {
+		Text = "Pet ESP",
+		Default = false,
+		Tooltip = "Show plot pets",
+		Callback = function(State)
+			FarmConfig.ESP_Pet = State
+		end,
+	})
+	EspGroup:AddToggle("Toggle_Chiyo_Player", {
+		Text = "Player ESP",
+		Default = false,
+		Tooltip = "Show players",
+		Callback = function(State)
+			FarmConfig.ESP_Player = State
+		end,
+	})
+	EspGroup:AddToggle("Toggle_Chiyo_Machine", {
+		Text = "Machine ESP",
+		Default = false,
+		Tooltip = "Show machines",
+		Callback = function(State)
+			FarmConfig.ESP_Machine = State
+		end,
+	})
+	EspGroup:AddToggle("Toggle_Chiyo_Plot", {
+		Text = "Plot ESP",
+		Default = false,
+		Tooltip = "Show plot numbers",
+		Callback = function(State)
+			FarmConfig.ESP_Plot = State
+		end,
+	})
+	EspGroup:AddInput("Input_Chiyo_EspDistance", {
+		Text = "ESP Distance",
+		Default = "2000",
+		Placeholder = "2000",
+		Numeric = true,
+		Finished = false,
+		Tooltip = "Max ESP distance",
+		Callback = function(Value)
+			FarmConfig.ESP_Distance = tonumber(Value) or 2000
+		end,
+	})
+	EspGroup:AddDropdown("Dropdown_CardShowInfo", {
 		Text = "ESP Show Info",
 		Values = { "Icon", "Name", "Rarity", "Mutation", "Value", "Weight", "Size", "Distance", "Area", "State" },
 		Default = { "Icon", "Name", "Rarity" },
 		Multi = true,
 		AllowNull = true,
 		Searchable = true,
-		Tooltip = "Egg billboard lines.",
+		Tooltip = "Egg card lines",
 		Callback = function(SelectedItems)
 			local map = ParseMultiDropdownSelection(SelectedItems)
 			FarmConfig.ESP_ShowInfo = {
-				Icon = map.Icon or false,
-				Name = map.Name or false,
-				Rarity = map.Rarity or false,
-				Mutation = map.Mutation or false,
-				Value = map.Value or false,
-				Weight = map.Weight or false,
-				Size = map.Size or false,
-				Distance = map.Distance or false,
-				Area = map.Area or false,
-				State = map.State or false,
+				Icon = map["icon"] ~= nil,
+				Name = map["name"] ~= nil,
+				Rarity = map["rarity"] ~= nil,
+				Mutation = map["mutation"] ~= nil,
+				Value = map["value"] ~= nil,
+				Weight = map["weight"] ~= nil,
+				Size = map["size"] ~= nil,
+				Distance = map["distance"] ~= nil,
+				Area = map["area"] ~= nil,
+				State = map["state"] ~= nil,
 			}
 		end,
 	})
-	EspGroup:AddInput("Input_Esp_MinValue", {
-		Text = "Min ESP Value /s",
+	EspGroup:AddDropdown("Dropdown_CardMinRarity", {
+		Text = "ESP Min Rarity",
+		Values = RarityNumberedList,
+		Default = "5. Legendary",
+		Multi = false,
+		AllowNull = false,
+		Tooltip = "Min ESP rarity",
+		Callback = function(v)
+			local rname = tostring(v):match("^%d+%.%s*(.+)$") or tostring(v)
+			FarmConfig.ESP_MinRarity = RarityRankOf(rname)
+		end,
+	})
+	EspGroup:AddInput("Input_MinStealValue", {
+		Text = "ESP Min Value /s",
 		Default = "0",
 		Placeholder = "0",
 		Numeric = true,
 		Finished = false,
-		Tooltip = "Hide eggs whose income is below this threshold.",
-		Callback = function(Value) FarmConfig.ESP_MinValue = math.max(0, math.floor(tonumber(Value) or 0)) end,
+		Tooltip = "Min ESP income",
+		Callback = function(Value)
+			FarmConfig.ESP_MinValue = math.max(0, math.floor(tonumber(Value) or 0))
+		end,
+	})
+	EspGroup:AddDropdown("Dropdown_CardHighlight", {
+		Text = "ESP Highlight",
+		Values = { "Off", "Rare Only", "All Shown" },
+		Default = "Off",
+		Multi = false,
+		AllowNull = false,
+		Tooltip = "Rarity color glow",
+		Callback = function(v)
+			FarmConfig.ESP_HighlightMode = v
+		end,
 	})
 	local MoveGroup = ESPTab:AddRightGroupbox("Movement", "move")
 	MoveGroup:AddInput("Input_Chiyo_WalkSpeed", {
@@ -14838,73 +14861,6 @@ local EspGroup = ESPTab:AddLeftGroupbox("ESP", "eye")
 		local LocalPlayer = Players.LocalPlayer
 		local PerfGroup = SettingsTab:AddLeftGroupbox("Performance", "gauge")
 		local UtilGroup = SettingsTab:AddRightGroupbox("Utility", "wrench")
-		local MoveGroup = SettingsTab:AddRightGroupbox("Movement", "move")
-		MoveGroup:AddInput("Input_Chiyo_WalkSpeed", {
-			Text = "Walk Speed",
-			Default = "16",
-			Placeholder = "16",
-			Numeric = true,
-			Finished = false,
-			Tooltip = "Walk speed",
-			Callback = function(Value) FarmConfig.Movement_WalkSpeed = tonumber(Value) or 16 end,
-		})
-		MoveGroup:AddInput("Input_Chiyo_JumpPower", {
-			Text = "Jump Power",
-			Default = "50",
-			Placeholder = "50",
-			Numeric = true,
-			Finished = false,
-			Tooltip = "Jump height",
-			Callback = function(Value) FarmConfig.Movement_JumpPower = tonumber(Value) or 50 end,
-		})
-		MoveGroup:AddToggle("Toggle_Chiyo_OverrideMove", {
-			Text = "Override Movement Stats",
-			Default = false,
-			Tooltip = "Lock speed & jump",
-			Callback = function(State)
-				FarmConfig.Movement_Override = State
-				if not State then
-					local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-					if hum then hum.WalkSpeed = 16; hum.JumpPower = 50 end
-				end
-			end,
-		})
-		MoveGroup:AddToggle("Toggle_Chiyo_Noclip", {
-			Text = "Noclip",
-			Default = false,
-			Tooltip = "Walk through walls",
-			Callback = function(State)
-				FarmConfig.Movement_Noclip = State
-				if not State then
-					local char = LocalPlayer.Character
-					if char then
-						for _, part in ipairs(char:GetDescendants()) do
-							if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.CanCollide = true end
-						end
-					end
-				end
-			end,
-		})
-		MoveGroup:AddDropdown("Dropdown_Chiyo_Waypoint", {
-			Text = "Waypoint",
-			Values = WaypointNames,
-			Default = "Base / Plot",
-			Multi = false,
-			AllowNull = false,
-			Tooltip = "Teleport target",
-			Callback = function(Selected) FarmConfig.Movement_SelectedWaypoint = Selected end,
-		})
-		MoveGroup:AddButton("Teleport To Waypoint", function()
-			local targetLocation = WaypointLocations[FarmConfig.Movement_SelectedWaypoint]
-			local char = LocalPlayer.Character
-			local hrp = char and char:FindFirstChild("HumanoidRootPart")
-			if hrp and targetLocation then
-				CreateSafetyFloorPad(targetLocation, 8)
-				hrp.CFrame = CFrame.new(targetLocation + Vector3.new(0, 3, 0))
-				hrp.AssemblyLinearVelocity = Vector3.zero
-				hrp.AssemblyAngularVelocity = Vector3.zero
-			end
-		end)
 		AddDiscordBox(SettingsTab)
 		local function ApplyFpsCap(n)
 			n = math.clamp(math.floor(tonumber(n) or 240), 30, 1000)
@@ -16097,167 +16053,294 @@ function Tasks.DefenseHeartbeat()
 end
 RunService.Heartbeat:Connect(Tasks.DefenseHeartbeat)
 function Tasks.EspRenderLoop()
-	-- Chili-style ESP: one Highlight instance per tracked instance, recycled each tick.
-	-- Highlights are parented to a Folder inside Players.LocalPlayer.PlayerGui so
-	-- they can never collide with game-owned instances and are guaranteed to render.
-	local ActiveEspHighlights = {}
-	local HighlightContainer = Instance.new("Folder")
-	HighlightContainer.Name = "N3_EspHighlights"
-	HighlightContainer.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
-	local function ensureHighlight(key, adornee, color, sizeScale, fixedSize)
-		local h = ActiveEspHighlights[key]
-		if not h or not h.Parent then
-			h = Instance.new("Highlight")
-			h.Name = "N3_Esp_" .. tostring(key)
-			h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-			h.FillTransparency = 0.78
-			h.OutlineTransparency = 0.02
-			h.Parent = HighlightContainer
-			ActiveEspHighlights[key] = h
-		end
-		h.Adornee = adornee
-		h.FillColor = color or Color3.fromRGB(255, 255, 255)
-		h.OutlineColor = h.FillColor
-		h.FillTransparency = 0.78
-		h.OutlineTransparency = 0.02
-		if fixedSize then
-			h.FillTransparency = 0.65
-		end
-		return h
-	end
-	local function clearHighlights()
-		for k, h in pairs(ActiveEspHighlights) do
-			if h and h.Parent then h:Destroy() end
-			ActiveEspHighlights[k] = nil
-		end
-	end
-	local function eggMatchesFilters(rec)
-		if not rec then return true end
-		local rarity = rec.Rarity
-		local rank = rarity and RarityRankOf(tostring(rarity)) or 0
-		if FarmConfig.ESP_MinRarity and FarmConfig.ESP_MinRarity > 0 and rank > 0 and rank < FarmConfig.ESP_MinRarity then
-			return false
-		end
-		if FarmConfig.ESP_MinValue and FarmConfig.ESP_MinValue > 0 then
-			local value = tonumber(rec.Value) or tonumber(rec.Income) or 0
-			if value < FarmConfig.ESP_MinValue then return false end
-		end
-		return true
-	end
-	local function rarityColor(rarity)
-		return DefaultRarityColors[tostring(rarity or "")] or Color3.fromRGB(255, 255, 255)
-	end
-	local GUARD_COLOR = Color3.fromRGB(255, 45, 45)
-	local PLAYER_COLOR = Color3.fromRGB(80, 200, 255)
-	local EGG_BASE_FILL = 0.78
 	while true do
 		task.wait(0.35)
 		local Character = LocalPlayer.Character
 		local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
-		local MyUserId = LocalPlayer.UserId
-		local Seen = {}
 		if RootPart then
 			local MyPos = RootPart.Position
 			local MaxDist = tonumber(FarmConfig.ESP_Distance) or 2000
-			local function within(p)
-				return p and (p - MyPos).Magnitude <= MaxDist
+			local SeenKeys = {}
+			local function ResolveModelImage(modelInst, fallbackImg)
+				if typeof(modelInst) == "Instance" then
+					local texture = ""
+					local ok, found = pcall(function()
+						local part = modelInst:IsA("BasePart") and modelInst
+							or modelInst:FindFirstChildWhichIsA("BasePart")
+						if part then
+							if part:IsA("MeshPart") then
+								texture = tostring(part.TextureID or "")
+							end
+							for _, dec in ipairs(part:GetDescendants()) do
+								if dec:IsA("Decal") or dec:IsA("Texture") then
+									texture = tostring(dec.Texture or "")
+									if texture ~= "" then
+										return texture
+									end
+								end
+							end
+							return texture
+						end
+						return ""
+					end)
+					if ok and found ~= "" then
+						local num = tostring(found):match("%d+")
+						if num then
+							return "rbxassetid://" .. num
+						end
+						return tostring(found)
+					end
+				end
+				return fallbackImg
 			end
-			-- Guards
+			local function RenderEggCard(key, pos, rec, info)
+				Tasks.CardRenderEggKey(key, rec, info, pos, { Seen = SeenKeys, MyPos = MyPos, MaxDist = MaxDist })
+			end
+			local function RenderItem(key, pos, name, infoText, color, imageAsset)
+				local dist = (pos - MyPos).Magnitude
+				if dist > MaxDist then
+					return
+				end
+				SeenKeys[key] = true
+				local card = ActiveEspCards[key]
+				if not card or not card.Anchor.Parent or card.EggMode then
+					if card and card.Anchor.Parent then
+						DestroyEggCard(card)
+					end
+					card = CreateMasterCard()
+					card.EggMode = false
+					ActiveEspCards[key] = card
+				end
+				card.Icon.Visible = (imageAsset and imageAsset ~= "") and true or false
+				if card.Icon.Visible then
+					card.Icon.Image = imageAsset
+				end
+				CardSetRow(card.NameRow, name, CardSheen)
+				CardSetRow(card.ExtraRow, (infoText or "") .. " · " .. math.floor(dist) .. " m", CardSheen)
+				if card.ShowIcon ~= card.Icon.Visible or card.ShowName ~= true or card.ShowExtra ~= true then
+					card.ShowIcon = card.Icon.Visible
+					card.ShowName = true
+					card.ShowExtra = true
+					card.ShowRarity = false
+					card.ShowValue = false
+					card.ShowMutation = false
+					card:ReLayout()
+				end
+				card.Anchor.CFrame = CFrame.new(pos)
+				card.Billboard.Enabled = true
+			end
+			if FarmConfig.ESP_WorldEgg then
+				local fieldEggs = FetchAllFieldEggs()
+				for _, egg in ipairs(fieldEggs or {}) do
+					if egg.State == "Slot" or egg.State == 1 or egg.State == "" then
+						local cf = egg.BoundsCFrame or (egg.PhysicalModel and egg.PhysicalModel:GetPivot())
+						if cf and cf.Position.X >= 530 then
+							local cat = tostring(egg.AssetCategory or egg.Name or "Egg")
+							RenderEggCard("WORLD_" .. tostring(egg.Uid or cf.Position), cf, egg, ResolveGameAsset(cat))
+						end
+					end
+				end
+			end
+			if FarmConfig.ESP_CarriedDropped then
+				local fieldEggs = FetchAllFieldEggs()
+				for _, egg in ipairs(fieldEggs or {}) do
+					local st = tostring(egg.State or ""):lower()
+					local isCarried = (st == "carried" or egg.State == 2 or egg.CarrierUserId ~= nil)
+					local isDropped = (st == "dropped" or egg.State == 3)
+					if isCarried or isDropped then
+						local cf = egg.BoundsCFrame or (egg.PhysicalModel and egg.PhysicalModel:GetPivot())
+						if cf then
+							local cat = tostring(egg.AssetCategory or egg.Name or "Egg")
+							RenderEggCard("CARRY_" .. tostring(egg.Uid or cf.Position), cf, egg, ResolveGameAsset(cat))
+						end
+					end
+				end
+			end
 			if FarmConfig.ESP_Guard then
-				local worldRoot = Workspace:FindFirstChild("World") or Workspace:FindFirstChild("__OBJECTS")
-				local areas = worldRoot and worldRoot:FindFirstChild("Areas")
-				local guardAreas = areas and areas:FindFirstChild("GuardAreas")
+				local detectedGuards = {}
+				local guardAreas = Workspace:FindFirstChild("__OBJECTS")
+					and Workspace.__OBJECTS:FindFirstChild("Areas")
+					and Workspace.__OBJECTS.Areas:FindFirstChild("GuardAreas")
 				if guardAreas then
 					for _, area in ipairs(guardAreas:GetChildren()) do
 						local guard = area:FindFirstChild("Guard")
-						if guard and guard:IsA("Model") and within(guard:GetPivot().Position) then
-							local key = "GUARD_" .. area.Name
-							Seen[key] = true
-							ensureHighlight(key, guard, GUARD_COLOR, FarmConfig.ESP_GuardSize, true)
-						end
-					end
-				end
-				local live = Workspace:FindFirstChild("_Guards")
-				if live then
-					for _, g in ipairs(live:GetChildren()) do
-						if g:IsA("Model") and within(g:GetPivot().Position) then
-							local key = "LIVEGUARD_" .. g.Name
-							Seen[key] = true
-							ensureHighlight(key, g, GUARD_COLOR, FarmConfig.ESP_GuardSize, true)
-						end
-					end
-				end
-			end
-			-- Eggs
-			if FarmConfig.ESP_Eggs then
-				local placed = Workspace:FindFirstChild("PlacedEggRenders")
-				local ownerRecs = {}
-				if EggStateModule and EggStateModule.ReadOwnerEggs then
-					pcall(function() ownerRecs = EggStateModule.ReadOwnerEggs(MyUserId) or {} end)
-				end
-				local function renderPlaced(model)
-					if not model or not model:IsA("Model") then return end
-					local rawName = model.Name
-					local uid = tostring(rawName:match("_(.+)$") or rawName)
-					local rec = ownerRecs and ownerRecs[uid]
-					local isOwn = rawName:find(tostring(MyUserId), 1, true) ~= nil
-					if isOwn and not FarmConfig.ESP_OwnBase then return end
-					if (not isOwn) and not FarmConfig.ESP_OtherBase then return end
-					if not within(model:GetPivot().Position) then return end
-					if not eggMatchesFilters(rec) then return end
-					local color = (rec and rec.Rarity) and rarityColor(rec.Rarity) or Color3.fromRGB(255, 255, 255)
-					local key = "PLACED_" .. rawName
-					Seen[key] = true
-					ensureHighlight(key, model, color, FarmConfig.ESP_EggSize, FarmConfig.ESP_FixedSize)
-				end
-				if placed then
-					for _, m in ipairs(placed:GetChildren()) do renderPlaced(m) end
-				end
-				-- Field eggs (wild, world)
-				local fieldEggs = FetchAllFieldEggs()
-				for _, egg in ipairs(fieldEggs or {}) do
-					local st = egg.State
-					if st == "Slot" or st == 1 or st == "" or st == nil then
-						local cf = egg.BoundsCFrame or (egg.PhysicalModel and egg.PhysicalModel:GetPivot())
-						if cf and cf.Position.X >= 530 and within(cf.Position) then
-							local rec = egg
-							if not eggMatchesFilters(rec) then
-								-- skip
-							else
-								local color = (rec.Rarity and rarityColor(rec.Rarity)) or Color3.fromRGB(255, 255, 255)
-								local adornee = egg.PhysicalModel or egg.ModelInstance or egg.Hitbox
-								if adornee then
-									local key = "WORLD_" .. tostring(egg.Uid or cf.Position)
-									Seen[key] = true
-									ensureHighlight(key, adornee, color, FarmConfig.ESP_EggSize, FarmConfig.ESP_FixedSize)
+							or area:FindFirstChild("ForestGuardAuthored")
+							or area:FindFirstChildWhichIsA("Model")
+						if guard and guard:IsA("Model") and not detectedGuards[guard] then
+							detectedGuards[guard] = true
+							local pv = guard:GetPivot()
+							local gName = (area.Name == "Forest") and "Forest Chicken Guard" or (area.Name .. " Guard")
+							local state = tostring(
+								guard:GetAttribute("GuardState")
+									or guard:GetAttribute("State")
+									or (guard:GetAttribute("Sleeping") and "Sleeping")
+									or "Patrol"
+							)
+							local guardIcon = "rbxassetid://10747384394"
+							local cat = guard:GetAttribute("Category") or guard:GetAttribute("AssetCategory")
+							if cat then
+								local realIcon = ResolveAssetImage(tostring(cat))
+								if realIcon ~= "" then
+									guardIcon = realIcon
 								end
 							end
+							RenderItem(
+								"GUARD_" .. area.Name,
+								pv.Position,
+								"[GUARD] " .. gName,
+								"State: " .. state,
+								Color3.fromRGB(255, 45, 45),
+								guardIcon
+							)
+						end
+					end
+				end
+				local liveGuards = Workspace:FindFirstChild("_Guards")
+				if liveGuards then
+					for _, g in ipairs(liveGuards:GetChildren()) do
+						if g:IsA("Model") and not detectedGuards[g] then
+							detectedGuards[g] = true
+							local pv = g:GetPivot()
+							local state = tostring(g:GetAttribute("GuardState") or "Patrol")
+							RenderItem(
+								"LIVEGUARD_" .. g.Name,
+								pv.Position,
+								"[GUARD] " .. g.Name,
+								"State: " .. state,
+								Color3.fromRGB(255, 45, 45),
+								"rbxassetid://10747384394"
+							)
 						end
 					end
 				end
 			end
-			-- Players
+			if FarmConfig.ESP_Pet then
+				local placedFolder = Workspace:FindFirstChild("PlacedEggRenders")
+				local MyUserId = LocalPlayer.UserId
+				local OwnerRecords = {}
+				if EggStateModule and EggStateModule.ReadOwnerEggs then
+					pcall(function()
+						OwnerRecords = EggStateModule.ReadOwnerEggs(MyUserId) or {}
+					end)
+				end
+				if placedFolder then
+					for _, petModel in ipairs(placedFolder:GetChildren()) do
+						if petModel:IsA("Model") and string.find(petModel.Name, tostring(MyUserId)) then
+							local rawName = petModel.Name
+							local eggUid = rawName:match("_(.+)$") or rawName
+							local pv = petModel:GetPivot()
+							local details = Tasks.GetPlotItemDetails(eggUid, petModel, OwnerRecords)
+							local rarityColor = DefaultRarityColors[details.Rarity] or Color3.fromRGB(87, 242, 135)
+							local tagPrefix = details.IsHatched and "[PET] " or "[EGG] "
+							local titleText = tagPrefix .. details.Category
+							if details.Kg > 0 then
+								titleText = titleText .. string.format(" (%dKg)", math.floor(details.Kg + 0.5))
+							end
+							local cashStr = details.Income > 0
+									and string.format(
+										'<font color="#57F287"><b>+$%s/s</b></font> · ',
+										FormatCash(details.Income)
+									)
+								or ""
+							local statusText = ""
+							if not details.IsHatched then
+								statusText = details.IsReady and '<font color="#57F287"><b>Ready!</b></font>'
+									or details.TimeLeft
+							end
+							local infoText = string.format(
+								"%s%s%s",
+								cashStr,
+								details.Rarity,
+								(statusText ~= "" and (" · " .. statusText) or "")
+							)
+							RenderItem(
+								"PLOTITEM_" .. rawName,
+								pv.Position,
+								titleText,
+								infoText,
+								rarityColor,
+								ResolveModelImage(petModel, details.Icon)
+							)
+						end
+					end
+				end
+			end
 			if FarmConfig.ESP_Player then
 				for _, plr in ipairs(Players:GetPlayers()) do
 					if plr ~= LocalPlayer and plr.Character then
-						local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-						if hrp and within(hrp.Position) then
-							local key = "PLR_" .. plr.Name
-							Seen[key] = true
-							ensureHighlight(key, plr.Character, PLAYER_COLOR, 1.0, true)
+						local oHrp = plr.Character:FindFirstChild("HumanoidRootPart")
+						if oHrp then
+							local avatarImg = PlayerAvatarCache[plr.UserId]
+							if not avatarImg then
+								task.spawn(function()
+									local ok, img = pcall(function()
+										return Players:GetUserThumbnailAsync(
+											plr.UserId,
+											Enum.ThumbnailType.HeadShot,
+											Enum.ThumbnailSize.Size100x100
+										)
+									end)
+									if ok and img then
+										PlayerAvatarCache[plr.UserId] = img
+									end
+								end)
+								avatarImg = ""
+							end
+							RenderItem(
+								"PLR_" .. plr.Name,
+								oHrp.Position,
+								plr.DisplayName .. " (@" .. plr.Name .. ")",
+								"Player",
+								Color3.fromRGB(80, 200, 255),
+								avatarImg
+							)
 						end
 					end
 				end
 			end
-			-- Reap unseen
-			for k, h in pairs(ActiveEspHighlights) do
-				if not Seen[k] then
-					if h and h.Parent then h:Destroy() end
-					ActiveEspHighlights[k] = nil
+			if FarmConfig.ESP_Machine then
+				RenderItem(
+					"MACH_FUSE",
+					Vector3.new(532.0, 72.0, -283.0),
+					"[MACHINE] Fuse Machine",
+					"Ready to Fuse",
+					Color3.fromRGB(180, 70, 255),
+					"rbxassetid://10734950309"
+				)
+				RenderItem(
+					"MACH_OFFLINE",
+					Vector3.new(545.1, 70.0, -413.4),
+					"[OFFLINE] Claim Stand",
+					"Offline Earnings",
+					Color3.fromRGB(255, 215, 0),
+					"rbxassetid://13522871708"
+				)
+			end
+			if FarmConfig.ESP_Plot then
+				local plots = Workspace:FindFirstChild("Plots")
+				if plots then
+					for _, plot in ipairs(plots:GetChildren()) do
+						local center = plot:FindFirstChild("CenterPoint") or plot:FindFirstChild("PetArea")
+						if center then
+							local owner = plot:GetAttribute("Owner") or plot.Name
+							RenderItem(
+								"PLOT_" .. plot.Name,
+								center.Position,
+								"Plot " .. plot.Name,
+								"Owner: " .. tostring(owner),
+								Color3.fromRGB(0, 255, 180),
+								"rbxassetid://4562959382"
+							)
+						end
+					end
 				end
 			end
-		else
-			clearHighlights()
+			for key, card in pairs(ActiveEspCards) do
+				if not SeenKeys[key] then
+					DestroyEggCard(card)
+					ActiveEspCards[key] = nil
+				end
+			end
 		end
 	end
 end
