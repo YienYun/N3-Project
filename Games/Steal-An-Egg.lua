@@ -283,6 +283,18 @@ local FarmConfig = {
 	Defense_AntiGuard = false,
 	Defense_InstantSteal = false,
 	Defense_InstantStealSteps = 3,
+	Combat_Nearest = false,
+	Combat_Holders = false,
+	Combat_Specific = false,
+	Combat_PickedName = nil,
+	Combat_Aura = false,
+	Combat_Speed = 400,
+	Combat_MaxSpeed = 750,
+	Combat_Lead = -275,
+	Combat_Sweep = 60,
+	Combat_Hold1 = 0.30,
+	Combat_Hold2 = 0.40,
+	Combat_SwapPicked = nil,
 	Perf_FpsCap = 240,
 	Perf_Optimizer = false,
 	Perf_FpsPing = true,
@@ -13293,7 +13305,42 @@ function Tasks.BuildMainInterface()
 		FarmConfig.CashReserve = ParseWeightInput(Value)
 	end,
 })
-local EspGroup = TabPlayer:AddLeftGroupbox("ESP", "eye")
+local DefenseGroup = TabPlayer:AddLeftGroupbox("Defense", "shield")
+DefenseGroup:AddToggle("Toggle_Defense_AntiTrap", {
+	Text = "Anti Trap",
+	Default = false,
+	Tooltip = "Auto escape traps",
+	Callback = function(State)
+		FarmConfig.Defense_AntiTrap = State
+	end,
+})
+DefenseGroup:AddToggle("Toggle_Defense_AntiRagdoll", {
+	Text = "Anti Ragdoll",
+	Default = false,
+	Tooltip = "Block ragdoll & fling",
+	Callback = function(State)
+		FarmConfig.Defense_AntiRagdoll = State
+	end,
+})
+DefenseGroup:AddToggle("Toggle_Defense_AntiGuard", {
+	Text = "Anti Guard",
+	Default = false,
+	Tooltip = "Dodge guards",
+	Callback = function(State)
+		FarmConfig.Defense_AntiGuard = State
+		local Engine = RuntimeState.StealEngine
+		if Engine and Engine.SetAntiGuard then
+			Engine.SetAntiGuard(State)
+		end
+		if State and Engine and Engine.SetLineDrop then
+			Engine.SetLineDrop(false)
+			if InstToggle and InstToggle.Set then
+				pcall(InstToggle.Set, InstToggle, false)
+			end
+		end
+	end,
+})
+	local EspGroup = TabPlayer:AddLeftGroupbox("ESP", "eye")
 	EspGroup:AddToggle("Toggle_Chiyo_WorldEgg", {
 		Text = "World Egg ESP",
 		Default = false,
@@ -13419,6 +13466,8 @@ local EspGroup = TabPlayer:AddLeftGroupbox("ESP", "eye")
 			FarmConfig.ESP_HighlightMode = v
 		end,
 	})
+	local CombatGroup = TabPlayer:AddLeftGroupbox("Combat", "swords")
+	if Tasks.BuildCombatUI then pcall(Tasks.BuildCombatUI, CombatGroup) end
 	local MoveGroup = TabPlayer:AddRightGroupbox("Movement", "move")
 	MoveGroup:AddInput("Input_Chiyo_WalkSpeed", {
 		Text = "Walk Speed",
@@ -13497,41 +13546,6 @@ local EspGroup = TabPlayer:AddLeftGroupbox("ESP", "eye")
 			hrp.AssemblyAngularVelocity = Vector3.zero
 		end
 	end)
-	local DefenseGroup = TabPlayer:AddRightGroupbox("Defense", "shield")
-	DefenseGroup:AddToggle("Toggle_Defense_AntiTrap", {
-		Text = "Anti Trap",
-		Default = false,
-		Tooltip = "Auto escape traps",
-		Callback = function(State)
-			FarmConfig.Defense_AntiTrap = State
-		end,
-	})
-	DefenseGroup:AddToggle("Toggle_Defense_AntiRagdoll", {
-		Text = "Anti Ragdoll",
-		Default = false,
-		Tooltip = "Block ragdoll & fling",
-		Callback = function(State)
-			FarmConfig.Defense_AntiRagdoll = State
-		end,
-	})
-	DefenseGroup:AddToggle("Toggle_Defense_AntiGuard", {
-		Text = "Anti Guard",
-		Default = false,
-		Tooltip = "Dodge guards",
-		Callback = function(State)
-			FarmConfig.Defense_AntiGuard = State
-			local Engine = RuntimeState.StealEngine
-			if Engine and Engine.SetAntiGuard then
-				Engine.SetAntiGuard(State)
-			end
-			if State and Engine and Engine.SetLineDrop then
-				Engine.SetLineDrop(false)
-				if InstToggle and InstToggle.Set then
-					pcall(InstToggle.Set, InstToggle, false)
-				end
-			end
-		end,
-	})
 	local RaceRallyGroup = EventTab:AddLeftGroupbox("Race Rally", "flag")
 	local Lbl_RaceStatus = RaceRallyGroup:AddLabel(
 		'<font color="#D946EF"><b>Status:</b></font> Off\n'
@@ -20815,6 +20829,506 @@ end
 	end)
 end)();
 -- END CAPTURE CONTROLLER
+-- BEGIN COMBAT CONTROLLER
+-- source V2 35555-36235 (combat dependency) + V2 32761-33348 (UI), rewritten clean.
+-- Reuses N3 helpers: targetParts / ragdollTime / leadOptions / batRange / keepOffWalls / aboveFloor
+-- / captureRemote. No obfuscated copy-paste. Single Heartbeat tick. Same BatSwing trigger.
+(function()
+	local engine = RuntimeState.StealEngine
+	local LocalPlayer = Players.LocalPlayer
+	local state = {
+		Generation = 0,
+		Status = "Idle",
+		TargetMode = 1,
+		PickedName = FarmConfig.Combat_PickedName,
+		Aura = FarmConfig.Combat_Aura == true,
+		Speed = tonumber(FarmConfig.Combat_Speed) or 400,
+		MaxSpeed = tonumber(FarmConfig.Combat_MaxSpeed) or 750,
+		Lead = tonumber(FarmConfig.Combat_Lead) or -275,
+		Sweep = tonumber(FarmConfig.Combat_Sweep) or 60,
+		SwapPicked = type(FarmConfig.Combat_SwapPicked) == "table" and FarmConfig.Combat_SwapPicked or {},
+		Holds = { tonumber(FarmConfig.Combat_Hold1) or 0.30, tonumber(FarmConfig.Combat_Hold2) or 0.40 },
+		Index = 1,
+		Since = 0,
+		Target = nil,
+		Plan = nil,
+		Pending = {},
+		LastFire = 0,
+		LastSwing = 0,
+		EquipAt = 0,
+		Trace = 0,
+		ForceAuraUntil = 0,
+		Label = nil,
+		Handles = {},
+	}
+	Tasks.CombatState = state
+
+	-- target parts / ragdoll helpers (mirror N3 capture-side)
+	local function targetParts(player)
+		local ch = player and player.Character
+		if not ch then return nil, nil end
+		local root = ch:FindFirstChild("HumanoidRootPart")
+		local hum = ch:FindFirstChildOfClass("Humanoid")
+		if root and hum and hum.Health > 0 then return ch, root end
+		return nil, nil
+	end
+
+	local function ragdollTime(player)
+		return tonumber(player:GetAttribute("RagdollEndTime")) or 0
+	end
+
+	local function hittable(player)
+		if not player or player == LocalPlayer or player.Parent ~= Players then return false end
+		local ch, root = targetParts(player)
+		if not ch then return false end
+		if ch:GetAttribute("IsTrapped") == true then return false end
+		if player:GetAttribute("InBossArena") == true then return false end
+		if engine and engine.InsideBase and root and engine.InsideBase(root.Position) then return false end
+		return true
+	end
+
+	-- bat / gear data
+	local gearCache, gearCacheAt = nil, 0
+	local function gears()
+		if gearCache and os.clock() - gearCacheAt < 30 then return gearCache end
+		local source = ReplicatedStorage:FindFirstChild("Data") and ReplicatedStorage.Data:FindFirstChild("Gears")
+		if source and source:IsA("ModuleScript") then
+			local ok, value = pcall(require, source)
+			if ok and type(value) == "table" then gearCache, gearCacheAt = value, os.clock(); return value end
+		end
+		return gearCache
+	end
+
+	local function batRange(tool)
+		if not tool then return 12 end
+		local g = gears()
+		local dir = type(g) == "table" and g.Directory
+		local gname = tool:GetAttribute("GearName") or tool.Name
+		local data = type(dir) == "table" and dir[tostring(gname)]
+		local base = type(data) == "table" and data.BatControllerData
+		local bonus = type(base) == "table" and tonumber(base.RangeBonus) or 0
+		local mult = (Workspace:GetAttribute("DragonEggEventActive") == true) and 1.35 or 1
+		return (12 + bonus) * mult
+	end
+
+	local function listBats()
+		local out, seen = {}, {}
+		for _, container in ipairs({ LocalPlayer:FindFirstChildOfClass("Backpack"), LocalPlayer.Character }) do
+			if container then
+				for _, child in ipairs(container:GetChildren()) do
+					if child:IsA("Tool") and not seen[child] then
+						seen[child] = true
+						local gname = tostring(child:GetAttribute("GearName") or child.Name):lower()
+						if gname:find("bat") or gname:find("scrambler") then
+							table.insert(out, { Tool = child, Name = tostring(child:GetAttribute("GearName") or child.Name) })
+						end
+					end
+				end
+			end
+		end
+		table.sort(out, function(a, b) return batRange(a.Tool) > batRange(b.Tool) end)
+		return out
+	end
+
+	local function pickBat()
+		local bats = listBats()
+		if #bats == 0 then return nil end
+		if #state.SwapPicked == 0 then return bats[1].Tool end
+		local index = math.min(state.Index, #state.SwapPicked)
+		local name = state.SwapPicked[index]
+		for _, b in ipairs(bats) do
+			if b.Name == name then
+				local now = os.clock()
+				local hold = state.Holds[index] or 0.3
+				if now - state.Since >= hold then
+					state.Index = (index % #state.SwapPicked) + 1
+					state.Since = now
+				end
+				return b.Tool
+			end
+		end
+		return bats[1].Tool
+	end
+
+	local function ensureEquipped(character, tool)
+		if not tool or tool.Parent == character then return true end
+		if os.clock() - state.EquipAt < 0.2 then return false end
+		state.EquipAt = os.clock()
+		local hum = character and character:FindFirstChildOfClass("Humanoid")
+		if hum then pcall(function() hum:EquipTool(tool) end) end
+		return tool.Parent == character
+	end
+
+	-- isHolder via EggState (mirror capture)
+	local function isHolder(player)
+		if not EggStateModule or type(EggStateModule.ReadFieldEggs) ~= "function" then return false end
+		local ok, snapshot = pcall(EggStateModule.ReadFieldEggs)
+		if not ok or type(snapshot) ~= "table" then return false end
+		local records = type(snapshot) == "table" and snapshot.Records or {}
+		for _, rec in pairs(records) do
+			if type(rec) == "table" then
+				local carrier = tonumber(rec.CarrierUserId) or 0
+				if carrier > 0 and carrier == player.UserId then return true end
+			end
+		end
+		return false
+	end
+
+	local function eligibleTarget(player)
+		if not hittable(player) then return false end
+		if state.TargetMode == 2 then return isHolder(player) end
+		if state.TargetMode == 3 then return state.PickedName ~= nil and player.Name == state.PickedName end
+		return true
+	end
+
+	local function pickTarget(myPos)
+		local current, currentDist
+		if state.Target then
+			if eligibleTarget(state.Target) and ragdollTime(state.Target) <= Workspace:GetServerTimeNow() then
+				local _, root = targetParts(state.Target)
+				if root then
+					current = state.Target
+					currentDist = (root.Position - myPos).Magnitude
+				end
+			else
+				state.Target = nil
+			end
+		end
+		local best, bestDist
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= LocalPlayer and eligibleTarget(plr) and ragdollTime(plr) <= Workspace:GetServerTimeNow() then
+				local _, root = targetParts(plr)
+				if root then
+					local d = (root.Position - myPos).Magnitude
+					if not best or d < bestDist then best, bestDist = plr, d end
+				end
+			end
+		end
+		-- keep current target unless another is at most 70% as far
+		if current and best and best ~= current and bestDist < currentDist * 0.7 then return best end
+		return best or current
+	end
+
+	local function keepOffWalls(from, to)
+		if engine and type(engine.KeepOffWalls) == "function" then return engine.KeepOffWalls(from, to) end
+		return to
+	end
+
+	local function aboveFloor(v)
+		if engine and type(engine.AboveFloor) == "function" then return engine.AboveFloor(v) end
+		return v
+	end
+
+	local function planFor(player, ownRoot)
+		local _, root = targetParts(player)
+		if not root or not ownRoot or not ownRoot.Parent then return nil end
+		local now, ok, ping = os.clock(), pcall(LocalPlayer.GetNetworkPing, LocalPlayer)
+		ping = math.clamp(ok and tonumber(ping) or 0, 0, 1)
+		local lead = math.clamp((state.Lead or -275) / 1000, -0.4, 0.1)
+		local sweep = math.clamp((state.Sweep or 60) / 100, 0, 2.5)
+		local tool = pickBat()
+		local range = batRange(tool)
+		local vel = root.AssemblyLinearVelocity
+		local historical = root.Position + vel * math.max(0, lead + ping - math.clamp(ping + 0.05, 0.05, 0.35))
+		local current = root.Position + vel * (lead + ping)
+		local delta = Vector3.new(ownRoot.Position.X - root.Position.X, 0, ownRoot.Position.Z - root.Position.Z)
+		local heading = delta.Magnitude > 0.1 and delta.Unit or Vector3.new(0, 0, 1)
+		local predicted = root.Position + vel * (ping + lead + 0.18 - 0.275) + (vel.Magnitude > 1 and vel.Unit * 6 * sweep or Vector3.zero)
+		local sweepDist = math.max(5, math.min(range * 0.7, 6 + vel.Magnitude * 0.07)) * sweep
+		local along = (math.sin(now * 2 * math.pi / 1.1) * 0.5 + 0.5) * sweepDist
+		local side = Vector3.new(-heading.Z, 0, heading.X)
+		if side:Dot(ownRoot.Position - predicted) < 0 then side = -side end
+		local goal = predicted + heading * along + side * (vel.Magnitude < 35 and 3 or 1.5) + Vector3.new(0, math.sin(now * 2 * math.pi / 0.8) * 2.5, 0)
+		goal = aboveFloor(Vector3.new(goal.X, goal.Y, root.Position.Z))
+		goal = keepOffWalls(ownRoot.Position, goal)
+		return {
+			Goal = goal, Velocity = vel, Face = current, Current = current, Historical = historical,
+			Option = 1, Ping = ping,
+			Distance = (root.Position - ownRoot.Position).Magnitude,
+		}
+	end
+
+	local function batTrigger()
+		local ok, remote = pcall(function()
+			return ReplicatedStorage:FindFirstChild("RE") and ReplicatedStorage.RE:FindFirstChild("BatSwing") and ReplicatedStorage.RE.BatSwing:FindFirstChild("Trigger")
+		end)
+		if ok and remote and remote:IsA("RemoteEvent") then return remote end
+		return nil
+	end
+
+	local function tryHit(player, plan, character, root)
+		if not plan or not character or not root then return end
+		if Workspace:GetAttribute("PvPDisabled") == true then return end
+		if not hittable(player) or ragdollTime(player) > Workspace:GetServerTimeNow() then return end
+		local tool = pickBat()
+		if not tool then return end
+		if not ensureEquipped(character, tool) then return end
+		local previous = root.Position - root.AssemblyLinearVelocity * 0.18
+		local r = batRange(tool)
+		if (plan.Historical - previous).Magnitude > r - 1 and (plan.Current - previous).Magnitude > r - 1 then return end
+		local cooldown = tonumber(tool:GetAttribute("CooldownEndTime")) or 0
+		if Workspace:GetServerTimeNow() < cooldown - plan.Ping * 0.5 then return end
+		if os.clock() - state.LastFire < math.max(0.12, plan.Ping * 1.5) then return end
+		local trigger = batTrigger()
+		if not trigger then return end
+		state.LastFire, state.Trace = os.clock(), state.Trace + 1
+		table.insert(state.Pending, {
+			Target = player, Tool = tool, Option = plan.Option,
+			At = os.clock(), Wait = math.max(0.5, plan.Ping * 2 + 0.3),
+			RagdollBefore = ragdollTime(player), CooldownBefore = cooldown,
+		})
+		pcall(function()
+			trigger:FireServer(player, string.format("%d:%d:%d", LocalPlayer.UserId, state.Trace, math.floor(Workspace:GetServerTimeNow() * 1000)))
+		end)
+	end
+
+	local function steerTo(ownRoot, plan, dt)
+		if not plan or not ownRoot or not ownRoot.Parent then return end
+		local v = plan.Velocity + (plan.Goal - ownRoot.Position) / math.max(0.12, dt)
+		local cap = math.min(state.MaxSpeed + plan.Velocity.Magnitude, state.MaxSpeed * 1.5)
+		if v.Magnitude > cap then v = v.Unit * cap end
+		v = v + Vector3.new(0, Workspace.Gravity * dt * 0.5, 0)
+		pcall(function()
+			ownRoot.AssemblyLinearVelocity = v
+			ownRoot.AssemblyAngularVelocity = Vector3.zero
+		end)
+	end
+
+	local function isCombatOn()
+		if state.Aura then return true end
+		if FarmConfig.Combat_Nearest or FarmConfig.Combat_Holders or FarmConfig.Combat_Specific then return true end
+		if os.clock() < (state.ForceAuraUntil or 0) then return true end
+		return false
+	end
+
+	function Tasks.CombatIsOn() return isCombatOn() end
+	function Tasks.CombatTarget() return state.Target end
+	function Tasks.CombatForceAura(seconds) state.ForceAuraUntil = os.clock() + (seconds or 0) end
+
+	local function tick(dt)
+		local character = LocalPlayer.Character
+		if not character then state.Target = nil; state.Plan = nil; state.Status = "Waiting for character"; return end
+		local root = character:FindFirstChild("HumanoidRootPart")
+		if not root then state.Target = nil; state.Plan = nil; state.Status = "Waiting for your character"; return end
+
+		if ragdollTime(LocalPlayer) > Workspace:GetServerTimeNow() then
+			state.Target = nil; state.Plan = nil; state.Status = "Self ragdoll"; return
+		end
+		if engine and engine.Guard and engine.Guard.Busy then
+			state.Target = nil; state.Plan = nil; state.Status = "Paused for Guard"; return
+		end
+
+		if not isCombatOn() then
+			state.Target = nil; state.Plan = nil; state.Status = "Off"; return
+		end
+
+		local target = pickTarget(root.Position)
+		state.Target = target
+		if not target then
+			state.Plan = nil
+			if state.TargetMode == 2 then state.Status = "Waiting for someone to hold an egg"
+			elseif state.TargetMode == 3 then state.Status = "Picked player is not reachable"
+			else state.Status = "No player to hit" end
+			return
+		end
+
+		local plan = planFor(target, root)
+		state.Plan = plan
+		if plan then steerTo(root, plan, dt) end
+		tryHit(target, plan, character, root)
+		if plan then
+			local d = math.floor(plan.Distance + 0.5)
+			state.Status = string.format("Chasing %s  %d studs", target.DisplayName, d)
+		end
+	end
+
+	RunService.Heartbeat:Connect(function(dt)
+		local ok, err = pcall(tick, dt)
+		if not ok then state.Status = tostring(err) end
+	end)
+
+	-- reset on respawn
+	local function onRespawn()
+		state.LastFire = 0; state.LastSwing = 0; state.EquipAt = 0; state.Trace = 0
+		table.clear(state.Pending); state.Target = nil; state.Plan = nil
+	end
+	LocalPlayer.CharacterRemoving:Connect(onRespawn)
+	LocalPlayer.CharacterAdded:Connect(onRespawn)
+
+	-- UI builder (groupbox already created by TabPlayer)
+	function Tasks.BuildCombatUI(group)
+		-- target mode toggles (exclusive)
+		local tNearest = group:AddToggle("Toggle_Combat_Nearest", {
+			Text = "Auto Hit Nearest Player",
+			Default = FarmConfig.Combat_Nearest == true,
+			Callback = function(v)
+				FarmConfig.Combat_Nearest = v
+				if v then
+					state.TargetMode = 1; state.PickedName = nil
+					if tHolders and tHolders.Set then pcall(tHolders.Set, tHolders, false) end
+					if tSpecific and tSpecific.Set then pcall(tSpecific.Set, tSpecific, false) end
+				end
+			end,
+		})
+		state.Handles.Nearest = tNearest
+		local tHolders = group:AddToggle("Toggle_Combat_Holders", {
+			Text = "Auto Hit Egg Holders",
+			Default = FarmConfig.Combat_Holders == true,
+			Callback = function(v)
+				FarmConfig.Combat_Holders = v
+				if v then
+					state.TargetMode = 2; state.PickedName = nil
+					if tNearest and tNearest.Set then pcall(tNearest.Set, tNearest, false) end
+					if tSpecific and tSpecific.Set then pcall(tSpecific.Set, tSpecific, false) end
+				end
+			end,
+		})
+		state.Handles.Holders = tHolders
+		local tSpecific = group:AddToggle("Toggle_Combat_Specific", {
+			Text = "Auto Hit Specific Player",
+			Default = FarmConfig.Combat_Specific == true,
+			Callback = function(v)
+				FarmConfig.Combat_Specific = v
+				if v then
+					state.TargetMode = 3
+					if tNearest and tNearest.Set then pcall(tNearest.Set, tNearest, false) end
+					if tHolders and tHolders.Set then pcall(tHolders.Set, tHolders, false) end
+				end
+			end,
+		})
+		state.Handles.Specific = tSpecific
+
+		-- Hit Player picker
+		local function listPlayers()
+			local out = {}
+			for _, plr in ipairs(Players:GetPlayers()) do
+				if plr ~= LocalPlayer then table.insert(out, plr.DisplayName) end
+			end
+			if #out == 0 then out = { "No other players" } end
+			return out
+		end
+		group:AddDropdown("Dropdown_Combat_Picked", {
+			Text = "Hit Player",
+			Values = listPlayers,
+			Default = listPlayers()[1] or "No other players",
+			Searchable = true,
+			Callback = function(v)
+				for _, plr in ipairs(Players:GetPlayers()) do
+					if plr.DisplayName == v then
+						state.PickedName = plr.Name
+						FarmConfig.Combat_PickedName = plr.Name
+						if tSpecific and tSpecific.Set and FarmConfig.Combat_Specific then
+							state.TargetMode = 3
+						end
+						break
+					end
+				end
+			end,
+		})
+
+		-- Hit Aura
+		group:AddToggle("Toggle_Combat_Aura", {
+			Text = "Hit Aura",
+			Default = state.Aura,
+			Callback = function(v) state.Aura = v; FarmConfig.Combat_Aura = v end,
+		})
+
+		-- Swap Weapons
+		local function listBatNames()
+			local bats, out, seen = listBats(), {}, {}
+			for _, b in ipairs(bats) do
+				if not seen[b.Name] then seen[b.Name] = true; table.insert(out, b.Name) end
+			end
+			return out
+		end
+		group:AddDropdown("Dropdown_Combat_Swap", {
+			Text = "Swap Weapons",
+			Values = listBatNames,
+			Default = {},
+			Multi = true,
+			AllowNull = true,
+			Searchable = true,
+			Tooltip = "Pick up to 2 weapons you own to switch between while hitting (empty = best bat only)",
+			Callback = function(sel)
+				local picked = {}
+				if type(sel) == "table" then
+					for _, v in pairs(sel) do
+						if type(v) == "string" then table.insert(picked, v) end
+					end
+				end
+				state.SwapPicked = picked
+				state.Index = 1; state.Since = 0
+				FarmConfig.Combat_SwapPicked = picked
+			end,
+		})
+
+		-- Hold times
+		group:AddInput("Input_Combat_Hold1", {
+			Text = "Weapon 1 Hold",
+			Default = tostring(state.Holds[1]),
+			Placeholder = "0.30",
+			Numeric = true,
+			Finished = true,
+			Suffix = "s",
+			Callback = function(v) state.Holds[1] = math.clamp(tonumber(v) or 0.30, 0.2, 1.5); FarmConfig.Combat_Hold1 = state.Holds[1] end,
+		})
+		group:AddInput("Input_Combat_Hold2", {
+			Text = "Weapon 2 Hold",
+			Default = tostring(state.Holds[2]),
+			Placeholder = "0.40",
+			Numeric = true,
+			Finished = true,
+			Suffix = "s",
+			Callback = function(v) state.Holds[2] = math.clamp(tonumber(v) or 0.40, 0.2, 1.5); FarmConfig.Combat_Hold2 = state.Holds[2] end,
+		})
+
+		-- Chase Settings label
+		group:AddLabel("Chase Settings")
+
+		-- Sliders
+		group:AddSlider("Slider_Combat_Speed", {
+			Text = "Hit Tween Speed",
+			Min = 100, Max = 1000, Default = state.Speed, Rounding = 0,
+			Suffix = " studs/s",
+			Callback = function(v) state.Speed = math.clamp(tonumber(v) or 400, 100, 1000); FarmConfig.Combat_Speed = state.Speed end,
+		})
+		group:AddSlider("Slider_Combat_MaxSpeed", {
+			Text = "Hit Max Speed",
+			Min = 100, Max = 1000, Default = state.MaxSpeed, Rounding = 0,
+			Suffix = " studs/s",
+			Callback = function(v) state.MaxSpeed = math.clamp(tonumber(v) or 750, 100, 1000); FarmConfig.Combat_MaxSpeed = state.MaxSpeed end,
+		})
+		group:AddSlider("Slider_Combat_Lead", {
+			Text = "Hit Lead",
+			Min = -400, Max = 100, Default = state.Lead, Rounding = 0,
+			Tooltip = "Stand further ahead of the target (+) or closer to them (-)",
+			Callback = function(v) state.Lead = tonumber(v) or -275; FarmConfig.Combat_Lead = state.Lead end,
+		})
+		group:AddSlider("Slider_Combat_Sweep", {
+			Text = "Hit Sweep",
+			Min = 0, Max = 250, Default = state.Sweep, Rounding = 0,
+			Suffix = "%",
+			Tooltip = "How far you move back and forth in front of the target",
+			Callback = function(v) state.Sweep = tonumber(v) or 60; FarmConfig.Combat_Sweep = state.Sweep end,
+		})
+
+		-- Status (no live status per user rules; but Combat module is admin feature,
+		-- lives in TabPlayer Combat group — keep this single tight label).
+		state.Label = group:AddLabel('<font color="#D946EF"><b>Status:</b></font> Idle', true)
+	end
+
+	-- status updater (compact, purple keyword + white value, no live telemetry)
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			if state.Label and state.Label.SetText then
+				local s = tostring(state.Status or "Idle")
+				pcall(function() state.Label:SetText('<font color="#D946EF"><b>Status:</b></font> ' .. s) end)
+			end
+		end
+	end)
+end)();
+-- END COMBAT CONTROLLER
 -- BEGIN ADMIN CONTROLLER
 -- source V2 8950-9330 (AdminAbuse), 76573-76860 (UI), 10390-10730 (treadmill recovery).
 -- Source-backed adaptation: one scheduler, reuse existing N3 treadmill mount, no parallel workers,

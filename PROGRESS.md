@@ -16,6 +16,13 @@ Branch `arena/a7ae49dc-n3-project` on `YienYun/N3-Project`.
 - `e868455` Revert ESP rewrite + 2 follow-ups: restore pre-Chili ESP.
 - `28fa5e0` Clean working tree: drop `.tools/` checkers, `Games/AGENTS.md`, `docs/CHANGELOG.md`, add `PROGRESS.md`.
 - `5e6a2aa` Tab: rename ESP tab -> TabPlayer (icon `user`); move Defense group from Home to TabPlayer (right).
+- `dbb5f2c` PROGRESS: log TabPlayer rename + Defense move.
+- `<next>` TabPlayer: move Defense from right -> left top (so it stands on its own above ESP).
+- `<next>` Add Combat system to TabPlayer (left group after Defense + ESP).
+  - Auto Hit Nearest Player / Auto Hit Egg Holders / Auto Hit Specific Player (exclusive 3-state).
+  - Hit Player picker, Hit Aura, Swap Weapons (multi, up to 2), Weapon 1/2 Hold, Chase Settings (Hit Tween Speed, Hit Max Speed, Hit Lead, Hit Sweep), single tight purple-keyword Status row.
+  - Heartbeat tick: target pick -> plan -> steer -> bat trigger.
+  - Reuses N3 helpers (targetParts, ragdollTime, Engine.InsideBase, batRange from ReplicatedStorage.Data.Gears) — no obfuscated Chili copy-paste.
 
 ## Final state after `5e6a2aa`
 
