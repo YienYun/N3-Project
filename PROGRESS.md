@@ -14,13 +14,18 @@ Branch `arena/a7ae49dc-n3-project` on `YienYun/N3-Project`.
 - `5971496` ESP: parent Highlights to PlayerGui folder so they always render.
 - `33992d2` ESP: relax rarity filter, match Chili guard path, accept unknown eggs.
 - `e868455` Revert ESP rewrite + 2 follow-ups: restore pre-Chili ESP.
+- `28fa5e0` Clean working tree: drop `.tools/` checkers, `Games/AGENTS.md`, `docs/CHANGELOG.md`, add `PROGRESS.md`.
+- `5e6a2aa` Tab: rename ESP tab -> TabPlayer (icon `user`); move Defense group from Home to TabPlayer (right).
 
-## Final state after `e868455`
+## Final state after `5e6a2aa`
 
-- Pre-Chili N3 ESP backend is back in place (multi-toggle ESP tab, World Egg / Carried / Guard / Pet / Player / Machine / Plot, ESP Distance, Show Info, Min Rarity, Min Value, Highlight, Movement group inside the ESP tab).
-- `Tasks.EspRenderLoop`, `Tasks.CardRenderEggKey`, `Tasks.GetPlotItemDetails` restored.
-- `FarmConfig` keys `ESP_WorldEgg`, `ESP_CarriedDropped`, `ESP_Pet`, `ESP_Machine`, `ESP_Plot` are back.
-- The 15 static scope checkers (`.tools/`) are no longer needed and have been removed from the working tree.
+- Home tab: Farm Eggs, Pet Index, Task Priority (no Defense).
+- TabPlayer (icon `user`):
+  - Left = ESP (7 toggles + distance + show info + min rarity + min value + highlight).
+  - Right = Movement, Defense (Anti Trap, Anti Ragdoll, Anti Guard).
+- Pre-Chili N3 ESP backend is in place: `Tasks.EspRenderLoop`, `Tasks.CardRenderEggKey`, `Tasks.GetPlotItemDetails`.
+- `FarmConfig` keeps `ESP_WorldEgg`, `ESP_CarriedDropped`, `ESP_Pet`, `ESP_Machine`, `ESP_Plot`, plus `Defense_AntiTrap`, `Defense_AntiRagdoll`, `Defense_AntiGuard`.
+- Combat feature is **not** implemented yet; will be driven by a careful re-read of `Games/Source/StealAnEgg/ChiliSourceV2.lua` before any code is written.
 
 ## Reference (immutable)
 
