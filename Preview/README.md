@@ -68,7 +68,12 @@ jadi paste ID polos diem-diem gagal tanpa error.
 
 Tab baru: **Wallpaper** (3 groupbox kiri / 3 kanan, simetris).
 
-> ⚠️ Kalau wallpaper nggak keliatan: pastiin **Canvas transparency = 100%**
+> ⚠️ **Default sekarang = NORMAL/semula** (canvas solid, warna kartu asli).
+> Kalau mau wallpaper keliatan sebagai background kartu: naikin
+> **Canvas transparency = 100%** di groupbox "Canvas & Kartu Group",
+> atau pencet tombol "Coba: wallpaper keliatan".
+> Kalau yang nembus malah **langit/game** (bukan wallpaper lu), berarti asset
+> ID-nya gagal load — cek baris status di groupbox "Live Info".
 > (groupbox "Canvas & Kartu Group"). Tanpa itu Container yang solid nutupin
 > wallpaper. Jangan pakai mode `front` buat wallpaper-as-background — mode itu
 > ngegambar wallpaper DI ATAS komponen, jadi komponen keliatan tembus.

@@ -310,10 +310,13 @@ Library:SetSurface({ CanvasTransparency = 1, GroupTransparency = 0, GroupContras
 ```
 Atau lewat `CreateWindow({ ContentTransparency, GroupTransparency, GroupContrast })`.
 
-**Resep yang direkomendasiin** (default preview):
-`Layer = "back"`, `CanvasTransparency = 1`, `GroupTransparency = 0`,
-`GroupContrast = 10`. Wallpaper jadi background kartu, group tetep solid &
-kebaca sebagai kartu.
+**Default = NORMAL / SEMULA.** `CanvasTransparency = 0`, `GroupTransparency = 0`,
+`GroupContrast = 0` — tampilan persis kayak sebelum fitur ini ada. User yang
+mutusin sendiri angkanya lewat slider di tab Wallpaper (ada tombol
+"BALIKIN NORMAL (semula)" dan "Coba: wallpaper keliatan").
+
+Resep eksperimen kalau mau wallpaper keliatan: `Layer = "back"`,
+`CanvasTransparency = 1`, `GroupTransparency = 0`, `GroupContrast = 10`.
 
 `Window:GetWallpaperInfo()` sekarang juga nge-report `ScaleTypeName` (string
 polos, bukan `Enum.ScaleType.Crop`), `CanvasTransparency`, `GroupTransparency`,
@@ -388,6 +391,23 @@ Library = require(ModuleObject) -- assign TANPA `local`
 harus didefinisiin **setelah** require, ATAU pakai forward declaration.
 Validator `validate4.js` punya `SCOPE CHECK` khusus buat ini.
 
+### 🐛 Bug class saudara: local helper dideklarasinya DI BAWAH pemakainya
+**Sempat kejadian (v4.2):** `ClampTransparency` didefinisiin di blok helper
+sebelum `CreateWindow` (~line 9430), padahal `Library:SetSurface` ada di
+~line 9145 — **di atasnya**. Di Lua, local cuma keliatan ke kode **di bawah**
+deklarasinya. Jadi di dalam `SetSurface`, `ClampTransparency(...)` resolve ke
+**global = nil** → `attempt to call a nil value` pas runtime → **semua slider
+& button surface mati**.
+
+Beda sama bug `PrintReport` dulu: yang ini bukan soal require-order, tapi
+**urutan deklarasi local di satu file yang sama**.
+
+**Fix:** seluruh blok helper N3V4 (Wallpaper helpers + Surface system) dipindah
+ke **atas** `Library:SetBackgroundImage`. Aturan: *helper module-level harus
+didefinisiin sebelum function module-level mana pun yang manggil dia.*
+Check `SCOPE` di `.cache/luacheck/check.js` sekarang nge-verify decl < pakai
+buat semua helper N3V4.
+
 ### Format icon yang diterima `GetCustomIcon` (tanpa HTTP)
 `rbxassetid://<id>` · `rbxasset://textures/...` · `content://...` · `rbxthumb://type=...`
 · `roblox.com/asset/?id=...` · angka polos · **nama lucide** (via chain 3 lapis)
@@ -398,13 +418,13 @@ Validator `validate4.js` punya `SCOPE CHECK` khusus buat ini.
 
 ```
 N3-Project/
-├── Library/N3V3-NoObfus.lua     14.431 baris — engine UI (fork Obsidian) ← DIUBAH
+├── Library/N3V3-NoObfus.lua     14.432 baris — engine UI (fork Obsidian) ← DIUBAH
 ├── Games/
 │   ├── N3-SAE.lua               18.659 baris — hub Steal An Egg (8 tab)
 │   ├── ride-an-pets.lua          6.128 baris — hub kedua (2 icon broken)
 │   └── Source/StealAnEgg/      200.515 baris — 4 source lama
 ├── Preview/
-│   ├── N3V4_Preview.client.lua   1.866 baris — LocalScript preview v4 ← DIUBAH
+│   ├── N3V4_Preview.client.lua   1.922 baris — LocalScript preview v4 ← DIUBAH
 │   └── README.md
 └── DESIGN_NOTES.md               ← file ini
 ```

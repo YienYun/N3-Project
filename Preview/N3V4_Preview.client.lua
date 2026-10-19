@@ -3,6 +3,20 @@
 	 N3V4 — PREVIEW KIT v4   (LocalScript)
 	================================================================================
 
+	 FIX (v4.3) — BALIKIN NORMAL:
+	   • BUG KRITIS: ClampTransparency didefinisiin DI BAWAH Library:SetSurface.
+	     Di Lua, local yang dideklarasinya belakangan nggak keliatan dari function
+	     di atasnya -> jadi global nil -> "attempt to call a nil value".
+	     Efeknya SEMUA slider/button surface "ga work". Helper block udah
+	     dipindah ke ATAS Library:SetBackgroundImage di library.
+	   • Default Surface BALIK NORMAL: Canvas 0 (solid), Group 0 (solid),
+	     Contrast 0 (warna kartu sama kayak semula, nggak diabu-abuin).
+	   • Tombol reset diganti: "BALIKIN NORMAL (semula)" + "Coba: wallpaper
+	     keliatan". Preset "Matiin semua" -> "Matiin semua (balik normal)".
+	   • Live Info tambah baris status: nge-warn kalau image GAGAL load
+	     (yang nembus itu game-nya, bukan wallpaper).
+	   • Sekarang LU yang atur angka lewat slider — default nggak maksa tampilan.
+
 	 FIX (v4.2) — SURFACE SYSTEM:
 	   • Wallpaper mode "back" dulu NGGAK keliatan karena Container (area konten)
 	     SOLID nutupin dia. Sekarang ada Canvas transparency -> set 100%.
@@ -104,19 +118,20 @@ local CONFIG = {
 	},
 
 	--// SURFACE \\--
-	-- Ini yang bikin wallpaper BENERAN keliatan sebagai background kartu:
+	-- DEFAULT = NORMAL / SEMULA. Nggak ada yang dibolongin, nggak ada yang
+	-- diabu-abuin. Semua angka di bawah cuma titik awal — lu yang atur sendiri
+	-- lewat slider di tab Wallpaper sampe nemu yang pas.
 	Surface = {
-		-- Area konten + sidebar dibikin transparan biar wallpaper (yang ada di
-		-- belakang konten) keliatan. 0 = solid (perilaku lama, wallpaper ketutup).
-		CanvasTransparency = 1,
+		-- 0 = area konten + sidebar SOLID (tampilan normal lu sehari-hari).
+		-- Naikin ke 100% kalau mau wallpaper keliatan sebagai background kartu.
+		CanvasTransparency = 0,
 
-		-- Kartu groupbox/tabbox/depbox: 0 = SOLID. Ini yang bikin button,
-		-- dropdown, slider, text di dalamnya NGGAK ikutan tembus pandang.
+		-- 0 = kartu group SOLID (biar button/dropdown/slider/text nggak tembus)
 		GroupTransparency = 0,
 
-		-- Persen: kartu group dibedain dari background window, biar kebaca
-		-- sebagai kartu di atas wallpaper. 10 = ~10% lebih terang (dark theme).
-		GroupContrast = 10,
+		-- 0 = warna kartu group SAMA kayak semula (nggak diabu-abuin).
+		-- Naikin kalau mau kartu kebaca beda dari background.
+		GroupContrast = 0,
 	},
 
 	-- false = mulai tanpa wallpaper (buat bandingin sebelum/sesudah)
@@ -1625,8 +1640,8 @@ Try("Wallpaper: R1 Presets", function()
 		SafeNotify({ Title = "Preset", Description = Name, Icon = "sparkles", Time = 2 })
 	end
 
-	Box:AddButton("Wallpaper gue (default)", function()
-		LoadPreset("Wallpaper gue", {
+	Box:AddButton("Resep: wallpaper keliatan", function()
+		LoadPreset("Wallpaper keliatan", {
 			Image = CONFIG.Wallpaper.Image, Transparency = 0.35, ScaleType = "Crop",
 			Layer = "back", Overlay = true, OverlayTransparency = 0.45,
 			Canvas = 1, Group = 0, Contrast = 10,
@@ -1666,8 +1681,8 @@ Try("Wallpaper: R1 Presets", function()
 		})
 	end)
 
-	Box:AddButton("Matiin semua", function()
-		LoadPreset("Off", {
+	Box:AddButton("Matiin semua (balik normal)", function()
+		LoadPreset("Off + normal", {
 			Image = "", Transparency = 0.75, ScaleType = "Crop",
 			Layer = "back", Overlay = false, OverlayTransparency = 0.5,
 			Canvas = 0, Group = 0, Contrast = 0,
@@ -1694,6 +1709,8 @@ Try("Wallpaper: R2 Live info", function()
 		Labels[Spec[1]] = Box:AddLabel(string.format("%s: -", Spec[1]), false)
 	end
 
+	Labels["WARN"] = Box:AddLabel("status: -", true)
+
 	local function Refresh()
 		if typeof(Window.GetWallpaperInfo) ~= "function" then
 			return
@@ -1703,6 +1720,17 @@ Try("Wallpaper: R2 Live info", function()
 			local L = Labels[Spec[1]]
 			if L and L.SetText then
 				L:SetText(string.format("%s: %s", Spec[1], Spec[2](Info)))
+			end
+		end
+
+		local Warn = Labels["WARN"]
+		if Warn and Warn.SetText then
+			if Info.Visible == false and tostring(Info.Image) ~= "" then
+				Warn:SetText("⚠ IMAGE GAGAL LOAD — yang nembus itu GAME-nya, bukan wallpaper lu. Cek ID / permission asset.")
+			elseif tostring(Info.Image) == "" then
+				Warn:SetText("Wallpaper kosong (belum di-set).")
+			else
+				Warn:SetText("OK — wallpaper ke-load.")
 			end
 		end
 	end
@@ -1742,6 +1770,12 @@ Try("Wallpaper: R3 Catatan", function()
 	Box:AddLabel("komponen (ZIndex 999). Kalau mau wallpaper", true)
 	Box:AddLabel("jadi background kartu, pakai 'back' + canvas 100%.", true)
 
+	Box:AddDivider({ Text = "Kalau yang keliatan langit / game?", Margin = 4 })
+	Box:AddLabel("Berarti asset ID wallpaper lu GAGAL load", true)
+	Box:AddLabel("(private / salah ID). Yang nembus itu GAME-nya,", true)
+	Box:AddLabel("bukan wallpaper. Cek groupbox 'Live Info':", true)
+	Box:AddLabel("baris status harus 'OK — wallpaper ke-load'.", true)
+
 	Box:AddDivider({ Text = "Format ID yang diterima", Margin = 4 })
 	Box:AddLabel("111593326989465          (angka polos)", false)
 	Box:AddLabel("rbxassetid://111593...   (prefix)", false)
@@ -1751,8 +1785,8 @@ end)
 Try("Wallpaper: L4 Canvas & kartu group", function()
 	local Box = WallpaperTab:AddLeftGroupbox("Canvas & Kartu Group", "layers")
 
-	Box:AddLabel("Ini yang bikin wallpaper BENERAN keliatan sebagai", true)
-	Box:AddLabel("background kartu — dan yang bikin group TETEP SOLID.", true)
+	Box:AddLabel("Default = NORMAL / semula. Slider di sini cuma alat;", true)
+	Box:AddLabel("lu yang mutusin angka berapa yang enak.", true)
 
 	Box:AddDivider({ Text = "Latar (canvas)", Margin = 4 })
 	Box:AddSlider("WP_Canvas", {
@@ -1798,11 +1832,20 @@ Try("Wallpaper: L4 Canvas & kartu group", function()
 		end,
 	})
 
-	Box:AddButton("Reset: canvas 100 / group solid / 10%", function()
+	Box:AddButton("BALIKIN NORMAL (semula)", function()
+		WP.CanvasTransparency = 0
+		WP.GroupTransparency = 0
+		WP.GroupContrast = 0
+		ApplyWallpaper()
+		SafeNotify({ Title = "Surface", Description = "Balik ke tampilan normal.", Icon = "rotate-3d", Time = 3 })
+	end)
+
+	Box:AddButton("Coba: wallpaper keliatan", function()
 		WP.CanvasTransparency = 1
 		WP.GroupTransparency = 0
 		WP.GroupContrast = 10
 		ApplyWallpaper()
+		SafeNotify({ Title = "Surface", Description = "Canvas 100 / contrast 10. Balikin lewat tombol di atas.", Icon = "image", Time = 4 })
 	end)
 end)
 

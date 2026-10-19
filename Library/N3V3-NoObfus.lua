@@ -8953,6 +8953,130 @@ function Library:SetFont(FontFace)
 	Library:UpdateColorsUsingRegistry()
 end
 
+--// N3V4: Wallpaper helpers \\--
+-- PENTING: tabel ini dibangun dari Enum.ScaleType:GetEnumItems(), BUKAN
+-- hardcoded `Enum.ScaleType.X`. Soalnya kalau ada satu nama ngarang, error
+-- "X is not a valid member of Enum.ScaleType" muncul pas module di-require
+-- -> SELURUH LIBRARY GAGAL LOAD. Pernah kejadian pake "Fill" (nggak ada).
+local WallpaperScaleTypes = {}
+for _, ScaleItem in Enum.ScaleType:GetEnumItems() do
+	WallpaperScaleTypes[ScaleItem.Name] = ScaleItem
+end
+
+-- Ambil member Enum.ScaleType dengan aman (nil kalau nggak ada), biar alias di
+-- bawah nggak pernah bisa bikin crash walaupun Studio-nya versi lama.
+local function SafeScaleType(Name: string)
+	return WallpaperScaleTypes[Name]
+end
+
+-- Alias nama yang sering dipake orang tapi BUKAN member asli Roblox.
+-- Roblox cuma punya: Stretch, Slice, Tile, Fit, Crop.
+--   Fill / Cover = CSS `background-size: cover` -> Roblox "Crop"
+--                  (nutupin penuh, aspect ratio dijaga, lebihannya di-crop)
+--   Contain      = CSS `background-size: contain` -> Roblox "Fit"
+for AliasName, TargetName in {
+	Fill = "Crop",
+	Cover = "Crop",
+	Contain = "Fit",
+} do
+	local Target = SafeScaleType(TargetName)
+	if Target and WallpaperScaleTypes[AliasName] == nil then
+		WallpaperScaleTypes[AliasName] = Target
+	end
+end
+
+-- Terima EnumItem ATAU string ("Crop"/"Fit"/"Fill"/...). Fallback ke Stretch.
+-- Nggak akan pernah error, cuma balik ke Stretch kalau namanya nggak dikenal.
+local function ResolveScaleType(Value: any): Enum.ScaleType
+	if typeof(Value) == "EnumItem" then
+		return Value :: Enum.ScaleType
+	end
+	if typeof(Value) == "string" then
+		return WallpaperScaleTypes[Value] or WallpaperScaleTypes.Stretch or Enum.ScaleType.Stretch
+	end
+	return Enum.ScaleType.Stretch
+end
+
+-- ZIndex wallpaper + overlay berdasarkan layer mode.
+-- ScreenGui library pakai ZIndexBehavior Legacy (nggak di-set), jadi ZIndex
+-- cuma berlaku antar sibling. Wallpaper & overlay dua-duanya child MainFrame,
+-- dan background MainFrame sendiri selalu di belakang semua child — jadi
+-- ZIndex negatif tetep keliatan, cuma kalah sama konten (TopBar/Container, ZIndex 1+).
+local WallpaperLayers = {
+	back = { Image = -2, Overlay = -1 }, -- wallpaper paling belakang, overlay di atasnya, konten di atas semua
+	front = { Image = 999, Overlay = 998 }, -- wash di atas konten (perilaku lama library)
+}
+
+local function ResolveWallpaperLayer(Value: any): { Image: number, Overlay: number }
+	if typeof(Value) == "string" and WallpaperLayers[Value:lower()] then
+		return WallpaperLayers[Value:lower()]
+	end
+	return WallpaperLayers.back
+end
+
+local function ClampTransparency(Value: any): number
+	local N = tonumber(Value)
+	if not N then
+		return 0.75
+	end
+	return math.clamp(N, 0, 1)
+end
+
+--// N3V4: Surface system \\--
+-- Dua masalah yang ini solve:
+--  1. Wallpaper mode "back" NGGAK keliatan, karena Container (seluruh area
+--     konten tab) SOLID dan nutupin wallpaper yang ada di belakangnya.
+--  2. Kartu groupbox pakai warna "BackgroundColor" yang SAMA PERSIS sama
+--     background window, jadi group nggak kebaca sebagai kartu di atas
+--     wallpaper. User minta group tetep solid & beda ~10% dari background.
+Library.Surface = {
+	CanvasTransparency = 0, -- Container + sidebar. 1 = wallpaper keliatan penuh
+	GroupTransparency = 0, -- kartu groupbox / tabbox / depbox. 0 = solid
+	GroupContrast = 0, -- persen 0-100: seberapa kartu group dibedain dari bg window
+	GroupColor = nil, -- Color3 override. nil = pakai BackgroundColor + GroupContrast
+}
+Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
+Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
+
+function Library:GetGroupSurfaceColor(): Color3
+	if typeof(Library.Surface.GroupColor) == "Color3" then
+		return Library.Surface.GroupColor
+	end
+
+	local Base = Library.Scheme.BackgroundColor
+	local Percent = math.clamp(tonumber(Library.Surface.GroupContrast) or 0, 0, 100) / 100
+
+	if Percent <= 0 then
+		return Base
+	end
+
+	-- dark theme: kartu lebih TERANG dari bg; light theme: lebih GELAP
+	local Target = Library.IsLightTheme and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)
+	return Base:Lerp(Target, Percent)
+end
+
+-- Re-apply transparency canvas & group ke semua instance yang udah dibikin.
+-- Warna group nggak perlu di-loop manual: dia di-register ke Registry sebagai
+-- function, jadi UpdateColorsUsingRegistry() yang nge-set ulang.
+function Library:ApplySurfaces()
+	local CanvasT = ClampTransparency(Library.Surface.CanvasTransparency)
+	local GroupT = ClampTransparency(Library.Surface.GroupTransparency)
+
+	for CanvasInstance in pairs(Library.SurfaceCanvas) do
+		if CanvasInstance.Parent then
+			CanvasInstance.BackgroundTransparency = CanvasT
+		end
+	end
+
+	for GroupInstance in pairs(Library.SurfaceGroups) do
+		if GroupInstance.Parent then
+			GroupInstance.BackgroundTransparency = GroupT
+		end
+	end
+
+	Library:UpdateColorsUsingRegistry()
+end
+
 function Library:SetBackgroundImage(Image: string | number)
 	assert(typeof(Image) == "string" or typeof(Image) == "number", "Expected string/number got " .. typeof(Image))
 
@@ -9438,129 +9562,6 @@ function Library:Notify(...)
 	return Data
 end
 
---// N3V4: Wallpaper helpers \\--
--- PENTING: tabel ini dibangun dari Enum.ScaleType:GetEnumItems(), BUKAN
--- hardcoded `Enum.ScaleType.X`. Soalnya kalau ada satu nama ngarang, error
--- "X is not a valid member of Enum.ScaleType" muncul pas module di-require
--- -> SELURUH LIBRARY GAGAL LOAD. Pernah kejadian pake "Fill" (nggak ada).
-local WallpaperScaleTypes = {}
-for _, ScaleItem in Enum.ScaleType:GetEnumItems() do
-	WallpaperScaleTypes[ScaleItem.Name] = ScaleItem
-end
-
--- Ambil member Enum.ScaleType dengan aman (nil kalau nggak ada), biar alias di
--- bawah nggak pernah bisa bikin crash walaupun Studio-nya versi lama.
-local function SafeScaleType(Name: string)
-	return WallpaperScaleTypes[Name]
-end
-
--- Alias nama yang sering dipake orang tapi BUKAN member asli Roblox.
--- Roblox cuma punya: Stretch, Slice, Tile, Fit, Crop.
---   Fill / Cover = CSS `background-size: cover` -> Roblox "Crop"
---                  (nutupin penuh, aspect ratio dijaga, lebihannya di-crop)
---   Contain      = CSS `background-size: contain` -> Roblox "Fit"
-for AliasName, TargetName in {
-	Fill = "Crop",
-	Cover = "Crop",
-	Contain = "Fit",
-} do
-	local Target = SafeScaleType(TargetName)
-	if Target and WallpaperScaleTypes[AliasName] == nil then
-		WallpaperScaleTypes[AliasName] = Target
-	end
-end
-
--- Terima EnumItem ATAU string ("Crop"/"Fit"/"Fill"/...). Fallback ke Stretch.
--- Nggak akan pernah error, cuma balik ke Stretch kalau namanya nggak dikenal.
-local function ResolveScaleType(Value: any): Enum.ScaleType
-	if typeof(Value) == "EnumItem" then
-		return Value :: Enum.ScaleType
-	end
-	if typeof(Value) == "string" then
-		return WallpaperScaleTypes[Value] or WallpaperScaleTypes.Stretch or Enum.ScaleType.Stretch
-	end
-	return Enum.ScaleType.Stretch
-end
-
--- ZIndex wallpaper + overlay berdasarkan layer mode.
--- ScreenGui library pakai ZIndexBehavior Legacy (nggak di-set), jadi ZIndex
--- cuma berlaku antar sibling. Wallpaper & overlay dua-duanya child MainFrame,
--- dan background MainFrame sendiri selalu di belakang semua child — jadi
--- ZIndex negatif tetep keliatan, cuma kalah sama konten (TopBar/Container, ZIndex 1+).
-local WallpaperLayers = {
-	back = { Image = -2, Overlay = -1 }, -- wallpaper paling belakang, overlay di atasnya, konten di atas semua
-	front = { Image = 999, Overlay = 998 }, -- wash di atas konten (perilaku lama library)
-}
-
-local function ResolveWallpaperLayer(Value: any): { Image: number, Overlay: number }
-	if typeof(Value) == "string" and WallpaperLayers[Value:lower()] then
-		return WallpaperLayers[Value:lower()]
-	end
-	return WallpaperLayers.back
-end
-
-local function ClampTransparency(Value: any): number
-	local N = tonumber(Value)
-	if not N then
-		return 0.75
-	end
-	return math.clamp(N, 0, 1)
-end
-
---// N3V4: Surface system \\--
--- Dua masalah yang ini solve:
---  1. Wallpaper mode "back" NGGAK keliatan, karena Container (seluruh area
---     konten tab) SOLID dan nutupin wallpaper yang ada di belakangnya.
---  2. Kartu groupbox pakai warna "BackgroundColor" yang SAMA PERSIS sama
---     background window, jadi group nggak kebaca sebagai kartu di atas
---     wallpaper. User minta group tetep solid & beda ~10% dari background.
-Library.Surface = {
-	CanvasTransparency = 0, -- Container + sidebar. 1 = wallpaper keliatan penuh
-	GroupTransparency = 0, -- kartu groupbox / tabbox / depbox. 0 = solid
-	GroupContrast = 0, -- persen 0-100: seberapa kartu group dibedain dari bg window
-	GroupColor = nil, -- Color3 override. nil = pakai BackgroundColor + GroupContrast
-}
-Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
-Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
-
-function Library:GetGroupSurfaceColor(): Color3
-	if typeof(Library.Surface.GroupColor) == "Color3" then
-		return Library.Surface.GroupColor
-	end
-
-	local Base = Library.Scheme.BackgroundColor
-	local Percent = math.clamp(tonumber(Library.Surface.GroupContrast) or 0, 0, 100) / 100
-
-	if Percent <= 0 then
-		return Base
-	end
-
-	-- dark theme: kartu lebih TERANG dari bg; light theme: lebih GELAP
-	local Target = Library.IsLightTheme and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)
-	return Base:Lerp(Target, Percent)
-end
-
--- Re-apply transparency canvas & group ke semua instance yang udah dibikin.
--- Warna group nggak perlu di-loop manual: dia di-register ke Registry sebagai
--- function, jadi UpdateColorsUsingRegistry() yang nge-set ulang.
-function Library:ApplySurfaces()
-	local CanvasT = ClampTransparency(Library.Surface.CanvasTransparency)
-	local GroupT = ClampTransparency(Library.Surface.GroupTransparency)
-
-	for CanvasInstance in pairs(Library.SurfaceCanvas) do
-		if CanvasInstance.Parent then
-			CanvasInstance.BackgroundTransparency = CanvasT
-		end
-	end
-
-	for GroupInstance in pairs(Library.SurfaceGroups) do
-		if GroupInstance.Parent then
-			GroupInstance.BackgroundTransparency = GroupT
-		end
-	end
-
-	Library:UpdateColorsUsingRegistry()
-end
 
 function Library:CreateWindow(WindowInfo)
 	WindowInfo = Library:Validate(WindowInfo, Templates.Window)
