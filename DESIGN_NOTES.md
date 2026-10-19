@@ -154,13 +154,106 @@ Semua di `Library/N3V3-NoObfus.lua`. **4 perubahan**, semua permanen (bukan prev
 
 | # | Perubahan | Lokasi | Efek |
 |---|---|---|---|
-| 1 | Animasi default `false` → `true` | `Library.Animations` (~line 225) + `Templates.Window.Animations` (~line 406) | Hub dapet animasi otomatis, termasuk Loading screen |
-| 2 | `CornerRadius` `4` → `10` | `Library.CornerRadius` (line 264) + `Templates.Window.CornerRadius` (line 376) | UI nggak boxy lagi. Clamp max tetap 20 |
-| 3 | Offline lucide fallback (117 icon) + GitHub mirror | blok baru sebelum `Library:GetIcon` (~line 1180) + rewrite `GetIcon` | Icon **selalu** muncul, tanpa HTTP |
+| 1 | Animasi default `false` → `true` | `Library.Animations` + `Templates.Window.Animations` | Hub dapet animasi otomatis, termasuk Loading screen |
+| 2 | `CornerRadius` `4` → `10` | `Library.CornerRadius` + `Templates.Window.CornerRadius` | UI nggak boxy lagi. Clamp max tetap 20 |
+| 3 | Offline lucide fallback (117 icon) + GitHub mirror | blok sebelum `Library:GetIcon` + rewrite `GetIcon` | Icon **selalu** muncul, tanpa HTTP |
 | 4 | Alias 13 nama lucide lama | `OfflineLucideAliases` | `sliders`/`bar-chart-2`/`home`/`chat` dll tetep resolve |
+| 5 | **Wallpaper system** — 7 template field, 5 helper, 7 method | `Templates.Window` + sebelum `CreateWindow` + `BackgroundImage`/`BackgroundOverlay` + setters | Wallpaper configurable penuh: transparency, tint, scaletype, layer, overlay/scrim |
+| 6 | **FIX** `Window:SetBackgroundImage` nggak handle number | awal fungsi | Paste angka ID sekarang jalan (dulu diem-diem gagal) |
 
 **Yang BELUM di library:** simetri (itu urusan hub), design tokens, warna/font baru,
-motion system tambahan. Nunggu keputusan arah visual.
+motion system tambahan, wallpaper di Loading/Dashboard/Notification.
+Nunggu keputusan arah visual.
+
+---
+
+## 🖼️ WALLPAPER SYSTEM (fitur baru, full di library)
+
+### Kondisi sebelumnya
+Library udah punya `BackgroundImage`, tapi **hampir semuanya hardcoded** dan
+**nggak pernah dipakai** hub lu (`grep BackgroundImage Games/*.lua` = kosong):
+
+```lua
+BackgroundImage = New("ImageLabel", {
+    ScaleType        = Enum.ScaleType.Stretch,  -- hardcoded
+    ZIndex           = 999,                      -- hardcoded, DI ATAS konten
+    ImageTransparency = 0.75,                    -- hardcoded
+    -- nggak ada ImageColor3 (tint)
+    -- nggak ada overlay/scrim sama sekali
+})
+```
+
+### 🐛 Bug asli yang ketemu & di-fix
+`Library:SetBackgroundImage` di-assert nerima `string | number`, tapi
+`Window:SetBackgroundImage` cuma nge-handle `typeof(Image) == "string"`.
+→ **paste angka ID (misal `111593326989465`) diem-diem gagal**, wallpaper nggak
+muncul, dan **nggak ada error**. Udah dinormalisasi ke `rbxassetid://%d`.
+
+### Yang ditambahin
+**Template (`Templates.Window`)** — 7 field baru:
+| Field | Default | Fungsi |
+|---|---|---|
+| `BackgroundImageTransparency` | `0.75` | 0 = gambar penuh, 1 = ilang |
+| `BackgroundImageScaleType` | `"Stretch"` | Fit / Fill / Stretch / Slice / Crop |
+| `BackgroundImageColor` | putih | tint (`ImageColor3`) |
+| `BackgroundImageLayer` | `"back"` | `"back"` = wallpaper beneran, `"front"` = wash (perilaku lama) |
+| `BackgroundOverlayEnabled` | `false` | scrim gelap |
+| `BackgroundOverlayColor` | hitam | warna scrim |
+| `BackgroundOverlayTransparency` | `0.5` | kekuatan scrim |
+
+**Helper module-level** (didefinisiin sebelum `CreateWindow`):
+`WallpaperScaleTypes`, `ResolveScaleType()`, `WallpaperLayers`,
+`ResolveWallpaperLayer()`, `ClampTransparency()`
+
+**Layering / ZIndex** — ScreenGui library pakai `ZIndexBehavior` **Legacy**
+(nggak di-set), jadi ZIndex cuma berlaku antar sibling. Wallpaper & overlay
+dua-duanya child `MainFrame`, dan background MainFrame sendiri selalu di
+belakang semua child → ZIndex negatif tetep keliatan.
+
+| Mode | Image ZIndex | Overlay ZIndex | Konten |
+|---|---|---|---|
+| `back` | **-2** | **-1** | 1+ (di atas semua) |
+| `front` | 999 | 998 | 1+ (wallpaper nutupin) |
+
+**Method baru:**
+```
+Window:SetBackgroundImageTransparency(n)
+Window:SetBackgroundImageScaleType(t)     -- EnumItem atau string
+Window:SetBackgroundImageColor(Color3)
+Window:SetBackgroundImageLayer("back"|"front")
+Window:SetBackgroundOverlay(Enabled?, Color?, Transparency?)   -- semua opsional
+Window:GetWallpaperInfo()                 -- snapshot state, buat debug/display
+Library:SetWallpaper({...})               -- one-shot, semua field opsional
+```
+
+Semua setter **nyimpen ke `WindowInfo`** juga, biar state konsisten.
+
+### Contoh pakai di hub
+```lua
+Library:SetWallpaper({
+    Image = "111593326989465",
+    Transparency = 0.35,
+    ScaleType = "Fill",
+    Layer = "back",
+    Overlay = true,
+    OverlayColor = Color3.fromRGB(0, 0, 0),
+    OverlayTransparency = 0.45,
+})
+```
+Atau langsung di `CreateWindow({ BackgroundImage = ..., BackgroundImageLayer = ..., ... })`.
+
+### ⚠️ Keterbatasan yang harus diinget
+**Mode `back` kadang kurang keliatan** karena groupbox punya `BackgroundColor3`
+solid (dari scheme `BackgroundColor`) → wallpaper ketutup. Keliatannya cuma di
+area padding & elemen semi-transparan.
+
+Fix-nya bukan di wallpaper, tapi di **Phase 2 (design tokens)**: bikin background
+groupbox/container semi-transparan. Sampai situ, mode `front` (wash) lebih
+keliatan hasilnya.
+
+**Wallpaper belum di-apply ke:** Loading screen, Dashboard window, Notification,
+Overlay panel, Draggable elements. Semua itu ScreenGui/Frame terpisah. Kalau mau
+konsisten, itu kerjaan lanjutan.
 
 ---
 
@@ -168,6 +261,7 @@ motion system tambahan. Nunggu keputusan arah visual.
 
 | API | Return | Jebakan |
 |---|---|---|
+| `Library:SetBackgroundImage(img)` | — | **Dulu bug**: assert-nya nerima `string \| number` tapi `Window:SetBackgroundImage` cuma handle string → angka ID diem-diem gagal. **Udah di-fix** (normalisasi ke `rbxassetid://%d`) |
 | `Library:Notify(...)` | `Data` table | `ChangeTitle`/`ChangeDescription`/`ChangeStep`/`Resize`/`Destroy`. **BUKAN** `SetStep`/`Dismiss` |
 | `Library:CreateOverlay(Info)` | `Self` | Panel **key-value**: `SetRow(K,V,Color)`/`RemoveRow`/`ClearRows`/`SetVisible`/`Destroy`. Nggak ada `AddLabel`/`AddButton` |
 | `Library:CreateDashboardWindow(Info)` | `Self` | Row API sama kayak Overlay |
@@ -230,13 +324,13 @@ Validator `validate4.js` punya `SCOPE CHECK` khusus buat ini.
 
 ```
 N3-Project/
-├── Library/N3V3-NoObfus.lua     14.058 baris — engine UI (fork Obsidian) ← DIUBAH
+├── Library/N3V3-NoObfus.lua     14.257 baris — engine UI (fork Obsidian) ← DIUBAH
 ├── Games/
 │   ├── N3-SAE.lua               18.659 baris — hub Steal An Egg (8 tab)
 │   ├── ride-an-pets.lua          6.128 baris — hub kedua (2 icon broken)
 │   └── Source/StealAnEgg/      200.515 baris — 4 source lama
 ├── Preview/
-│   ├── N3V4_Preview.client.lua   1.308 baris — LocalScript preview v3 ← DIUBAH
+│   ├── N3V4_Preview.client.lua   1.648 baris — LocalScript preview v4 ← DIUBAH
 │   └── README.md
 └── DESIGN_NOTES.md               ← file ini
 ```
@@ -247,13 +341,15 @@ N3-Project/
 
 - [x] **Phase 0** — Preview Kit
 - [x] **Phase 0.5** — Animasi ON, CornerRadius 10, offline icon fallback (semua di library)
-- [ ] **Phase 0.6** — Rebalance simetri `N3-SAE.lua` (12 kiri vs 9 kanan) ← *butuh go dari lu*
+- [x] **Phase 0.6** — Wallpaper system (library + tab preview, 7 kontrol + 6 preset)
+- [ ] **Phase 0.7** — Rebalance simetri `N3-SAE.lua` (12 kiri vs 9 kanan) ← *butuh go dari lu*
 - [ ] **Phase 1** — Design tokens: tarik semua angka visual ke satu tabel `Design`
 - [ ] **Phase 2** — Chrome: window, sidebar, tab + sliding indicator, groupbox, footer
 - [ ] **Phase 3** — Komponen: button, toggle, slider, dropdown, keybind, colorpicker, input
 - [ ] **Phase 4** — Motion system: spring util, hover/press state, stagger reveal
 - [ ] **Phase 5** — Loading, Dashboard, Notification, Draggable
 - [ ] **Phase 6** — Icon set lengkap (kalau butuh > 117 icon offline)
+- [ ] **Phase 6.5** — Wallpaper di Loading screen / Dashboard / Notification (sekarang cuma main window)
 - [ ] **Phase 7** — Theme presets bawaan library
 
 **Belum diputusin:** arah visual (glass / brutalist / cyber / minimal), accent & font final.

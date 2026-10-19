@@ -1,7 +1,19 @@
 --[[
 	================================================================================
-	 N3V4 — PREVIEW KIT v3   (LocalScript)
+	 N3V4 — PREVIEW KIT v4   (LocalScript)
 	================================================================================
+
+	 CHANGELOG v4 (WALLPAPER):
+	   • Tab baru "Wallpaper" — 3 groupbox kiri / 3 kanan (simetris)
+	   • Kontrol: Asset ID (paste), transparency, tint, ScaleType, Layer
+	     (back/front), Overlay/scrim (toggle + warna + transparency)
+	   • 6 preset: Wallpaper gue / Subtle / Bold / Wash / Accent tint / Off
+	   • Live Info pakai Window:GetWallpaperInfo()
+	   • ID wallpaper lu (111593326989465) jadi default di CONFIG.Wallpaper
+	   • SEMUA kontrol manggil API LIBRARY (Library:SetWallpaper), bukan hack
+	     preview -> yang lu lihat di sini = yang bakal hub lu dapet
+	   • Grup "Font & Background" di Theme Lab dirampingin jadi "Font"
+	     (kontrol background pindah ke tab Wallpaper, nggak dobel)
 
 	 CHANGELOG v3 (revisi icon):
 	   • Icon balik ke NAMA LUCIDE — sama persis kayak hub lu ("house", "paw-print",
@@ -43,7 +55,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v2",
+	Footer = "N3V4 • UI Preview Kit v4",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -51,6 +63,25 @@ local CONFIG = {
 
 	-- VideoFrame butuh asset ID punya lu. Kosong = section-nya nunjukin notice.
 	VideoAsset = "",
+
+	--// WALLPAPER \\--
+	-- ID wallpaper lu, dipakai sebagai default pas window dibikin.
+	-- Semua field ini sekarang beneran dibaca sama library (bukan cuma preview):
+	-- Templates.Window.BackgroundImage* + BackgroundOverlay*
+	Wallpaper = {
+		Image = "111593326989465",
+		Transparency = 0.35, -- 0 = gambar penuh, 1 = ilang total
+		ScaleType = "Fill", -- Fit | Fill | Stretch | Slice | Crop
+		Color = Color3.fromRGB(255, 255, 255), -- tint (ImageColor3)
+		Layer = "back", -- "back" = wallpaper di belakang konten | "front" = wash di atas
+
+		Overlay = true, -- scrim gelap biar teks tetep kebaca
+		OverlayColor = Color3.fromRGB(0, 0, 0),
+		OverlayTransparency = 0.45,
+	},
+
+	-- false = mulai tanpa wallpaper (buat bandingin sebelum/sesudah)
+	ApplyWallpaperOnStart = true,
 
 	ShowLoadingIntro = true,
 	LoadingSteps = 5,
@@ -365,7 +396,7 @@ end
 --================================================================================
 -- MAIN WINDOW
 --================================================================================
-local Window = Library:CreateWindow({
+local WindowInfo = {
 	Title = CONFIG.Title,
 	Footer = CONFIG.Footer,
 	Icon = CONFIG.Icon,
@@ -381,7 +412,23 @@ local Window = Library:CreateWindow({
 		Dropdown = true,
 		KeyPicker = true,
 	},
-})
+}
+
+-- Wallpaper di-pass langsung ke CreateWindow (field-nya sekarang ada di
+-- Templates.Window, jadi ke-validate & ke-apply otomatis)
+if CONFIG.ApplyWallpaperOnStart then
+	local W = CONFIG.Wallpaper
+	WindowInfo.BackgroundImage = W.Image
+	WindowInfo.BackgroundImageTransparency = W.Transparency
+	WindowInfo.BackgroundImageScaleType = W.ScaleType
+	WindowInfo.BackgroundImageColor = W.Color
+	WindowInfo.BackgroundImageLayer = W.Layer
+	WindowInfo.BackgroundOverlayEnabled = W.Overlay
+	WindowInfo.BackgroundOverlayColor = W.OverlayColor
+	WindowInfo.BackgroundOverlayTransparency = W.OverlayTransparency
+end
+
+local Window = Library:CreateWindow(WindowInfo)
 
 --================================================================================
 -- TAB 1 — OVERVIEW   (2 kiri / 2 kanan — simetris)
@@ -1204,8 +1251,8 @@ Try("Theme: L3 Geometry & scale", function()
 	})
 end)
 
-Try("Theme: R1 Font & background", function()
-	local Box = ThemeTab:AddRightGroupbox("Font & Background", "type")
+Try("Theme: R1 Font", function()
+	local Box = ThemeTab:AddRightGroupbox("Font", "type")
 
 	Box:AddDropdown("Theme_Font", {
 		Text = "Font face",
@@ -1221,18 +1268,13 @@ Try("Theme: R1 Font & background", function()
 		end,
 	})
 
-	Box:AddInput("Theme_BGImage", {
-		Text = "Background image (asset ID)", Default = "",
-		Placeholder = "rbxassetid://0  (kosongin = clear)", Finished = true,
-		Callback = function(Value) Library:SetBackgroundImage(Value or "") end,
-	})
+	Box:AddButton("Reset ke Code", function()
+		Library:SetFont(Enum.Font.Code)
+	end)
 
-	Box:AddButton("Pakai texture N3", function()
-		Library:SetBackgroundImage(CONFIG.ImageAsset)
-	end)
-	Box:AddButton("Clear background image", function()
-		Library:SetBackgroundImage("")
-	end)
+	Box:AddDivider({ Text = "Wallpaper", Margin = 4 })
+	Box:AddLabel("Kontrol background image pindah ke tab WALLPAPER.", true)
+	Box:AddLabel("Di sana ada: ID, transparency, tint, scaletype, layer, overlay.", true)
 end)
 
 Try("Theme: R2 Animations", function()
@@ -1307,6 +1349,301 @@ Try("Theme: R3 Window controls", function()
 			Library:Unload()
 		end,
 	})
+end)
+
+--================================================================================
+-- TAB 7 — WALLPAPER   (3 kiri / 3 kanan — simetris)
+--================================================================================
+local WallpaperTab = Window:AddTab("Wallpaper", "image", "Background image, overlay, tint, layering")
+
+-- State wallpaper sekarang (dipakai bareng sama semua kontrol di bawah)
+local WP = {
+	Image = CONFIG.Wallpaper.Image,
+	Transparency = CONFIG.Wallpaper.Transparency,
+	ScaleType = CONFIG.Wallpaper.ScaleType,
+	Color = CONFIG.Wallpaper.Color,
+	Layer = CONFIG.Wallpaper.Layer,
+	Overlay = CONFIG.Wallpaper.Overlay,
+	OverlayColor = CONFIG.Wallpaper.OverlayColor,
+	OverlayTransparency = CONFIG.Wallpaper.OverlayTransparency,
+}
+
+-- Satu jalur apply: selalu lewat Library:SetWallpaper (API library, bukan hack preview)
+local function ApplyWallpaper()
+	local Success, Err = Library:SetWallpaper({
+		Image = WP.Image,
+		Transparency = WP.Transparency,
+		ScaleType = WP.ScaleType,
+		Color = WP.Color,
+		Layer = WP.Layer,
+		Overlay = WP.Overlay,
+		OverlayColor = WP.OverlayColor,
+		OverlayTransparency = WP.OverlayTransparency,
+	})
+	if not Success and CONFIG.VerboseErrors then
+		warn("[N3V4 Preview] SetWallpaper gagal: " .. tostring(Err))
+	end
+	return Success
+end
+
+Try("Wallpaper: L1 Image source", function()
+	local Box = WallpaperTab:AddLeftGroupbox("Wallpaper", "image")
+
+	Box:AddInput("WP_Id", {
+		Text = "Asset ID wallpaper (paste di sini)",
+		Default = tostring(WP.Image),
+		Placeholder = "111593326989465  atau  rbxassetid://...",
+		Finished = true,
+		Callback = function(Value)
+			WP.Image = (Value == "" or Value == nil) and "" or Value
+			ApplyWallpaper()
+		end,
+	})
+
+	Box:AddButton("Apply wallpaper gue", function()
+		WP.Image = CONFIG.Wallpaper.Image
+		ApplyWallpaper()
+		SafeNotify({ Title = "Wallpaper", Description = "ID: " .. tostring(WP.Image), Icon = "image", Time = 3 })
+	end)
+
+	Box:AddButton("Clear wallpaper", function()
+		WP.Image = ""
+		ApplyWallpaper()
+	end)
+
+	Box:AddSlider("WP_Transparency", {
+		Text = "Image transparency",
+		Default = math.floor(WP.Transparency * 100),
+		Min = 0,
+		Max = 100,
+		Rounding = 0,
+		Suffix = "%",
+		Tooltip = "0% = gambar penuh · 100% = ilang total",
+		Callback = function(Value)
+			WP.Transparency = Value / 100
+			ApplyWallpaper()
+		end,
+	})
+
+	local Tint = Box:AddToggle("WP_TintToggle", { Text = "Tint warna wallpaper", Default = false })
+	if Tint and Tint.AddColorPicker then
+		Tint:AddColorPicker("WP_Tint", {
+			Title = "Warna tint",
+			Default = WP.Color,
+			Callback = function(Color)
+				WP.Color = Color
+				ApplyWallpaper()
+			end,
+		})
+	end
+end)
+
+Try("Wallpaper: L2 Overlay (scrim)", function()
+	local Box = WallpaperTab:AddLeftGroupbox("Overlay / Scrim", "square-check")
+
+	Box:AddLabel("Overlay = lapisan warna di antara wallpaper dan konten.", true)
+	Box:AddLabel("Gunanya: wallpaper ramai/terang nggak bikin teks susah dibaca.", true)
+
+	Box:AddToggle("WP_OverlayEnabled", {
+		Text = "Aktifin overlay",
+		Default = WP.Overlay,
+		Callback = function(Value)
+			WP.Overlay = Value
+			ApplyWallpaper()
+		end,
+	})
+
+	Box:AddSlider("WP_OverlayTransparency", {
+		Text = "Overlay transparency",
+		Default = math.floor(WP.OverlayTransparency * 100),
+		Min = 0,
+		Max = 100,
+		Rounding = 0,
+		Suffix = "%",
+		Tooltip = "0% = overlay nutupin penuh · 100% = overlay ilang",
+		Callback = function(Value)
+			WP.OverlayTransparency = Value / 100
+			ApplyWallpaper()
+		end,
+	})
+
+	local OColor = Box:AddToggle("WP_OverlayColorToggle", { Text = "Warna overlay", Default = true })
+	if OColor and OColor.AddColorPicker then
+		OColor:AddColorPicker("WP_OverlayColor", {
+			Title = "Overlay color",
+			Default = WP.OverlayColor,
+			Callback = function(Color)
+				WP.OverlayColor = Color
+				ApplyWallpaper()
+			end,
+		})
+	end
+end)
+
+Try("Wallpaper: L3 Rendering", function()
+	local Box = WallpaperTab:AddLeftGroupbox("Rendering", "ruler")
+
+	Box:AddDropdown("WP_ScaleType", {
+		Text = "ScaleType",
+		Values = { "Fit", "Fill", "Stretch", "Slice", "Crop" },
+		Default = (function()
+			local Order = { "Fit", "Fill", "Stretch", "Slice", "Crop" }
+			for i, v in ipairs(Order) do
+				if v == WP.ScaleType then return i end
+			end
+			return 3
+		end)(),
+		Tooltip = "Fill = nutupin penuh tanpa gepeng (paling umum buat wallpaper)",
+		Callback = function(Value)
+			WP.ScaleType = Value
+			ApplyWallpaper()
+		end,
+	})
+
+	Box:AddDropdown("WP_Layer", {
+		Text = "Layer mode",
+		Values = { "back", "front" },
+		Default = WP.Layer == "front" and 2 or 1,
+		Tooltip = "back = wallpaper di belakang konten (ZIndex -2)\nfront = wash di atas konten (ZIndex 999, perilaku lama library)",
+		Callback = function(Value)
+			WP.Layer = Value
+			ApplyWallpaper()
+		end,
+	})
+
+	Box:AddDivider({ Text = "ZIndex yang dipakai", Margin = 4 })
+	Box:AddLabel("back  -> image -2, overlay -1, konten 1+", false)
+	Box:AddLabel("front -> image 999, overlay 998", false)
+	Box:AddLabel("Background MainFrame selalu di belakang semua child,", true)
+	Box:AddLabel("jadi ZIndex negatif tetep keliatan.", true)
+end)
+
+Try("Wallpaper: R1 Presets", function()
+	local Box = WallpaperTab:AddRightGroupbox("Presets", "wand-sparkles")
+
+	local function LoadPreset(Name, P)
+		WP.Image = P.Image
+		WP.Transparency = P.Transparency
+		WP.ScaleType = P.ScaleType
+		WP.Color = P.Color or Color3.fromRGB(255, 255, 255)
+		WP.Layer = P.Layer or "back"
+		WP.Overlay = P.Overlay
+		WP.OverlayColor = P.OverlayColor or Color3.fromRGB(0, 0, 0)
+		WP.OverlayTransparency = P.OverlayTransparency
+		ApplyWallpaper()
+		SafeNotify({ Title = "Preset", Description = Name, Icon = "sparkles", Time = 2 })
+	end
+
+	Box:AddButton("Wallpaper gue (default)", function()
+		LoadPreset("Wallpaper gue", {
+			Image = CONFIG.Wallpaper.Image, Transparency = 0.35, ScaleType = "Fill",
+			Layer = "back", Overlay = true, OverlayTransparency = 0.45,
+		})
+	end)
+
+	Box:AddButton("Subtle ( wallpaper tipis )", function()
+		LoadPreset("Subtle", {
+			Image = CONFIG.Wallpaper.Image, Transparency = 0.72, ScaleType = "Fill",
+			Layer = "back", Overlay = true, OverlayTransparency = 0.30,
+		})
+	end)
+
+	Box:AddButton("Bold (wallpaper kuat)", function()
+		LoadPreset("Bold", {
+			Image = CONFIG.Wallpaper.Image, Transparency = 0.10, ScaleType = "Fill",
+			Layer = "back", Overlay = true, OverlayTransparency = 0.60,
+		})
+	end)
+
+	Box:AddButton("Wash (layer front)", function()
+		LoadPreset("Wash", {
+			Image = CONFIG.Wallpaper.Image, Transparency = 0.82, ScaleType = "Stretch",
+			Layer = "front", Overlay = false, OverlayTransparency = 0.5,
+		})
+	end)
+
+	Box:AddButton("Accent tint (ungu N3)", function()
+		LoadPreset("Accent tint", {
+			Image = CONFIG.Wallpaper.Image, Transparency = 0.45, ScaleType = "Fill",
+			Color = Color3.fromRGB(218, 98, 255), Layer = "back",
+			Overlay = true, OverlayColor = Color3.fromRGB(20, 8, 30), OverlayTransparency = 0.40,
+		})
+	end)
+
+	Box:AddButton("Matiin semua", function()
+		LoadPreset("Off", {
+			Image = "", Transparency = 0.75, ScaleType = "Fill",
+			Layer = "back", Overlay = false, OverlayTransparency = 0.5,
+		})
+	end)
+end)
+
+Try("Wallpaper: R2 Live info", function()
+	local Box = WallpaperTab:AddRightGroupbox("Live Info", "info")
+
+	local Labels = {}
+	local Fields = {
+		{ "Image", function(I) return tostring(I.Image) end },
+		{ "Visible", function(I) return tostring(I.Visible) end },
+		{ "Transparency", function(I) return string.format("%.2f", I.Transparency) end },
+		{ "ScaleType", function(I) return tostring(I.ScaleType) end },
+		{ "Layer", function(I) return tostring(I.Layer) end },
+		{ "ZIndex", function(I) return tostring(I.ZIndex) end },
+		{ "Overlay", function(I) return tostring(I.OverlayEnabled) end },
+		{ "OverlayTransp", function(I) return string.format("%.2f", I.OverlayTransparency) end },
+	}
+
+	for _, Spec in ipairs(Fields) do
+		Labels[Spec[1]] = Box:AddLabel(string.format("%s: -", Spec[1]), false)
+	end
+
+	local function Refresh()
+		if typeof(Window.GetWallpaperInfo) ~= "function" then
+			return
+		end
+		local Info = Window:GetWallpaperInfo()
+		for _, Spec in ipairs(Fields) do
+			local L = Labels[Spec[1]]
+			if L and L.SetText then
+				L:SetText(string.format("%s: %s", Spec[1], Spec[2](Info)))
+			end
+		end
+	end
+
+	Box:AddDivider({ Text = "Snapshot dari library", Margin = 4 })
+	Box:AddButton("Refresh info", Refresh)
+	Box:AddButton("Print ke Output", function()
+		if typeof(Window.GetWallpaperInfo) == "function" then
+			print("[N3V4 Wallpaper] ", Window:GetWallpaperInfo())
+		end
+	end)
+
+	Refresh()
+end)
+
+Try("Wallpaper: R3 Catatan", function()
+	local Box = WallpaperTab:AddRightGroupbox("Catatan", "book-open")
+
+	Box:AddLabel("Semua kontrol di tab ini manggil API LIBRARY", true)
+	Box:AddLabel("(Library:SetWallpaper / Window:SetBackground*),", true)
+	Box:AddLabel("bukan hack di sisi preview. Jadi hasil yang lu lihat", true)
+	Box:AddLabel("di sini = hasil yang bakal hub lu dapet.", true)
+
+	Box:AddDivider({ Text = "Layer mode", Margin = 4 })
+	Box:AddLabel("back  : wallpaper di belakang konten. Keliatan di", true)
+	Box:AddLabel("        area padding & elemen yang transparan.", true)
+	Box:AddLabel("front : wash di atas semua konten (ZIndex 999).", true)
+	Box:AddLabel("        Lebih keliatan, tapi nutupin teks sedikit.", true)
+
+	Box:AddDivider({ Text = "Kenapa 'back' kadang kurang keliatan?", Margin = 4 })
+	Box:AddLabel("Groupbox punya BackgroundColor3 solid, jadi", true)
+	Box:AddLabel("wallpaper ketutup. Fix-nya = bikin background", true)
+	Box:AddLabel("groupbox semi-transparan (Phase 2: design tokens).", true)
+
+	Box:AddDivider({ Text = "Format ID yang diterima", Margin = 4 })
+	Box:AddLabel("111593326989465          (angka polos)", false)
+	Box:AddLabel("rbxassetid://111593...   (prefix)", false)
+	Box:AddLabel("https://...  (URL, di-download)", false)
 end)
 
 --================================================================================

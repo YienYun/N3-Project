@@ -399,8 +399,21 @@ local Templates = {
 		--// Dragging \\--
 		CompactWidthActivation = 128,
 
-		--// Background \\--
+		--// Background / Wallpaper \\--
+		-- N3V4: dulu cuma `BackgroundImage = ""` dan sisanya hardcoded
+		-- (ImageTransparency 0.75, ScaleType Stretch, ZIndex 999 di atas konten,
+		-- tanpa overlay). Sekarang semuanya bisa dikonfigurasi.
 		BackgroundImage = "",
+		BackgroundImageTransparency = 0.75,
+		BackgroundImageScaleType = "Stretch", -- Fit | Fill | Stretch | Slice | Crop
+		BackgroundImageColor = Color3.new(1, 1, 1), -- tint (ImageColor3)
+		BackgroundImageLayer = "back", -- "back" = wallpaper beneran (di belakang konten)
+		--   | "front" = wash/texture di atas konten (perilaku lama, ZIndex 999)
+
+		-- Overlay = scrim gelap di antara wallpaper dan konten, biar teks tetep kebaca
+		BackgroundOverlayEnabled = false,
+		BackgroundOverlayColor = Color3.new(0, 0, 0),
+		BackgroundOverlayTransparency = 0.5,
 
 		--// Animations \\--
 		-- N3V4: default di-nyalain semua. Sebelumnya false semua, jadi hub yang
@@ -8933,6 +8946,51 @@ function Library:SetBackgroundImage(Image: string | number)
 	Library:UpdateColorsUsingRegistry()
 end
 
+--// N3V4: one-shot Wallpaper API \\--
+-- Semua field OPSIONAL — yang nil nggak diubah. Contoh:
+--
+--   Library:SetWallpaper({
+--       Image = "111593326989465",      -- angka polos, "rbxassetid://...", atau URL
+--       Transparency = 0.35,            -- 0 = gambar penuh, 1 = ilang
+--       ScaleType = "Fill",             -- Fit | Fill | Stretch | Slice | Crop
+--       Color = Color3.fromRGB(255,255,255),  -- tint
+--       Layer = "back",                 -- "back" (wallpaper) | "front" (wash di atas konten)
+--       Overlay = true,                 -- scrim gelap biar teks kebaca
+--       OverlayColor = Color3.fromRGB(0, 0, 0),
+--       OverlayTransparency = 0.45,
+--   })
+function Library:SetWallpaper(Info: { [string]: any })
+	if typeof(Info) ~= "table" then
+		return false, "Info must be a table"
+	end
+
+	local Window = Library.Window
+	if not Window then
+		return false, "No active window (panggil setelah CreateWindow)"
+	end
+
+	if Info.Image ~= nil then
+		Library:SetBackgroundImage(Info.Image)
+	end
+	if Info.Transparency ~= nil then
+		Window:SetBackgroundImageTransparency(Info.Transparency)
+	end
+	if Info.ScaleType ~= nil then
+		Window:SetBackgroundImageScaleType(Info.ScaleType)
+	end
+	if Info.Color ~= nil then
+		Window:SetBackgroundImageColor(Info.Color)
+	end
+	if Info.Layer ~= nil then
+		Window:SetBackgroundImageLayer(Info.Layer)
+	end
+	if Info.Overlay ~= nil or Info.OverlayColor ~= nil or Info.OverlayTransparency ~= nil then
+		Window:SetBackgroundOverlay(Info.Overlay, Info.OverlayColor, Info.OverlayTransparency)
+	end
+
+	return true
+end
+
 function Library:UpdateNotificationPositions(Snap: boolean?)
 	local IsLeft = Library.NotifySide:lower() == "left"
 	local XScale = IsLeft and 0 or 1
@@ -9327,6 +9385,51 @@ function Library:Notify(...)
 	return Data
 end
 
+--// N3V4: Wallpaper helpers \\--
+local WallpaperScaleTypes = {
+	Fit = Enum.ScaleType.Fit,
+	Fill = Enum.ScaleType.Fill,
+	Stretch = Enum.ScaleType.Stretch,
+	Slice = Enum.ScaleType.Slice,
+	Crop = Enum.ScaleType.Crop,
+}
+
+-- Terima EnumItem ATAU string ("Fit"/"Fill"/...). Fallback ke Stretch.
+local function ResolveScaleType(Value: any): Enum.ScaleType
+	if typeof(Value) == "EnumItem" then
+		return Value :: Enum.ScaleType
+	end
+	if typeof(Value) == "string" then
+		return WallpaperScaleTypes[Value] or Enum.ScaleType.Stretch
+	end
+	return Enum.ScaleType.Stretch
+end
+
+-- ZIndex wallpaper + overlay berdasarkan layer mode.
+-- ScreenGui library pakai ZIndexBehavior Legacy (nggak di-set), jadi ZIndex
+-- cuma berlaku antar sibling. Wallpaper & overlay dua-duanya child MainFrame,
+-- dan background MainFrame sendiri selalu di belakang semua child — jadi
+-- ZIndex negatif tetep keliatan, cuma kalah sama konten (TopBar/Container, ZIndex 1+).
+local WallpaperLayers = {
+	back = { Image = -2, Overlay = -1 }, -- wallpaper paling belakang, overlay di atasnya, konten di atas semua
+	front = { Image = 999, Overlay = 998 }, -- wash di atas konten (perilaku lama library)
+}
+
+local function ResolveWallpaperLayer(Value: any): { Image: number, Overlay: number }
+	if typeof(Value) == "string" and WallpaperLayers[Value:lower()] then
+		return WallpaperLayers[Value:lower()]
+	end
+	return WallpaperLayers.back
+end
+
+local function ClampTransparency(Value: any): number
+	local N = tonumber(Value)
+	if not N then
+		return 0.75
+	end
+	return math.clamp(N, 0, 1)
+end
+
 function Library:CreateWindow(WindowInfo)
 	WindowInfo = Library:Validate(WindowInfo, Templates.Window)
 	local ViewportSize: Vector2 = workspace.CurrentCamera.ViewportSize
@@ -9396,6 +9499,7 @@ function Library:CreateWindow(WindowInfo)
 	local Tabs
 	local Container
 	local BackgroundImage
+	local BackgroundOverlay
 	local BottomBackground
 	local FooterLabel
 	local TopBar
@@ -9664,16 +9768,19 @@ function Library:CreateWindow(WindowInfo)
 		})
 
 		local BackgroundIcon = Library:GetCustomIcon(WindowInfo.BackgroundImage)
+		local WallpaperLayer = ResolveWallpaperLayer(WindowInfo.BackgroundImageLayer)
+
 		BackgroundImage = New("ImageLabel", {
 			Image = BackgroundIcon and BackgroundIcon.Url or "",
 			ImageRectOffset = BackgroundIcon and BackgroundIcon.ImageRectOffset or Vector2.zero,
 			ImageRectSize = BackgroundIcon and BackgroundIcon.ImageRectSize or Vector2.zero,
 			Position = UDim2.fromScale(0, 0),
 			Size = UDim2.fromScale(1, 1),
-			ScaleType = Enum.ScaleType.Stretch,
-			ZIndex = 999,
+			ScaleType = ResolveScaleType(WindowInfo.BackgroundImageScaleType),
+			ZIndex = WallpaperLayer.Image,
 			BackgroundTransparency = 1,
-			ImageTransparency = 0.75,
+			ImageColor3 = WindowInfo.BackgroundImageColor,
+			ImageTransparency = ClampTransparency(WindowInfo.BackgroundImageTransparency),
 			Visible = BackgroundIcon ~= nil,
 			Parent = MainFrame,
 		})
@@ -9683,6 +9790,28 @@ function Library:CreateWindow(WindowInfo)
 			New("UICorner", {
 				CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
 				Parent = BackgroundImage,
+			})
+		)
+
+		-- N3V4: Overlay / scrim. Lapisan warna di antara wallpaper dan konten,
+		-- gunanya biar teks tetep kebaca waktu wallpaper-nya ramai/terang.
+		-- ZIndex selalu satu tingkat di atas wallpaper, di bawah konten.
+		BackgroundOverlay = New("Frame", {
+			BackgroundColor3 = WindowInfo.BackgroundOverlayColor,
+			BackgroundTransparency = ClampTransparency(WindowInfo.BackgroundOverlayTransparency),
+			BorderSizePixel = 0,
+			Position = UDim2.fromScale(0, 0),
+			Size = UDim2.fromScale(1, 1),
+			ZIndex = WallpaperLayer.Overlay,
+			Visible = WindowInfo.BackgroundOverlayEnabled == true,
+			Parent = MainFrame,
+		})
+
+		table.insert(
+			Library.Corners,
+			New("UICorner", {
+				CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+				Parent = BackgroundOverlay,
 			})
 		)
 
@@ -9956,6 +10085,14 @@ function Library:CreateWindow(WindowInfo)
 	function Window:SetBackgroundImage(Image: string)
 		local ValidIcon = false
 
+		-- N3V4 FIX: Library:SetBackgroundImage() di-assert nerima string | number,
+		-- tapi fungsi ini cuma nge-handle string. Jadi angka ID (misal 111593326989465)
+		-- diem-diem gagal -> ValidIcon false -> wallpaper nggak muncul tanpa error.
+		-- Dinormalisasi ke "rbxassetid://<id>" di sini.
+		if typeof(Image) == "number" then
+			Image = string.format("rbxassetid://%d", Image)
+		end
+
 		if typeof(Image) == "string" then
 			local BackgroundIcon = Library:GetCustomIcon(Image)
 
@@ -10013,6 +10150,68 @@ function Library:CreateWindow(WindowInfo)
 		end
 
 		WindowInfo.BackgroundImage = Image
+	end
+
+	--// N3V4: Wallpaper setters \\--
+	-- Semua nyimpen ke WindowInfo juga, biar state-nya konsisten kalau window
+	-- di-resize / di-rebuild.
+
+	function Window:SetBackgroundImageTransparency(Transparency: number)
+		BackgroundImage.ImageTransparency = ClampTransparency(Transparency)
+		WindowInfo.BackgroundImageTransparency = BackgroundImage.ImageTransparency
+	end
+
+	function Window:SetBackgroundImageScaleType(ScaleType: Enum.ScaleType | string)
+		BackgroundImage.ScaleType = ResolveScaleType(ScaleType)
+		WindowInfo.BackgroundImageScaleType = ScaleType
+	end
+
+	function Window:SetBackgroundImageColor(Color: Color3)
+		assert(typeof(Color) == "Color3", "Expected Color3 for wallpaper tint got: " .. typeof(Color))
+		BackgroundImage.ImageColor3 = Color
+		WindowInfo.BackgroundImageColor = Color
+	end
+
+	function Window:SetBackgroundImageLayer(Layer: string)
+		local Resolved = ResolveWallpaperLayer(Layer)
+		BackgroundImage.ZIndex = Resolved.Image
+		BackgroundOverlay.ZIndex = Resolved.Overlay
+		WindowInfo.BackgroundImageLayer = (Layer:lower() == "front") and "front" or "back"
+	end
+
+	-- Semua parameter opsional — yang nil nggak diubah.
+	function Window:SetBackgroundOverlay(Enabled: boolean?, Color: Color3?, Transparency: number?)
+		if Enabled ~= nil then
+			BackgroundOverlay.Visible = Enabled == true
+			WindowInfo.BackgroundOverlayEnabled = Enabled == true
+		end
+
+		if Color ~= nil then
+			assert(typeof(Color) == "Color3", "Expected Color3 for overlay got: " .. typeof(Color))
+			BackgroundOverlay.BackgroundColor3 = Color
+			WindowInfo.BackgroundOverlayColor = Color
+		end
+
+		if Transparency ~= nil then
+			BackgroundOverlay.BackgroundTransparency = ClampTransparency(Transparency)
+			WindowInfo.BackgroundOverlayTransparency = BackgroundOverlay.BackgroundTransparency
+		end
+	end
+
+	-- Snapshot state wallpaper sekarang (buat debug / display di UI)
+	function Window:GetWallpaperInfo()
+		return {
+			Image = WindowInfo.BackgroundImage,
+			Visible = BackgroundImage.Visible,
+			Transparency = BackgroundImage.ImageTransparency,
+			ScaleType = BackgroundImage.ScaleType,
+			Color = BackgroundImage.ImageColor3,
+			Layer = WindowInfo.BackgroundImageLayer,
+			ZIndex = BackgroundImage.ZIndex,
+			OverlayEnabled = BackgroundOverlay.Visible,
+			OverlayColor = BackgroundOverlay.BackgroundColor3,
+			OverlayTransparency = BackgroundOverlay.BackgroundTransparency,
+		}
 	end
 
 	function Window:SetFooter(Footer: string)

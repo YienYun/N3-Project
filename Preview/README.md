@@ -1,4 +1,4 @@
-# N3V4 — Preview Kit (v3)
+# N3V4 — Preview Kit (v4)
 
 Preview lengkap semua fitur UI library N3, buat dites di **Roblox Studio**.
 
@@ -41,6 +41,31 @@ Icon lucide punya **fallback offline di dalam library**, jadi:
 |---|---|
 | **OFF** | ✅ Semua icon muncul (117 icon offline, spritesheet publik) |
 | **ON** | ✅ Semua icon muncul (1866 icon penuh dari gitlab / mirror GitHub) |
+
+---
+
+## Yang baru di v4 — WALLPAPER 🖼️
+
+Fitur baru, **full di library** (bukan preview-only):
+
+| Kontrol | Detail |
+|---|---|
+| **Asset ID** | Paste angka polos (`111593326989465`), `rbxassetid://...`, atau URL |
+| **Transparency** | 0–100% |
+| **Tint** | ColorPicker (`ImageColor3`) |
+| **ScaleType** | Fit / Fill / Stretch / Slice / Crop |
+| **Layer** | `back` (wallpaper di belakang konten) / `front` (wash di atas, perilaku lama) |
+| **Overlay / Scrim** | toggle + warna + transparency — biar teks tetep kebaca |
+| **6 Preset** | Wallpaper gue / Subtle / Bold / Wash / Accent tint / Off |
+| **Live Info** | snapshot `Window:GetWallpaperInfo()` |
+
+Plus **fix bug asli library**: `Window:SetBackgroundImage` nggak handle angka,
+jadi paste ID polos diem-diem gagal tanpa error.
+
+Tab baru: **Wallpaper** (3 groupbox kiri / 3 kanan, simetris).
+
+> ⚠️ Mode `back` kadang kurang keliatan karena groupbox punya background solid.
+> Kalau gitu, coba mode `front`. Fix permanennya ada di Phase 2 (design tokens).
 
 ---
 
@@ -100,7 +125,7 @@ Toggle UI: `RightCtrl`
 
 ---
 
-## Isi (6 tab, 33 section, semua simetris)
+## Isi (7 tab, semua simetris)
 
 | Tab | Kiri | Kanan |
 |---|---|---|
@@ -109,9 +134,10 @@ Toggle UI: `RightCtrl`
 | **Advanced** | Dependency System (Box + Groupbox) · Tabbox 3 sub-tab · Collapse Control | Nested Tabbox · UI Passthrough · Dialog (4 variant + WaitTime + form) |
 | **Media** | Viewport Interaktif (drag) · Image Element (height/scaletype/tint live) · Video | Spotlight Card (swap 2D↔3D) · Live Feed (12 row + clear) · Asset Dipakai |
 | **Overlays** | Notifications (6 varian + progress steps) · Draggable Label/Button/ImageButton · Draggable Menu | Overlay Panel (SetRow realtime) · Dashboard + Loading states · Context Menu (right-click) |
-| **Theme Lab** | Scheme Colors (5 picker live) · Theme Presets (4) · Geometry & Scale | Font & Background (9 font) · Animations (5 toggle + timing) · Window Controls |
+| **Theme Lab** | Scheme Colors (5 picker live) · Theme Presets (4) · Geometry & Scale | Font (9 font) · Animations (5 toggle + timing) · Window Controls |
+| **Wallpaper** 🆕 | Wallpaper (ID/transparency/tint) · Overlay-Scrim (toggle/color/transparency) · Rendering (scaletype/layer/ZIndex) | Presets (6) · Live Info (GetWallpaperInfo) · Catatan |
 
-**Simetri:** tiap tab groupbox kiri = kanan (2/2, 3/3, 3/3, 3/3, 3/3, 3/3).
+**Simetri:** tiap tab groupbox kiri = kanan (2/2, 3/3, 3/3, 3/3, 3/3, 3/3, 3/3).
 
 > ⚠️ Hub lu (`Games/N3-SAE.lua`) **belum** simetris: 12 `AddLeftGroupbox` vs
 > 9 `AddRightGroupbox`. Simetri itu urusan layout di hub, bukan library.
@@ -126,6 +152,8 @@ Toggle UI: `RightCtrl`
 | `Title` / `Footer` / `Icon` | — | Identitas window |
 | `ImageAsset` | N3 logo | Gambar polos buat Image / Spotlight / **ScrollFeed** |
 | `VideoAsset` | `""` | Asset VideoFrame. Kosong = section nunjukin notice |
+| `Wallpaper` | tabel | `Image`, `Transparency`, `ScaleType`, `Color`, `Layer`, `Overlay`, `OverlayColor`, `OverlayTransparency` |
+| `ApplyWallpaperOnStart` | `true` | `false` = mulai tanpa wallpaper (buat bandingin) |
 | `ShowLoadingIntro` | `true` | Loading screen pembuka |
 | `LoadingSteps` / `LoadingStepDelay` | `5` / `0.45` | Jumlah step & jeda |
 | `ToggleKey` | `RightControl` | Keybind toggle UI |
