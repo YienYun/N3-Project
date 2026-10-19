@@ -223,11 +223,14 @@ local Library = {
 	RotatingChevronTweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 
 	Animations = {
-		ToggleWindow = false,
-		TabSwitch = false,
-		Groupbox = false,
-		Dropdown = false,
-		KeyPicker = false,
+		-- N3V4: disamain sama Templates.Window.Animations (ON semua).
+		-- Tabel ini kepakai SEBELUM CreateWindow() dipanggil (mis. Loading screen),
+		-- habis itu di-override sama Library.Animations = WindowInfo.Animations.
+		ToggleWindow = true,
+		TabSwitch = true,
+		Groupbox = true,
+		Dropdown = true,
+		KeyPicker = true,
 	},
 
 	--// States \\--
@@ -400,12 +403,15 @@ local Templates = {
 		BackgroundImage = "",
 
 		--// Animations \\--
+		-- N3V4: default di-nyalain semua. Sebelumnya false semua, jadi hub yang
+		-- nggak ngoper `Animations` ke CreateWindow() nggak dapet animasi sama sekali.
+		-- Matiin per-window kalau perlu: CreateWindow({ Animations = { TabSwitch = false, ... } })
 		Animations = {
-			ToggleWindow = false,
-			TabSwitch = false,
-			Groupbox = false,
-			Dropdown = false,
-			KeyPicker = false,
+			ToggleWindow = true,
+			TabSwitch = true,
+			Groupbox = true,
+			Dropdown = true,
+			KeyPicker = true,
 		},
 
 		TabTransitionTime = 0.22,

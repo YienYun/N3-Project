@@ -1,6 +1,10 @@
-# N3V4 — Preview Kit
+# N3V4 — Preview Kit (v2)
 
 Preview lengkap semua fitur UI library N3, buat dites langsung di **Roblox Studio**.
+
+> Keputusan desain & temuan teknis ada di **`../DESIGN_NOTES.md`** — baca itu dulu.
+
+---
 
 ## Setup (3 langkah)
 
@@ -11,11 +15,11 @@ ReplicatedStorage
 └── N3V4          <- ModuleScript
 ```
 
-Isi ModuleScript-nya = **seluruh kode** dari `Library/N3V3-NoObfus.lua`.
-Baris terakhir harus tetap `return Library` (udah ada di file aslinya).
+Isi = **seluruh kode** `Library/N3V3-NoObfus.lua`.
+Baris terakhir harus tetap `return Library`.
 
-> Nama modul bisa diganti — tinggal sesuaikan `CONFIG.ModuleName` di script preview.
-> Kalau nggak ketemu di ReplicatedStorage, script bakal scan seluruh DataModel.
+> Nama bisa diganti — sesuaikan `CONFIG.ModuleName`. Kalau nggak ada di
+> ReplicatedStorage, script scan seluruh DataModel.
 
 ### 2. LocalScript preview
 
@@ -25,87 +29,86 @@ StarterPlayer
     └── N3V4_Preview   <- LocalScript
 ```
 
-Isi = **seluruh kode** dari `Preview/N3V4_Preview.client.lua`.
+Isi = **seluruh kode** `N3V4_Preview.client.lua`.
 
-**Nama LocalScript-nya bebas.** Rekomendasi: `N3V4_Preview`.
-Yang penting tipenya **LocalScript** (bukan Script / ModuleScript) dan
-ditaruh di **StarterPlayerScripts**.
+Nama bebas. Yang wajib: tipenya **LocalScript** dan lokasinya di **StarterPlayerScripts**.
 
-### 3. Nyalakan HTTP
+### 3. HTTP Requests — sekarang **OPSIONAL**
 
-`File > Game Settings > Security > Allow HTTP Requests = ON`
+`File > Game Settings > Security > Allow HTTP Requests`
 
-Dibutuhkan buat:
-- Icon **lucide** (`gitlab.com/upio/lucide-roblox-direct`)
-- Asset bawaan library (LoadingIcon, CheckIcon, TransparencyTexture, SaturationMap)
+| Keadaan | Efek |
+|---|---|
+| **OFF** | ✅ Icon tetep muncul (pakai `rbxassetid` manual). Asset library pakai fallback ID. |
+| **ON** | Sama aja, kecuali lu set `CONFIG.UseLucideIcons = true` |
 
-Kalau OFF, UI tetap jalan — cuma icon-icon-nya kosong.
+---
+
+## Yang baru di v2
+
+| Perubahan | Kenapa |
+|---|---|
+| **Icon pakai `rbxassetid` manual** (31 ID) | Lucide butuh HTTP ke gitlab. Kalau gagal → icon kosong semua, dan `AddDraggableLabel` malah **error keras** (assert). ID-nya ditambang dari repo lu sendiri, artinya terkonfirmasi dari source. |
+| **FIX** `AddDraggableLabel` icon assert | Ganti `"zap"` (lucide) → `ICONS.Star` (rbxassetid) |
+| **FIX** `AddContextMenu` | Ternyata nge-return **table** `{Open, Close, Toggle, SetSize, Destroy, Menu}` — **nggak ada `AddButton`**. Item sekarang dibangun manual ke `Ctx.Menu`, dan right-click di-bind manual (library nggak auto-bind) |
+| **Layout simetris** | Tiap tab: groupbox kiri = kanan (2/2, 3/3, 3/3, 3/3, 3/3, 3/3) |
+| **Animasi ON dari library** | Default `Templates.Window.Animations` di-flip `false` → `true`. Hub lu dapet animasi **tanpa diedit** |
 
 ---
 
 ## Jalanin
 
-Tekan **Play**. Urutannya:
+Tekan **Play**:
 
 1. Loading screen intro (5 step, ±3 detik)
-2. Main window muncul di tengah layar
+2. Main window muncul di tengah
 3. Laporan komponen ke-print di **Output**
 
 Toggle UI: `RightCtrl`
 
 ---
 
-## Isi Preview (6 tab, 33 section)
+## Isi (6 tab, 33 section, semua simetris)
 
-| Tab | Isi |
-|---|---|
-| **Overview** | SpotlightCard, Label, Divider, Viewport 3D auto-spin, ScrollFeed |
-| **Components** | Button (biasa/tooltip/double-click/risky/disabled/sub-button), Toggle + KeyPicker + ColorPicker, Checkbox, Slider, Input, Dropdown (single/multi/searchable/disabled/values-images/player/team) |
-| **Advanced** | DependencyBox, DependencyGroupbox, Tabbox kiri, Nested Tabbox dalam Groupbox, Groupbox collapse, UIPassthrough, KeyBox, Dialog (3 variant + destructive + form) |
-| **Media** | Viewport interaktif (drag), Image + kontrol realtime, SpotlightCard 2D↔3D, Video, ScrollFeed besar |
-| **Overlays** | Notification (6 varian termasuk progress steps), Draggable Label/Button/ImageButton/Menu, Overlay panel (SetRow), Dashboard window, Loading error page, Context menu |
-| **Theme Lab** | 5 color picker scheme, 3 preset tema, corner radius, DPI scale, sidebar width, compact sidebar, font face, background image, 5 animation toggle + timing/swipe control, notify side, title/footer, unload |
+| Tab | Kiri | Kanan |
+|---|---|---|
+| **Overview** | Selamat Datang (SpotlightCard, Divider, Label) · Status Session | Asset 3D (Viewport auto-spin) · Activity Feed (ScrollFeed clickable) |
+| **Components** | Buttons (biasa/tooltip/double-click/risky/disabled/sub) · Toggles & Addons (KeyPicker, ColorPicker, Checkbox) · Sliders (suffix/prefix/decimal) | Inputs (text/numeric/no-empty/webhook) · Dropdowns Basic (single/multi+DragSelect/searchable 20 item) · Dropdowns Special (disabled-values/ValueImages/Player auto/Team auto) |
+| **Advanced** | Dependency System (DependencyBox + DependencyGroupbox) · Tabbox 3 sub-tab · Collapse Control | Nested Tabbox dalam Groupbox · UI Passthrough · Dialog (4 variant + WaitTime + form) |
+| **Media** | Viewport Interaktif (drag) · Image Element (height/scaletype/tint live) · Video | Spotlight Card (swap 2D↔3D) · Live Feed (12 row + clear) · Asset Dipakai (daftar ID) |
+| **Overlays** | Notifications (6 varian + progress steps) · Draggable Label/Button/ImageButton · Draggable Menu (manual build) | Overlay Panel (SetRow/RemoveRow/ClearRows realtime) · Dashboard + Loading states (incl. error page) · Context Menu (right-click) |
+| **Theme Lab** | Scheme Colors (5 picker live) · Theme Presets (4) · Geometry & Scale (radius/DPI/sidebar/compact) | Font & Background (9 font + bg image) · Animations (5 toggle + timing/swipe/direction) · Window Controls (notify side/title/footer/report/unload) |
+
+---
+
+## Config cepat
+
+Blok `CONFIG` di paling atas:
+
+| Key | Default | Fungsi |
+|---|---|---|
+| `ModuleName` | `"N3V4"` | Nama ModuleScript library |
+| `Title` / `Footer` / `Icon` | — | Identitas window |
+| `ImageAsset` | N3 logo | Asset buat Image / Spotlight / Feed |
+| `VideoAsset` | `""` | Asset VideoFrame. Kosong = section nunjukin notice |
+| `UseLucideIcons` | `false` | `true` = pakai nama lucide (butuh HTTP ON) |
+| `ShowLoadingIntro` | `true` | Loading screen pembuka |
+| `LoadingSteps` / `LoadingStepDelay` | `5` / `0.45` | Jumlah step & jeda |
+| `ToggleKey` | `RightControl` | Keybind toggle UI |
+| `VerboseErrors` | `true` | Warning per-section gagal di Output |
+
+Ganti icon? Edit tabel **`ICONS`** (ID) atau **`UI_ICON`** (slot → ID). 41 slot.
 
 ---
 
 ## Catatan Studio
 
-- `writefile` / `getcustomasset` / `isfile` **nggak ada** di Studio
-  → SaveManager nggak bisa nyimpen config. **Normal, bukan bug.**
-- `protectgui` / `cloneref` / `gethui` punya fallback di library, jadi aman.
-- UI di-parent ke `PlayerGui` (bukan CoreGui) kalau jalan di Studio.
+- `writefile` / `getcustomasset` / `isfile` nggak ada di Studio → SaveManager nggak nyimpen. **Normal.**
+- `protectgui` / `cloneref` / `gethui` punya fallback di library, aman.
+- UI di-parent ke `PlayerGui` (bukan CoreGui) kalau di Studio.
 
 ## Laporan komponen
 
-Setiap section dibungkus `pcall`. Kalau ada yang gagal, script **tetep jalan** —
-yang gagal cuma di-skip dan dicatat.
+Tiap section dibungkus `pcall`. Yang gagal cuma di-skip + dicatat, script tetep jalan.
 
-Lihat laporan kapan aja: tab **Theme Lab** → groupbox *Window Controls* →
-**"Print laporan ke Output"**.
-
-```
-===================================================
-  N3V4 PREVIEW KIT — LAPORAN KOMPONEN
-===================================================
-  ✅ BERHASIL : 33
-      • Overview: Groupbox kiri (Spotlight + Label + Divider)
-      ...
-  ❌ GAGAL    : 0
-      (nggak ada — semua komponen jalan 🎉)
-===================================================
-```
-
-## Config cepat
-
-Semua yang mungkin mau lu ubah ada di blok `CONFIG` paling atas:
-
-| Key | Fungsi |
-|---|---|
-| `ModuleName` | Nama ModuleScript library (default `N3V4`) |
-| `Title` / `Footer` / `Icon` | Identitas window |
-| `ImageAsset` | Asset buat demo Image / Spotlight / Feed icon |
-| `VideoAsset` | Asset VideoFrame. **Kosong = section Video di-skip** |
-| `ShowLoadingIntro` | Nyalain/matiin loading screen pembuka |
-| `LoadingSteps` / `LoadingStepDelay` | Jumlah step & jeda loading |
-| `ToggleKey` | Keybind toggle UI |
-| `VerboseErrors` | Warning per-komponen gagal di Output |
+Lihat ulang kapan aja: **Theme Lab → Window Controls → "Print laporan ke Output"**.

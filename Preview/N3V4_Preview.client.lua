@@ -1,38 +1,22 @@
 --[[
 	================================================================================
-	 N3V4 — PREVIEW KIT   (LocalScript)
+	 N3V4 — PREVIEW KIT v2   (LocalScript)
 	================================================================================
 
-	 APA INI?
-	   Preview lengkap SEMUA fitur UI yang ada di library N3 lu.
-	   Tujuannya: lu bisa lihat & klik-klik seluruh komponen di Roblox Studio
-	   tanpa harus jalanin hub 18.000 baris.
+	 CHANGELOG v2:
+	   • Icon sekarang pakai rbxassetid MANUAL — nggak butuh HTTP lagi, langsung muncul.
+	     (ID-nya ditambang dari repo lu sendiri, artinya udah dikonfirmasi dari source)
+	   • FIX: AddDraggableLabel error "Icon must be a valid Roblox asset..."
+	   • FIX: AddContextMenu error "AddButton is not a valid member of Frame"
+	   • Layout SIMETRIS: 3 groupbox kiri / 3 groupbox kanan di tiap tab
+	   • Animasi library udah di-nyalain dari default (lihat Library/N3V3-NoObfus.lua)
 
-	 CARA PAKAI (3 langkah):
-	   1. Library lu  -> ModuleScript di ReplicatedStorage, nama: N3V4
-	                     (isi = seluruh kode N3V3-NoObfus.lua, baris terakhir
-	                      harus "return Library")
-	   2. Script INI  -> LocalScript di StarterPlayer > StarterPlayerScripts
-	                     nama rekomendasi: N3V4_Preview
-	   3. Game Settings > Security > Allow HTTP Requests = ON
-	                     (buat icon lucide + asset library)
+	 CARA PAKAI:
+	   1. ReplicatedStorage > ModuleScript "N3V4"  = isi N3V3-NoObfus.lua
+	   2. StarterPlayer > StarterPlayerScripts > LocalScript "N3V4_Preview" = file ini
+	   3. Game Settings > Security > Allow HTTP Requests = ON (opsional sekarang,
+	      cuma dibutuhin kalau CONFIG.UseLucideIcons = true)
 	   Tekan Play.
-
-	 CATATAN STUDIO:
-	   - writefile/getcustomasset nggak ada di Studio, jadi SaveManager nggak
-	     nyimpen config. Itu NORMAL, bukan bug.
-	   - Icon nggak muncul? Berarti HTTP Requests masih OFF.
-	   - Tiap section dibungkus pcall. Komponen yang gagal NGGAK bikin script
-	     mati. Laporan lengkap ke-print di Output.
-
-	 API YANG DIPAKE DISINI 100% HASIL VERIFIKASI DARI SOURCE LU:
-	   Notify        -> return Data { ChangeTitle, ChangeDescription, ChangeStep, Resize, Destroy }
-	   CreateOverlay -> return Self { SetRow, RemoveRow, ClearRows, SetVisible, Destroy }
-	   Dashboard     -> return Self { SetRow, RemoveRow, ClearRows, Destroy }
-	   DraggableMenu -> return Holder, Container (raw Instance, tanpa method)
-	   DraggableLabel-> return { SetText, SetIcon, SetIconPosition, SetVisible, Destroy }
-	   AddKeyBox     -> Callback(Text)
-	   AddFooterButton-> (Idx, { Title, Variant, Order, WaitTime, Callback(Dialog) })
 
 	================================================================================
 ]]
@@ -44,38 +28,163 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 --================================================================================
--- CONFIG — ubah bagian ini aja, nggak usah ngoprek yang bawah
+-- CONFIG
 --================================================================================
 local CONFIG = {
-	-- Nama ModuleScript library lu. Gue cari di ReplicatedStorage dulu; kalau
-	-- nggak ketemu, gue scan seluruh DataModel. Jadi mau ditaruh di mana pun kebaca.
 	ModuleName = "N3V4",
 
-	-- Identitas window preview
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit",
-	Icon = "rbxassetid://117688744510818",
+	Footer = "N3V4 • UI Preview Kit v2",
+	Icon = "rbxassetid://117688744510818", -- N3 logo
 
-	-- Asset buat demo Image / SpotlightCard / Dropdown ValueImages / Feed icon
+	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
 	ImageAsset = "rbxassetid://117688744510818",
 
-	-- Demo Video butuh asset ID VideoFrame punya lu. Kosongin ("") = di-skip.
+	-- VideoFrame butuh asset ID punya lu. Kosong = section-nya nunjukin notice.
 	VideoAsset = "",
 
-	-- Loading screen pembuka
+	-- false = pakai ICONS (rbxassetid, offline, PASTI muncul)
+	-- true  = pakai nama lucide (butuh HTTP Requests ON)
+	UseLucideIcons = false,
+
 	ShowLoadingIntro = true,
 	LoadingSteps = 5,
 	LoadingStepDelay = 0.45,
 
-	-- Keybind toggle UI
 	ToggleKey = Enum.KeyCode.RightControl,
-
-	-- Set false kalau lu nggak mau warning error per-komponen di Output
 	VerboseErrors = true,
 }
 
 --================================================================================
--- 1. REPORT HELPER
+-- ICONS — ditambang dari repo lu sendiri, arti udah dikonfirmasi dari konteks source
+--
+--   Sumber: Games/Source/StealAnEgg/ChiliSourceV4.lua:43885 (named icon map)
+--           Games/Source/StealAnEgg/ChiliSourceV4.lua:12534 (feature icon map)
+--           Games/Source/StealAnEgg/SenaV2.lua             (pet icon map)
+--           Library/N3V3-NoObfus.lua                       (LoadingIcon/CheckIcon)
+--
+--   Catatan: ini icon game-specific (pet/item/stat), bukan icon UI generik.
+--   Dipakai sebagai PLACEHOLDER biar preview ada icon-nya tanpa butuh HTTP.
+--   Nanti pas upgrade visual, ini bisa diganti icon set yang proper.
+--================================================================================
+local ICONS = {
+	-- Brand & UI asset bawaan library
+	N3Logo = "rbxassetid://117688744510818",
+	Loading = "rbxassetid://97544096941083",
+	Check = "rbxassetid://97682394690683",
+
+	-- Stat icons (dari ChiliSourceV4:43885 — key name = artinya)
+	Money = "rbxassetid://119640363267627",
+	Speed = "rbxassetid://78137530993637",
+	Eggs = "rbxassetid://97499770821177",
+	Pets = "rbxassetid://112223455192501",
+	Night = "rbxassetid://123238464128459",
+	Index = "rbxassetid://72512465543867",
+	Shop = "rbxassetid://70598530577515",
+	Fights = "rbxassetid://135238935953633",
+	Lab = "rbxassetid://103838374075457",
+	Race = "rbxassetid://82857133407630",
+	Wins = "rbxassetid://116272961700800",
+	Star = "rbxassetid://118070800707365",
+
+	-- Feature icons (dari ChiliSourceV4:12534 — dikonfirmasi dari Sub description)
+	Treadmill = "rbxassetid://84421204509494",
+	Butterfly = "rbxassetid://131116540264095",
+	Essence = "rbxassetid://114750647204247",
+	Wisp = "rbxassetid://117266037162644",
+	Train = "rbxassetid://83798853441239",
+	Pumpkin = "rbxassetid://112785428441728",
+	Shield = "rbxassetid://10747384394", -- guardIcon
+
+	-- Creature icons (dari SenaV2)
+	Dragon = "rbxassetid://78935088838538",
+	Unicorn = "rbxassetid://70463817382627",
+	Phoenix = "rbxassetid://118067990008425",
+	ArchAngel = "rbxassetid://113289118499426",
+	Kitsune = "rbxassetid://107842067813602",
+	Pegasus = "rbxassetid://112830316982322",
+	Gargoyle = "rbxassetid://137949993315884",
+	Godzilla = "rbxassetid://102979882140882",
+	TRex = "rbxassetid://124293259998827",
+}
+
+-- Pemetaan slot UI -> icon. Ganti di sini aja kalau mau icon lain.
+local UI_ICON = {
+	-- Tab
+	TabOverview = "Index",
+	TabComponents = "Lab",
+	TabAdvanced = "Essence",
+	TabMedia = "Pets",
+	TabOverlays = "Night",
+	TabTheme = "Phoenix",
+
+	-- Overview
+	Welcome = "Star",
+	Session = "Index",
+	Asset3D = "Dragon",
+	Feed = "Butterfly",
+
+	-- Components
+	Buttons = "Fights",
+	Toggles = "Shield",
+	Sliders = "Speed",
+	Inputs = "Wisp",
+	DropdownBasic = "Eggs",
+	DropdownSpecial = "Pets",
+
+	-- Advanced
+	Dependency = "Essence",
+	Tabbox = "Train",
+	Collapse = "Pumpkin",
+	NestedTabbox = "Treadmill",
+	Passthrough = "Race",
+	Dialog = "Gargoyle",
+
+	-- Media
+	Viewport = "Godzilla",
+	Image = "Kitsune",
+	Video = "TRex",
+	Spotlight = "ArchAngel",
+	LiveFeed = "Unicorn",
+	MediaInfo = "Pegasus",
+
+	-- Overlays
+	Notify = "Star",
+	Draggable = "Wins",
+	DragMenu = "Shop",
+	Overlay = "Money",
+	Dashboard = "Lab",
+	LoadingState = "Loading",
+	ContextMenu = "Fights",
+
+	-- Theme
+	SchemeColors = "Essence",
+	Presets = "Phoenix",
+	Geometry = "Treadmill",
+	FontBg = "Index",
+	Animations = "Speed",
+	WindowCtrl = "Shield",
+}
+
+-- Resolver: lucide name (kalau HTTP on) atau rbxassetid (offline, default)
+local LUCIDE_FALLBACK = {
+	TabOverview = "layout-dashboard", TabComponents = "shapes", TabAdvanced = "layers",
+	TabMedia = "image", TabOverlays = "bell", TabTheme = "palette",
+}
+
+local function Icon(SlotKey)
+	local IdKey = UI_ICON[SlotKey]
+	if not IdKey then
+		return ICONS.N3Logo
+	end
+	if CONFIG.UseLucideIcons and LUCIDE_FALLBACK[SlotKey] then
+		return LUCIDE_FALLBACK[SlotKey]
+	end
+	return ICONS[IdKey] or ICONS.N3Logo
+end
+
+--================================================================================
+-- REPORT HELPER
 --================================================================================
 local Report = { OK = {}, Failed = {} }
 
@@ -95,13 +204,13 @@ end
 
 local function PrintReport()
 	print("===================================================")
-	print("  N3V4 PREVIEW KIT — LAPORAN KOMPONEN")
+	print("  N3V4 PREVIEW KIT v2 — LAPORAN KOMPONEN")
 	print("===================================================")
+	print(string.format("  Icon mode : %s", CONFIG.UseLucideIcons and "LUCIDE (butuh HTTP)" or "rbxassetid MANUAL (offline)"))
 	print(string.format("  ✅ BERHASIL : %d", #Report.OK))
 	for _, Name in ipairs(Report.OK) do
 		print("      • " .. Name)
 	end
-
 	print(string.format("  ❌ GAGAL    : %d", #Report.Failed))
 	if #Report.Failed > 0 then
 		for _, Name in ipairs(Report.Failed) do
@@ -114,19 +223,17 @@ local function PrintReport()
 end
 
 --================================================================================
--- 2. RESOLVE LIBRARY MODULE
+-- RESOLVE LIBRARY
 --================================================================================
 local function FindModule(Name)
 	local Direct = ReplicatedStorage:FindFirstChild(Name)
 	if Direct and Direct:IsA("ModuleScript") then
 		return Direct
 	end
-
 	local Scanned = game:FindFirstChild(Name, true)
 	if Scanned and Scanned:IsA("ModuleScript") then
 		return Scanned
 	end
-
 	return nil
 end
 
@@ -140,28 +247,22 @@ while not ModuleObject and Waited < 15 do
 end
 
 if not ModuleObject then
-	error(string.format(
-		"[N3V4 Preview] ModuleScript %q nggak ketemu (nunggu 15 detik).\n"
-			.. "  -> Bikinn ModuleScript bernama %q di ReplicatedStorage\n"
-			.. "  -> Isi = seluruh kode library N3V3-NoObfus.lua",
-		CONFIG.ModuleName, CONFIG.ModuleName
-	), 0)
+	error(string.format("[N3V4 Preview] ModuleScript %q nggak ketemu (nunggu 15 detik).", CONFIG.ModuleName), 0)
 end
 
 local Library = require(ModuleObject)
 
 if typeof(Library) ~= "table" or typeof(Library.CreateWindow) ~= "function" then
-	error("[N3V4 Preview] Module N3V4 nggak nge-return Library yang valid.\n"
-		.. "  -> Pastikan baris terakhir library lu: return Library", 0)
+	error("[N3V4 Preview] Module N3V4 nggak nge-return Library yang valid.", 0)
 end
 
 print(string.format(
-	"[N3V4 Preview] Library OK | Device: %s | Mobile: %s | DPIScale: %s | CornerRadius: %s",
+	"[N3V4 Preview] Library OK | Device: %s | Mobile: %s | DPI: %s | Radius: %s | Animations: %s",
 	tostring(Library.DevicePlatform), tostring(Library.IsMobile),
-	tostring(Library.DPIScale), tostring(Library.CornerRadius)
+	tostring(Library.DPIScale), tostring(Library.CornerRadius),
+	Library.Animations and "ON" or "OFF"
 ))
 
--- Notify wrapper: icon lucide butuh HTTP. Kalau HTTP off, jangan bikin error.
 local function SafeNotify(Info)
 	local Success, Err = pcall(function()
 		return Library:Notify(Info)
@@ -172,7 +273,6 @@ local function SafeNotify(Info)
 	return Success
 end
 
--- Font resolver: beberapa Enum.Font nggak ada di versi Studio lama
 local function GetFontEnum(Name)
 	local Success, FontEnum = pcall(function()
 		return Enum.Font[Name]
@@ -184,7 +284,7 @@ local function GetFontEnum(Name)
 end
 
 --================================================================================
--- 3. DEMO ASSETS (dibikin runtime, nggak nyampahin Workspace)
+-- DEMO ASSETS
 --================================================================================
 local function BuildDemoEgg()
 	local Model = Instance.new("Model")
@@ -225,9 +325,7 @@ local function BuildDemoEgg()
 	Core.Parent = Model
 
 	Model.PrimaryPart = Egg
-	-- Parent ke script: aman, nggak muncul di dunia game, tapi tetap bisa di-Clone()
 	Model.Parent = script
-
 	return Model
 end
 
@@ -239,7 +337,6 @@ local function BuildPassthroughFrame()
 
 	local Text = Instance.new("TextLabel")
 	Text.Size = UDim2.new(1, 0, 0, 14)
-	Text.Position = UDim2.new(0, 0, 0, 0)
 	Text.BackgroundTransparency = 1
 	Text.Text = "Frame custom lu (UIPassthrough) — 62%"
 	Text.TextSize = 12
@@ -267,11 +364,50 @@ local function BuildPassthroughFrame()
 	return Holder
 end
 
+-- Builder item menu manual (dipakai DraggableMenu & ContextMenu, dua-duanya
+-- nge-return raw Instance / table tanpa method AddButton)
+local function BuildMenuItem(Parent, Text, Scheme, OnClick)
+	local Btn = Instance.new("TextButton")
+	Btn.Size = UDim2.new(1, 0, 0, 26)
+	Btn.BackgroundColor3 = Scheme.MainColor
+	Btn.BorderSizePixel = 0
+	Btn.AutoButtonColor = false
+	Btn.Text = "  " .. Text
+	Btn.TextSize = 13
+	Btn.Font = Enum.Font.Code
+	Btn.TextColor3 = Scheme.FontColor
+	Btn.TextXAlignment = Enum.TextXAlignment.Left
+	Btn.Parent = Parent
+
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0, (Library.CornerRadius or 4) / 2)
+	Corner.Parent = Btn
+
+	local Stroke = Instance.new("UIStroke")
+	Stroke.Color = Scheme.OutlineColor
+	Stroke.Thickness = 1
+	Stroke.Parent = Btn
+
+	Btn.MouseButton1Click:Connect(function()
+		if OnClick then OnClick() end
+	end)
+	Btn.MouseEnter:Connect(function()
+		Btn.BackgroundColor3 = Scheme.AccentColor
+		Btn.TextColor3 = Color3.fromRGB(20, 20, 20)
+	end)
+	Btn.MouseLeave:Connect(function()
+		Btn.BackgroundColor3 = Scheme.MainColor
+		Btn.TextColor3 = Scheme.FontColor
+	end)
+
+	return Btn
+end
+
 local DemoEgg = BuildDemoEgg()
 local PassthroughFrame = BuildPassthroughFrame()
 
 --================================================================================
--- 4. LOADING SCREEN INTRO
+-- LOADING SCREEN
 --================================================================================
 local LoadingMessages = {
 	{ "Load Engine", "Preparing services, remotes & runtime core..." },
@@ -312,13 +448,12 @@ end
 if CONFIG.ShowLoadingIntro then
 	Try("Loading Screen (intro)", function()
 		RunLoadingSequence()
-		-- Tunggu intro kelar dulu sebelum bikin window
 		task.wait((CONFIG.LoadingStepDelay * CONFIG.LoadingSteps) + 0.7)
 	end)
 end
 
 --================================================================================
--- 5. MAIN WINDOW
+-- MAIN WINDOW
 --================================================================================
 local Window = Library:CreateWindow({
 	Title = CONFIG.Title,
@@ -328,6 +463,7 @@ local Window = Library:CreateWindow({
 	Center = true,
 	Resizable = true,
 	ToggleKeybind = CONFIG.ToggleKey,
+	-- Explicit, biar tetap ON walaupun default library berubah
 	Animations = {
 		ToggleWindow = true,
 		TabSwitch = true,
@@ -338,12 +474,12 @@ local Window = Library:CreateWindow({
 })
 
 --================================================================================
--- TAB 1 — OVERVIEW
+-- TAB 1 — OVERVIEW   (2 kiri / 2 kanan — simetris)
 --================================================================================
-local OverviewTab = Window:AddTab("Overview", "layout-dashboard", "Ringkasan elemen visual utama")
+local OverviewTab = Window:AddTab("Overview", Icon("TabOverview"), "Ringkasan elemen visual utama")
 
-Try("Overview: Groupbox kiri (Spotlight + Label + Divider)", function()
-	local Box = OverviewTab:AddLeftGroupbox("Selamat Datang", "sparkles")
+Try("Overview: L1 Welcome (Spotlight + Label + Divider)", function()
+	local Box = OverviewTab:AddLeftGroupbox("Selamat Datang", Icon("Welcome"))
 
 	local Card = Box:AddSpotlightCard("Spotlight_Hero", {
 		Height = 130,
@@ -351,36 +487,36 @@ Try("Overview: Groupbox kiri (Spotlight + Label + Divider)", function()
 		Description = "Semua komponen library lu, satu window.",
 		Image = CONFIG.ImageAsset,
 	})
-
 	if Card and Card.SetData then
-		Card:SetData(
-			"N3V4 Preview Kit",
-			"Baseline visual: CornerRadius 4 · Font Code · Accent ungu-pink"
-		)
+		Card:SetData("N3V4 Preview Kit v2", "Icon offline · Layout simetris · Animasi ON")
 	end
 
-	Box:AddDivider({ Text = "Status Session", Margin = 6 })
+	Box:AddDivider({ Text = "Selamat Datang", Margin = 6 })
 	Box:AddLabel('Library: <font color="#5adcff">ONLINE</font>', false)
-	Box:AddLabel(string.format("Device: %s", tostring(Library.DevicePlatform or "Studio")), false)
-	Box:AddLabel(string.format("Mobile: %s · DPI: %s", tostring(Library.IsMobile), tostring(Library.DPIScale)), false)
 	Box:AddLabel("Klik tab di sidebar buat jelajah semua komponen.", true)
 end)
 
-Try("Overview: Viewport 3D auto-spin", function()
-	local Box = OverviewTab:AddRightGroupbox("Asset 3D", "box")
-	local Viewport = Box:AddViewport("Viewport_Egg", {
-		Height = 200,
-		Spin = true,
-		Interactive = false,
-	})
+Try("Overview: L2 Session Info", function()
+	local Box = OverviewTab:AddLeftGroupbox("Status Session", Icon("Session"))
+	Box:AddLabel(string.format("Device: %s", tostring(Library.DevicePlatform or "Studio")), false)
+	Box:AddLabel(string.format("Mobile: %s", tostring(Library.IsMobile)), false)
+	Box:AddLabel(string.format("DPIScale: %s", tostring(Library.DPIScale)), false)
+	Box:AddLabel(string.format("CornerRadius: %s", tostring(Library.CornerRadius)), false)
+	Box:AddLabel(string.format("Animations: %s", Library.Animations and "ON" or "OFF"), false)
+	Box:AddLabel(string.format("Icon mode: %s", CONFIG.UseLucideIcons and "Lucide" or "rbxassetid"), false)
+end)
+
+Try("Overview: R1 Viewport 3D auto-spin", function()
+	local Box = OverviewTab:AddRightGroupbox("Asset 3D", Icon("Asset3D"))
+	local Viewport = Box:AddViewport("Viewport_Egg", { Height = 200, Spin = true, Interactive = false })
 	if Viewport and Viewport.SetModel then
 		Viewport:SetModel(DemoEgg)
 	end
 end)
 
-Try("Overview: ScrollFeed", function()
-	local Box = OverviewTab:AddRightGroupbox("Activity Feed", "activity")
-	local Feed = Box:AddScrollFeed("Feed_Activity", { Height = 215 })
+Try("Overview: R2 ScrollFeed", function()
+	local Box = OverviewTab:AddRightGroupbox("Activity Feed", Icon("Feed"))
+	local Feed = Box:AddScrollFeed("Feed_Activity", { Height = 200 })
 
 	local Items = {
 		{ Title = "Golden Egg hatched", Detail = "Rate 1.2K/s · Scale 1.4 · 62 Kg", RightTag = "98%" },
@@ -400,31 +536,21 @@ Try("Overview: ScrollFeed", function()
 end)
 
 --================================================================================
--- TAB 2 — COMPONENTS
+-- TAB 2 — COMPONENTS   (3 kiri / 3 kanan — simetris)
 --================================================================================
-local ComponentsTab = Window:AddTab("Components", "shapes", "Button, toggle, slider, dropdown, input, keybind, color")
+local ComponentsTab = Window:AddTab("Components", Icon("TabComponents"), "Button, toggle, slider, input, dropdown")
 
-Try("Components: Buttons", function()
-	local Box = ComponentsTab:AddLeftGroupbox("Buttons", "mouse-pointer-click")
+Try("Components: L1 Buttons", function()
+	local Box = ComponentsTab:AddLeftGroupbox("Buttons", Icon("Buttons"))
 
 	Box:AddButton("Button biasa", function()
 		SafeNotify("Button biasa diklik")
 	end)
-
+	Box:AddButton({ Text = "Button + Tooltip", Tooltip = "Hover gue buat lihat tooltip.", Func = function() end })
 	Box:AddButton({
-		Text = "Button + Tooltip",
-		Tooltip = "Hover gue buat lihat tooltip.",
-		Func = function() end,
+		Text = "Double-click confirm", DoubleClick = true,
+		Func = function() SafeNotify({ Title = "Confirmed", Description = "Klik 2x buat eksekusi.", Time = 2 }) end,
 	})
-
-	Box:AddButton({
-		Text = "Double-click confirm",
-		DoubleClick = true,
-		Func = function()
-			SafeNotify({ Title = "Confirmed", Description = "Klik 2x buat eksekusi.", Time = 2 })
-		end,
-	})
-
 	Box:AddButton({ Text = "Risky button (merah)", Risky = true, Func = function() end })
 	Box:AddButton({ Text = "Disabled button", Disabled = true, DisabledTooltip = "Lagi dimatiin.", Func = function() end })
 
@@ -435,101 +561,73 @@ Try("Components: Buttons", function()
 	end
 end)
 
-Try("Components: Toggles + KeyPicker + ColorPicker", function()
-	local Box = ComponentsTab:AddLeftGroupbox("Toggles", "toggle-right")
+Try("Components: L2 Toggles + Addons", function()
+	local Box = ComponentsTab:AddLeftGroupbox("Toggles & Addons", Icon("Toggles"))
 
 	Box:AddToggle("Toggle_Master", {
-		Text = "Master toggle",
-		Default = true,
+		Text = "Master toggle", Default = true,
 		Tooltip = "Dipakai juga di tab Advanced buat demo dependency.",
-		Callback = function(Value)
-			print("[Preview] Master toggle ->", Value)
-		end,
+		Callback = function(Value) print("[Preview] Master toggle ->", Value) end,
 	})
 
 	local WithKey = Box:AddToggle("Toggle_WithKeybind", { Text = "Toggle + keybind", Default = false })
 	if WithKey and WithKey.AddKeyPicker then
 		WithKey:AddKeyPicker("KeyPicker_Toggle", {
-			Text = "Keybind",
-			Default = "None",
-			Mode = "Toggle",
-			Modes = { "Always", "Toggle", "Hold" },
-			SyncToggleState = true,
+			Text = "Keybind", Default = "None", Mode = "Toggle",
+			Modes = { "Always", "Toggle", "Hold" }, SyncToggleState = true,
 		})
 	end
 
 	local WithColor = Box:AddToggle("Toggle_WithColor", { Text = "Toggle + color picker", Default = false })
 	if WithColor and WithColor.AddColorPicker then
 		WithColor:AddColorPicker("ColorPicker_Toggle", {
-			Title = "Warna aksen",
-			Default = Color3.fromRGB(218, 98, 255),
+			Title = "Warna aksen", Default = Color3.fromRGB(218, 98, 255),
 		})
 	end
 
 	Box:AddCheckbox("Checkbox_Force", { Text = "Checkbox (bukan switch)", Default = false })
-	Box:AddToggle("Toggle_Risky", { Text = "Risky toggle", Default = false, Risky = true })
-	Box:AddToggle("Toggle_Disabled", { Text = "Disabled toggle", Default = false, Disabled = true })
 end)
 
-Try("Components: Sliders", function()
-	local Box = ComponentsTab:AddRightGroupbox("Sliders", "sliders-horizontal")
+Try("Components: L3 Sliders", function()
+	local Box = ComponentsTab:AddLeftGroupbox("Sliders", Icon("Sliders"))
 
 	Box:AddSlider("Slider_Speed", {
 		Text = "Walkspeed", Default = 16, Min = 0, Max = 200,
 		Rounding = 0, Suffix = " studs/s", AllowRightClickInput = true,
 	})
-
 	Box:AddSlider("Slider_Rate", {
 		Text = "Farm rate", Default = 1.5, Min = 0.1, Max = 10, Rounding = 2, Suffix = "x",
 	})
-
 	Box:AddSlider("Slider_Money", {
-		Text = "Target coins", Default = 250000, Min = 0, Max = 1000000,
-		Rounding = 0, Prefix = "$",
+		Text = "Target coins", Default = 250000, Min = 0, Max = 1000000, Rounding = 0, Prefix = "$",
 	})
 end)
 
-Try("Components: Inputs", function()
-	local Box = ComponentsTab:AddRightGroupbox("Inputs", "keyboard")
+Try("Components: R1 Inputs", function()
+	local Box = ComponentsTab:AddRightGroupbox("Inputs", Icon("Inputs"))
 
-	Box:AddInput("Input_Text", {
-		Text = "Text input", Default = "", Placeholder = "Ketik sesuatu...", Finished = true,
-	})
-
-	Box:AddInput("Input_Numeric", {
-		Text = "Numeric only", Default = "100", Numeric = true, Placeholder = "0",
-	})
-
-	Box:AddInput("Input_NoEmpty", {
-		Text = "Nggak boleh kosong", Default = "N3", AllowEmpty = false, EmptyReset = "---",
-	})
-
+	Box:AddInput("Input_Text", { Text = "Text input", Default = "", Placeholder = "Ketik sesuatu...", Finished = true })
+	Box:AddInput("Input_Numeric", { Text = "Numeric only", Default = "100", Numeric = true, Placeholder = "0" })
+	Box:AddInput("Input_NoEmpty", { Text = "Nggak boleh kosong", Default = "N3", AllowEmpty = false, EmptyReset = "---" })
 	Box:AddInput("Input_Webhook", {
 		Text = "Discord webhook URL", Default = "",
 		Placeholder = "https://discord.com/api/webhooks/...", Finished = true,
 	})
 end)
 
-Try("Components: Dropdowns", function()
-	local Box = ComponentsTab:AddRightGroupbox("Dropdowns", "chevron-down")
+Try("Components: R2 Dropdowns basic", function()
+	local Box = ComponentsTab:AddRightGroupbox("Dropdowns — Basic", Icon("DropdownBasic"))
 
 	Box:AddDropdown("Dropdown_Single", {
-		Text = "Single select",
-		Values = { "Forest", "Cave", "Sky", "Lava", "Ocean" },
-		Default = 1,
-		Tooltip = "Dropdown biasa, satu pilihan.",
+		Text = "Single select", Values = { "Forest", "Cave", "Sky", "Lava", "Ocean" },
+		Default = 1, Tooltip = "Dropdown biasa, satu pilihan.",
 	})
-
 	Box:AddDropdown("Dropdown_Multi", {
 		Text = "Multi select + DragSelect",
 		Values = { "Auto Farm", "Auto Hatch", "Auto Sell", "Auto Fuse", "Anti Steal" },
-		Default = {},
-		Multi = true,
-		AllowNull = true,
-		DragSelect = true,
+		Default = {}, Multi = true, AllowNull = true, DragSelect = true,
 		Tooltip = "Tahan & geser buat milih banyak.",
 	})
-
 	Box:AddDropdown("Dropdown_Search", {
 		Text = "Searchable (20 item)",
 		Values = {
@@ -538,142 +636,130 @@ Try("Components: Dropdowns", function()
 			"Lunar Egg", "Solar Egg", "Mystic Egg", "Ancient Egg", "Primal Egg",
 			"Nova Egg", "Quantum Egg", "Spectral Egg", "Radiant Egg", "Obsidian Egg",
 		},
-		Default = 1,
-		Searchable = true,
-		MaxVisibleDropdownItems = 8,
+		Default = 1, Searchable = true, MaxVisibleDropdownItems = 8,
 	})
+end)
+
+Try("Components: R3 Dropdowns special", function()
+	local Box = ComponentsTab:AddRightGroupbox("Dropdowns — Special", Icon("DropdownSpecial"))
 
 	Box:AddDropdown("Dropdown_Disabled", {
 		Text = "Ada item disabled",
 		Values = { "Common", "Rare", "Epic", "Legendary", "Mythic" },
-		DisabledValues = { "Legendary", "Mythic" },
-		Default = 1,
+		DisabledValues = { "Legendary", "Mythic" }, Default = 1,
 	})
-
 	Box:AddDropdown("Dropdown_Images", {
 		Text = "Icon per item (ValueImages)",
 		Values = { "Pet A", "Pet B", "Pet C" },
-		ValueImages = {
-			["Pet A"] = CONFIG.ImageAsset,
-			["Pet B"] = CONFIG.ImageAsset,
-			["Pet C"] = CONFIG.ImageAsset,
-		},
+		ValueImages = { ["Pet A"] = ICONS.Dragon, ["Pet B"] = ICONS.Phoenix, ["Pet C"] = ICONS.Kitsune },
 		Default = 1,
 	})
-
 	Box:AddDropdown("Dropdown_Players", {
-		Text = "Player list (auto)",
-		SpecialType = "Player",
-		ExcludeLocalPlayer = false,
-		EnablePlayerImages = true,
-		Default = 1,
+		Text = "Player list (auto)", SpecialType = "Player",
+		ExcludeLocalPlayer = false, EnablePlayerImages = true, Default = 1,
 	})
-
 	Box:AddDropdown("Dropdown_Teams", {
-		Text = "Team list (auto)",
-		SpecialType = "Team",
-		Default = 1,
+		Text = "Team list (auto)", SpecialType = "Team", Default = 1,
 	})
 end)
 
 --================================================================================
--- TAB 3 — ADVANCED
+-- TAB 3 — ADVANCED   (3 kiri / 3 kanan — simetris)
 --================================================================================
-local AdvancedTab = Window:AddTab("Advanced", "layers", "Dependency, tabbox, keybox, dialog, passthrough")
+local AdvancedTab = Window:AddTab("Advanced", Icon("TabAdvanced"), "Dependency, tabbox, dialog, passthrough")
 
-Try("Advanced: DependencyBox", function()
-	local Box = AdvancedTab:AddLeftGroupbox("Dependency System", "git-branch")
+Try("Advanced: L1 Dependency (Box + Groupbox)", function()
+	local Box = AdvancedTab:AddLeftGroupbox("Dependency System", Icon("Dependency"))
 
 	local Master = Box:AddToggle("Adv_Master", { Text = "Aktifin sub-settings", Default = false })
 
 	local Dep = Box:AddDependencyBox()
 	Dep:SetupDependencies({ { Master, true } })
-
 	Dep:AddLabel("Isi box ini cuma muncul kalau master ON", false)
 	Dep:AddSlider("Adv_DepSlider", { Text = "Intensity", Default = 50, Min = 0, Max = 100, Suffix = "%" })
 	Dep:AddDropdown("Adv_DepDropdown", { Text = "Mode", Values = { "Aggressive", "Balanced", "Safe" }, Default = 1 })
-end)
 
-Try("Advanced: DependencyGroupbox", function()
-	local Box = AdvancedTab:AddLeftGroupbox("Dependency Groupbox", "box")
-
-	local Master = Box:AddToggle("Adv_MasterGB", { Text = "Munculin groupbox tambahan", Default = false })
-
+	local MasterGB = Box:AddToggle("Adv_MasterGB", { Text = "Munculin dep-groupbox", Default = false })
 	local DepGB = Box:AddDependencyGroupbox()
-	DepGB:SetupDependencies({ { Master, true } })
-
+	DepGB:SetupDependencies({ { MasterGB, true } })
 	DepGB:AddLabel("Groupbox ini nempel otomatis di bawah.", false)
 	DepGB:AddToggle("Adv_GBToggle", { Text = "Opsi di dalam dep-groupbox", Default = true })
 end)
 
-Try("Advanced: Tabbox kiri (sub-tab)", function()
+Try("Advanced: L2 Tabbox kiri (3 sub-tab)", function()
 	local Tabbox = AdvancedTab:AddLeftTabbox("Contoh Tabbox")
 
-	local SubA = Tabbox:AddTab("Pets", "paw-print")
+	local SubA = Tabbox:AddTab("Pets", Icon("DropdownSpecial"))
 	SubA:AddToggle("TB_PetAutoSell", { Text = "Auto sell pets", Default = false })
 	SubA:AddSlider("TB_PetMinRate", { Text = "Min rate", Default = 100, Min = 0, Max = 5000, Prefix = "$" })
 
-	local SubB = Tabbox:AddTab("Eggs", "egg")
+	local SubB = Tabbox:AddTab("Eggs", Icon("DropdownBasic"))
 	SubB:AddToggle("TB_EggAutoHatch", { Text = "Auto hatch", Default = false })
 	SubB:AddDropdown("TB_EggZone", { Text = "Zone", Values = { "Forest", "Cave", "Sky" }, Default = 1 })
 
-	local SubC = Tabbox:AddTab("Misc", "wrench")
+	local SubC = Tabbox:AddTab("Misc", Icon("MediaInfo"))
 	SubC:AddLabel("Tabbox juga bisa di dalam groupbox (lihat kanan).", true)
+	SubC:AddButton("Contoh button di sub-tab", function() end)
 end)
 
-Try("Advanced: Groupbox collapse", function()
-	local Box = AdvancedTab:AddLeftGroupbox("Collapse Control", "chevrons-up-down")
-	local Target = AdvancedTab:AddLeftGroupbox("Box target (bisa collapse)", "package")
-	Target:AddLabel("Klik tombol di bawah, atau klik header box ini.", true)
+Try("Advanced: L3 Collapse control", function()
+	local Box = AdvancedTab:AddLeftGroupbox("Collapse Control", Icon("Collapse"))
+	Box:AddLabel("Target-nya = groupbox 'Dependency System' di kiri atas.", true)
+
+	-- Ambil reference lewat Tab.Groupboxes (diisi otomatis sama library tiap AddGroupbox)
+	local function GetTarget()
+		return AdvancedTab.Groupboxes and AdvancedTab.Groupboxes["Dependency System"]
+	end
 
 	Box:AddButton("Toggle collapsed", function()
-		if Target.ToggleCollapsed then Target:ToggleCollapsed() end
+		local T = GetTarget()
+		if T and T.ToggleCollapsed then T:ToggleCollapsed() end
 	end)
 	Box:AddButton("Hide total", function()
-		if Target.Hide then Target:Hide() end
+		local T = GetTarget()
+		if T and T.Hide then T:Hide() end
 	end)
 	Box:AddButton("Show lagi", function()
-		if Target.Show then Target:Show() end
+		local T = GetTarget()
+		if T and T.Show then T:Show() end
+	end)
+	Box:AddButton("Resize", function()
+		local T = GetTarget()
+		if T and T.Resize then T:Resize() end
 	end)
 end)
 
-Try("Advanced: Nested Tabbox dalam Groupbox", function()
-	local Box = AdvancedTab:AddRightGroupbox("Nested Tabbox", "folder-tree")
+Try("Advanced: R1 Nested Tabbox dalam Groupbox", function()
+	local Box = AdvancedTab:AddRightGroupbox("Nested Tabbox", Icon("NestedTabbox"))
 	local Inner = Box:AddTabbox({ Name = "Webhook Embeds" })
 
-	local S1 = Inner:AddTab("Status", "activity")
+	local S1 = Inner:AddTab("Status", Icon("Dashboard"))
 	S1:AddToggle("Nest_Status", { Text = "Kirim status embed", Default = true })
 
-	local S2 = Inner:AddTab("Egg", "egg")
+	local S2 = Inner:AddTab("Egg", Icon("DropdownBasic"))
 	S2:AddToggle("Nest_Egg", { Text = "Kirim egg embed", Default = false })
+
+	local S3 = Inner:AddTab("Pets", Icon("DropdownSpecial"))
+	S3:AddToggle("Nest_Pets", { Text = "Kirim pets embed", Default = false })
 end)
 
-Try("Advanced: UIPassthrough", function()
-	local Box = AdvancedTab:AddRightGroupbox("UI Passthrough", "frame")
+Try("Advanced: R2 UIPassthrough", function()
+	local Box = AdvancedTab:AddRightGroupbox("UI Passthrough", Icon("Passthrough"))
 	Box:AddLabel("Masukin GuiObject buatan lu ke dalam UI library:", true)
-	Box:AddUIPassthrough("Passthrough_Demo", {
-		Instance = PassthroughFrame,
-		Height = 44,
-	})
+	Box:AddUIPassthrough("Passthrough_Demo", { Instance = PassthroughFrame, Height = 44 })
+	Box:AddLabel("Frame di atas dibangun manual pakai Instance.new().", true)
 end)
 
-Try("Advanced: KeyBox (execute key)", function()
-	AdvancedTab:AddKeyBox(function(KeyText)
-		SafeNotify({ Title = "KeyBox", Description = "Key masuk: " .. tostring(KeyText), Time = 3 })
-	end)
-end)
-
-Try("Advanced: Dialog", function()
-	local Box = AdvancedTab:AddRightGroupbox("Dialog", "message-square")
+Try("Advanced: R3 Dialog", function()
+	local Box = AdvancedTab:AddRightGroupbox("Dialog", Icon("Dialog"))
 
 	Box:AddButton("Dialog 3 button variant", function()
 		local Dialog = Window:AddDialog("Dialog_Demo", {
 			Title = "Konfirmasi Aksi",
-			Description = "Dialog modal: overlay gelap, scale-in animation, footer button dengan beberapa variant.",
+			Description = "Dialog modal: overlay gelap, scale-in animation, footer button 4 variant.",
 			AutoDismiss = true,
 			OutsideClickDismiss = true,
 		})
-
 		Dialog:AddFooterButton("Cancel", {
 			Title = "Batal", Variant = "Ghost", Order = 1,
 			Callback = function() SafeNotify({ Title = "Dialog", Description = "Lu milih Batal.", Time = 2 }) end,
@@ -708,18 +794,23 @@ Try("Advanced: Dialog", function()
 	end)
 end)
 
---================================================================================
--- TAB 4 — MEDIA
---================================================================================
-local MediaTab = Window:AddTab("Media", "image", "Viewport 3D interaktif, image, video, spotlight, feed")
+-- KeyBox = elemen level Tab (muncul di area atas tab), nggak ngaruh simetri kiri/kanan
+Try("Advanced: KeyBox (execute key)", function()
+	AdvancedTab:AddKeyBox(function(KeyText)
+		SafeNotify({ Title = "KeyBox", Description = "Key masuk: " .. tostring(KeyText), Time = 3 })
+	end)
+end)
 
-Try("Media: Viewport interaktif (drag)", function()
-	local Box = MediaTab:AddLeftGroupbox("Viewport Interaktif", "rotate-3d")
-	Box:AddLabel("Drag mouse di dalam viewport buat muter manual. Spin dimatiin.", true)
+--================================================================================
+-- TAB 4 — MEDIA   (3 kiri / 3 kanan — simetris)
+--================================================================================
+local MediaTab = Window:AddTab("Media", Icon("TabMedia"), "Viewport 3D, image, video, spotlight, feed")
 
-	local VP = Box:AddViewport("Media_Viewport", {
-		Height = 240, Spin = false, Interactive = true,
-	})
+Try("Media: L1 Viewport interaktif", function()
+	local Box = MediaTab:AddLeftGroupbox("Viewport Interaktif", Icon("Viewport"))
+	Box:AddLabel("Drag mouse di dalam viewport buat muter manual.", true)
+
+	local VP = Box:AddViewport("Media_Viewport", { Height = 220, Spin = false, Interactive = true })
 	if VP and VP.SetModel then
 		VP:SetModel(DemoEgg)
 	end
@@ -732,65 +823,67 @@ Try("Media: Viewport interaktif (drag)", function()
 	end)
 end)
 
-Try("Media: Image + kontrol", function()
-	local Box = MediaTab:AddLeftGroupbox("Image Element", "image")
+Try("Media: L2 Image + kontrol", function()
+	local Box = MediaTab:AddLeftGroupbox("Image Element", Icon("Image"))
 
 	local Img = Box:AddImage("Media_Image", {
-		Image = CONFIG.ImageAsset,
-		Height = 180,
-		ScaleType = Enum.ScaleType.Fit,
-		Color = Color3.fromRGB(255, 255, 255),
-		Transparency = 0,
+		Image = CONFIG.ImageAsset, Height = 160,
+		ScaleType = Enum.ScaleType.Fit, Color = Color3.fromRGB(255, 255, 255), Transparency = 0,
 	})
 
 	Box:AddSlider("Media_ImgHeight", {
-		Text = "Tinggi image", Default = 180, Min = 60, Max = 400, Suffix = "px",
-		Callback = function(Value)
-			if Img and Img.SetHeight then Img:SetHeight(Value) end
-		end,
+		Text = "Tinggi image", Default = 160, Min = 60, Max = 400, Suffix = "px",
+		Callback = function(Value) if Img and Img.SetHeight then Img:SetHeight(Value) end end,
 	})
-
 	Box:AddDropdown("Media_ImgScale", {
-		Text = "ScaleType",
-		Values = { "Fit", "Fill", "Stretch", "Slice", "Crop" },
-		Default = 1,
+		Text = "ScaleType", Values = { "Fit", "Fill", "Stretch", "Slice", "Crop" }, Default = 1,
 		Callback = function(Value)
 			local Map = {
-				Fit = Enum.ScaleType.Fit,
-				Fill = Enum.ScaleType.Fill,
-				Stretch = Enum.ScaleType.Stretch,
-				Slice = Enum.ScaleType.Slice,
-				Crop = Enum.ScaleType.Crop,
+				Fit = Enum.ScaleType.Fit, Fill = Enum.ScaleType.Fill, Stretch = Enum.ScaleType.Stretch,
+				Slice = Enum.ScaleType.Slice, Crop = Enum.ScaleType.Crop,
 			}
-			if Img and Img.SetScaleType and Map[Value] then
-				Img:SetScaleType(Map[Value])
-			end
+			if Img and Img.SetScaleType and Map[Value] then Img:SetScaleType(Map[Value]) end
 		end,
 	})
 
-	local TintToggle = Box:AddToggle("Media_ImgTint", { Text = "Tint warna", Default = false })
-	if TintToggle and TintToggle.AddColorPicker then
-		TintToggle:AddColorPicker("Media_ImgColor", {
-			Title = "Warna tint",
-			Default = Color3.fromRGB(218, 98, 255),
-			Callback = function(Color)
-				if Img and Img.SetColor then Img:SetColor(Color) end
-			end,
+	local Tint = Box:AddToggle("Media_ImgTint", { Text = "Tint warna", Default = false })
+	if Tint and Tint.AddColorPicker then
+		Tint:AddColorPicker("Media_ImgColor", {
+			Title = "Warna tint", Default = Color3.fromRGB(218, 98, 255),
+			Callback = function(Color) if Img and Img.SetColor then Img:SetColor(Color) end end,
 		})
 	end
 end)
 
-Try("Media: SpotlightCard 2D <-> 3D", function()
-	local Box = MediaTab:AddRightGroupbox("Spotlight Card", "star")
+Try("Media: L3 Video", function()
+	local Box = MediaTab:AddLeftGroupbox("Video Element", Icon("Video"))
+
+	if CONFIG.VideoAsset == "" or not CONFIG.VideoAsset then
+		Box:AddLabel("CONFIG.VideoAsset masih kosong.", true)
+		Box:AddLabel("Isi pakai asset ID VideoFrame punya lu, terus reload.", true)
+		Box:AddLabel("VideoFrame nggak bisa pakai decal biasa.", true)
+		return
+	end
+
+	local Vid = Box:AddVideo("Media_Video", {
+		Video = CONFIG.VideoAsset, Height = 180, Looped = true, Playing = true, Volume = 1,
+	})
+	Box:AddButton("Play", function() if Vid and Vid.Play then Vid:Play() end end)
+	Box:AddButton("Pause", function() if Vid and Vid.Pause then Vid:Pause() end end)
+	Box:AddSlider("Media_VidVol", {
+		Text = "Volume", Default = 100, Min = 0, Max = 100, Suffix = "%",
+		Callback = function(V) if Vid and Vid.SetVolume then Vid:SetVolume(V / 100) end end,
+	})
+end)
+
+Try("Media: R1 SpotlightCard 2D <-> 3D", function()
+	local Box = MediaTab:AddRightGroupbox("Spotlight Card", Icon("Spotlight"))
 
 	local Card = Box:AddSpotlightCard("Media_Spotlight", {
-		Height = 150,
-		Title = "Mythic Pet",
+		Height = 150, Title = "Mythic Pet",
 		Description = "SpotlightCard bisa nampilin gambar 2D ATAU model 3D.",
 	})
-
 	if Card and Card.SetData then
-		-- Param ke-4 = modelSource -> otomatis switch ke ViewportFrame 3D
 		Card:SetData("Mythic Pet", "Rate 2.4K/s · Scale 1.8 · 96 Kg · Mutasi: Shiny", nil, DemoEgg)
 	end
 
@@ -806,30 +899,9 @@ Try("Media: SpotlightCard 2D <-> 3D", function()
 	end)
 end)
 
-Try("Media: Video", function()
-	local Box = MediaTab:AddRightGroupbox("Video Element", "video")
-
-	if CONFIG.VideoAsset == "" or not CONFIG.VideoAsset then
-		Box:AddLabel("DI-SKIP: CONFIG.VideoAsset masih kosong.", true)
-		Box:AddLabel("Isi pakai asset ID VideoFrame punya lu, terus reload preview.", true)
-		return
-	end
-
-	local Vid = Box:AddVideo("Media_Video", {
-		Video = CONFIG.VideoAsset, Height = 200, Looped = true, Playing = true, Volume = 1,
-	})
-
-	Box:AddButton("Play", function() if Vid and Vid.Play then Vid:Play() end end)
-	Box:AddButton("Pause", function() if Vid and Vid.Pause then Vid:Pause() end end)
-	Box:AddSlider("Media_VidVol", {
-		Text = "Volume", Default = 100, Min = 0, Max = 100, Suffix = "%",
-		Callback = function(V) if Vid and Vid.SetVolume then Vid:SetVolume(V / 100) end end,
-	})
-end)
-
-Try("Media: ScrollFeed besar + clear", function()
-	local Box = MediaTab:AddRightGroupbox("Live Feed", "rss")
-	local Feed = Box:AddScrollFeed("Media_Feed", { Height = 260 })
+Try("Media: R2 ScrollFeed besar", function()
+	local Box = MediaTab:AddRightGroupbox("Live Feed", Icon("LiveFeed"))
+	local Feed = Box:AddScrollFeed("Media_Feed", { Height = 220 })
 
 	for i = 1, 12 do
 		Feed:AddItem({
@@ -840,59 +912,54 @@ Try("Media: ScrollFeed besar + clear", function()
 		})
 	end
 
-	Box:AddButton("Clear feed", function()
-		if Feed and Feed.Clear then Feed:Clear() end
-	end)
+	Box:AddButton("Clear feed", function() if Feed and Feed.Clear then Feed:Clear() end end)
+end)
+
+Try("Media: R3 Asset info", function()
+	local Box = MediaTab:AddRightGroupbox("Asset Dipakai", Icon("MediaInfo"))
+	Box:AddLabel("Semua ID di bawah offline-ready (rbxassetid).", true)
+	Box:AddDivider({ Text = "Icon", Margin = 4 })
+	Box:AddLabel("N3Logo  " .. ICONS.N3Logo, false)
+	Box:AddLabel("Dragon  " .. ICONS.Dragon, false)
+	Box:AddLabel("Phoenix " .. ICONS.Phoenix, false)
+	Box:AddDivider({ Text = "Texture", Margin = 4 })
+	Box:AddLabel("ImageAsset  " .. CONFIG.ImageAsset, false)
+	Box:AddLabel(string.format("VideoAsset  %s", CONFIG.VideoAsset == "" and "(kosong)" or CONFIG.VideoAsset), false)
 end)
 
 --================================================================================
--- TAB 5 — OVERLAYS
+-- TAB 5 — OVERLAYS   (3 kiri / 3 kanan — simetris)
 --================================================================================
-local OverlaysTab = Window:AddTab("Overlays", "bell", "Notification, draggable, overlay, dashboard, context menu")
+local OverlaysTab = Window:AddTab("Overlays", Icon("TabOverlays"), "Notification, draggable, overlay, dashboard")
 
-Try("Overlays: Notifications", function()
-	local Box = OverlaysTab:AddLeftGroupbox("Notifications", "bell-ring")
+Try("Overlays: L1 Notifications", function()
+	local Box = OverlaysTab:AddLeftGroupbox("Notifications", Icon("Notify"))
 
 	Box:AddButton("Notify simple (string)", function()
 		SafeNotify("Ini notification paling simpel.")
 	end)
-
 	Box:AddButton("Notify title + description", function()
 		SafeNotify({ Title = "Auto Farm", Description = "Berhasil. 128 egg dikumpulin.", Time = 4 })
 	end)
-
-	Box:AddButton("Notify + lucide icon", function()
+	Box:AddButton("Notify + icon", function()
 		SafeNotify({
-			Title = "Pet diperoleh!",
-			Description = "Mythic Dragon · Shiny mutation",
-			Icon = "paw-print",
-			IconColor = Color3.fromRGB(218, 98, 255),
-			Time = 4,
+			Title = "Pet diperoleh!", Description = "Mythic Dragon · Shiny mutation",
+			Icon = ICONS.Dragon, IconColor = Color3.fromRGB(218, 98, 255), Time = 4,
 		})
 	end)
-
 	Box:AddButton("Notify big icon + warna custom", function()
 		SafeNotify({
-			Title = "RIFT EVENT",
-			TitleColor = Color3.fromRGB(255, 200, 60),
+			Title = "RIFT EVENT", TitleColor = Color3.fromRGB(255, 200, 60),
 			Description = "Event dimulai di 3 zona. Sisa 5 menit.",
 			DescriptionColor = Color3.fromRGB(220, 220, 220),
-			BigIcon = CONFIG.ImageAsset,
-			Time = 5,
+			BigIcon = CONFIG.ImageAsset, Time = 5,
 		})
 	end)
-
 	Box:AddButton("Notify + progress steps (persist)", function()
 		local Notif = Library:Notify({
-			Title = "Hatching...",
-			Description = "Step 0 / 5",
-			Steps = 5,
-			Persist = true,
+			Title = "Hatching...", Description = "Step 0 / 5", Steps = 5, Persist = true,
 		})
-
-		if typeof(Notif) ~= "table" then
-			return
-		end
+		if typeof(Notif) ~= "table" then return end
 
 		task.spawn(function()
 			for Step = 1, 5 do
@@ -906,7 +973,6 @@ Try("Overlays: Notifications", function()
 			if Notif.Destroy then Notif:Destroy() end
 		end)
 	end)
-
 	Box:AddButton("Spam 5 notify (test stacking)", function()
 		for i = 1, 5 do
 			task.delay(i * 0.25, function()
@@ -916,14 +982,16 @@ Try("Overlays: Notifications", function()
 	end)
 end)
 
-Try("Overlays: Draggable label & buttons", function()
-	local Box = OverlaysTab:AddLeftGroupbox("Draggable Elements", "move")
+Try("Overlays: L2 Draggable label & button", function()
+	local Box = OverlaysTab:AddLeftGroupbox("Draggable Elements", Icon("Draggable"))
 	Box:AddLabel("Semua elemen di bawah bisa lu drag keluar window.", true)
 
+	-- FIX v2: icon HARUS rbxassetid / URL valid. Nama lucide ("zap") bikin
+	-- assert error di Library:2023 kalau HTTP fetch lucide gagal.
 	Box:AddButton("Spawn draggable label", function()
 		local Label = Library:AddDraggableLabel({
 			Text = "N3 HUB • Watermark",
-			Icon = "zap",
+			Icon = ICONS.Star,
 			IconPosition = "left",
 		})
 		if Label and Label.SetVisible then Label:SetVisible(true) end
@@ -937,100 +1005,59 @@ Try("Overlays: Draggable label & buttons", function()
 	Box:AddButton("Spawn draggable button", function()
 		Library:AddDraggableButton({
 			Text = "Klik gue",
-			Func = function()
-				SafeNotify({ Title = "Draggable Button", Description = "Diklik!", Time = 2 })
-			end,
+			Func = function() SafeNotify({ Title = "Draggable Button", Description = "Diklik!", Time = 2 }) end,
 		})
 	end)
 
 	Box:AddButton("Spawn draggable image button", function()
 		Library:AddDraggableImageButton({
-			Icon = CONFIG.Icon,
+			Icon = ICONS.N3Logo,
 			IconSize = 28,
-			Func = function()
-				SafeNotify({ Title = "Image Button", Description = "Diklik!", Time = 2 })
-			end,
+			Func = function() SafeNotify({ Title = "Image Button", Description = "Diklik!", Time = 2 }) end,
 		})
 	end)
 end)
 
-Try("Overlays: Draggable menu (raw Instance API)", function()
-	local Box = OverlaysTab:AddLeftGroupbox("Draggable Menu", "menu")
+Try("Overlays: L3 Draggable menu", function()
+	local Box = OverlaysTab:AddLeftGroupbox("Draggable Menu", Icon("DragMenu"))
 	Box:AddLabel("AddDraggableMenu nge-return (Holder, Container) — raw Instance.", true)
-	Box:AddLabel("Isinya lu bangun sendiri. Ini contoh 3 item:", true)
+	Box:AddLabel("Nggak ada method AddButton, isinya dibangun manual.", true)
 
 	Box:AddButton("Spawn draggable menu", function()
 		local Holder, Container = Library:AddDraggableMenu("Menu Cepat")
-		if not Container then
-			return
-		end
+		if typeof(Container) ~= "Instance" then return end
 
 		for i = 1, 3 do
-			local Btn = Instance.new("TextButton")
-			Btn.Size = UDim2.new(1, 0, 0, 26)
-			Btn.BackgroundColor3 = Library.Scheme.MainColor
-			Btn.BorderSizePixel = 0
-			Btn.AutoButtonColor = false
-			Btn.Text = "  Aksi " .. i
-			Btn.TextSize = 13
-			Btn.Font = Enum.Font.Code
-			Btn.TextColor3 = Library.Scheme.FontColor
-			Btn.TextXAlignment = Enum.TextXAlignment.Left
-			Btn.Parent = Container
-
-			local Corner = Instance.new("UICorner")
-			Corner.CornerRadius = UDim.new(0, (Library.CornerRadius or 4) / 2)
-			Corner.Parent = Btn
-
-			local Stroke = Instance.new("UIStroke")
-			Stroke.Color = Library.Scheme.OutlineColor
-			Stroke.Thickness = 1
-			Stroke.Parent = Btn
-
-			Btn.MouseButton1Click:Connect(function()
+			BuildMenuItem(Container, "Aksi " .. i, Library.Scheme, function()
 				SafeNotify({ Title = "Menu", Description = "Aksi " .. i .. " dijalankan", Time = 2 })
-			end)
-			Btn.MouseEnter:Connect(function()
-				Btn.BackgroundColor3 = Library.Scheme.AccentColor
-			end)
-			Btn.MouseLeave:Connect(function()
-				Btn.BackgroundColor3 = Library.Scheme.MainColor
 			end)
 		end
 
-		-- Holder & Container dari library pakai AutomaticSize/Scale yang bisa
-		-- collapse jadi 0px kalau isinya dibikin manual. Kita set eksplisit aja.
-		local MenuWidth = 170
-		local ItemHeight = 26
-		local ItemPadding = 7
-		local ItemCount = 3
-		local ContainerHeight = (ItemCount * ItemHeight) + ((ItemCount - 1) * ItemPadding) + (ItemPadding * 2)
+		-- Holder & Container pakai AutomaticSize/Scale yang bisa collapse jadi 0px
+		-- kalau isinya dibikin manual. Set eksplisit biar pasti keliatan.
+		local MenuWidth, ItemH, ItemPad, Count = 170, 26, 7, 3
+		local ContainerH = (Count * ItemH) + ((Count - 1) * ItemPad) + (ItemPad * 2)
 
 		Container.AutomaticSize = Enum.AutomaticSize.None
-		Container.Size = UDim2.fromOffset(MenuWidth, ContainerHeight)
-
+		Container.Size = UDim2.fromOffset(MenuWidth, ContainerH)
 		Holder.AutomaticSize = Enum.AutomaticSize.None
-		Holder.Size = UDim2.fromOffset(MenuWidth, 35 + ContainerHeight)
+		Holder.Size = UDim2.fromOffset(MenuWidth, 35 + ContainerH)
 	end)
 end)
 
-Try("Overlays: Overlay panel (key-value rows)", function()
-	local Box = OverlaysTab:AddRightGroupbox("Overlay", "picture-in-picture")
-	Box:AddLabel("Overlay = panel stat key-value, API-nya SetRow/RemoveRow.", true)
+Try("Overlays: R1 Overlay panel (SetRow)", function()
+	local Box = OverlaysTab:AddRightGroupbox("Overlay Panel", Icon("Overlay"))
+	Box:AddLabel("Overlay = panel stat key-value. API: SetRow / RemoveRow / ClearRows.", true)
 
 	local LiveOverlay = nil
 
 	Box:AddButton("Bikin overlay + isi row", function()
-		if LiveOverlay then
-			LiveOverlay:Destroy()
-			LiveOverlay = nil
-		end
+		if LiveOverlay then LiveOverlay:Destroy() LiveOverlay = nil end
 
 		LiveOverlay = Library:CreateOverlay({
 			Title = "Live Stats",
 			Position = UDim2.fromOffset(320, 140),
 		})
-
 		LiveOverlay:SetRow("Coins", "1.248.500", Color3.fromRGB(255, 205, 70))
 		LiveOverlay:SetRow("Eggs", "37", Color3.fromRGB(140, 230, 255))
 		LiveOverlay:SetRow("Pets", "12", Color3.fromRGB(218, 98, 255))
@@ -1051,19 +1078,23 @@ Try("Overlays: Overlay panel (key-value rows)", function()
 		end)
 	end)
 
+	Box:AddButton("RemoveRow + ClearRows", function()
+		if not LiveOverlay then return end
+		LiveOverlay:RemoveRow("Pets")
+		task.delay(1, function()
+			if LiveOverlay and LiveOverlay.ClearRows then LiveOverlay:ClearRows() end
+		end)
+	end)
+
 	Box:AddButton("Tutup overlay", function()
-		if LiveOverlay then
-			LiveOverlay:Destroy()
-			LiveOverlay = nil
-		end
+		if LiveOverlay then LiveOverlay:Destroy() LiveOverlay = nil end
 	end)
 end)
 
-Try("Overlays: Dashboard window", function()
-	local Box = OverlaysTab:AddRightGroupbox("Live Dashboard", "gauge")
-	Box:AddLabel("Window kedua buat monitor stats realtime.", true)
+Try("Overlays: R2 Dashboard + Loading states", function()
+	local Box = OverlaysTab:AddRightGroupbox("Dashboard & Loading", Icon("Dashboard"))
 
-	Box:AddButton("Buka Dashboard", function()
+	Box:AddButton("Buka Dashboard window", function()
 		local Dash = Library:CreateDashboardWindow({
 			Title = "N3 Live Dashboard",
 			Position = UDim2.fromOffset(25, 120),
@@ -1074,10 +1105,8 @@ Try("Overlays: Dashboard window", function()
 			Dash:SetRow("Collected", "128 eggs")
 		end
 	end)
-end)
 
-Try("Overlays: Loading error page", function()
-	local Box = OverlaysTab:AddRightGroupbox("Loading States", "loader")
+	Box:AddDivider({ Text = "Loading", Margin = 4 })
 
 	Box:AddButton("Replay loading normal", function()
 		RunLoadingSequence()
@@ -1090,16 +1119,11 @@ Try("Overlays: Loading error page", function()
 		end
 
 		local Loading = Library:CreateLoading({
-			Title = CONFIG.Title,
-			TotalSteps = 3,
-			CurrentStep = 1,
-			AutoResizeHeight = true,
+			Title = CONFIG.Title, TotalSteps = 3, CurrentStep = 1, AutoResizeHeight = true,
 		})
-
 		Loading:SetCurrentStep(2)
 		Loading:SetMessage("Koneksi gagal")
 		Loading:SetDescription("Nggak bisa hubungin remote server.")
-
 		if Loading.ShowErrorPage then Loading:ShowErrorPage(true) end
 		if Loading.SetErrorMessage then Loading:SetErrorMessage("HTTP 503 — Service Unavailable") end
 		if Loading.SetErrorButtons then
@@ -1111,29 +1135,69 @@ Try("Overlays: Loading error page", function()
 	end)
 end)
 
-Try("Overlays: Context menu (right-click)", function()
-	local Box = OverlaysTab:AddRightGroupbox("Context Menu", "list")
-	Box:AddLabel("Klik kanan button di bawah.", true)
+Try("Overlays: R3 Context menu (right-click)", function()
+	local Box = OverlaysTab:AddRightGroupbox("Context Menu", Icon("ContextMenu"))
+	Box:AddLabel("Klik KANAN button di bawah.", true)
 
-	local Trigger = Box:AddButton("Right-click gue", function() end)
-	local Target = Trigger and (Trigger.Base or Trigger.Holder)
+	local Trigger = Box:AddButton("Right-click gue", function()
+		SafeNotify({ Title = "Context Menu", Description = "Klik kiri = callback biasa", Time = 2 })
+	end)
 
-	if typeof(Target) == "Instance" and Target:IsA("GuiObject") and Library.AddContextMenu then
-		local Menu = Library:AddContextMenu(Target, UDim2.fromOffset(150, 0))
-		if Menu and Menu.AddButton then
-			Menu:AddButton("Copy value", function() end)
-			Menu:AddButton("Reset ke default", function() end)
-		end
+	local Target = Trigger and Trigger.Base
+	if typeof(Target) ~= "Instance" or not Target:IsA("GuiObject") then
+		Box:AddLabel("Trigger.Base nggak ketemu — skip.", true)
+		return
 	end
+
+	-- FIX v2: AddContextMenu nge-return TABLE { Open, Close, Toggle, SetSize,
+	-- Destroy, Menu, Holder, Active } — BUKAN object dengan AddButton.
+	-- Item harus dibikin manual ke Ctx.Menu. List=1 -> library bikinin
+	-- UIListLayout + AutomaticSize.Y di Menu.
+	local Ctx = Library:AddContextMenu(
+		Target,
+		UDim2.fromOffset(160, 0),
+		function() return { 0, Target.AbsoluteSize.Y + 2 } end,
+		1
+	)
+
+	if typeof(Ctx) ~= "table" or typeof(Ctx.Menu) ~= "Instance" then
+		Box:AddLabel("AddContextMenu gagal — skip.", true)
+		return
+	end
+
+	local MenuItems = {
+		{ "Copy value", function() SafeNotify({ Title = "Context", Description = "Copy value", Time = 2 }) end },
+		{ "Reset ke default", function() SafeNotify({ Title = "Context", Description = "Reset", Time = 2 }) end },
+		{ "Set max", function() SafeNotify({ Title = "Context", Description = "Set max", Time = 2 }) end },
+		{ "Disable", function() SafeNotify({ Title = "Context", Description = "Disable", Time = 2 }) end },
+	}
+
+	for _, Spec in ipairs(MenuItems) do
+		BuildMenuItem(Ctx.Menu, Spec[1], Library.Scheme, function()
+			Spec[2]()
+			if Ctx.Close then Ctx:Close() end
+		end)
+	end
+
+	-- Library nggak auto-bind right-click, kita bind sendiri
+	Target.InputBegan:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton2 then
+			if Ctx.Toggle then Ctx:Toggle() end
+		end
+	end)
+
+	Box:AddButton("Buka manual (kiri)", function()
+		if Ctx.Toggle then Ctx:Toggle() end
+	end)
 end)
 
 --================================================================================
--- TAB 6 — THEME LAB
+-- TAB 6 — THEME LAB   (3 kiri / 3 kanan — simetris)
 --================================================================================
-local ThemeTab = Window:AddTab("Theme Lab", "palette", "Ganti warna, radius, font, animasi secara realtime")
+local ThemeTab = Window:AddTab("Theme Lab", Icon("TabTheme"), "Ganti warna, radius, font, animasi realtime")
 
-Try("Theme: Scheme colors + preset", function()
-	local Box = ThemeTab:AddLeftGroupbox("Scheme Colors", "droplets")
+Try("Theme: L1 Scheme colors", function()
+	local Box = ThemeTab:AddLeftGroupbox("Scheme Colors", Icon("SchemeColors"))
 
 	local function ApplyColor(Key, Color)
 		Library.Scheme[Key] = Color
@@ -1141,27 +1205,29 @@ Try("Theme: Scheme colors + preset", function()
 	end
 
 	local Pickers = {
-		{ Key = "AccentColor", Label = "Accent color", Idx = "CP_Accent", Title = "AccentColor" },
-		{ Key = "BackgroundColor", Label = "Background color", Idx = "CP_BG", Title = "BackgroundColor" },
-		{ Key = "MainColor", Label = "Main color", Idx = "CP_Main", Title = "MainColor" },
-		{ Key = "OutlineColor", Label = "Outline color", Idx = "CP_Outline", Title = "OutlineColor" },
-		{ Key = "FontColor", Label = "Font color", Idx = "CP_Font", Title = "FontColor" },
+		{ Key = "AccentColor", Label = "Accent color", Idx = "CP_Accent" },
+		{ Key = "BackgroundColor", Label = "Background color", Idx = "CP_BG" },
+		{ Key = "MainColor", Label = "Main color", Idx = "CP_Main" },
+		{ Key = "OutlineColor", Label = "Outline color", Idx = "CP_Outline" },
+		{ Key = "FontColor", Label = "Font color", Idx = "CP_Font" },
 	}
 
 	for _, Spec in ipairs(Pickers) do
 		local T = Box:AddToggle("Theme_" .. Spec.Idx, { Text = Spec.Label, Default = true })
 		if T and T.AddColorPicker then
 			T:AddColorPicker(Spec.Idx, {
-				Title = Spec.Title,
+				Title = Spec.Key,
 				Default = Library.Scheme[Spec.Key] or Color3.fromRGB(255, 255, 255),
 				Callback = function(Color) ApplyColor(Spec.Key, Color) end,
 			})
 		end
 	end
+end)
 
-	Box:AddDivider({ Text = "Preset", Margin = 6 })
+Try("Theme: L2 Presets", function()
+	local Box = ThemeTab:AddLeftGroupbox("Theme Presets", Icon("Presets"))
 
-	Box:AddButton("Preset: Default Obsidian", function()
+	Box:AddButton("Default Obsidian", function()
 		Library.IsLightTheme = false
 		Library.Scheme.AccentColor = Color3.fromRGB(218, 98, 255)
 		Library.Scheme.BackgroundColor = Color3.fromRGB(30, 30, 30)
@@ -1171,7 +1237,7 @@ Try("Theme: Scheme colors + preset", function()
 		Library:UpdateColorsUsingRegistry()
 	end)
 
-	Box:AddButton("Preset: Midnight Cyan", function()
+	Box:AddButton("Midnight Cyan", function()
 		Library.IsLightTheme = false
 		Library.Scheme.AccentColor = Color3.fromRGB(90, 220, 255)
 		Library.Scheme.BackgroundColor = Color3.fromRGB(14, 17, 23)
@@ -1181,7 +1247,7 @@ Try("Theme: Scheme colors + preset", function()
 		Library:UpdateColorsUsingRegistry()
 	end)
 
-	Box:AddButton("Preset: Light Mode", function()
+	Box:AddButton("Light Mode", function()
 		Library.IsLightTheme = true
 		Library.Scheme.AccentColor = Color3.fromRGB(124, 58, 237)
 		Library.Scheme.BackgroundColor = Color3.fromRGB(244, 244, 247)
@@ -1190,55 +1256,47 @@ Try("Theme: Scheme colors + preset", function()
 		Library.Scheme.FontColor = Color3.fromRGB(28, 28, 34)
 		Library:UpdateColorsUsingRegistry()
 	end)
+
+	Box:AddButton("N3 Purple (brand)", function()
+		Library.IsLightTheme = false
+		Library.Scheme.AccentColor = Color3.fromRGB(218, 98, 255)
+		Library.Scheme.BackgroundColor = Color3.fromRGB(20, 16, 26)
+		Library.Scheme.MainColor = Color3.fromRGB(32, 26, 42)
+		Library.Scheme.OutlineColor = Color3.fromRGB(58, 46, 76)
+		Library.Scheme.FontColor = Color3.fromRGB(240, 234, 248)
+		Library:UpdateColorsUsingRegistry()
+	end)
 end)
 
-Try("Theme: Geometry & scale", function()
-	local Box = ThemeTab:AddLeftGroupbox("Geometry & Scale", "ruler")
+Try("Theme: L3 Geometry & scale", function()
+	local Box = ThemeTab:AddLeftGroupbox("Geometry & Scale", Icon("Geometry"))
 
 	Box:AddSlider("Theme_Radius", {
 		Text = "Corner radius (default 4)",
-		Default = Library.CornerRadius or 4,
-		Min = 0, Max = 20, Rounding = 0, Suffix = "px",
-		Callback = function(Value)
-			if Window.SetCornerRadius then Window:SetCornerRadius(Value) end
-		end,
+		Default = Library.CornerRadius or 4, Min = 0, Max = 20, Rounding = 0, Suffix = "px",
+		Callback = function(Value) if Window.SetCornerRadius then Window:SetCornerRadius(Value) end end,
 	})
-
 	Box:AddSlider("Theme_DPI", {
 		Text = "DPI scale",
-		Default = math.floor((Library.DPIScale or 1) * 100),
-		Min = 70, Max = 140, Rounding = 0, Suffix = "%",
-		Callback = function(Value)
-			Library:SetDPIScale(Value)
-		end,
+		Default = math.floor((Library.DPIScale or 1) * 100), Min = 70, Max = 140, Rounding = 0, Suffix = "%",
+		Callback = function(Value) Library:SetDPIScale(Value) end,
 	})
-
 	Box:AddSlider("Theme_Sidebar", {
-		Text = "Sidebar width",
-		Default = 128, Min = 50, Max = 260, Rounding = 0, Suffix = "px",
-		Callback = function(Value)
-			if Window.SetSidebarWidth then Window:SetSidebarWidth(Value) end
-		end,
+		Text = "Sidebar width", Default = 128, Min = 50, Max = 260, Rounding = 0, Suffix = "px",
+		Callback = function(Value) if Window.SetSidebarWidth then Window:SetSidebarWidth(Value) end end,
 	})
-
 	Box:AddToggle("Theme_Compact", {
-		Text = "Compact sidebar (icon only)",
-		Default = false,
-		Callback = function(Value)
-			if Window.SetCompact then Window:SetCompact(Value) end
-		end,
+		Text = "Compact sidebar (icon only)", Default = false,
+		Callback = function(Value) if Window.SetCompact then Window:SetCompact(Value) end end,
 	})
 end)
 
-Try("Theme: Font & background image", function()
-	local Box = ThemeTab:AddRightGroupbox("Font & Background", "type")
+Try("Theme: R1 Font & background", function()
+	local Box = ThemeTab:AddRightGroupbox("Font & Background", Icon("FontBg"))
 
 	Box:AddDropdown("Theme_Font", {
 		Text = "Font face",
-		Values = {
-			"Code", "Gotham", "GothamMedium", "GothamBold",
-			"BuilderSans", "Montserrat", "Ubuntu", "Jura", "SourceSans",
-		},
+		Values = { "Code", "Gotham", "GothamMedium", "GothamBold", "BuilderSans", "Montserrat", "Ubuntu", "Jura", "SourceSans" },
 		Default = 1,
 		Callback = function(Value)
 			local FontEnum = GetFontEnum(Value)
@@ -1251,43 +1309,35 @@ Try("Theme: Font & background image", function()
 	})
 
 	Box:AddInput("Theme_BGImage", {
-		Text = "Background image (asset ID)",
-		Default = "",
-		Placeholder = "rbxassetid://0  (kosongin = clear)",
-		Finished = true,
-		Callback = function(Value)
-			Library:SetBackgroundImage(Value or "")
-		end,
+		Text = "Background image (asset ID)", Default = "",
+		Placeholder = "rbxassetid://0  (kosongin = clear)", Finished = true,
+		Callback = function(Value) Library:SetBackgroundImage(Value or "") end,
 	})
 
+	Box:AddButton("Pakai texture N3", function()
+		Library:SetBackgroundImage(ICONS.N3Logo)
+	end)
 	Box:AddButton("Clear background image", function()
 		Library:SetBackgroundImage("")
 	end)
 end)
 
-Try("Theme: Animation controls", function()
-	local Box = ThemeTab:AddRightGroupbox("Animations", "wind")
+Try("Theme: R2 Animations", function()
+	local Box = ThemeTab:AddRightGroupbox("Animations", Icon("Animations"))
 
 	local AnimState = {
-		ToggleWindow = true,
-		TabSwitch = true,
-		Groupbox = true,
-		Dropdown = true,
-		KeyPicker = true,
+		ToggleWindow = true, TabSwitch = true, Groupbox = true, Dropdown = true, KeyPicker = true,
 	}
 
-	local Specs = {
-		{ Key = "ToggleWindow", Label = "Toggle window animation" },
-		{ Key = "TabSwitch", Label = "Tab switch animation" },
-		{ Key = "Groupbox", Label = "Groupbox animation" },
-		{ Key = "Dropdown", Label = "Dropdown animation" },
-		{ Key = "KeyPicker", Label = "KeyPicker animation" },
-	}
-
-	for _, Spec in ipairs(Specs) do
+	for _, Spec in ipairs({
+		{ Key = "ToggleWindow", Label = "Toggle window" },
+		{ Key = "TabSwitch", Label = "Tab switch" },
+		{ Key = "Groupbox", Label = "Groupbox" },
+		{ Key = "Dropdown", Label = "Dropdown" },
+		{ Key = "KeyPicker", Label = "KeyPicker" },
+	}) do
 		Box:AddToggle("Anim_" .. Spec.Key, {
-			Text = Spec.Label,
-			Default = true,
+			Text = Spec.Label, Default = true,
 			Callback = function(Value)
 				AnimState[Spec.Key] = Value
 				Window:SetAnimations(AnimState)
@@ -1295,66 +1345,41 @@ Try("Theme: Animation controls", function()
 		})
 	end
 
-	Box:AddDivider({ Text = "Timing", Margin = 6 })
+	Box:AddDivider({ Text = "Timing", Margin = 4 })
 
 	Box:AddSlider("Anim_TabTime", {
-		Text = "Tab transition", Default = 22, Min = 0, Max = 100,
-		Rounding = 0, Suffix = " ms",
-		Callback = function(Value)
-			Window:SetAnimations(nil, Value / 100)
-		end,
+		Text = "Tab transition", Default = 22, Min = 0, Max = 100, Rounding = 0, Suffix = " ms",
+		Callback = function(Value) Window:SetAnimations(nil, Value / 100) end,
 	})
-
 	Box:AddDropdown("Anim_SwipeFrom", {
-		Text = "Swipe direction",
-		Values = { "bottom", "top", "left", "right" },
-		Default = 1,
-		Callback = function(Value)
-			Window:SetAnimations(nil, nil, nil, Value)
-		end,
+		Text = "Swipe direction", Values = { "bottom", "top", "left", "right" }, Default = 1,
+		Callback = function(Value) Window:SetAnimations(nil, nil, nil, Value) end,
 	})
-
 	Box:AddSlider("Anim_SwipeOffset", {
-		Text = "Swipe offset", Default = 26, Min = 1, Max = 120,
-		Rounding = 0, Suffix = "px",
-		Callback = function(Value)
-			Window:SetAnimations(nil, nil, Value)
-		end,
+		Text = "Swipe offset", Default = 26, Min = 1, Max = 120, Rounding = 0, Suffix = "px",
+		Callback = function(Value) Window:SetAnimations(nil, nil, Value) end,
 	})
 end)
 
-Try("Theme: Window controls & utility", function()
-	local Box = ThemeTab:AddRightGroupbox("Window Controls", "settings-2")
+Try("Theme: R3 Window controls", function()
+	local Box = ThemeTab:AddRightGroupbox("Window Controls", Icon("WindowCtrl"))
 
 	Box:AddDropdown("Theme_NotifySide", {
-		Text = "Notification side",
-		Values = { "Right", "Left" },
-		Default = 1,
-		Callback = function(Value)
-			Library:SetNotifySide(Value)
-		end,
+		Text = "Notification side", Values = { "Right", "Left" }, Default = 1,
+		Callback = function(Value) Library:SetNotifySide(Value) end,
 	})
-
 	Box:AddInput("Theme_Title", {
 		Text = "Window title", Default = CONFIG.Title, Finished = true,
-		Callback = function(Value)
-			if Window.ChangeTitle then Window:ChangeTitle(Value) end
-		end,
+		Callback = function(Value) if Window.ChangeTitle then Window:ChangeTitle(Value) end end,
 	})
-
 	Box:AddInput("Theme_Footer", {
 		Text = "Window footer", Default = CONFIG.Footer, Finished = true,
-		Callback = function(Value)
-			if Window.SetFooter then Window:SetFooter(Value) end
-		end,
+		Callback = function(Value) if Window.SetFooter then Window:SetFooter(Value) end end,
 	})
 
-	Box:AddDivider({ Text = "Utility", Margin = 6 })
+	Box:AddDivider({ Text = "Utility", Margin = 4 })
 
-	Box:AddButton("Print laporan ke Output", function()
-		PrintReport()
-	end)
-
+	Box:AddButton("Print laporan ke Output", function() PrintReport() end)
 	Box:AddButton("Toggle UI (atau RightCtrl)", function()
 		if Window.Toggle then
 			Window:Toggle()
@@ -1362,12 +1387,8 @@ Try("Theme: Window controls & utility", function()
 			Library.Toggle()
 		end
 	end)
-
 	Box:AddButton({
-		Text = "Unload library",
-		Risky = true,
-		DoubleClick = true,
-		DisabledTooltip = "Klik 2x buat beneran unload.",
+		Text = "Unload library", Risky = true, DoubleClick = true,
 		Func = function()
 			PrintReport()
 			Library:Unload()
@@ -1376,12 +1397,17 @@ Try("Theme: Window controls & utility", function()
 end)
 
 --================================================================================
--- 6. FINAL REPORT
+-- FINAL REPORT
 --================================================================================
 PrintReport()
 
 SafeNotify({
-	Title = "Preview siap",
-	Description = string.format("%d section OK · %d gagal. Cek Output buat detail.", #Report.OK, #Report.Failed),
+	Title = "Preview v2 siap",
+	Description = string.format(
+		"%d section OK · %d gagal · icon %s",
+		#Report.OK, #Report.Failed,
+		CONFIG.UseLucideIcons and "lucide" or "rbxassetid"
+	),
+	Icon = ICONS.Check,
 	Time = 6,
 })
