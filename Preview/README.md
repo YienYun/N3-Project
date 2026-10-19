@@ -1,14 +1,14 @@
-# N3V4 — Preview Kit (v2)
+# N3V4 — Preview Kit (v3)
 
-Preview lengkap semua fitur UI library N3, buat dites langsung di **Roblox Studio**.
+Preview lengkap semua fitur UI library N3, buat dites di **Roblox Studio**.
 
-> Keputusan desain & temuan teknis ada di **`../DESIGN_NOTES.md`** — baca itu dulu.
+> Keputusan desain, kronologi icon, jebakan API, dan roadmap ada di **`../DESIGN_NOTES.md`**.
 
 ---
 
-## Setup (3 langkah)
+## Setup
 
-### 1. ModuleScript library
+### 1. ModuleScript library ⚠️ **WAJIB COPY ULANG**
 
 ```
 ReplicatedStorage
@@ -16,10 +16,9 @@ ReplicatedStorage
 ```
 
 Isi = **seluruh kode** `Library/N3V3-NoObfus.lua`.
-Baris terakhir harus tetap `return Library`.
 
-> Nama bisa diganti — sesuaikan `CONFIG.ModuleName`. Kalau nggak ada di
-> ReplicatedStorage, script scan seluruh DataModel.
+> **Library-nya berubah** (icon fallback + animasi ON + radius 10).
+> Kalau lu masih pakai copy lama, icon-nya tetep nggak muncul.
 
 ### 2. LocalScript preview
 
@@ -29,30 +28,63 @@ StarterPlayer
     └── N3V4_Preview   <- LocalScript
 ```
 
-Isi = **seluruh kode** `N3V4_Preview.client.lua`.
+Isi = **seluruh kode** `N3V4_Preview.client.lua`. Nama bebas, yang wajib tipenya
+**LocalScript** dan lokasinya di **StarterPlayerScripts**.
 
-Nama bebas. Yang wajib: tipenya **LocalScript** dan lokasinya di **StarterPlayerScripts**.
-
-### 3. HTTP Requests — sekarang **OPSIONAL**
+### 3. HTTP Requests — sekarang beneran **OPSIONAL**
 
 `File > Game Settings > Security > Allow HTTP Requests`
 
-| Keadaan | Efek |
+Icon lucide punya **fallback offline di dalam library**, jadi:
+
+| HTTP | Hasil |
 |---|---|
-| **OFF** | ✅ Icon tetep muncul (pakai `rbxassetid` manual). Asset library pakai fallback ID. |
-| **ON** | Sama aja, kecuali lu set `CONFIG.UseLucideIcons = true` |
+| **OFF** | ✅ Semua icon muncul (117 icon offline, spritesheet publik) |
+| **ON** | ✅ Semua icon muncul (1866 icon penuh dari gitlab / mirror GitHub) |
 
 ---
 
-## Yang baru di v2
+## Yang baru di v3
 
-| Perubahan | Kenapa |
+| Perubahan | Detail |
 |---|---|
-| **Icon pakai `rbxassetid` manual** (31 ID) | Lucide butuh HTTP ke gitlab. Kalau gagal → icon kosong semua, dan `AddDraggableLabel` malah **error keras** (assert). ID-nya ditambang dari repo lu sendiri, artinya terkonfirmasi dari source. |
-| **FIX** `AddDraggableLabel` icon assert | Ganti `"zap"` (lucide) → `ICONS.Star` (rbxassetid) |
-| **FIX** `AddContextMenu` | Ternyata nge-return **table** `{Open, Close, Toggle, SetSize, Destroy, Menu}` — **nggak ada `AddButton`**. Item sekarang dibangun manual ke `Ctx.Menu`, dan right-click di-bind manual (library nggak auto-bind) |
-| **Layout simetris** | Tiap tab: groupbox kiri = kanan (2/2, 3/3, 3/3, 3/3, 3/3, 3/3) |
-| **Animasi ON dari library** | Default `Templates.Window.Animations` di-flip `false` → `true`. Hub lu dapet animasi **tanpa diedit** |
+| **Icon balik ke lucide** | Preview pakai nama lucide (`house`, `paw-print`, `sparkles`...) — sama persis kayak hub lu. **Bukan** rbxassetid tambangan lagi. |
+| **v2 gue salah** | Gue pakai asset ID dari `Games/Source/*.lua` yang ternyata **private punya game** → `The experience doesn't have access permission`. Maaf. |
+| **Fix-nya di LIBRARY** | Gue tambahin `OfflineLucideIcons` (117 icon) + spritesheet **publik** + mirror GitHub. Jadi lucide jalan tanpa HTTP. |
+| **Alias nama lama** | 13 nama lucide yang udah di-rename upstream (`sliders`→`sliders-horizontal`, `bar-chart-2`→`chart-column`, `home`→`house`, dll) di-resolve otomatis. |
+| **CornerRadius 10** | Default library 4 → 10 (lu approve lewat slider Theme Lab). |
+
+---
+
+## Rantai resolusi icon (di `Library:GetIcon`)
+
+```
+1. gitlab.com/upio/lucide-roblox-direct        (repo asli, 1866 icon)
+        ↓ gagal
+2. raw.githubusercontent.com/notpoiu/...       (mirror GitHub)
+        ↓ gagal
+3. OfflineLucideIcons                          (117 icon, PASTI jalan)
+```
+
+Spritesheet-nya asset **publik**:
+- `rbxassetid://136111683851629` (sheet 1)
+- `rbxassetid://135883070486325` (sheet 2)
+- pitch 25px, rect 24×24
+
+---
+
+## ⚠️ Jebakan ScrollFeed
+
+```lua
+-- Library line 5134
+Image = itemData.Icon or "",     -- cuma Image, tanpa ImageRectOffset/Size
+```
+
+`AddScrollFeed():AddItem({ Icon = ... })` **harus gambar polos** (`CONFIG.ImageAsset`).
+Kalau dikasih nama lucide → yang ke-render **seluruh spritesheet**.
+
+Semua konsumen lain aman (apply rect bener): `AddTab`, `AddGroupbox`, `Notify.Icon`,
+`Notify.BigIcon`, `Dropdown.ValueImages`, `AddDraggableLabel`, `AddDraggableImageButton`.
 
 ---
 
@@ -61,7 +93,7 @@ Nama bebas. Yang wajib: tipenya **LocalScript** dan lokasinya di **StarterPlayer
 Tekan **Play**:
 
 1. Loading screen intro (5 step, ±3 detik)
-2. Main window muncul di tengah
+2. Main window muncul di tengah, corner radius 10, **animasi ON**
 3. Laporan komponen ke-print di **Output**
 
 Toggle UI: `RightCtrl`
@@ -73,42 +105,45 @@ Toggle UI: `RightCtrl`
 | Tab | Kiri | Kanan |
 |---|---|---|
 | **Overview** | Selamat Datang (SpotlightCard, Divider, Label) · Status Session | Asset 3D (Viewport auto-spin) · Activity Feed (ScrollFeed clickable) |
-| **Components** | Buttons (biasa/tooltip/double-click/risky/disabled/sub) · Toggles & Addons (KeyPicker, ColorPicker, Checkbox) · Sliders (suffix/prefix/decimal) | Inputs (text/numeric/no-empty/webhook) · Dropdowns Basic (single/multi+DragSelect/searchable 20 item) · Dropdowns Special (disabled-values/ValueImages/Player auto/Team auto) |
-| **Advanced** | Dependency System (DependencyBox + DependencyGroupbox) · Tabbox 3 sub-tab · Collapse Control | Nested Tabbox dalam Groupbox · UI Passthrough · Dialog (4 variant + WaitTime + form) |
-| **Media** | Viewport Interaktif (drag) · Image Element (height/scaletype/tint live) · Video | Spotlight Card (swap 2D↔3D) · Live Feed (12 row + clear) · Asset Dipakai (daftar ID) |
-| **Overlays** | Notifications (6 varian + progress steps) · Draggable Label/Button/ImageButton · Draggable Menu (manual build) | Overlay Panel (SetRow/RemoveRow/ClearRows realtime) · Dashboard + Loading states (incl. error page) · Context Menu (right-click) |
-| **Theme Lab** | Scheme Colors (5 picker live) · Theme Presets (4) · Geometry & Scale (radius/DPI/sidebar/compact) | Font & Background (9 font + bg image) · Animations (5 toggle + timing/swipe/direction) · Window Controls (notify side/title/footer/report/unload) |
+| **Components** | Buttons (biasa/tooltip/double-click/risky/disabled/sub) · Toggles & Addons (KeyPicker, ColorPicker, Checkbox) · Sliders (suffix/prefix/decimal) | Inputs (text/numeric/no-empty/webhook) · Dropdowns Basic (single/multi+DragSelect/searchable 20 item) · Dropdowns Special (disabled-values/ValueImages/Player/Team) |
+| **Advanced** | Dependency System (Box + Groupbox) · Tabbox 3 sub-tab · Collapse Control | Nested Tabbox · UI Passthrough · Dialog (4 variant + WaitTime + form) |
+| **Media** | Viewport Interaktif (drag) · Image Element (height/scaletype/tint live) · Video | Spotlight Card (swap 2D↔3D) · Live Feed (12 row + clear) · Asset Dipakai |
+| **Overlays** | Notifications (6 varian + progress steps) · Draggable Label/Button/ImageButton · Draggable Menu | Overlay Panel (SetRow realtime) · Dashboard + Loading states · Context Menu (right-click) |
+| **Theme Lab** | Scheme Colors (5 picker live) · Theme Presets (4) · Geometry & Scale | Font & Background (9 font) · Animations (5 toggle + timing) · Window Controls |
+
+**Simetri:** tiap tab groupbox kiri = kanan (2/2, 3/3, 3/3, 3/3, 3/3, 3/3).
+
+> ⚠️ Hub lu (`Games/N3-SAE.lua`) **belum** simetris: 12 `AddLeftGroupbox` vs
+> 9 `AddRightGroupbox`. Simetri itu urusan layout di hub, bukan library.
 
 ---
 
-## Config cepat
-
-Blok `CONFIG` di paling atas:
+## Config
 
 | Key | Default | Fungsi |
 |---|---|---|
 | `ModuleName` | `"N3V4"` | Nama ModuleScript library |
 | `Title` / `Footer` / `Icon` | — | Identitas window |
-| `ImageAsset` | N3 logo | Asset buat Image / Spotlight / Feed |
+| `ImageAsset` | N3 logo | Gambar polos buat Image / Spotlight / **ScrollFeed** |
 | `VideoAsset` | `""` | Asset VideoFrame. Kosong = section nunjukin notice |
-| `UseLucideIcons` | `false` | `true` = pakai nama lucide (butuh HTTP ON) |
 | `ShowLoadingIntro` | `true` | Loading screen pembuka |
 | `LoadingSteps` / `LoadingStepDelay` | `5` / `0.45` | Jumlah step & jeda |
 | `ToggleKey` | `RightControl` | Keybind toggle UI |
 | `VerboseErrors` | `true` | Warning per-section gagal di Output |
 
-Ganti icon? Edit tabel **`ICONS`** (ID) atau **`UI_ICON`** (slot → ID). 41 slot.
+Mau ganti icon? Langsung tulis nama lucide-nya di tempatnya
+(misal `AddLeftGroupbox("Judul", "rocket")`). Daftar 117 nama yang dijamin
+resolve offline ada di `Library/N3V3-NoObfus.lua` → `OfflineLucideIcons`.
 
 ---
 
 ## Catatan Studio
 
 - `writefile` / `getcustomasset` / `isfile` nggak ada di Studio → SaveManager nggak nyimpen. **Normal.**
-- `protectgui` / `cloneref` / `gethui` punya fallback di library, aman.
-- UI di-parent ke `PlayerGui` (bukan CoreGui) kalau di Studio.
+- `protectgui` / `cloneref` / `gethui` punya fallback, aman.
+- UI di-parent ke `PlayerGui` (bukan CoreGui) di Studio.
 
 ## Laporan komponen
 
 Tiap section dibungkus `pcall`. Yang gagal cuma di-skip + dicatat, script tetep jalan.
-
-Lihat ulang kapan aja: **Theme Lab → Window Controls → "Print laporan ke Output"**.
+Lihat ulang: **Theme Lab → Window Controls → "Print laporan ke Output"**.

@@ -1,21 +1,30 @@
 --[[
 	================================================================================
-	 N3V4 — PREVIEW KIT v2   (LocalScript)
+	 N3V4 — PREVIEW KIT v3   (LocalScript)
 	================================================================================
 
+	 CHANGELOG v3 (revisi icon):
+	   • Icon balik ke NAMA LUCIDE — sama persis kayak hub lu ("house", "paw-print",
+	     "egg", "settings", ...). Bukan rbxassetid tambangan lagi.
+	   • v2 gue salah: gue pakai asset ID dari Games/Source/*.lua yang ternyata
+	     PRIVATE punya game -> "The experience doesn't have access permission".
+	   • Solusinya di LIBRARY, bukan di preview: gue tambahin OfflineLucideIcons
+	     (117 icon, spritesheet PUBLIK) + mirror GitHub. Jadi lucide tetep muncul
+	     walaupun HTTP off / gitlab down.
+	   • Corner radius default 4 -> 10 (lu approve lewat slider Theme Lab)
+
 	 CHANGELOG v2:
-	   • Icon sekarang pakai rbxassetid MANUAL — nggak butuh HTTP lagi, langsung muncul.
-	     (ID-nya ditambang dari repo lu sendiri, artinya udah dikonfirmasi dari source)
 	   • FIX: AddDraggableLabel error "Icon must be a valid Roblox asset..."
 	   • FIX: AddContextMenu error "AddButton is not a valid member of Frame"
-	   • Layout SIMETRIS: 3 groupbox kiri / 3 groupbox kanan di tiap tab
-	   • Animasi library udah di-nyalain dari default (lihat Library/N3V3-NoObfus.lua)
+	   • Layout SIMETRIS: groupbox kiri = kanan di tiap tab
+	   • Animasi library di-nyalain dari default (Library/N3V3-NoObfus.lua)
 
 	 CARA PAKAI:
 	   1. ReplicatedStorage > ModuleScript "N3V4"  = isi N3V3-NoObfus.lua
+	      ^ WAJIB copy ulang, library-nya berubah (icon fallback + animasi + radius)
 	   2. StarterPlayer > StarterPlayerScripts > LocalScript "N3V4_Preview" = file ini
-	   3. Game Settings > Security > Allow HTTP Requests = ON (opsional sekarang,
-	      cuma dibutuhin kalau CONFIG.UseLucideIcons = true)
+	   3. Game Settings > Security > Allow HTTP Requests = ON  ->  OPSIONAL.
+	      Icon udah punya fallback offline, jadi HTTP nggak dibutuhin lagi.
 	   Tekan Play.
 
 	================================================================================
@@ -43,10 +52,6 @@ local CONFIG = {
 	-- VideoFrame butuh asset ID punya lu. Kosong = section-nya nunjukin notice.
 	VideoAsset = "",
 
-	-- false = pakai ICONS (rbxassetid, offline, PASTI muncul)
-	-- true  = pakai nama lucide (butuh HTTP Requests ON)
-	UseLucideIcons = false,
-
 	ShowLoadingIntro = true,
 	LoadingSteps = 5,
 	LoadingStepDelay = 0.45,
@@ -56,132 +61,21 @@ local CONFIG = {
 }
 
 --================================================================================
--- ICONS — ditambang dari repo lu sendiri, arti udah dikonfirmasi dari konteks source
---
---   Sumber: Games/Source/StealAnEgg/ChiliSourceV4.lua:43885 (named icon map)
---           Games/Source/StealAnEgg/ChiliSourceV4.lua:12534 (feature icon map)
---           Games/Source/StealAnEgg/SenaV2.lua             (pet icon map)
---           Library/N3V3-NoObfus.lua                       (LoadingIcon/CheckIcon)
---
---   Catatan: ini icon game-specific (pet/item/stat), bukan icon UI generik.
---   Dipakai sebagai PLACEHOLDER biar preview ada icon-nya tanpa butuh HTTP.
---   Nanti pas upgrade visual, ini bisa diganti icon set yang proper.
+-- ICON
 --================================================================================
-local ICONS = {
-	-- Brand & UI asset bawaan library
-	N3Logo = "rbxassetid://117688744510818",
-	Loading = "rbxassetid://97544096941083",
-	Check = "rbxassetid://97682394690683",
-
-	-- Stat icons (dari ChiliSourceV4:43885 — key name = artinya)
-	Money = "rbxassetid://119640363267627",
-	Speed = "rbxassetid://78137530993637",
-	Eggs = "rbxassetid://97499770821177",
-	Pets = "rbxassetid://112223455192501",
-	Night = "rbxassetid://123238464128459",
-	Index = "rbxassetid://72512465543867",
-	Shop = "rbxassetid://70598530577515",
-	Fights = "rbxassetid://135238935953633",
-	Lab = "rbxassetid://103838374075457",
-	Race = "rbxassetid://82857133407630",
-	Wins = "rbxassetid://116272961700800",
-	Star = "rbxassetid://118070800707365",
-
-	-- Feature icons (dari ChiliSourceV4:12534 — dikonfirmasi dari Sub description)
-	Treadmill = "rbxassetid://84421204509494",
-	Butterfly = "rbxassetid://131116540264095",
-	Essence = "rbxassetid://114750647204247",
-	Wisp = "rbxassetid://117266037162644",
-	Train = "rbxassetid://83798853441239",
-	Pumpkin = "rbxassetid://112785428441728",
-	Shield = "rbxassetid://10747384394", -- guardIcon
-
-	-- Creature icons (dari SenaV2)
-	Dragon = "rbxassetid://78935088838538",
-	Unicorn = "rbxassetid://70463817382627",
-	Phoenix = "rbxassetid://118067990008425",
-	ArchAngel = "rbxassetid://113289118499426",
-	Kitsune = "rbxassetid://107842067813602",
-	Pegasus = "rbxassetid://112830316982322",
-	Gargoyle = "rbxassetid://137949993315884",
-	Godzilla = "rbxassetid://102979882140882",
-	TRex = "rbxassetid://124293259998827",
-}
-
--- Pemetaan slot UI -> icon. Ganti di sini aja kalau mau icon lain.
-local UI_ICON = {
-	-- Tab
-	TabOverview = "Index",
-	TabComponents = "Lab",
-	TabAdvanced = "Essence",
-	TabMedia = "Pets",
-	TabOverlays = "Night",
-	TabTheme = "Phoenix",
-
-	-- Overview
-	Welcome = "Star",
-	Session = "Index",
-	Asset3D = "Dragon",
-	Feed = "Butterfly",
-
-	-- Components
-	Buttons = "Fights",
-	Toggles = "Shield",
-	Sliders = "Speed",
-	Inputs = "Wisp",
-	DropdownBasic = "Eggs",
-	DropdownSpecial = "Pets",
-
-	-- Advanced
-	Dependency = "Essence",
-	Tabbox = "Train",
-	Collapse = "Pumpkin",
-	NestedTabbox = "Treadmill",
-	Passthrough = "Race",
-	Dialog = "Gargoyle",
-
-	-- Media
-	Viewport = "Godzilla",
-	Image = "Kitsune",
-	Video = "TRex",
-	Spotlight = "ArchAngel",
-	LiveFeed = "Unicorn",
-	MediaInfo = "Pegasus",
-
-	-- Overlays
-	Notify = "Star",
-	Draggable = "Wins",
-	DragMenu = "Shop",
-	Overlay = "Money",
-	Dashboard = "Lab",
-	LoadingState = "Loading",
-	ContextMenu = "Fights",
-
-	-- Theme
-	SchemeColors = "Essence",
-	Presets = "Phoenix",
-	Geometry = "Treadmill",
-	FontBg = "Index",
-	Animations = "Speed",
-	WindowCtrl = "Shield",
-}
-
--- Resolver: lucide name (kalau HTTP on) atau rbxassetid (offline, default)
-local LUCIDE_FALLBACK = {
-	TabOverview = "layout-dashboard", TabComponents = "shapes", TabAdvanced = "layers",
-	TabMedia = "image", TabOverlays = "bell", TabTheme = "palette",
-}
-
-local function Icon(SlotKey)
-	local IdKey = UI_ICON[SlotKey]
-	if not IdKey then
-		return ICONS.N3Logo
-	end
-	if CONFIG.UseLucideIcons and LUCIDE_FALLBACK[SlotKey] then
-		return LUCIDE_FALLBACK[SlotKey]
-	end
-	return ICONS[IdKey] or ICONS.N3Logo
-end
+-- Preview ini pakai NAMA LUCIDE langsung, sama persis kayak hub lu
+-- (N3-SAE.lua pakai "house", "paw-print", "egg", "settings", ...).
+--
+-- Icon-nya DIJAMIN muncul tanpa HTTP, karena library sekarang punya
+-- OfflineLucideIcons fallback (117 icon, spritesheet publik rbxassetid://
+-- 136111683851629 & 135883070486325) yang di-extract dari lucide-roblox-direct.
+--
+-- Chain di Library:GetIcon -> gitlab -> mirror GitHub -> data offline.
+--
+-- PENTING: ScrollFeed.itemData.Icon TIDAK apply ImageRectOffset/Size
+-- (Library line 5134: `Image = itemData.Icon or ""`). Jadi di situ harus pakai
+-- gambar polos (CONFIG.ImageAsset), BUKAN nama lucide — kalau nggak yang
+-- ke-render seluruh spritesheet.
 
 --================================================================================
 -- REPORT HELPER
@@ -206,7 +100,8 @@ local function PrintReport()
 	print("===================================================")
 	print("  N3V4 PREVIEW KIT v2 — LAPORAN KOMPONEN")
 	print("===================================================")
-	print(string.format("  Icon mode : %s", CONFIG.UseLucideIcons and "LUCIDE (butuh HTTP)" or "rbxassetid MANUAL (offline)"))
+	local LucideOnline = Library.GetIcon and Library:GetIcon("house") ~= nil
+	print(string.format("  Icon      : lucide (%s)", LucideOnline and "resolve OK" or "GAGAL — cek library"))
 	print(string.format("  ✅ BERHASIL : %d", #Report.OK))
 	for _, Name in ipairs(Report.OK) do
 		print("      • " .. Name)
@@ -476,10 +371,10 @@ local Window = Library:CreateWindow({
 --================================================================================
 -- TAB 1 — OVERVIEW   (2 kiri / 2 kanan — simetris)
 --================================================================================
-local OverviewTab = Window:AddTab("Overview", Icon("TabOverview"), "Ringkasan elemen visual utama")
+local OverviewTab = Window:AddTab("Overview", "layout-dashboard", "Ringkasan elemen visual utama")
 
 Try("Overview: L1 Welcome (Spotlight + Label + Divider)", function()
-	local Box = OverviewTab:AddLeftGroupbox("Selamat Datang", Icon("Welcome"))
+	local Box = OverviewTab:AddLeftGroupbox("Selamat Datang", "sparkles")
 
 	local Card = Box:AddSpotlightCard("Spotlight_Hero", {
 		Height = 130,
@@ -497,17 +392,17 @@ Try("Overview: L1 Welcome (Spotlight + Label + Divider)", function()
 end)
 
 Try("Overview: L2 Session Info", function()
-	local Box = OverviewTab:AddLeftGroupbox("Status Session", Icon("Session"))
+	local Box = OverviewTab:AddLeftGroupbox("Status Session", "activity")
 	Box:AddLabel(string.format("Device: %s", tostring(Library.DevicePlatform or "Studio")), false)
 	Box:AddLabel(string.format("Mobile: %s", tostring(Library.IsMobile)), false)
 	Box:AddLabel(string.format("DPIScale: %s", tostring(Library.DPIScale)), false)
 	Box:AddLabel(string.format("CornerRadius: %s", tostring(Library.CornerRadius)), false)
 	Box:AddLabel(string.format("Animations: %s", Library.Animations and "ON" or "OFF"), false)
-	Box:AddLabel(string.format("Icon mode: %s", CONFIG.UseLucideIcons and "Lucide" or "rbxassetid"), false)
+	Box:AddLabel(string.format("Icon lucide resolve: %s", tostring(Library:GetIcon("house") ~= nil)), false)
 end)
 
 Try("Overview: R1 Viewport 3D auto-spin", function()
-	local Box = OverviewTab:AddRightGroupbox("Asset 3D", Icon("Asset3D"))
+	local Box = OverviewTab:AddRightGroupbox("Asset 3D", "box")
 	local Viewport = Box:AddViewport("Viewport_Egg", { Height = 200, Spin = true, Interactive = false })
 	if Viewport and Viewport.SetModel then
 		Viewport:SetModel(DemoEgg)
@@ -515,7 +410,7 @@ Try("Overview: R1 Viewport 3D auto-spin", function()
 end)
 
 Try("Overview: R2 ScrollFeed", function()
-	local Box = OverviewTab:AddRightGroupbox("Activity Feed", Icon("Feed"))
+	local Box = OverviewTab:AddRightGroupbox("Activity Feed", "rss")
 	local Feed = Box:AddScrollFeed("Feed_Activity", { Height = 200 })
 
 	local Items = {
@@ -538,10 +433,10 @@ end)
 --================================================================================
 -- TAB 2 — COMPONENTS   (3 kiri / 3 kanan — simetris)
 --================================================================================
-local ComponentsTab = Window:AddTab("Components", Icon("TabComponents"), "Button, toggle, slider, input, dropdown")
+local ComponentsTab = Window:AddTab("Components", "shapes", "Button, toggle, slider, input, dropdown")
 
 Try("Components: L1 Buttons", function()
-	local Box = ComponentsTab:AddLeftGroupbox("Buttons", Icon("Buttons"))
+	local Box = ComponentsTab:AddLeftGroupbox("Buttons", "mouse-pointer-click")
 
 	Box:AddButton("Button biasa", function()
 		SafeNotify("Button biasa diklik")
@@ -562,7 +457,7 @@ Try("Components: L1 Buttons", function()
 end)
 
 Try("Components: L2 Toggles + Addons", function()
-	local Box = ComponentsTab:AddLeftGroupbox("Toggles & Addons", Icon("Toggles"))
+	local Box = ComponentsTab:AddLeftGroupbox("Toggles & Addons", "toggle-right")
 
 	Box:AddToggle("Toggle_Master", {
 		Text = "Master toggle", Default = true,
@@ -589,7 +484,7 @@ Try("Components: L2 Toggles + Addons", function()
 end)
 
 Try("Components: L3 Sliders", function()
-	local Box = ComponentsTab:AddLeftGroupbox("Sliders", Icon("Sliders"))
+	local Box = ComponentsTab:AddLeftGroupbox("Sliders", "sliders-horizontal")
 
 	Box:AddSlider("Slider_Speed", {
 		Text = "Walkspeed", Default = 16, Min = 0, Max = 200,
@@ -604,7 +499,7 @@ Try("Components: L3 Sliders", function()
 end)
 
 Try("Components: R1 Inputs", function()
-	local Box = ComponentsTab:AddRightGroupbox("Inputs", Icon("Inputs"))
+	local Box = ComponentsTab:AddRightGroupbox("Inputs", "keyboard")
 
 	Box:AddInput("Input_Text", { Text = "Text input", Default = "", Placeholder = "Ketik sesuatu...", Finished = true })
 	Box:AddInput("Input_Numeric", { Text = "Numeric only", Default = "100", Numeric = true, Placeholder = "0" })
@@ -616,7 +511,7 @@ Try("Components: R1 Inputs", function()
 end)
 
 Try("Components: R2 Dropdowns basic", function()
-	local Box = ComponentsTab:AddRightGroupbox("Dropdowns — Basic", Icon("DropdownBasic"))
+	local Box = ComponentsTab:AddRightGroupbox("Dropdowns — Basic", "chevron-down")
 
 	Box:AddDropdown("Dropdown_Single", {
 		Text = "Single select", Values = { "Forest", "Cave", "Sky", "Lava", "Ocean" },
@@ -641,7 +536,7 @@ Try("Components: R2 Dropdowns basic", function()
 end)
 
 Try("Components: R3 Dropdowns special", function()
-	local Box = ComponentsTab:AddRightGroupbox("Dropdowns — Special", Icon("DropdownSpecial"))
+	local Box = ComponentsTab:AddRightGroupbox("Dropdowns — Special", "list")
 
 	Box:AddDropdown("Dropdown_Disabled", {
 		Text = "Ada item disabled",
@@ -651,7 +546,7 @@ Try("Components: R3 Dropdowns special", function()
 	Box:AddDropdown("Dropdown_Images", {
 		Text = "Icon per item (ValueImages)",
 		Values = { "Pet A", "Pet B", "Pet C" },
-		ValueImages = { ["Pet A"] = ICONS.Dragon, ["Pet B"] = ICONS.Phoenix, ["Pet C"] = ICONS.Kitsune },
+		ValueImages = { ["Pet A"] = "paw-print", ["Pet B"] = "flame", ["Pet C"] = "gem" },
 		Default = 1,
 	})
 	Box:AddDropdown("Dropdown_Players", {
@@ -666,10 +561,10 @@ end)
 --================================================================================
 -- TAB 3 — ADVANCED   (3 kiri / 3 kanan — simetris)
 --================================================================================
-local AdvancedTab = Window:AddTab("Advanced", Icon("TabAdvanced"), "Dependency, tabbox, dialog, passthrough")
+local AdvancedTab = Window:AddTab("Advanced", "layers", "Dependency, tabbox, dialog, passthrough")
 
 Try("Advanced: L1 Dependency (Box + Groupbox)", function()
-	local Box = AdvancedTab:AddLeftGroupbox("Dependency System", Icon("Dependency"))
+	local Box = AdvancedTab:AddLeftGroupbox("Dependency System", "git-branch")
 
 	local Master = Box:AddToggle("Adv_Master", { Text = "Aktifin sub-settings", Default = false })
 
@@ -689,21 +584,21 @@ end)
 Try("Advanced: L2 Tabbox kiri (3 sub-tab)", function()
 	local Tabbox = AdvancedTab:AddLeftTabbox("Contoh Tabbox")
 
-	local SubA = Tabbox:AddTab("Pets", Icon("DropdownSpecial"))
+	local SubA = Tabbox:AddTab("Pets", "list")
 	SubA:AddToggle("TB_PetAutoSell", { Text = "Auto sell pets", Default = false })
 	SubA:AddSlider("TB_PetMinRate", { Text = "Min rate", Default = 100, Min = 0, Max = 5000, Prefix = "$" })
 
-	local SubB = Tabbox:AddTab("Eggs", Icon("DropdownBasic"))
+	local SubB = Tabbox:AddTab("Eggs", "chevron-down")
 	SubB:AddToggle("TB_EggAutoHatch", { Text = "Auto hatch", Default = false })
 	SubB:AddDropdown("TB_EggZone", { Text = "Zone", Values = { "Forest", "Cave", "Sky" }, Default = 1 })
 
-	local SubC = Tabbox:AddTab("Misc", Icon("MediaInfo"))
+	local SubC = Tabbox:AddTab("Misc", "info")
 	SubC:AddLabel("Tabbox juga bisa di dalam groupbox (lihat kanan).", true)
 	SubC:AddButton("Contoh button di sub-tab", function() end)
 end)
 
 Try("Advanced: L3 Collapse control", function()
-	local Box = AdvancedTab:AddLeftGroupbox("Collapse Control", Icon("Collapse"))
+	local Box = AdvancedTab:AddLeftGroupbox("Collapse Control", "chevrons-up-down")
 	Box:AddLabel("Target-nya = groupbox 'Dependency System' di kiri atas.", true)
 
 	-- Ambil reference lewat Tab.Groupboxes (diisi otomatis sama library tiap AddGroupbox)
@@ -730,28 +625,28 @@ Try("Advanced: L3 Collapse control", function()
 end)
 
 Try("Advanced: R1 Nested Tabbox dalam Groupbox", function()
-	local Box = AdvancedTab:AddRightGroupbox("Nested Tabbox", Icon("NestedTabbox"))
+	local Box = AdvancedTab:AddRightGroupbox("Nested Tabbox", "layers")
 	local Inner = Box:AddTabbox({ Name = "Webhook Embeds" })
 
-	local S1 = Inner:AddTab("Status", Icon("Dashboard"))
+	local S1 = Inner:AddTab("Status", "gauge")
 	S1:AddToggle("Nest_Status", { Text = "Kirim status embed", Default = true })
 
-	local S2 = Inner:AddTab("Egg", Icon("DropdownBasic"))
+	local S2 = Inner:AddTab("Egg", "chevron-down")
 	S2:AddToggle("Nest_Egg", { Text = "Kirim egg embed", Default = false })
 
-	local S3 = Inner:AddTab("Pets", Icon("DropdownSpecial"))
+	local S3 = Inner:AddTab("Pets", "list")
 	S3:AddToggle("Nest_Pets", { Text = "Kirim pets embed", Default = false })
 end)
 
 Try("Advanced: R2 UIPassthrough", function()
-	local Box = AdvancedTab:AddRightGroupbox("UI Passthrough", Icon("Passthrough"))
+	local Box = AdvancedTab:AddRightGroupbox("UI Passthrough", "frame")
 	Box:AddLabel("Masukin GuiObject buatan lu ke dalam UI library:", true)
 	Box:AddUIPassthrough("Passthrough_Demo", { Instance = PassthroughFrame, Height = 44 })
 	Box:AddLabel("Frame di atas dibangun manual pakai Instance.new().", true)
 end)
 
 Try("Advanced: R3 Dialog", function()
-	local Box = AdvancedTab:AddRightGroupbox("Dialog", Icon("Dialog"))
+	local Box = AdvancedTab:AddRightGroupbox("Dialog", "message-square")
 
 	Box:AddButton("Dialog 3 button variant", function()
 		local Dialog = Window:AddDialog("Dialog_Demo", {
@@ -804,10 +699,10 @@ end)
 --================================================================================
 -- TAB 4 — MEDIA   (3 kiri / 3 kanan — simetris)
 --================================================================================
-local MediaTab = Window:AddTab("Media", Icon("TabMedia"), "Viewport 3D, image, video, spotlight, feed")
+local MediaTab = Window:AddTab("Media", "image", "Viewport 3D, image, video, spotlight, feed")
 
 Try("Media: L1 Viewport interaktif", function()
-	local Box = MediaTab:AddLeftGroupbox("Viewport Interaktif", Icon("Viewport"))
+	local Box = MediaTab:AddLeftGroupbox("Viewport Interaktif", "rotate-3d")
 	Box:AddLabel("Drag mouse di dalam viewport buat muter manual.", true)
 
 	local VP = Box:AddViewport("Media_Viewport", { Height = 220, Spin = false, Interactive = true })
@@ -824,7 +719,7 @@ Try("Media: L1 Viewport interaktif", function()
 end)
 
 Try("Media: L2 Image + kontrol", function()
-	local Box = MediaTab:AddLeftGroupbox("Image Element", Icon("Image"))
+	local Box = MediaTab:AddLeftGroupbox("Image Element", "image")
 
 	local Img = Box:AddImage("Media_Image", {
 		Image = CONFIG.ImageAsset, Height = 160,
@@ -856,7 +751,7 @@ Try("Media: L2 Image + kontrol", function()
 end)
 
 Try("Media: L3 Video", function()
-	local Box = MediaTab:AddLeftGroupbox("Video Element", Icon("Video"))
+	local Box = MediaTab:AddLeftGroupbox("Video Element", "video")
 
 	if CONFIG.VideoAsset == "" or not CONFIG.VideoAsset then
 		Box:AddLabel("CONFIG.VideoAsset masih kosong.", true)
@@ -877,7 +772,7 @@ Try("Media: L3 Video", function()
 end)
 
 Try("Media: R1 SpotlightCard 2D <-> 3D", function()
-	local Box = MediaTab:AddRightGroupbox("Spotlight Card", Icon("Spotlight"))
+	local Box = MediaTab:AddRightGroupbox("Spotlight Card", "star")
 
 	local Card = Box:AddSpotlightCard("Media_Spotlight", {
 		Height = 150, Title = "Mythic Pet",
@@ -900,7 +795,7 @@ Try("Media: R1 SpotlightCard 2D <-> 3D", function()
 end)
 
 Try("Media: R2 ScrollFeed besar", function()
-	local Box = MediaTab:AddRightGroupbox("Live Feed", Icon("LiveFeed"))
+	local Box = MediaTab:AddRightGroupbox("Live Feed", "rss")
 	local Feed = Box:AddScrollFeed("Media_Feed", { Height = 220 })
 
 	for i = 1, 12 do
@@ -916,24 +811,27 @@ Try("Media: R2 ScrollFeed besar", function()
 end)
 
 Try("Media: R3 Asset info", function()
-	local Box = MediaTab:AddRightGroupbox("Asset Dipakai", Icon("MediaInfo"))
-	Box:AddLabel("Semua ID di bawah offline-ready (rbxassetid).", true)
-	Box:AddDivider({ Text = "Icon", Margin = 4 })
-	Box:AddLabel("N3Logo  " .. ICONS.N3Logo, false)
-	Box:AddLabel("Dragon  " .. ICONS.Dragon, false)
-	Box:AddLabel("Phoenix " .. ICONS.Phoenix, false)
-	Box:AddDivider({ Text = "Texture", Margin = 4 })
+	local Box = MediaTab:AddRightGroupbox("Asset Dipakai", "info")
+	Box:AddLabel("Icon = nama lucide, di-resolve library (offline-ready).", true)
+	Box:AddDivider({ Text = "Spritesheet lucide", Margin = 4 })
+	Box:AddLabel("Sheet 1  rbxassetid://136111683851629", false)
+	Box:AddLabel("Sheet 2  rbxassetid://135883070486325", false)
+	Box:AddLabel("117 icon offline di Library:GetIcon fallback", false)
+	Box:AddDivider({ Text = "Gambar polos", Margin = 4 })
 	Box:AddLabel("ImageAsset  " .. CONFIG.ImageAsset, false)
 	Box:AddLabel(string.format("VideoAsset  %s", CONFIG.VideoAsset == "" and "(kosong)" or CONFIG.VideoAsset), false)
+	Box:AddDivider({ Text = "Catatan", Margin = 4 })
+	Box:AddLabel("ScrollFeed itemData.Icon TIDAK apply ImageRect,", true)
+	Box:AddLabel("jadi harus gambar polos — bukan nama lucide.", true)
 end)
 
 --================================================================================
 -- TAB 5 — OVERLAYS   (3 kiri / 3 kanan — simetris)
 --================================================================================
-local OverlaysTab = Window:AddTab("Overlays", Icon("TabOverlays"), "Notification, draggable, overlay, dashboard")
+local OverlaysTab = Window:AddTab("Overlays", "bell", "Notification, draggable, overlay, dashboard")
 
 Try("Overlays: L1 Notifications", function()
-	local Box = OverlaysTab:AddLeftGroupbox("Notifications", Icon("Notify"))
+	local Box = OverlaysTab:AddLeftGroupbox("Notifications", "bell-ring")
 
 	Box:AddButton("Notify simple (string)", function()
 		SafeNotify("Ini notification paling simpel.")
@@ -944,7 +842,7 @@ Try("Overlays: L1 Notifications", function()
 	Box:AddButton("Notify + icon", function()
 		SafeNotify({
 			Title = "Pet diperoleh!", Description = "Mythic Dragon · Shiny mutation",
-			Icon = ICONS.Dragon, IconColor = Color3.fromRGB(218, 98, 255), Time = 4,
+			Icon = "paw-print", IconColor = Color3.fromRGB(218, 98, 255), Time = 4,
 		})
 	end)
 	Box:AddButton("Notify big icon + warna custom", function()
@@ -983,7 +881,7 @@ Try("Overlays: L1 Notifications", function()
 end)
 
 Try("Overlays: L2 Draggable label & button", function()
-	local Box = OverlaysTab:AddLeftGroupbox("Draggable Elements", Icon("Draggable"))
+	local Box = OverlaysTab:AddLeftGroupbox("Draggable Elements", "move")
 	Box:AddLabel("Semua elemen di bawah bisa lu drag keluar window.", true)
 
 	-- FIX v2: icon HARUS rbxassetid / URL valid. Nama lucide ("zap") bikin
@@ -991,7 +889,7 @@ Try("Overlays: L2 Draggable label & button", function()
 	Box:AddButton("Spawn draggable label", function()
 		local Label = Library:AddDraggableLabel({
 			Text = "N3 HUB • Watermark",
-			Icon = ICONS.Star,
+			Icon = "zap",
 			IconPosition = "left",
 		})
 		if Label and Label.SetVisible then Label:SetVisible(true) end
@@ -1011,7 +909,7 @@ Try("Overlays: L2 Draggable label & button", function()
 
 	Box:AddButton("Spawn draggable image button", function()
 		Library:AddDraggableImageButton({
-			Icon = ICONS.N3Logo,
+			Icon = CONFIG.ImageAsset,
 			IconSize = 28,
 			Func = function() SafeNotify({ Title = "Image Button", Description = "Diklik!", Time = 2 }) end,
 		})
@@ -1019,7 +917,7 @@ Try("Overlays: L2 Draggable label & button", function()
 end)
 
 Try("Overlays: L3 Draggable menu", function()
-	local Box = OverlaysTab:AddLeftGroupbox("Draggable Menu", Icon("DragMenu"))
+	local Box = OverlaysTab:AddLeftGroupbox("Draggable Menu", "menu")
 	Box:AddLabel("AddDraggableMenu nge-return (Holder, Container) — raw Instance.", true)
 	Box:AddLabel("Nggak ada method AddButton, isinya dibangun manual.", true)
 
@@ -1046,7 +944,7 @@ Try("Overlays: L3 Draggable menu", function()
 end)
 
 Try("Overlays: R1 Overlay panel (SetRow)", function()
-	local Box = OverlaysTab:AddRightGroupbox("Overlay Panel", Icon("Overlay"))
+	local Box = OverlaysTab:AddRightGroupbox("Overlay Panel", "picture-in-picture")
 	Box:AddLabel("Overlay = panel stat key-value. API: SetRow / RemoveRow / ClearRows.", true)
 
 	local LiveOverlay = nil
@@ -1092,7 +990,7 @@ Try("Overlays: R1 Overlay panel (SetRow)", function()
 end)
 
 Try("Overlays: R2 Dashboard + Loading states", function()
-	local Box = OverlaysTab:AddRightGroupbox("Dashboard & Loading", Icon("Dashboard"))
+	local Box = OverlaysTab:AddRightGroupbox("Dashboard & Loading", "gauge")
 
 	Box:AddButton("Buka Dashboard window", function()
 		local Dash = Library:CreateDashboardWindow({
@@ -1136,7 +1034,7 @@ Try("Overlays: R2 Dashboard + Loading states", function()
 end)
 
 Try("Overlays: R3 Context menu (right-click)", function()
-	local Box = OverlaysTab:AddRightGroupbox("Context Menu", Icon("ContextMenu"))
+	local Box = OverlaysTab:AddRightGroupbox("Context Menu", "list")
 	Box:AddLabel("Klik KANAN button di bawah.", true)
 
 	local Trigger = Box:AddButton("Right-click gue", function()
@@ -1194,10 +1092,10 @@ end)
 --================================================================================
 -- TAB 6 — THEME LAB   (3 kiri / 3 kanan — simetris)
 --================================================================================
-local ThemeTab = Window:AddTab("Theme Lab", Icon("TabTheme"), "Ganti warna, radius, font, animasi realtime")
+local ThemeTab = Window:AddTab("Theme Lab", "palette", "Ganti warna, radius, font, animasi realtime")
 
 Try("Theme: L1 Scheme colors", function()
-	local Box = ThemeTab:AddLeftGroupbox("Scheme Colors", Icon("SchemeColors"))
+	local Box = ThemeTab:AddLeftGroupbox("Scheme Colors", "droplets")
 
 	local function ApplyColor(Key, Color)
 		Library.Scheme[Key] = Color
@@ -1225,7 +1123,7 @@ Try("Theme: L1 Scheme colors", function()
 end)
 
 Try("Theme: L2 Presets", function()
-	local Box = ThemeTab:AddLeftGroupbox("Theme Presets", Icon("Presets"))
+	local Box = ThemeTab:AddLeftGroupbox("Theme Presets", "palette")
 
 	Box:AddButton("Default Obsidian", function()
 		Library.IsLightTheme = false
@@ -1269,7 +1167,7 @@ Try("Theme: L2 Presets", function()
 end)
 
 Try("Theme: L3 Geometry & scale", function()
-	local Box = ThemeTab:AddLeftGroupbox("Geometry & Scale", Icon("Geometry"))
+	local Box = ThemeTab:AddLeftGroupbox("Geometry & Scale", "ruler")
 
 	Box:AddSlider("Theme_Radius", {
 		Text = "Corner radius (default 4)",
@@ -1292,7 +1190,7 @@ Try("Theme: L3 Geometry & scale", function()
 end)
 
 Try("Theme: R1 Font & background", function()
-	local Box = ThemeTab:AddRightGroupbox("Font & Background", Icon("FontBg"))
+	local Box = ThemeTab:AddRightGroupbox("Font & Background", "type")
 
 	Box:AddDropdown("Theme_Font", {
 		Text = "Font face",
@@ -1315,7 +1213,7 @@ Try("Theme: R1 Font & background", function()
 	})
 
 	Box:AddButton("Pakai texture N3", function()
-		Library:SetBackgroundImage(ICONS.N3Logo)
+		Library:SetBackgroundImage(CONFIG.ImageAsset)
 	end)
 	Box:AddButton("Clear background image", function()
 		Library:SetBackgroundImage("")
@@ -1323,7 +1221,7 @@ Try("Theme: R1 Font & background", function()
 end)
 
 Try("Theme: R2 Animations", function()
-	local Box = ThemeTab:AddRightGroupbox("Animations", Icon("Animations"))
+	local Box = ThemeTab:AddRightGroupbox("Animations", "wind")
 
 	local AnimState = {
 		ToggleWindow = true, TabSwitch = true, Groupbox = true, Dropdown = true, KeyPicker = true,
@@ -1362,7 +1260,7 @@ Try("Theme: R2 Animations", function()
 end)
 
 Try("Theme: R3 Window controls", function()
-	local Box = ThemeTab:AddRightGroupbox("Window Controls", Icon("WindowCtrl"))
+	local Box = ThemeTab:AddRightGroupbox("Window Controls", "settings-2")
 
 	Box:AddDropdown("Theme_NotifySide", {
 		Text = "Notification side", Values = { "Right", "Left" }, Default = 1,
@@ -1403,11 +1301,7 @@ PrintReport()
 
 SafeNotify({
 	Title = "Preview v2 siap",
-	Description = string.format(
-		"%d section OK · %d gagal · icon %s",
-		#Report.OK, #Report.Failed,
-		CONFIG.UseLucideIcons and "lucide" or "rbxassetid"
-	),
-	Icon = ICONS.Check,
+	Description = string.format("%d section OK · %d gagal · icon lucide offline-ready", #Report.OK, #Report.Failed),
+	Icon = "circle-check",
 	Time = 6,
 })

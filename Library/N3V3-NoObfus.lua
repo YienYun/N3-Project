@@ -261,7 +261,7 @@ local Library = {
 	OriginalMinSize = Vector2.new(480, 360),
 	MinSize = Vector2.new(480, 360),
 	DPIScale = 1,
-	CornerRadius = 4,
+	CornerRadius = 10, -- N3V4: 4 -> 10 (di-approve user lewat slider di Theme Lab)
 
 	--// Scheme \\--
 	IsLightTheme = false,
@@ -373,7 +373,7 @@ local Templates = {
 		SearchbarSize = UDim2.fromScale(1, 1),
 		GlobalSearch = false,
 
-		CornerRadius = 4,
+		CornerRadius = 10, -- N3V4: 4 -> 10, disamain sama Library.CornerRadius
 		NotifySide = "Right",
 		ShowCustomCursor = true,
 
@@ -1168,25 +1168,216 @@ type IconModule = {
 	GetAsset: (Name: string) -> Icon?,
 }
 
-local FetchIcons, Icons = pcall(function()
-	return (
-		loadstring(
-			game:HttpGet("https://gitlab.com/upio/lucide-roblox-direct/-/raw/main/source.lua")
-		) :: () -> IconModule
-	)()
-end)
+-- N3V4: dua sumber + fallback offline (lihat OfflineLucideIcons di bawah).
+-- Urutan: gitlab (repo asli) -> mirror GitHub -> data offline.
+-- raw.githubusercontent.com udah terbukti jalan di library ini (dipakai BaseURL
+-- buat asset Obsidian), jadi mirror ini lebih reliable daripada gitlab doang.
+local LucideSources = {
+	"https://gitlab.com/upio/lucide-roblox-direct/-/raw/main/source.lua",
+	"https://raw.githubusercontent.com/notpoiu/lucide-roblox-direct/main/source.lua",
+}
+
+local FetchIcons: boolean = false
+local Icons: IconModule? = nil
+
+for _, SourceURL in LucideSources do
+	local Success, Result = pcall(function()
+		return (loadstring(game:HttpGet(SourceURL)) :: () -> IconModule)()
+	end)
+
+	if Success and typeof(Result) == "table" and typeof(Result.GetAsset) == "function" then
+		FetchIcons = true
+		Icons = Result
+		break
+	end
+end
+
+--// N3V4: Offline Lucide Icon Fallback \\--
+-- Fallback kalau fetch ke gitlab gagal (HTTP Requests OFF / repo pindah / rate limit).
+-- Data di-extract langsung dari lucide-roblox-direct source.lua (1866 icon, diambil
+-- subset yang dipake repo ini + icon UI umum):
+--   spritesheet[1] = rbxassetid://136111683851629
+--   spritesheet[2] = rbxassetid://135883070486325
+--   pitch 25px, rect 24x24. Kedua spritesheet asset PUBLIK -> jalan tanpa HTTP
+--   dan tanpa butuh access permission khusus.
+local OfflineLucideSheets = {
+	[1] = "rbxassetid://136111683851629",
+	[2] = "rbxassetid://135883070486325",
+}
+
+-- Format: ["nama"] = { sheetIndex, rectX, rectY }   -- rectSize selalu 24x24
+-- Total 117 icon.
+local OfflineLucideIcons = {
+	["activity"] = { 1, 25, 25 },
+	["bell"] = { 1, 100, 325 },
+	["bell-ring"] = { 1, 125, 300 },
+	["book-open"] = { 1, 25, 450 },
+	["bookmark"] = { 1, 175, 325 },
+	["box"] = { 1, 0, 500 },
+	["bug"] = { 1, 500, 50 },
+	["calendar"] = { 1, 300, 275 },
+	["chart-column"] = { 1, 525, 100 },
+	["check"] = { 1, 175, 450 },
+	["chevron-down"] = { 1, 625, 25 },
+	["chevron-left"] = { 1, 550, 100 },
+	["chevron-right"] = { 1, 525, 125 },
+	["chevron-up"] = { 1, 500, 150 },
+	["chevrons-up-down"] = { 1, 300, 350 },
+	["circle-check"] = { 1, 625, 50 },
+	["circle-user"] = { 1, 475, 225 },
+	["circle-x"] = { 1, 450, 250 },
+	["clock"] = { 1, 200, 525 },
+	["cloud"] = { 1, 450, 300 },
+	["coins"] = { 1, 250, 500 },
+	["compass"] = { 1, 75, 675 },
+	["copy"] = { 1, 450, 325 },
+	["cpu"] = { 1, 175, 600 },
+	["crosshair"] = { 1, 725, 75 },
+	["crown"] = { 1, 700, 100 },
+	["database"] = { 1, 300, 500 },
+	["dollar-sign"] = { 1, 475, 350 },
+	["download"] = { 1, 225, 600 },
+	["droplets"] = { 1, 50, 775 },
+	["dumbbell"] = { 1, 850, 0 },
+	["egg"] = { 1, 650, 200 },
+	["eye"] = { 1, 175, 675 },
+	["eye-off"] = { 1, 200, 650 },
+	["file-text"] = { 1, 500, 400 },
+	["flag"] = { 1, 900, 25 },
+	["flame"] = { 1, 850, 75 },
+	["flower-2"] = { 1, 700, 225 },
+	["folder"] = { 1, 800, 150 },
+	["folder-tree"] = { 1, 875, 75 },
+	["frame"] = { 1, 650, 300 },
+	["gauge"] = { 1, 225, 725 },
+	["gem"] = { 1, 175, 775 },
+	["gift"] = { 1, 50, 900 },
+	["git-branch"] = { 1, 975, 0 },
+	["git-merge"] = { 1, 775, 200 },
+	["globe"] = { 1, 425, 550 },
+	["heart"] = { 1, 50, 950 },
+	["hourglass"] = { 1, 775, 250 },
+	["house"] = { 1, 625, 400 },
+	["image"] = { 1, 300, 725 },
+	["info"] = { 1, 150, 875 },
+	["keyboard"] = { 1, 700, 350 },
+	["layers"] = { 1, 125, 925 },
+	["layout-dashboard"] = { 1, 975, 100 },
+	["list"] = { 1, 550, 550 },
+	["list-ordered"] = { 1, 800, 300 },
+	["loader"] = { 1, 475, 625 },
+	["lock"] = { 1, 300, 800 },
+	["lock-open"] = { 1, 325, 775 },
+	["map-pin"] = { 1, 325, 800 },
+	["menu"] = { 1, 850, 300 },
+	["message-square"] = { 1, 900, 275 },
+	["messages-square"] = { 1, 850, 325 },
+	["minus"] = { 1, 450, 725 },
+	["moon"] = { 1, 775, 425 },
+	["mouse-pointer-click"] = { 1, 475, 725 },
+	["move"] = { 1, 775, 450 },
+	["package"] = { 1, 550, 700 },
+	["package-open"] = { 1, 650, 600 },
+	["palette"] = { 1, 425, 825 },
+	["pause"] = { 1, 400, 875 },
+	["paw-print"] = { 1, 375, 900 },
+	["pencil"] = { 1, 825, 475 },
+	["picture-in-picture"] = { 1, 400, 900 },
+	["play"] = { 1, 675, 650 },
+	["plus"] = { 1, 500, 825 },
+	["refresh-cw"] = { 1, 400, 975 },
+	["repeat"] = { 1, 825, 575 },
+	["rocket"] = { 1, 575, 825 },
+	["rotate-3d"] = { 1, 475, 925 },
+	["rss"] = { 1, 675, 750 },
+	["ruler"] = { 1, 600, 825 },
+	["scan"] = { 1, 475, 975 },
+	["search"] = { 1, 650, 825 },
+	["settings"] = { 1, 825, 675 },
+	["settings-2"] = { 1, 850, 650 },
+	["shapes"] = { 1, 800, 700 },
+	["shield"] = { 1, 750, 775 },
+	["shopping-cart"] = { 1, 975, 575 },
+	["sliders-horizontal"] = { 1, 800, 775 },
+	["sparkles"] = { 1, 850, 750 },
+	["square-check"] = { 1, 700, 950 },
+	["star"] = { 1, 950, 925 },
+	["sun"] = { 2, 0, 100 },
+	["swords"] = { 2, 125, 25 },
+	["tag"] = { 2, 175, 25 },
+	["terminal"] = { 2, 125, 100 },
+	["toggle-right"] = { 2, 75, 225 },
+	["trash"] = { 2, 250, 100 },
+	["trending-down"] = { 2, 125, 225 },
+	["trending-up"] = { 2, 75, 275 },
+	["triangle-alert"] = { 2, 50, 300 },
+	["type"] = { 2, 25, 350 },
+	["upload"] = { 2, 100, 300 },
+	["user"] = { 2, 375, 75 },
+	["users"] = { 2, 325, 125 },
+	["utensils"] = { 2, 275, 175 },
+	["video"] = { 2, 425, 50 },
+	["wand-sparkles"] = { 2, 0, 475 },
+	["webhook"] = { 2, 150, 350 },
+	["wifi"] = { 2, 275, 250 },
+	["wifi-off"] = { 2, 375, 150 },
+	["wind"] = { 2, 200, 325 },
+	["wrench"] = { 2, 50, 475 },
+	["x"] = { 2, 450, 100 },
+	["zap"] = { 2, 400, 150 },
+}
+
+-- Nama lucide lama yang udah di-rename upstream. Repo lu masih pakai beberapa:
+--   Games/ride-an-pets.lua:4044  "sliders"      -> sliders-horizontal
+--   Games/ride-an-pets.lua:4046  "bar-chart-2"  -> chart-column
+--   Games/Source/.../SenaV2.lua  "chat" / "forum" / "donator"
+local OfflineLucideAliases = {
+	["alert-triangle"] = "triangle-alert",
+	["bar-chart-2"] = "chart-column",
+	["chat"] = "message-square",
+	["check-circle"] = "circle-check",
+	["check-square"] = "square-check",
+	["donator"] = "crown",
+	["edit"] = "pencil",
+	["forum"] = "messages-square",
+	["home"] = "house",
+	["sliders"] = "sliders-horizontal",
+	["trash-2"] = "trash",
+	["unlock"] = "lock-open",
+	["x-circle"] = "circle-x",
+}
+
+local function GetOfflineLucideIcon(IconName: any)
+	if typeof(IconName) ~= "string" then
+		return nil
+	end
+
+	local Resolved = OfflineLucideAliases[IconName] or IconName
+	local Entry = OfflineLucideIcons[Resolved]
+	if not Entry then
+		return nil
+	end
+
+	return {
+		IconName = Resolved,
+		Url = OfflineLucideSheets[Entry[1]],
+		ImageRectSize = Vector2.new(24, 24),
+		ImageRectOffset = Vector2.new(Entry[2], Entry[3]),
+	}
+end
 
 function Library:GetIcon(IconName: string)
-	if not FetchIcons then
-		return
+	-- N3V4: chain = online (1866 icon penuh) -> offline subset (spritesheet publik).
+	-- Offline juga nge-resolve nama lucide lama yang udah di-rename upstream,
+	-- jadi "sliders" / "bar-chart-2" / "home" tetep muncul.
+	if FetchIcons and Icons then
+		local Success, Icon = pcall(Icons.GetAsset, IconName)
+		if Success and Icon then
+			return Icon
+		end
 	end
 
-	local Success, Icon = pcall(Icons.GetAsset, IconName)
-	if not Success then
-		return
-	end
-
-	return Icon
+	return GetOfflineLucideIcon(IconName)
 end
 
 function Library:GetCustomIcon(IconName: string): any
