@@ -189,6 +189,37 @@ BaseAddons.__index   = Funcs     -- Toggle/Button dapet AddKeyPicker & AddColorP
 Tab.Groupboxes[Name] = Groupbox  -- reference otomatis, bisa collapse/hide dari jauh
 ```
 
+### 🐛 Bug class: forward reference ke `Library`
+**Sempat kejadian di preview v3** — error `attempt to index nil with 'GetIcon'`.
+
+Penyebab: function didefinisiin **sebelum** `local Library = require(...)`, jadi
+`Library` di dalam body-nya nangkep **GLOBAL**, bukan upvalue local.
+
+```lua
+local function PrintReport()
+    Library:GetIcon("house")   -- ❌ global Library = nil
+end
+local Library = require(Mod)   -- deklarasinya di SINI, kelewat
+```
+
+Kenapa global-nya nil padahal library melakukan `getgenv().Library = Library`?
+Karena di Studio `getgenv` fallback ke **`shared`**, bukan `_G`:
+```lua
+local getgenv = getgenv or function() return shared end
+```
+Jadi `shared.Library` keisi, `_G.Library` tetap nil.
+
+**Fix (udah diterapkan):** forward declaration.
+```lua
+local Library                  -- deklarasi dulu
+local function PrintReport() ... Library:GetIcon(...) ... end
+Library = require(ModuleObject) -- assign TANPA `local`
+```
+
+**Aturan buat ke depannya:** helper function apa pun yang nyentuh `Library`
+harus didefinisiin **setelah** require, ATAU pakai forward declaration.
+Validator `validate4.js` punya `SCOPE CHECK` khusus buat ini.
+
 ### Format icon yang diterima `GetCustomIcon` (tanpa HTTP)
 `rbxassetid://<id>` · `rbxasset://textures/...` · `content://...` · `rbxthumb://type=...`
 · `roblox.com/asset/?id=...` · angka polos · **nama lucide** (via chain 3 lapis)

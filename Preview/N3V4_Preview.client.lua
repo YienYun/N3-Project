@@ -82,6 +82,13 @@ local CONFIG = {
 --================================================================================
 local Report = { OK = {}, Failed = {} }
 
+-- FORWARD DECLARATION — wajib.
+-- PrintReport() didefinisiin SEBELUM library di-require. Tanpa ini, `Library`
+-- di dalam PrintReport nangkep GLOBAL (nil), karena library set getgenv().Library
+-- yang di Studio fallback ke `shared`, bukan `_G`.
+-- Error yang muncul: "attempt to index nil with 'GetIcon'"
+local Library
+
 local function Try(Label, Func)
 	local Success, Result = pcall(Func)
 	if Success then
@@ -98,10 +105,18 @@ end
 
 local function PrintReport()
 	print("===================================================")
-	print("  N3V4 PREVIEW KIT v2 — LAPORAN KOMPONEN")
+	print("  N3V4 PREVIEW KIT v3 — LAPORAN KOMPONEN")
 	print("===================================================")
-	local LucideOnline = Library.GetIcon and Library:GetIcon("house") ~= nil
-	print(string.format("  Icon      : lucide (%s)", LucideOnline and "resolve OK" or "GAGAL — cek library"))
+
+	-- Defensive: kalau Library belum ke-assign (require gagal), jangan meledak
+	local IconStatus = "library belum ke-load"
+	if typeof(Library) == "table" and typeof(Library.GetIcon) == "function" then
+		local Resolved = Library:GetIcon("house")
+		IconStatus = Resolved ~= nil and "resolve OK (house -> sheet + rect)" or "GAGAL resolve"
+	end
+	print(string.format("  Icon      : lucide — %s", IconStatus))
+	print(string.format("  Radius    : %s", typeof(Library) == "table" and tostring(Library.CornerRadius) or "?"))
+	print(string.format("  Animations: %s", typeof(Library) == "table" and tostring(Library.Animations ~= nil) or "?"))
 	print(string.format("  ✅ BERHASIL : %d", #Report.OK))
 	for _, Name in ipairs(Report.OK) do
 		print("      • " .. Name)
@@ -145,7 +160,7 @@ if not ModuleObject then
 	error(string.format("[N3V4 Preview] ModuleScript %q nggak ketemu (nunggu 15 detik).", CONFIG.ModuleName), 0)
 end
 
-local Library = require(ModuleObject)
+Library = require(ModuleObject) -- assign ke forward-declared local di atas (BUKAN `local`)
 
 if typeof(Library) ~= "table" or typeof(Library.CreateWindow) ~= "function" then
 	error("[N3V4 Preview] Module N3V4 nggak nge-return Library yang valid.", 0)

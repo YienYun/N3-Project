@@ -137,6 +137,25 @@ resolve offline ada di `Library/N3V3-NoObfus.lua` → `OfflineLucideIcons`.
 
 ---
 
+## Arti log pembuka
+
+```
+[N3V4 Preview] Library OK | Device: nil | Mobile: false | DPI: 1 | Radius: 10 | Animations: ON
+```
+
+| Field | Arti | Normal? |
+|---|---|---|
+| `Device: nil` | `Library.DevicePlatform` cuma di-set kalau **bukan** Studio (`UserInputService:GetPlatform()` ada di cabang `else`). Di Studio nilainya memang `nil`. | ✅ **NORMAL** |
+| `Mobile: false` | Studio + mouse → bukan mobile | ✅ Normal |
+| `DPI: 1` | Default scale 1.0 | ✅ Normal |
+| `Radius: 10` | **Corner radius baru ke-apply** (dari 4) | ✅ Bukti fix library jalan |
+| `Animations: ON` | **Animasi ke-apply** | ✅ Bukti fix library jalan |
+
+Kalau `Radius: 4` atau `Animations: nil` → berarti ModuleScript `N3V4` lu
+**belum di-copy ulang** dari `Library/N3V3-NoObfus.lua`.
+
+---
+
 ## Catatan Studio
 
 - `writefile` / `getcustomasset` / `isfile` nggak ada di Studio → SaveManager nggak nyimpen. **Normal.**
