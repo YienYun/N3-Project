@@ -9034,9 +9034,18 @@ Library.Surface = {
 	GroupTransparency = 0, -- kartu groupbox / tabbox / depbox. 0 = solid
 	GroupContrast = 0, -- persen 0-100: seberapa kartu group dibedain dari bg window
 	GroupColor = nil, -- Color3 override. nil = pakai BackgroundColor + GroupContrast
+	CanvasColor = nil, -- Color3 override warna latar (Container+sidebar). nil = ikut theme
 }
 Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
 Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
+
+-- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
+function Library:GetCanvasColor(): Color3
+	if typeof(Library.Surface.CanvasColor) == "Color3" then
+		return Library.Surface.CanvasColor
+	end
+	return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
+end
 
 function Library:GetGroupSurfaceColor(): Color3
 	if typeof(Library.Surface.GroupColor) == "Color3" then
@@ -9141,6 +9150,7 @@ end
 --       GroupTransparency = 0,    -- kartu group. 0 = SOLID (biar isinya nggak tembus)
 --       GroupContrast = 10,       -- % kartu group dibedain dari background window
 --       GroupColor = Color3...,   -- override warna kartu. false = balik ke auto
+--       CanvasColor = Color3...,  -- override warna latar. false = balik ikut theme
 --   })
 function Library:SetSurface(Info: { [string]: any })
 	if typeof(Info) ~= "table" then
@@ -9161,6 +9171,13 @@ function Library:SetSurface(Info: { [string]: any })
 			Library.Surface.GroupColor = nil
 		elseif typeof(Info.GroupColor) == "Color3" then
 			Library.Surface.GroupColor = Info.GroupColor
+		end
+	end
+	if Info.CanvasColor ~= nil then
+		if Info.CanvasColor == false then
+			Library.Surface.CanvasColor = nil
+		elseif typeof(Info.CanvasColor) == "Color3" then
+			Library.Surface.CanvasColor = Info.CanvasColor
 		end
 	end
 
@@ -10166,7 +10183,9 @@ function Library:CreateWindow(WindowInfo)
 		--// Tabs \\--
 		Tabs = New("ScrollingFrame", {
 			AutomaticCanvasSize = Enum.AutomaticSize.Y,
-			BackgroundColor3 = "BackgroundColor",
+			BackgroundColor3 = function()
+				return Library:GetCanvasColor()
+			end,
 			CanvasSize = UDim2.fromScale(0, 0),
 			Position = UDim2.fromOffset(0, 49),
 			ScrollBarThickness = 0,
@@ -10183,8 +10202,10 @@ function Library:CreateWindow(WindowInfo)
 		--// Container \\--
 		Container = New("Frame", {
 			AnchorPoint = Vector2.new(1, 0),
+			-- N3V4: lewat GetCanvasColor biar bisa di-override (Surface.CanvasColor)
+			-- dan tetep ikut theme kalau override-nya nil
 			BackgroundColor3 = function()
-				return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
+				return Library:GetCanvasColor()
 			end,
 			ClipsDescendants = true,
 			Name = "Container",
@@ -10369,6 +10390,9 @@ function Library:CreateWindow(WindowInfo)
 			GroupTransparency = Library.Surface.GroupTransparency,
 			GroupContrast = Library.Surface.GroupContrast,
 			GroupSurfaceColor = Library:GetGroupSurfaceColor(),
+			GroupColorOverride = Library.Surface.GroupColor,
+			CanvasColor = Library:GetCanvasColor(),
+			CanvasColorOverride = Library.Surface.CanvasColor,
 		}
 	end
 

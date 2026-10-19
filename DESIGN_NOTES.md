@@ -298,6 +298,7 @@ Bonus masalah dari mode `front`: wallpaper digambar **DI ATAS semua komponen**
 | `GroupTransparency` | `0` | Kartu group/tabbox/depbox. `0` = **SOLID** (isinya nggak ikutan tembus) |
 | `GroupContrast` | `0` | persen 0–100: kartu group dibedain dari bg window (dark: lebih terang) |
 | `GroupColor` | `nil` | override `Color3` kartu. `false` = balik ke auto |
+| `CanvasColor` | `nil` | override `Color3` latar (Container+sidebar) via `Library:GetCanvasColor()`. `false` = ikut theme |
 
 Tracking instance: `Library.SurfaceCanvas` (Container, Tabs) &
 `Library.SurfaceGroups` (GroupboxHolder, TabboxHolder, DepGroupboxContainer).
@@ -310,13 +311,20 @@ Library:SetSurface({ CanvasTransparency = 1, GroupTransparency = 0, GroupContras
 ```
 Atau lewat `CreateWindow({ ContentTransparency, GroupTransparency, GroupContrast })`.
 
-**Default = NORMAL / SEMULA.** `CanvasTransparency = 0`, `GroupTransparency = 0`,
-`GroupContrast = 0` — tampilan persis kayak sebelum fitur ini ada. User yang
-mutusin sendiri angkanya lewat slider di tab Wallpaper (ada tombol
-"BALIKIN NORMAL (semula)" dan "Coba: wallpaper keliatan").
+**Default preview (v4.4):** `CanvasTransparency = 1` (wallpaper keliatan sebagai
+background kartu), `GroupTransparency = 0` (kartu solid), `GroupContrast = 0`
+(kartu pakai warna ASLI theme — user kesel waktu contrast maksa kartu jadi
+abu-abu). Tombol "BALIKIN NORMAL (semula)" ada buat balik ke canvas solid.
 
-Resep eksperimen kalau mau wallpaper keliatan: `Layer = "back"`,
-`CanvasTransparency = 1`, `GroupTransparency = 0`, `GroupContrast = 10`.
+**Control lengkap di preview:** 4 color picker langsung (tint wallpaper,
+overlay, canvas, kartu group) + tombol reset/"ikut theme lagi" per picker,
+5 slider (image/overlay/canvas/group transparency + group contrast),
+2 dropdown (ScaleType, Layer), 7 preset, print resep.
+
+**Aturan layer yang wajib dijelasin ke user** (dulu bikin bingung):
+group transparency cuma KELIATAN kalau canvas transparan. Kalau canvas solid,
+kartu yang ditransparankan cuma nunjukin warna canvas di belakangnya ->
+keliatannya "slider-nya ga ngaruh".
 
 `Window:GetWallpaperInfo()` sekarang juga nge-report `ScaleTypeName` (string
 polos, bukan `Enum.ScaleType.Crop`), `CanvasTransparency`, `GroupTransparency`,

@@ -3,6 +3,19 @@
 	 N3V4 — PREVIEW KIT v4   (LocalScript)
 	================================================================================
 
+	 CHANGELOG v4.4 — WALLPAPER STUDIO LENGKAP:
+	   • Default BALIK ke wallpaper keliatan (canvas 100%) tapi kartu group
+	     SOLID pakai warna ASLI theme (contrast 0) — nggak diabu-abuin lagi.
+	   • COLOR PICKER langsung (nggak disembunyiin di toggle):
+	     tint wallpaper, warna overlay, warna canvas, warna kartu group.
+	   • Tiap picker punya tombol reset / "ikut theme lagi".
+	   • Groupbox L4 dijelasin ATURAN LAYER biar nggak bingung kenapa
+	     "group transparency kayak ga ngaruh" (jawabannya: cuma keliatan
+	     kalau canvas-nya transparan).
+	   • Preset baru "Kartu nongol (contrast 15)"; preset lama contrast-nya
+	     di-nol-in biar nggak maksa grey.
+	   • Print resep sekarang ikut nyertain GroupColor/CanvasColor override.
+
 	 FIX (v4.3) — BALIKIN NORMAL:
 	   • BUG KRITIS: ClampTransparency didefinisiin DI BAWAH Library:SetSurface.
 	     Di Lua, local yang dideklarasinya belakangan nggak keliatan dari function
@@ -118,20 +131,26 @@ local CONFIG = {
 	},
 
 	--// SURFACE \\--
-	-- DEFAULT = NORMAL / SEMULA. Nggak ada yang dibolongin, nggak ada yang
-	-- diabu-abuin. Semua angka di bawah cuma titik awal — lu yang atur sendiri
-	-- lewat slider di tab Wallpaper sampe nemu yang pas.
+	-- Default = wallpaper KELIATAN sebagai background kartu, tapi kartu group
+	-- SOLID pakai warna ASLI theme (nggak diabu-abuin, nggak dipaksa).
+	-- Semua angka & warna di bawah cuma titik awal — lu yang atur lewat
+	-- slider + color picker di tab Wallpaper.
 	Surface = {
-		-- 0 = area konten + sidebar SOLID (tampilan normal lu sehari-hari).
-		-- Naikin ke 100% kalau mau wallpaper keliatan sebagai background kartu.
-		CanvasTransparency = 0,
+		-- 100% = area konten + sidebar dibolongin -> wallpaper keliatan.
+		-- 0% = solid (wallpaper ketutup, tampilan "kosong").
+		CanvasTransparency = 1,
 
-		-- 0 = kartu group SOLID (biar button/dropdown/slider/text nggak tembus)
+		-- 0 = kartu group SOLID (button/dropdown/slider/text nggak tembus)
 		GroupTransparency = 0,
 
-		-- 0 = warna kartu group SAMA kayak semula (nggak diabu-abuin).
-		-- Naikin kalau mau kartu kebaca beda dari background.
+		-- 0 = warna kartu SAMA PERSIS sama warna asli theme (nggak di-grey).
+		-- Naikin cuma kalau mau kartu sengaja dibedain.
 		GroupContrast = 0,
+
+		-- Override warna manual. nil = ikut theme / ikut contrast.
+		-- Nanti bisa lu set lewat color picker di tab Wallpaper.
+		GroupColor = nil,
+		CanvasColor = nil,
 	},
 
 	-- false = mulai tanpa wallpaper (buat bandingin sebelum/sesudah)
@@ -517,6 +536,12 @@ if CONFIG.ApplyWallpaperOnStart then
 end
 
 local Window = Library:CreateWindow(WindowInfo)
+
+-- Override warna surface (nil = di-skip sama SetSurface, jadi aman)
+Library:SetSurface({
+	GroupColor = CONFIG.Surface.GroupColor,
+	CanvasColor = CONFIG.Surface.CanvasColor,
+})
 
 --================================================================================
 -- TAB 1 — OVERVIEW   (2 kiri / 2 kanan — simetris)
@@ -1460,6 +1485,9 @@ local WP = {
 	CanvasTransparency = CONFIG.Surface.CanvasTransparency,
 	GroupTransparency = CONFIG.Surface.GroupTransparency,
 	GroupContrast = CONFIG.Surface.GroupContrast,
+	-- nil/false = ikut theme. Color3 = override manual dari color picker
+	GroupColor = CONFIG.Surface.GroupColor,
+	CanvasColor = CONFIG.Surface.CanvasColor,
 }
 
 -- Satu jalur apply: selalu lewat Library:SetWallpaper (API library, bukan hack preview)
@@ -1483,6 +1511,8 @@ local function ApplyWallpaper()
 		CanvasTransparency = WP.CanvasTransparency,
 		GroupTransparency = WP.GroupTransparency,
 		GroupContrast = WP.GroupContrast,
+		GroupColor = WP.GroupColor,
+		CanvasColor = WP.CanvasColor,
 	})
 
 	return Success
@@ -1527,17 +1557,20 @@ Try("Wallpaper: L1 Image source", function()
 		end,
 	})
 
-	local Tint = Box:AddToggle("WP_TintToggle", { Text = "Tint warna wallpaper", Default = false })
-	if Tint and Tint.AddColorPicker then
-		Tint:AddColorPicker("WP_Tint", {
-			Title = "Warna tint",
-			Default = WP.Color,
-			Callback = function(Color)
-				WP.Color = Color
-				ApplyWallpaper()
-			end,
-		})
-	end
+	Box:AddColorPicker("WP_Tint", {
+		Title = "Tint warna wallpaper",
+		Default = WP.Color,
+		Tooltip = "Putih = warna asli gambar. Warna lain = di-tint.",
+		Callback = function(Color)
+			WP.Color = Color
+			ApplyWallpaper()
+		end,
+	})
+
+	Box:AddButton("Reset tint ke putih", function()
+		WP.Color = Color3.fromRGB(255, 255, 255)
+		ApplyWallpaper()
+	end)
 end)
 
 Try("Wallpaper: L2 Overlay (scrim)", function()
@@ -1569,17 +1602,20 @@ Try("Wallpaper: L2 Overlay (scrim)", function()
 		end,
 	})
 
-	local OColor = Box:AddToggle("WP_OverlayColorToggle", { Text = "Warna overlay", Default = true })
-	if OColor and OColor.AddColorPicker then
-		OColor:AddColorPicker("WP_OverlayColor", {
-			Title = "Overlay color",
-			Default = WP.OverlayColor,
-			Callback = function(Color)
-				WP.OverlayColor = Color
-				ApplyWallpaper()
-			end,
-		})
-	end
+	Box:AddColorPicker("WP_OverlayColor", {
+		Title = "Warna overlay",
+		Default = WP.OverlayColor,
+		Tooltip = "Hitam = scrim gelap (teks kebaca). Warna lain = tint suasana.",
+		Callback = function(Color)
+			WP.OverlayColor = Color
+			ApplyWallpaper()
+		end,
+	})
+
+	Box:AddButton("Reset overlay ke hitam", function()
+		WP.OverlayColor = Color3.fromRGB(0, 0, 0)
+		ApplyWallpaper()
+	end)
 end)
 
 Try("Wallpaper: L3 Rendering", function()
@@ -1636,6 +1672,8 @@ Try("Wallpaper: R1 Presets", function()
 		WP.CanvasTransparency = P.Canvas ~= nil and P.Canvas or CONFIG.Surface.CanvasTransparency
 		WP.GroupTransparency = P.Group ~= nil and P.Group or CONFIG.Surface.GroupTransparency
 		WP.GroupContrast = P.Contrast ~= nil and P.Contrast or CONFIG.Surface.GroupContrast
+		WP.GroupColor = P.GroupColor ~= nil and P.GroupColor or false
+		WP.CanvasColor = P.CanvasColor ~= nil and P.CanvasColor or false
 		ApplyWallpaper()
 		SafeNotify({ Title = "Preset", Description = Name, Icon = "sparkles", Time = 2 })
 	end
@@ -1644,7 +1682,7 @@ Try("Wallpaper: R1 Presets", function()
 		LoadPreset("Wallpaper keliatan", {
 			Image = CONFIG.Wallpaper.Image, Transparency = 0.35, ScaleType = "Crop",
 			Layer = "back", Overlay = true, OverlayTransparency = 0.45,
-			Canvas = 1, Group = 0, Contrast = 10,
+			Canvas = 1, Group = 0, Contrast = 0,
 		})
 	end)
 
@@ -1652,7 +1690,7 @@ Try("Wallpaper: R1 Presets", function()
 		LoadPreset("Subtle", {
 			Image = CONFIG.Wallpaper.Image, Transparency = 0.72, ScaleType = "Crop",
 			Layer = "back", Overlay = true, OverlayTransparency = 0.30,
-			Canvas = 1, Group = 0, Contrast = 12,
+			Canvas = 1, Group = 0, Contrast = 0,
 		})
 	end)
 
@@ -1660,7 +1698,7 @@ Try("Wallpaper: R1 Presets", function()
 		LoadPreset("Bold", {
 			Image = CONFIG.Wallpaper.Image, Transparency = 0.10, ScaleType = "Crop",
 			Layer = "back", Overlay = true, OverlayTransparency = 0.60,
-			Canvas = 1, Group = 0, Contrast = 14,
+			Canvas = 1, Group = 0, Contrast = 0,
 		})
 	end)
 
@@ -1677,7 +1715,15 @@ Try("Wallpaper: R1 Presets", function()
 			Image = CONFIG.Wallpaper.Image, Transparency = 0.45, ScaleType = "Crop",
 			Color = Color3.fromRGB(218, 98, 255), Layer = "back",
 			Overlay = true, OverlayColor = Color3.fromRGB(20, 8, 30), OverlayTransparency = 0.40,
-			Canvas = 1, Group = 0, Contrast = 12,
+			Canvas = 1, Group = 0, Contrast = 0,
+		})
+	end)
+
+	Box:AddButton("Kartu nongol (contrast 15)", function()
+		LoadPreset("Kartu nongol", {
+			Image = CONFIG.Wallpaper.Image, Transparency = 0.35, ScaleType = "Crop",
+			Layer = "back", Overlay = true, OverlayTransparency = 0.45,
+			Canvas = 1, Group = 0, Contrast = 15,
 		})
 	end)
 
@@ -1785,10 +1831,15 @@ end)
 Try("Wallpaper: L4 Canvas & kartu group", function()
 	local Box = WallpaperTab:AddLeftGroupbox("Canvas & Kartu Group", "layers")
 
-	Box:AddLabel("Default = NORMAL / semula. Slider di sini cuma alat;", true)
-	Box:AddLabel("lu yang mutusin angka berapa yang enak.", true)
+	Box:AddLabel("ATURAN LAYER (baca dulu biar nggak bingung):", true)
+	Box:AddLabel("1. Wallpaper ada DI BELAKANG canvas (area konten).", true)
+	Box:AddLabel("2. Canvas solid = wallpaper ketutup -> naikin Canvas", true)
+	Box:AddLabel("   transparency biar wallpaper keliatan.", true)
+	Box:AddLabel("3. Group transparency cuma KELIATAN kalau canvas-nya", true)
+	Box:AddLabel("   transparan. Kalau canvas solid, kartu transparan cuma", true)
+	Box:AddLabel("   nunjukin warna canvas -> keliatannya \"ga ngaruh\".", true)
 
-	Box:AddDivider({ Text = "Latar (canvas)", Margin = 4 })
+	Box:AddDivider({ Text = "Latar / canvas", Margin = 4 })
 	Box:AddSlider("WP_Canvas", {
 		Text = "Canvas transparency",
 		Default = math.floor(WP.CanvasTransparency * 100),
@@ -1796,12 +1847,27 @@ Try("Wallpaper: L4 Canvas & kartu group", function()
 		Max = 100,
 		Rounding = 0,
 		Suffix = "%",
-		Tooltip = "Area konten + sidebar.\n100% = wallpaper keliatan penuh di latar.\n0% = solid (wallpaper ketutup, perilaku lama)",
+		Tooltip = "Area konten + sidebar.\n100% = wallpaper keliatan sebagai background kartu\n0% = solid (wallpaper ketutup)",
 		Callback = function(Value)
 			WP.CanvasTransparency = Value / 100
 			ApplyWallpaper()
 		end,
 	})
+
+	Box:AddColorPicker("WP_CanvasColor", {
+		Title = "Warna canvas (override)",
+		Default = WP.CanvasColor or Color3.fromRGB(32, 32, 32),
+		Tooltip = "Warna latar konten kalau wallpaper mati/transparan.\nPicker ini langsung jadi override manual.",
+		Callback = function(Color)
+			WP.CanvasColor = Color
+			ApplyWallpaper()
+		end,
+	})
+
+	Box:AddButton("Canvas: ikut theme lagi", function()
+		WP.CanvasColor = false
+		ApplyWallpaper()
+	end)
 
 	Box:AddDivider({ Text = "Kartu group", Margin = 4 })
 	Box:AddSlider("WP_GroupTransparency", {
@@ -1811,7 +1877,7 @@ Try("Wallpaper: L4 Canvas & kartu group", function()
 		Max = 100,
 		Rounding = 0,
 		Suffix = "%",
-		Tooltip = "Kartu groupbox/tabbox/depbox.\n0% = SOLID: button, dropdown, slider, text\nnggak ikutan tembus pandang",
+		Tooltip = "Kartu groupbox/tabbox/depbox.\n0% = SOLID: button/dropdown/slider/text nggak tembus\nIngat: efeknya cuma keliatan kalau canvas transparan",
 		Callback = function(Value)
 			WP.GroupTransparency = Value / 100
 			ApplyWallpaper()
@@ -1819,33 +1885,54 @@ Try("Wallpaper: L4 Canvas & kartu group", function()
 	})
 
 	Box:AddSlider("WP_GroupContrast", {
-		Text = "Group contrast",
+		Text = "Group contrast (auto)",
 		Default = math.floor(WP.GroupContrast),
 		Min = 0,
 		Max = 40,
 		Rounding = 0,
 		Suffix = "%",
-		Tooltip = "Seberapa kartu group dibedain dari background window.\n10% = kartu ~10% lebih terang (dark theme)\nbiar kebaca sebagai kartu di atas wallpaper",
+		Tooltip = "Dipakai cuma kalau warna group = ikut theme.\n10% = kartu ~10% lebih terang (dark theme)\n0% = warna asli theme persis",
 		Callback = function(Value)
 			WP.GroupContrast = Value
 			ApplyWallpaper()
 		end,
 	})
 
+	Box:AddColorPicker("WP_GroupColor", {
+		Title = "Warna kartu group (custom)",
+		Default = WP.GroupColor or Color3.fromRGB(30, 30, 30),
+		Tooltip = "Override manual warna kartu group.\nKalau di-set, contrast di atas di-ignore.",
+		Callback = function(Color)
+			WP.GroupColor = Color
+			ApplyWallpaper()
+		end,
+	})
+
+	Box:AddButton("Group: ikut theme lagi", function()
+		WP.GroupColor = false
+		WP.GroupContrast = 0
+		ApplyWallpaper()
+	end)
+
+	Box:AddDivider({ Text = "Cepat", Margin = 4 })
 	Box:AddButton("BALIKIN NORMAL (semula)", function()
 		WP.CanvasTransparency = 0
 		WP.GroupTransparency = 0
 		WP.GroupContrast = 0
+		WP.GroupColor = false
+		WP.CanvasColor = false
 		ApplyWallpaper()
-		SafeNotify({ Title = "Surface", Description = "Balik ke tampilan normal.", Icon = "rotate-3d", Time = 3 })
+		SafeNotify({ Title = "Surface", Description = "Semua balik ke tampilan semula.", Icon = "rotate-3d", Time = 3 })
 	end)
 
-	Box:AddButton("Coba: wallpaper keliatan", function()
+	Box:AddButton("Resep: wallpaper keliatan", function()
 		WP.CanvasTransparency = 1
 		WP.GroupTransparency = 0
-		WP.GroupContrast = 10
+		WP.GroupContrast = 0
+		WP.GroupColor = false
+		WP.CanvasColor = false
 		ApplyWallpaper()
-		SafeNotify({ Title = "Surface", Description = "Canvas 100 / contrast 10. Balikin lewat tombol di atas.", Icon = "image", Time = 4 })
+		SafeNotify({ Title = "Surface", Description = "Wallpaper jadi background, kartu solid warna asli.", Icon = "image", Time = 4 })
 	end)
 end)
 
@@ -1874,6 +1961,12 @@ Try("Wallpaper: R4 Resep aktif", function()
 			string.format("\tCanvasTransparency = %.2f,", WP.CanvasTransparency),
 			string.format("\tGroupTransparency = %.2f,", WP.GroupTransparency),
 			string.format("\tGroupContrast = %d,", math.floor(WP.GroupContrast + 0.5)),
+			(typeof(WP.GroupColor) == "Color3")
+				and string.format("\tGroupColor = Color3.fromRGB(%d, %d, %d),", math.floor(WP.GroupColor.R * 255 + 0.5), math.floor(WP.GroupColor.G * 255 + 0.5), math.floor(WP.GroupColor.B * 255 + 0.5))
+				or "\tGroupColor = false, -- ikut theme",
+			(typeof(WP.CanvasColor) == "Color3")
+				and string.format("\tCanvasColor = Color3.fromRGB(%d, %d, %d),", math.floor(WP.CanvasColor.R * 255 + 0.5), math.floor(WP.CanvasColor.G * 255 + 0.5), math.floor(WP.CanvasColor.B * 255 + 0.5))
+				or "\tCanvasColor = false, -- ikut theme",
 			"})",
 		}, "\n")
 	end
