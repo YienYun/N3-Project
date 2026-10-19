@@ -53,7 +53,7 @@ Fitur baru, **full di library** (bukan preview-only):
 | **Asset ID** | Paste angka polos (`111593326989465`), `rbxassetid://...`, atau URL |
 | **Transparency** | 0–100% |
 | **Tint** | ColorPicker (`ImageColor3`) |
-| **ScaleType** | Fit / Fill / Stretch / Slice / Crop |
+| **ScaleType** | Crop / Fit / Stretch / Slice / Tile — **member asli Roblox** (`Fill` nggak ada, tapi gue bikinin alias `Fill`/`Cover` → `Crop`) |
 | **Layer** | `back` (wallpaper di belakang konten) / `front` (wash di atas, perilaku lama) |
 | **Overlay / Scrim** | toggle + warna + transparency — biar teks tetep kebaca |
 | **6 Preset** | Wallpaper gue / Subtle / Bold / Wash / Accent tint / Off |

@@ -3,6 +3,14 @@
 	 N3V4 — PREVIEW KIT v4   (LocalScript)
 	================================================================================
 
+	 FIX (v4.1):
+	   • Enum.ScaleType.Fill itu NGGAK ADA di Roblox — bikin seluruh library
+	     gagal di-require. Member asli cuma: Stretch, Slice, Tile, Fit, Crop.
+	   • Sekarang tabel ScaleType dibangun dari GetEnumItems() (nggak mungkin
+	     ngarang lagi) + alias Fill/Cover -> Crop, Contain -> Fit
+	   • Dropdown ScaleType di tab Media juga kena bug yang sama (crash pas
+	     dipilih). Udah dibenerin lewat ResolveScale()
+
 	 CHANGELOG v4 (WALLPAPER):
 	   • Tab baru "Wallpaper" — 3 groupbox kiri / 3 kanan (simetris)
 	   • Kontrol: Asset ID (paste), transparency, tint, ScaleType, Layer
@@ -71,7 +79,9 @@ local CONFIG = {
 	Wallpaper = {
 		Image = "111593326989465",
 		Transparency = 0.35, -- 0 = gambar penuh, 1 = ilang total
-		ScaleType = "Fill", -- Fit | Fill | Stretch | Slice | Crop
+		ScaleType = "Crop", -- member asli: Stretch | Slice | Tile | Fit | Crop
+		--   "Crop" = kayak CSS background-size: cover (nutupin penuh, aspect ratio dijaga)
+		--   ⚠️ "Fill" BUKAN member Enum.ScaleType — cuma alias yang gue bikin di library
 		Color = Color3.fromRGB(255, 255, 255), -- tint (ImageColor3)
 		Layer = "back", -- "back" = wallpaper di belakang konten | "front" = wash di atas
 
@@ -119,6 +129,32 @@ local Report = { OK = {}, Failed = {} }
 -- yang di Studio fallback ke `shared`, bukan `_G`.
 -- Error yang muncul: "attempt to index nil with 'GetIcon'"
 local Library
+
+-- Enum.ScaleType member ASLI Roblox cuma: Stretch, Slice, Tile, Fit, Crop.
+-- "Fill" NGGAK ADA — dan nyentuh Enum.ScaleType.Fill langsung bikin error
+-- "<name> is not a valid member of Enum.ScaleType". Kalau itu kejadian di top
+-- level module, seluruh script gagal load. Makanya tabel ini dibangun dari
+-- GetEnumItems() (dijamin cuma berisi member yang beneran ada), plus alias.
+local SCALE_TYPES = {}
+for _, ScaleItem in Enum.ScaleType:GetEnumItems() do
+	SCALE_TYPES[ScaleItem.Name] = ScaleItem
+end
+SCALE_TYPES.Fill = SCALE_TYPES.Fill or SCALE_TYPES.Crop -- CSS cover
+SCALE_TYPES.Cover = SCALE_TYPES.Cover or SCALE_TYPES.Crop
+SCALE_TYPES.Contain = SCALE_TYPES.Contain or SCALE_TYPES.Fit -- CSS contain
+
+-- Urutan buat dropdown: Crop paling enak buat wallpaper (kayak CSS cover)
+local SCALE_TYPE_NAMES = { "Crop", "Fit", "Stretch", "Slice", "Tile" }
+
+local function ResolveScale(Value)
+	if typeof(Value) == "EnumItem" then
+		return Value
+	end
+	if typeof(Value) == "string" then
+		return SCALE_TYPES[Value] or SCALE_TYPES.Stretch
+	end
+	return SCALE_TYPES.Stretch
+end
 
 local function Try(Label, Func)
 	local Success, Result = pcall(Func)
@@ -793,13 +829,14 @@ Try("Media: L2 Image + kontrol", function()
 		Callback = function(Value) if Img and Img.SetHeight then Img:SetHeight(Value) end end,
 	})
 	Box:AddDropdown("Media_ImgScale", {
-		Text = "ScaleType", Values = { "Fit", "Fill", "Stretch", "Slice", "Crop" }, Default = 1,
+		Text = "ScaleType", Values = SCALE_TYPE_NAMES, Default = 2,
+		Tooltip = "Fit / Crop / Stretch / Slice / Tile — member asli Enum.ScaleType",
 		Callback = function(Value)
-			local Map = {
-				Fit = Enum.ScaleType.Fit, Fill = Enum.ScaleType.Fill, Stretch = Enum.ScaleType.Stretch,
-				Slice = Enum.ScaleType.Slice, Crop = Enum.ScaleType.Crop,
-			}
-			if Img and Img.SetScaleType and Map[Value] then Img:SetScaleType(Map[Value]) end
+			-- Dulu di sini ada `Fill = Enum.ScaleType.Fill` yang bikin crash
+			-- tiap kali dropdown dipilih. Sekarang lewat ResolveScale (aman).
+			if Img and Img.SetScaleType then
+				Img:SetScaleType(ResolveScale(Value))
+			end
 		end,
 	})
 
@@ -1485,15 +1522,16 @@ Try("Wallpaper: L3 Rendering", function()
 
 	Box:AddDropdown("WP_ScaleType", {
 		Text = "ScaleType",
-		Values = { "Fit", "Fill", "Stretch", "Slice", "Crop" },
+		Values = SCALE_TYPE_NAMES,
 		Default = (function()
-			local Order = { "Fit", "Fill", "Stretch", "Slice", "Crop" }
-			for i, v in ipairs(Order) do
-				if v == WP.ScaleType then return i end
+			for i, v in ipairs(SCALE_TYPE_NAMES) do
+				if v == WP.ScaleType then
+					return i
+				end
 			end
-			return 3
+			return 1
 		end)(),
-		Tooltip = "Fill = nutupin penuh tanpa gepeng (paling umum buat wallpaper)",
+		Tooltip = "Crop = kayak CSS background-size: cover (nutupin penuh, ratio dijaga) — paling umum buat wallpaper\nFit = muat semua tapi bisa ada sisi kosong\nStretch = dipaksa nutupin, bisa gepeng\nSlice = 9-slice (buat gambar ber-frame)\nTile = diulang sesuai TileSize",
 		Callback = function(Value)
 			WP.ScaleType = Value
 			ApplyWallpaper()
@@ -1536,21 +1574,21 @@ Try("Wallpaper: R1 Presets", function()
 
 	Box:AddButton("Wallpaper gue (default)", function()
 		LoadPreset("Wallpaper gue", {
-			Image = CONFIG.Wallpaper.Image, Transparency = 0.35, ScaleType = "Fill",
+			Image = CONFIG.Wallpaper.Image, Transparency = 0.35, ScaleType = "Crop",
 			Layer = "back", Overlay = true, OverlayTransparency = 0.45,
 		})
 	end)
 
 	Box:AddButton("Subtle ( wallpaper tipis )", function()
 		LoadPreset("Subtle", {
-			Image = CONFIG.Wallpaper.Image, Transparency = 0.72, ScaleType = "Fill",
+			Image = CONFIG.Wallpaper.Image, Transparency = 0.72, ScaleType = "Crop",
 			Layer = "back", Overlay = true, OverlayTransparency = 0.30,
 		})
 	end)
 
 	Box:AddButton("Bold (wallpaper kuat)", function()
 		LoadPreset("Bold", {
-			Image = CONFIG.Wallpaper.Image, Transparency = 0.10, ScaleType = "Fill",
+			Image = CONFIG.Wallpaper.Image, Transparency = 0.10, ScaleType = "Crop",
 			Layer = "back", Overlay = true, OverlayTransparency = 0.60,
 		})
 	end)
@@ -1564,7 +1602,7 @@ Try("Wallpaper: R1 Presets", function()
 
 	Box:AddButton("Accent tint (ungu N3)", function()
 		LoadPreset("Accent tint", {
-			Image = CONFIG.Wallpaper.Image, Transparency = 0.45, ScaleType = "Fill",
+			Image = CONFIG.Wallpaper.Image, Transparency = 0.45, ScaleType = "Crop",
 			Color = Color3.fromRGB(218, 98, 255), Layer = "back",
 			Overlay = true, OverlayColor = Color3.fromRGB(20, 8, 30), OverlayTransparency = 0.40,
 		})
@@ -1572,7 +1610,7 @@ Try("Wallpaper: R1 Presets", function()
 
 	Box:AddButton("Matiin semua", function()
 		LoadPreset("Off", {
-			Image = "", Transparency = 0.75, ScaleType = "Fill",
+			Image = "", Transparency = 0.75, ScaleType = "Crop",
 			Layer = "back", Overlay = false, OverlayTransparency = 0.5,
 		})
 	end)

@@ -405,7 +405,9 @@ local Templates = {
 		-- tanpa overlay). Sekarang semuanya bisa dikonfigurasi.
 		BackgroundImage = "",
 		BackgroundImageTransparency = 0.75,
-		BackgroundImageScaleType = "Stretch", -- Fit | Fill | Stretch | Slice | Crop
+		BackgroundImageScaleType = "Stretch", -- member asli: Stretch | Slice | Tile | Fit | Crop
+		--   alias yang gue tambahin: Fill/Cover -> Crop, Contain -> Fit
+		--   Buat wallpaper biasanya "Crop" paling enak (kayak CSS background-size: cover)
 		BackgroundImageColor = Color3.new(1, 1, 1), -- tint (ImageColor3)
 		BackgroundImageLayer = "back", -- "back" = wallpaper beneran (di belakang konten)
 		--   | "front" = wash/texture di atas konten (perilaku lama, ZIndex 999)
@@ -8952,7 +8954,7 @@ end
 --   Library:SetWallpaper({
 --       Image = "111593326989465",      -- angka polos, "rbxassetid://...", atau URL
 --       Transparency = 0.35,            -- 0 = gambar penuh, 1 = ilang
---       ScaleType = "Fill",             -- Fit | Fill | Stretch | Slice | Crop
+--       ScaleType = "Crop",             -- Stretch | Slice | Tile | Fit | Crop (+ alias Fill/Cover/Contain)
 --       Color = Color3.fromRGB(255,255,255),  -- tint
 --       Layer = "back",                 -- "back" (wallpaper) | "front" (wash di atas konten)
 --       Overlay = true,                 -- scrim gelap biar teks kebaca
@@ -9386,21 +9388,45 @@ function Library:Notify(...)
 end
 
 --// N3V4: Wallpaper helpers \\--
-local WallpaperScaleTypes = {
-	Fit = Enum.ScaleType.Fit,
-	Fill = Enum.ScaleType.Fill,
-	Stretch = Enum.ScaleType.Stretch,
-	Slice = Enum.ScaleType.Slice,
-	Crop = Enum.ScaleType.Crop,
-}
+-- PENTING: tabel ini dibangun dari Enum.ScaleType:GetEnumItems(), BUKAN
+-- hardcoded `Enum.ScaleType.X`. Soalnya kalau ada satu nama ngarang, error
+-- "X is not a valid member of Enum.ScaleType" muncul pas module di-require
+-- -> SELURUH LIBRARY GAGAL LOAD. Pernah kejadian pake "Fill" (nggak ada).
+local WallpaperScaleTypes = {}
+for _, ScaleItem in Enum.ScaleType:GetEnumItems() do
+	WallpaperScaleTypes[ScaleItem.Name] = ScaleItem
+end
 
--- Terima EnumItem ATAU string ("Fit"/"Fill"/...). Fallback ke Stretch.
+-- Ambil member Enum.ScaleType dengan aman (nil kalau nggak ada), biar alias di
+-- bawah nggak pernah bisa bikin crash walaupun Studio-nya versi lama.
+local function SafeScaleType(Name: string)
+	return WallpaperScaleTypes[Name]
+end
+
+-- Alias nama yang sering dipake orang tapi BUKAN member asli Roblox.
+-- Roblox cuma punya: Stretch, Slice, Tile, Fit, Crop.
+--   Fill / Cover = CSS `background-size: cover` -> Roblox "Crop"
+--                  (nutupin penuh, aspect ratio dijaga, lebihannya di-crop)
+--   Contain      = CSS `background-size: contain` -> Roblox "Fit"
+for AliasName, TargetName in {
+	Fill = "Crop",
+	Cover = "Crop",
+	Contain = "Fit",
+} do
+	local Target = SafeScaleType(TargetName)
+	if Target and WallpaperScaleTypes[AliasName] == nil then
+		WallpaperScaleTypes[AliasName] = Target
+	end
+end
+
+-- Terima EnumItem ATAU string ("Crop"/"Fit"/"Fill"/...). Fallback ke Stretch.
+-- Nggak akan pernah error, cuma balik ke Stretch kalau namanya nggak dikenal.
 local function ResolveScaleType(Value: any): Enum.ScaleType
 	if typeof(Value) == "EnumItem" then
 		return Value :: Enum.ScaleType
 	end
 	if typeof(Value) == "string" then
-		return WallpaperScaleTypes[Value] or Enum.ScaleType.Stretch
+		return WallpaperScaleTypes[Value] or WallpaperScaleTypes.Stretch or Enum.ScaleType.Stretch
 	end
 	return Enum.ScaleType.Stretch
 end

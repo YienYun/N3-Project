@@ -194,7 +194,7 @@ muncul, dan **nggak ada error**. Udah dinormalisasi ke `rbxassetid://%d`.
 | Field | Default | Fungsi |
 |---|---|---|
 | `BackgroundImageTransparency` | `0.75` | 0 = gambar penuh, 1 = ilang |
-| `BackgroundImageScaleType` | `"Stretch"` | Fit / Fill / Stretch / Slice / Crop |
+| `BackgroundImageScaleType` | `"Stretch"` | member asli: Stretch / Slice / Tile / Fit / Crop + alias Fill,Cover→Crop, Contain→Fit |
 | `BackgroundImageColor` | putih | tint (`ImageColor3`) |
 | `BackgroundImageLayer` | `"back"` | `"back"` = wallpaper beneran, `"front"` = wash (perilaku lama) |
 | `BackgroundOverlayEnabled` | `false` | scrim gelap |
@@ -241,6 +241,37 @@ Library:SetWallpaper({
 })
 ```
 Atau langsung di `CreateWindow({ BackgroundImage = ..., BackgroundImageLayer = ..., ... })`.
+
+### 🐛 Bug class: hardcoded member Enum yang nggak ada
+**Sempat kejadian:** `Fill = Enum.ScaleType.Fill` di top-level →
+`Fill is not a valid member of "Enum.ScaleType"` → **seluruh library gagal
+di-require**. `Enum.ScaleType` aslinya cuma punya:
+`Stretch · Slice · Tile · Fit · Crop` — **`Fill` nggak ada.**
+
+Dua tempat kena: helper wallpaper di library, dan peta ScaleType dropdown Image
+di tab Media preview (yang ini di dalam callback, jadi crash-nya pas dropdown
+dipilih, bukan pas load).
+
+**Fix permanen:** tabel dibangun dari `GetEnumItems()`, bukan literal.
+```lua
+local WallpaperScaleTypes = {}
+for _, Item in Enum.ScaleType:GetEnumItems() do
+    WallpaperScaleTypes[Item.Name] = Item      -- dijamin cuma member asli
+end
+WallpaperScaleTypes.Fill = WallpaperScaleTypes.Fill or WallpaperScaleTypes.Crop
+```
+Alias di-assign lewat **indexing tabel** (aman), bukan `Enum.X.Y` (bisa crash).
+
+**Aturan ke depannya:** jangan pernah nulis `Enum.<Type>.<Member>` buat nilai
+yang nggak 100% pasti ada. Bangun dari `GetEnumItems()`, atau bungkus pcall.
+Validator `.cache/luacheck/enums.js` sekarang nge-check ini + audit semua
+referensi Enum di library & preview.
+
+**Soal nama:** `Fill` / `Cover` yang orang maksud biasanya = CSS
+`background-size: cover` = **Roblox `Crop`** (nutupin penuh, ratio dijaga,
+lebihannya kebuang). `Fit` = CSS `contain` (muat semua, bisa ada sisi kosong).
+
+---
 
 ### ⚠️ Keterbatasan yang harus diinget
 **Mode `back` kadang kurang keliatan** karena groupbox punya `BackgroundColor3`
