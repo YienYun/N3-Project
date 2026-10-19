@@ -58,14 +58,20 @@ Fitur baru, **full di library** (bukan preview-only):
 | **Overlay / Scrim** | toggle + warna + transparency — biar teks tetep kebaca |
 | **6 Preset** | Wallpaper gue / Subtle / Bold / Wash / Accent tint / Off |
 | **Live Info** | snapshot `Window:GetWallpaperInfo()` |
+| **Canvas transparency** | area konten + sidebar. `100%` = wallpaper keliatan sebagai background kartu |
+| **Group transparency** | kartu group. `0%` = **SOLID** — button/dropdown/slider/text nggak ikutan tembus |
+| **Group contrast** | % kartu group dibedain dari background window (10% = kebaca sebagai kartu) |
+| **Resep Aktif** 🆕 | tombol **Print resep Lua** — nge-print `SetWallpaper` + `SetSurface` siap paste balik |
 
 Plus **fix bug asli library**: `Window:SetBackgroundImage` nggak handle angka,
 jadi paste ID polos diem-diem gagal tanpa error.
 
 Tab baru: **Wallpaper** (3 groupbox kiri / 3 kanan, simetris).
 
-> ⚠️ Mode `back` kadang kurang keliatan karena groupbox punya background solid.
-> Kalau gitu, coba mode `front`. Fix permanennya ada di Phase 2 (design tokens).
+> ⚠️ Kalau wallpaper nggak keliatan: pastiin **Canvas transparency = 100%**
+> (groupbox "Canvas & Kartu Group"). Tanpa itu Container yang solid nutupin
+> wallpaper. Jangan pakai mode `front` buat wallpaper-as-background — mode itu
+> ngegambar wallpaper DI ATAS komponen, jadi komponen keliatan tembus.
 
 ---
 
@@ -135,9 +141,9 @@ Toggle UI: `RightCtrl`
 | **Media** | Viewport Interaktif (drag) · Image Element (height/scaletype/tint live) · Video | Spotlight Card (swap 2D↔3D) · Live Feed (12 row + clear) · Asset Dipakai |
 | **Overlays** | Notifications (6 varian + progress steps) · Draggable Label/Button/ImageButton · Draggable Menu | Overlay Panel (SetRow realtime) · Dashboard + Loading states · Context Menu (right-click) |
 | **Theme Lab** | Scheme Colors (5 picker live) · Theme Presets (4) · Geometry & Scale | Font (9 font) · Animations (5 toggle + timing) · Window Controls |
-| **Wallpaper** 🆕 | Wallpaper (ID/transparency/tint) · Overlay-Scrim (toggle/color/transparency) · Rendering (scaletype/layer/ZIndex) | Presets (6) · Live Info (GetWallpaperInfo) · Catatan |
+| **Wallpaper** 🆕 | Wallpaper (ID/transparency/tint) · Overlay-Scrim (toggle/color/transparency) · Rendering (scaletype/layer/ZIndex) · Canvas & Kartu Group (canvas/group transparency + contrast) | Presets (6) · Live Info (GetWallpaperInfo) · Catatan · Resep Aktif (print resep Lua) |
 
-**Simetri:** tiap tab groupbox kiri = kanan (2/2, 3/3, 3/3, 3/3, 3/3, 3/3, 3/3).
+**Simetri:** tiap tab groupbox kiri = kanan (2/2, 3/3, 3/3, 3/3, 3/3, 3/3, 4/4).
 
 > ⚠️ Hub lu (`Games/N3-SAE.lua`) **belum** simetris: 12 `AddLeftGroupbox` vs
 > 9 `AddRightGroupbox`. Simetri itu urusan layout di hub, bukan library.

@@ -3,6 +3,19 @@
 	 N3V4 — PREVIEW KIT v4   (LocalScript)
 	================================================================================
 
+	 FIX (v4.2) — SURFACE SYSTEM:
+	   • Wallpaper mode "back" dulu NGGAK keliatan karena Container (area konten)
+	     SOLID nutupin dia. Sekarang ada Canvas transparency -> set 100%.
+	   • Mode "front" bikin button/dropdown/slider/text keliatan TEMBUS — itu
+	     karena wallpaper digambar DI ATAS komponen (ZIndex 999). Buat
+	     wallpaper-as-background, pakai "back" + canvas 100%.
+	   • Kartu group sekarang SOLID default + GroupContrast (default 10%) biar
+	     kebaca sebagai kartu di atas wallpaper, beda dari background window.
+	   • Groupbox baru: "Canvas & Kartu Group" (kiri) + "Resep Aktif" (kanan).
+	     Tombol "Print resep Lua" nge-print SetWallpaper+SetSurface siap paste.
+	   • CONFIG.Surface baru: CanvasTransparency=1, GroupTransparency=0,
+	     GroupContrast=10.
+
 	 FIX (v4.1):
 	   • Enum.ScaleType.Fill itu NGGAK ADA di Roblox — bikin seluruh library
 	     gagal di-require. Member asli cuma: Stretch, Slice, Tile, Fit, Crop.
@@ -88,6 +101,22 @@ local CONFIG = {
 		Overlay = true, -- scrim gelap biar teks tetep kebaca
 		OverlayColor = Color3.fromRGB(0, 0, 0),
 		OverlayTransparency = 0.45,
+	},
+
+	--// SURFACE \\--
+	-- Ini yang bikin wallpaper BENERAN keliatan sebagai background kartu:
+	Surface = {
+		-- Area konten + sidebar dibikin transparan biar wallpaper (yang ada di
+		-- belakang konten) keliatan. 0 = solid (perilaku lama, wallpaper ketutup).
+		CanvasTransparency = 1,
+
+		-- Kartu groupbox/tabbox/depbox: 0 = SOLID. Ini yang bikin button,
+		-- dropdown, slider, text di dalamnya NGGAK ikutan tembus pandang.
+		GroupTransparency = 0,
+
+		-- Persen: kartu group dibedain dari background window, biar kebaca
+		-- sebagai kartu di atas wallpaper. 10 = ~10% lebih terang (dark theme).
+		GroupContrast = 10,
 	},
 
 	-- false = mulai tanpa wallpaper (buat bandingin sebelum/sesudah)
@@ -462,6 +491,14 @@ if CONFIG.ApplyWallpaperOnStart then
 	WindowInfo.BackgroundOverlayEnabled = W.Overlay
 	WindowInfo.BackgroundOverlayColor = W.OverlayColor
 	WindowInfo.BackgroundOverlayTransparency = W.OverlayTransparency
+end
+
+-- Surface: tanpa ini wallpaper mode "back" ketutup Container yang solid
+if CONFIG.ApplyWallpaperOnStart then
+	local S = CONFIG.Surface
+	WindowInfo.ContentTransparency = S.CanvasTransparency
+	WindowInfo.GroupTransparency = S.GroupTransparency
+	WindowInfo.GroupContrast = S.GroupContrast
 end
 
 local Window = Library:CreateWindow(WindowInfo)
@@ -1403,6 +1440,11 @@ local WP = {
 	Overlay = CONFIG.Wallpaper.Overlay,
 	OverlayColor = CONFIG.Wallpaper.OverlayColor,
 	OverlayTransparency = CONFIG.Wallpaper.OverlayTransparency,
+
+	-- Surface: latar konten & kartu group (terpisah dari wallpaper)
+	CanvasTransparency = CONFIG.Surface.CanvasTransparency,
+	GroupTransparency = CONFIG.Surface.GroupTransparency,
+	GroupContrast = CONFIG.Surface.GroupContrast,
 }
 
 -- Satu jalur apply: selalu lewat Library:SetWallpaper (API library, bukan hack preview)
@@ -1420,6 +1462,14 @@ local function ApplyWallpaper()
 	if not Success and CONFIG.VerboseErrors then
 		warn("[N3V4 Preview] SetWallpaper gagal: " .. tostring(Err))
 	end
+
+	-- Surface di-apply bareng biar wallpaper & kartu group selalu sinkron
+	Library:SetSurface({
+		CanvasTransparency = WP.CanvasTransparency,
+		GroupTransparency = WP.GroupTransparency,
+		GroupContrast = WP.GroupContrast,
+	})
+
 	return Success
 end
 
@@ -1568,6 +1618,9 @@ Try("Wallpaper: R1 Presets", function()
 		WP.Overlay = P.Overlay
 		WP.OverlayColor = P.OverlayColor or Color3.fromRGB(0, 0, 0)
 		WP.OverlayTransparency = P.OverlayTransparency
+		WP.CanvasTransparency = P.Canvas ~= nil and P.Canvas or CONFIG.Surface.CanvasTransparency
+		WP.GroupTransparency = P.Group ~= nil and P.Group or CONFIG.Surface.GroupTransparency
+		WP.GroupContrast = P.Contrast ~= nil and P.Contrast or CONFIG.Surface.GroupContrast
 		ApplyWallpaper()
 		SafeNotify({ Title = "Preset", Description = Name, Icon = "sparkles", Time = 2 })
 	end
@@ -1576,6 +1629,7 @@ Try("Wallpaper: R1 Presets", function()
 		LoadPreset("Wallpaper gue", {
 			Image = CONFIG.Wallpaper.Image, Transparency = 0.35, ScaleType = "Crop",
 			Layer = "back", Overlay = true, OverlayTransparency = 0.45,
+			Canvas = 1, Group = 0, Contrast = 10,
 		})
 	end)
 
@@ -1583,6 +1637,7 @@ Try("Wallpaper: R1 Presets", function()
 		LoadPreset("Subtle", {
 			Image = CONFIG.Wallpaper.Image, Transparency = 0.72, ScaleType = "Crop",
 			Layer = "back", Overlay = true, OverlayTransparency = 0.30,
+			Canvas = 1, Group = 0, Contrast = 12,
 		})
 	end)
 
@@ -1590,6 +1645,7 @@ Try("Wallpaper: R1 Presets", function()
 		LoadPreset("Bold", {
 			Image = CONFIG.Wallpaper.Image, Transparency = 0.10, ScaleType = "Crop",
 			Layer = "back", Overlay = true, OverlayTransparency = 0.60,
+			Canvas = 1, Group = 0, Contrast = 14,
 		})
 	end)
 
@@ -1597,6 +1653,7 @@ Try("Wallpaper: R1 Presets", function()
 		LoadPreset("Wash", {
 			Image = CONFIG.Wallpaper.Image, Transparency = 0.82, ScaleType = "Stretch",
 			Layer = "front", Overlay = false, OverlayTransparency = 0.5,
+			Canvas = 0, Group = 0, Contrast = 10,
 		})
 	end)
 
@@ -1605,6 +1662,7 @@ Try("Wallpaper: R1 Presets", function()
 			Image = CONFIG.Wallpaper.Image, Transparency = 0.45, ScaleType = "Crop",
 			Color = Color3.fromRGB(218, 98, 255), Layer = "back",
 			Overlay = true, OverlayColor = Color3.fromRGB(20, 8, 30), OverlayTransparency = 0.40,
+			Canvas = 1, Group = 0, Contrast = 12,
 		})
 	end)
 
@@ -1612,6 +1670,7 @@ Try("Wallpaper: R1 Presets", function()
 		LoadPreset("Off", {
 			Image = "", Transparency = 0.75, ScaleType = "Crop",
 			Layer = "back", Overlay = false, OverlayTransparency = 0.5,
+			Canvas = 0, Group = 0, Contrast = 0,
 		})
 	end)
 end)
@@ -1673,15 +1732,137 @@ Try("Wallpaper: R3 Catatan", function()
 	Box:AddLabel("front : wash di atas semua konten (ZIndex 999).", true)
 	Box:AddLabel("        Lebih keliatan, tapi nutupin teks sedikit.", true)
 
-	Box:AddDivider({ Text = "Kenapa 'back' kadang kurang keliatan?", Margin = 4 })
-	Box:AddLabel("Groupbox punya BackgroundColor3 solid, jadi", true)
-	Box:AddLabel("wallpaper ketutup. Fix-nya = bikin background", true)
-	Box:AddLabel("groupbox semi-transparan (Phase 2: design tokens).", true)
+	Box:AddDivider({ Text = "Kenapa dulu 'back' nggak keliatan?", Margin = 4 })
+	Box:AddLabel("Container (area konten) dulu SOLID nutupin", true)
+	Box:AddLabel("wallpaper. Sekarang ada Canvas transparency", true)
+	Box:AddLabel("di groupbox 'Canvas & Kartu Group' -> set 100%.", true)
+
+	Box:AddDivider({ Text = "Kenapa 'front' bikin komponen tembus?", Margin = 4 })
+	Box:AddLabel("front = wallpaper digambar DI ATAS semua", true)
+	Box:AddLabel("komponen (ZIndex 999). Kalau mau wallpaper", true)
+	Box:AddLabel("jadi background kartu, pakai 'back' + canvas 100%.", true)
 
 	Box:AddDivider({ Text = "Format ID yang diterima", Margin = 4 })
 	Box:AddLabel("111593326989465          (angka polos)", false)
 	Box:AddLabel("rbxassetid://111593...   (prefix)", false)
 	Box:AddLabel("https://...  (URL, di-download)", false)
+end)
+
+Try("Wallpaper: L4 Canvas & kartu group", function()
+	local Box = WallpaperTab:AddLeftGroupbox("Canvas & Kartu Group", "layers")
+
+	Box:AddLabel("Ini yang bikin wallpaper BENERAN keliatan sebagai", true)
+	Box:AddLabel("background kartu — dan yang bikin group TETEP SOLID.", true)
+
+	Box:AddDivider({ Text = "Latar (canvas)", Margin = 4 })
+	Box:AddSlider("WP_Canvas", {
+		Text = "Canvas transparency",
+		Default = math.floor(WP.CanvasTransparency * 100),
+		Min = 0,
+		Max = 100,
+		Rounding = 0,
+		Suffix = "%",
+		Tooltip = "Area konten + sidebar.\n100% = wallpaper keliatan penuh di latar.\n0% = solid (wallpaper ketutup, perilaku lama)",
+		Callback = function(Value)
+			WP.CanvasTransparency = Value / 100
+			ApplyWallpaper()
+		end,
+	})
+
+	Box:AddDivider({ Text = "Kartu group", Margin = 4 })
+	Box:AddSlider("WP_GroupTransparency", {
+		Text = "Group transparency",
+		Default = math.floor(WP.GroupTransparency * 100),
+		Min = 0,
+		Max = 100,
+		Rounding = 0,
+		Suffix = "%",
+		Tooltip = "Kartu groupbox/tabbox/depbox.\n0% = SOLID: button, dropdown, slider, text\nnggak ikutan tembus pandang",
+		Callback = function(Value)
+			WP.GroupTransparency = Value / 100
+			ApplyWallpaper()
+		end,
+	})
+
+	Box:AddSlider("WP_GroupContrast", {
+		Text = "Group contrast",
+		Default = math.floor(WP.GroupContrast),
+		Min = 0,
+		Max = 40,
+		Rounding = 0,
+		Suffix = "%",
+		Tooltip = "Seberapa kartu group dibedain dari background window.\n10% = kartu ~10% lebih terang (dark theme)\nbiar kebaca sebagai kartu di atas wallpaper",
+		Callback = function(Value)
+			WP.GroupContrast = Value
+			ApplyWallpaper()
+		end,
+	})
+
+	Box:AddButton("Reset: canvas 100 / group solid / 10%", function()
+		WP.CanvasTransparency = 1
+		WP.GroupTransparency = 0
+		WP.GroupContrast = 10
+		ApplyWallpaper()
+	end)
+end)
+
+Try("Wallpaper: R4 Resep aktif", function()
+	local Box = WallpaperTab:AddRightGroupbox("Resep Aktif", "copy")
+
+	Box:AddLabel("Angka yang lagi aktif sekarang. Tombol di bawah", true)
+	Box:AddLabel("nge-print resep Lua yang tinggal lu paste ke gue.", true)
+
+	local function BuildResep()
+		local C = WP.OverlayColor
+		local T = WP.Color
+
+		return table.concat({
+			"Library:SetWallpaper({",
+			string.format('\tImage = "%s",', tostring(WP.Image)),
+			string.format("\tTransparency = %.2f,", WP.Transparency),
+			string.format('\tScaleType = "%s",', tostring(WP.ScaleType)),
+			string.format("\tColor = Color3.fromRGB(%d, %d, %d),", math.floor(T.R * 255 + 0.5), math.floor(T.G * 255 + 0.5), math.floor(T.B * 255 + 0.5)),
+			string.format('\tLayer = "%s",', tostring(WP.Layer)),
+			string.format("\tOverlay = %s,", tostring(WP.Overlay == true)),
+			string.format("\tOverlayColor = Color3.fromRGB(%d, %d, %d),", math.floor(C.R * 255 + 0.5), math.floor(C.G * 255 + 0.5), math.floor(C.B * 255 + 0.5)),
+			string.format("\tOverlayTransparency = %.2f,", WP.OverlayTransparency),
+			"})",
+			"Library:SetSurface({",
+			string.format("\tCanvasTransparency = %.2f,", WP.CanvasTransparency),
+			string.format("\tGroupTransparency = %.2f,", WP.GroupTransparency),
+			string.format("\tGroupContrast = %d,", math.floor(WP.GroupContrast + 0.5)),
+			"})",
+		}, "\n")
+	end
+
+	local function ShowResep()
+		local Resep = BuildResep()
+		print("[N3V4 RESEP] paste ini balik ke gue:\n" .. Resep)
+
+		if typeof(Window.GetWallpaperInfo) == "function" then
+			print("[N3V4 Wallpaper] ", Window:GetWallpaperInfo())
+		end
+
+		SafeNotify({
+			Title = "Resep di-print",
+			Description = "Cek Output — copy & paste balik ke gue.",
+			Icon = "copy",
+			Time = 4,
+		})
+	end
+
+	Box:AddDivider({ Text = "Kirim balik ke gue", Margin = 4 })
+	Box:AddButton("Print resep Lua + info", ShowResep)
+	Box:AddButton("Print info doang", function()
+		if typeof(Window.GetWallpaperInfo) == "function" then
+			print("[N3V4 Wallpaper] ", Window:GetWallpaperInfo())
+		end
+	end)
+
+	Box:AddDivider({ Text = "Cara pakai di hub", Margin = 4 })
+	Box:AddLabel("Dua panggilan di atas bisa lu taro persis", true)
+	Box:AddLabel("habis CreateWindow() di hub lu. Nggak perlu", true)
+	Box:AddLabel("ngubah apapun lagi — semua udah API library.", true)
 end)
 
 --================================================================================

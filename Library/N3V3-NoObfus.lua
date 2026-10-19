@@ -417,6 +417,18 @@ local Templates = {
 		BackgroundOverlayColor = Color3.new(0, 0, 0),
 		BackgroundOverlayTransparency = 0.5,
 
+		--// Surface \\--
+		-- N3V4: biar wallpaper beneran keliatan SEBAGAI background kartu, area
+		-- konten (Container + sidebar) harus bisa dibikin transparan. Default 0
+		-- = perilaku lama (solid), jadi hub yang nggak pakai wallpaper aman.
+		ContentTransparency = 0,
+		-- Kartu groupbox/tabbox/depbox: 0 = solid (biar komponen di dalamnya
+		-- NGGAK ikutan tembus pandang), naikin kalau mau sedikit see-through.
+		GroupTransparency = 0,
+		-- Persen (0-100): kartu group dibedain dari background window.
+		-- 10 = kartu ~10% lebih terang (dark theme) -> kebaca sebagai kartu.
+		GroupContrast = 0,
+
 		--// Animations \\--
 		-- N3V4: default di-nyalain semua. Sebelumnya false semua, jadi hub yang
 		-- nggak ngoper `Animations` ke CreateWindow() nggak dapet animasi sama sekali.
@@ -8784,11 +8796,15 @@ do
 
 		do
 			DepGroupboxContainer = New("Frame", {
-				BackgroundColor3 = "BackgroundColor",
+				BackgroundColor3 = function()
+					return Library:GetGroupSurfaceColor()
+				end,
+				BackgroundTransparency = ClampTransparency(Library.Surface.GroupTransparency),
 				Size = UDim2.fromScale(1, 0),
 				Visible = false,
 				Parent = BoxHolder,
 			})
+			Library.SurfaceGroups[DepGroupboxContainer] = true
 			table.insert(
 				Library.Corners,
 				New("UICorner", {
@@ -8990,6 +9006,41 @@ function Library:SetWallpaper(Info: { [string]: any })
 		Window:SetBackgroundOverlay(Info.Overlay, Info.OverlayColor, Info.OverlayTransparency)
 	end
 
+	return true
+end
+
+--// N3V4: Surface API \\--
+-- Kontrol latar & kartu group, TERPISAH dari wallpaper. Semua field opsional.
+--
+--   Library:SetSurface({
+--       CanvasTransparency = 1,   -- area konten + sidebar. 1 = wallpaper keliatan
+--       GroupTransparency = 0,    -- kartu group. 0 = SOLID (biar isinya nggak tembus)
+--       GroupContrast = 10,       -- % kartu group dibedain dari background window
+--       GroupColor = Color3...,   -- override warna kartu. false = balik ke auto
+--   })
+function Library:SetSurface(Info: { [string]: any })
+	if typeof(Info) ~= "table" then
+		return false, "Info must be a table"
+	end
+
+	if Info.CanvasTransparency ~= nil then
+		Library.Surface.CanvasTransparency = ClampTransparency(Info.CanvasTransparency)
+	end
+	if Info.GroupTransparency ~= nil then
+		Library.Surface.GroupTransparency = ClampTransparency(Info.GroupTransparency)
+	end
+	if Info.GroupContrast ~= nil then
+		Library.Surface.GroupContrast = math.clamp(tonumber(Info.GroupContrast) or 0, 0, 100)
+	end
+	if Info.GroupColor ~= nil then
+		if Info.GroupColor == false then
+			Library.Surface.GroupColor = nil
+		elseif typeof(Info.GroupColor) == "Color3" then
+			Library.Surface.GroupColor = Info.GroupColor
+		end
+	end
+
+	Library:ApplySurfaces()
 	return true
 end
 
@@ -9456,8 +9507,68 @@ local function ClampTransparency(Value: any): number
 	return math.clamp(N, 0, 1)
 end
 
+--// N3V4: Surface system \\--
+-- Dua masalah yang ini solve:
+--  1. Wallpaper mode "back" NGGAK keliatan, karena Container (seluruh area
+--     konten tab) SOLID dan nutupin wallpaper yang ada di belakangnya.
+--  2. Kartu groupbox pakai warna "BackgroundColor" yang SAMA PERSIS sama
+--     background window, jadi group nggak kebaca sebagai kartu di atas
+--     wallpaper. User minta group tetep solid & beda ~10% dari background.
+Library.Surface = {
+	CanvasTransparency = 0, -- Container + sidebar. 1 = wallpaper keliatan penuh
+	GroupTransparency = 0, -- kartu groupbox / tabbox / depbox. 0 = solid
+	GroupContrast = 0, -- persen 0-100: seberapa kartu group dibedain dari bg window
+	GroupColor = nil, -- Color3 override. nil = pakai BackgroundColor + GroupContrast
+}
+Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
+Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
+
+function Library:GetGroupSurfaceColor(): Color3
+	if typeof(Library.Surface.GroupColor) == "Color3" then
+		return Library.Surface.GroupColor
+	end
+
+	local Base = Library.Scheme.BackgroundColor
+	local Percent = math.clamp(tonumber(Library.Surface.GroupContrast) or 0, 0, 100) / 100
+
+	if Percent <= 0 then
+		return Base
+	end
+
+	-- dark theme: kartu lebih TERANG dari bg; light theme: lebih GELAP
+	local Target = Library.IsLightTheme and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)
+	return Base:Lerp(Target, Percent)
+end
+
+-- Re-apply transparency canvas & group ke semua instance yang udah dibikin.
+-- Warna group nggak perlu di-loop manual: dia di-register ke Registry sebagai
+-- function, jadi UpdateColorsUsingRegistry() yang nge-set ulang.
+function Library:ApplySurfaces()
+	local CanvasT = ClampTransparency(Library.Surface.CanvasTransparency)
+	local GroupT = ClampTransparency(Library.Surface.GroupTransparency)
+
+	for CanvasInstance in pairs(Library.SurfaceCanvas) do
+		if CanvasInstance.Parent then
+			CanvasInstance.BackgroundTransparency = CanvasT
+		end
+	end
+
+	for GroupInstance in pairs(Library.SurfaceGroups) do
+		if GroupInstance.Parent then
+			GroupInstance.BackgroundTransparency = GroupT
+		end
+	end
+
+	Library:UpdateColorsUsingRegistry()
+end
+
 function Library:CreateWindow(WindowInfo)
 	WindowInfo = Library:Validate(WindowInfo, Templates.Window)
+
+	-- N3V4: seed Surface state dari WindowInfo, biar bisa di-set lewat CreateWindow
+	Library.Surface.CanvasTransparency = ClampTransparency(WindowInfo.ContentTransparency)
+	Library.Surface.GroupTransparency = ClampTransparency(WindowInfo.GroupTransparency)
+	Library.Surface.GroupContrast = math.clamp(tonumber(WindowInfo.GroupContrast) or 0, 0, 100)
 	local ViewportSize: Vector2 = workspace.CurrentCamera.ViewportSize
 	if RunService:IsStudio() and ViewportSize.X <= 5 and ViewportSize.Y <= 5 then
 		repeat
@@ -10061,6 +10172,9 @@ function Library:CreateWindow(WindowInfo)
 			Size = UDim2.new(0, InitialLeftWidth, 1, -70),
 			Parent = MainFrame,
 		})
+		-- N3V4: sidebar ikut jadi "canvas" biar wallpaper keliatan di belakang icon
+		Tabs.BackgroundTransparency = ClampTransparency(Library.Surface.CanvasTransparency)
+		Library.SurfaceCanvas[Tabs] = true
 		New("UIListLayout", {
 			Parent = Tabs,
 		})
@@ -10077,6 +10191,11 @@ function Library:CreateWindow(WindowInfo)
 			Size = UDim2.new(1, -InitialLeftWidth - 1, 1, -70),
 			Parent = MainFrame,
 		})
+		-- N3V4: INI dia biang keroknya. Container dulu SOLID (nggak ada
+		-- BackgroundTransparency), jadi wallpaper mode "back" ketutup total dan
+		-- keliatannya "nggak ngapa-ngapain". Sekarang bisa dibikin transparan.
+		Container.BackgroundTransparency = ClampTransparency(Library.Surface.CanvasTransparency)
+		Library.SurfaceCanvas[Container] = true
 		New("UIPadding", {
 			PaddingBottom = UDim.new(0, 0),
 			PaddingLeft = UDim.new(0, 6),
@@ -10224,20 +10343,36 @@ function Library:CreateWindow(WindowInfo)
 		end
 	end
 
-	-- Snapshot state wallpaper sekarang (buat debug / display di UI)
+	-- Snapshot state wallpaper + surface sekarang (buat debug / display di UI).
+	-- Sengaja lengkap biar user bisa paste output-nya balik dan kita tau
+	-- persis konfigurasi yang lagi aktif.
 	function Window:GetWallpaperInfo()
+		local ScaleEnum = tostring(BackgroundImage.ScaleType)
+
 		return {
 			Image = WindowInfo.BackgroundImage,
 			Visible = BackgroundImage.Visible,
 			Transparency = BackgroundImage.ImageTransparency,
 			ScaleType = BackgroundImage.ScaleType,
+			-- nama polos ("Crop") bukan "Enum.ScaleType.Crop", biar enak dibaca
+			ScaleTypeName = ScaleEnum:match("%.(%w+)$") or ScaleEnum,
 			Color = BackgroundImage.ImageColor3,
 			Layer = WindowInfo.BackgroundImageLayer,
 			ZIndex = BackgroundImage.ZIndex,
 			OverlayEnabled = BackgroundOverlay.Visible,
 			OverlayColor = BackgroundOverlay.BackgroundColor3,
 			OverlayTransparency = BackgroundOverlay.BackgroundTransparency,
+
+			--// Surface \\--
+			CanvasTransparency = Library.Surface.CanvasTransparency,
+			GroupTransparency = Library.Surface.GroupTransparency,
+			GroupContrast = Library.Surface.GroupContrast,
+			GroupSurfaceColor = Library:GetGroupSurfaceColor(),
 		}
+	end
+
+	function Window:SetSurface(Info: { [string]: any })
+		return Library:SetSurface(Info)
 	end
 
 	function Window:SetFooter(Footer: string)
@@ -10785,10 +10920,14 @@ function Library:CreateWindow(WindowInfo)
 
 			do
 				TabboxHolder = New("Frame", {
-					BackgroundColor3 = "BackgroundColor",
+					BackgroundColor3 = function()
+						return Library:GetGroupSurfaceColor()
+					end,
+					BackgroundTransparency = ClampTransparency(Library.Surface.GroupTransparency),
 					Size = UDim2.fromScale(1, 0),
 					Parent = BoxHolder,
 				})
+				Library.SurfaceGroups[TabboxHolder] = true
 				table.insert(
 					Library.Corners,
 					New("UICorner", {
@@ -11121,10 +11260,19 @@ function Library:CreateWindow(WindowInfo)
 
 			do
 				GroupboxHolder = New("Frame", {
-					BackgroundColor3 = "BackgroundColor",
+					-- N3V4: kartu group sekarang bisa dibedain dari background window
+					-- (GroupContrast) atau di-override warnanya (GroupColor). Warna
+					-- di-register ke Registry sebagai function -> theme change aman.
+					-- Transparency default 0 = SOLID, biar button/dropdown/slider/
+					-- text di dalamnya NGGAK ikutan tembus pandang.
+					BackgroundColor3 = function()
+						return Library:GetGroupSurfaceColor()
+					end,
+					BackgroundTransparency = ClampTransparency(Library.Surface.GroupTransparency),
 					Size = UDim2.fromScale(1, 0),
 					Parent = BoxHolder,
 				})
+				Library.SurfaceGroups[GroupboxHolder] = true
 				table.insert(
 					Library.Corners,
 					New("UICorner", {

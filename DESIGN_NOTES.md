@@ -273,18 +273,61 @@ lebihannya kebuang). `Fit` = CSS `contain` (muat semua, bisa ada sisi kosong).
 
 ---
 
+### 🎯 Surface system — bikin wallpaper BENERAN jadi background kartu
+**(ditambah setelah user tes: "wallpaper nggak keliatan" + "komponen jadi tembus")**
+
+Dua akar masalah yang ketemu dari source:
+
+1. **`Container`** (seluruh area konten tab) dibuat **SOLID** —
+   `BackgroundColor3 = GetBetterColor(BackgroundColor, 1)`, tanpa
+   `BackgroundTransparency`. Wallpaper mode `back` ada DI BELAKANG dia →
+   **ketutup total**. Keliatannya "nggak ngapa-ngapain".
+2. **Kartu groupbox/tabbox/depbox** pakai `BackgroundColor3 = "BackgroundColor"` —
+   **warna yang sama persis** sama background window → group nggak kebaca
+   sebagai kartu. User minta group **tetep solid** dan **~10% beda** dari bg.
+
+Bonus masalah dari mode `front`: wallpaper digambar **DI ATAS semua komponen**
+(ZIndex 999) → button/dropdown/slider/text keliatan "tembus pandang". Itu
+**bukan** transparency komponen, itu wallpaper yang nutupin.
+
+**Solusi: `Library.Surface`** — kontrol latar & kartu, terpisah dari wallpaper:
+
+| Field | Default | Fungsi |
+|---|---|---|
+| `CanvasTransparency` | `0` | Container **+ sidebar**. `1` = wallpaper keliatan penuh di latar |
+| `GroupTransparency` | `0` | Kartu group/tabbox/depbox. `0` = **SOLID** (isinya nggak ikutan tembus) |
+| `GroupContrast` | `0` | persen 0–100: kartu group dibedain dari bg window (dark: lebih terang) |
+| `GroupColor` | `nil` | override `Color3` kartu. `false` = balik ke auto |
+
+Tracking instance: `Library.SurfaceCanvas` (Container, Tabs) &
+`Library.SurfaceGroups` (GroupboxHolder, TabboxHolder, DepGroupboxContainer).
+Warna kartu di-register ke **Registry sebagai function**
+(`Library:GetGroupSurfaceColor()`), jadi **theme change & contrast change
+dua-duanya ke-apply** lewat `UpdateColorsUsingRegistry()`.
+
+```lua
+Library:SetSurface({ CanvasTransparency = 1, GroupTransparency = 0, GroupContrast = 10 })
+```
+Atau lewat `CreateWindow({ ContentTransparency, GroupTransparency, GroupContrast })`.
+
+**Resep yang direkomendasiin** (default preview):
+`Layer = "back"`, `CanvasTransparency = 1`, `GroupTransparency = 0`,
+`GroupContrast = 10`. Wallpaper jadi background kartu, group tetep solid &
+kebaca sebagai kartu.
+
+`Window:GetWallpaperInfo()` sekarang juga nge-report `ScaleTypeName` (string
+polos, bukan `Enum.ScaleType.Crop`), `CanvasTransparency`, `GroupTransparency`,
+`GroupContrast`, `GroupSurfaceColor` — biar user bisa paste snapshot-nya balik
+dan kita tau persis konfigurasi aktif.
+
 ### ⚠️ Keterbatasan yang harus diinget
-**Mode `back` kadang kurang keliatan** karena groupbox punya `BackgroundColor3`
-solid (dari scheme `BackgroundColor`) → wallpaper ketutup. Keliatannya cuma di
-area padding & elemen semi-transparan.
-
-Fix-nya bukan di wallpaper, tapi di **Phase 2 (design tokens)**: bikin background
-groupbox/container semi-transparan. Sampai situ, mode `front` (wash) lebih
-keliatan hasilnya.
-
 **Wallpaper belum di-apply ke:** Loading screen, Dashboard window, Notification,
 Overlay panel, Draggable elements. Semua itu ScreenGui/Frame terpisah. Kalau mau
 konsisten, itu kerjaan lanjutan.
+
+**`GroupContrast` ngaruh global** ke semua kartu group/tabbox/depbox, termasuk
+pas wallpaper mati. Default `0` = perilaku lama persis, jadi hub yang nggak
+nyetel apa-apa nggak berubah tampilan.
 
 ---
 
@@ -355,13 +398,13 @@ Validator `validate4.js` punya `SCOPE CHECK` khusus buat ini.
 
 ```
 N3-Project/
-├── Library/N3V3-NoObfus.lua     14.257 baris — engine UI (fork Obsidian) ← DIUBAH
+├── Library/N3V3-NoObfus.lua     14.431 baris — engine UI (fork Obsidian) ← DIUBAH
 ├── Games/
 │   ├── N3-SAE.lua               18.659 baris — hub Steal An Egg (8 tab)
 │   ├── ride-an-pets.lua          6.128 baris — hub kedua (2 icon broken)
 │   └── Source/StealAnEgg/      200.515 baris — 4 source lama
 ├── Preview/
-│   ├── N3V4_Preview.client.lua   1.648 baris — LocalScript preview v4 ← DIUBAH
+│   ├── N3V4_Preview.client.lua   1.866 baris — LocalScript preview v4 ← DIUBAH
 │   └── README.md
 └── DESIGN_NOTES.md               ← file ini
 ```
@@ -372,7 +415,7 @@ N3-Project/
 
 - [x] **Phase 0** — Preview Kit
 - [x] **Phase 0.5** — Animasi ON, CornerRadius 10, offline icon fallback (semua di library)
-- [x] **Phase 0.6** — Wallpaper system (library + tab preview, 7 kontrol + 6 preset)
+- [x] **Phase 0.6** — Wallpaper system + Surface system (library + tab preview, 4/4 groupbox + 6 preset + print resep)
 - [ ] **Phase 0.7** — Rebalance simetri `N3-SAE.lua` (12 kiri vs 9 kanan) ← *butuh go dari lu*
 - [ ] **Phase 1** — Design tokens: tarik semua angka visual ke satu tabel `Design`
 - [ ] **Phase 2** — Chrome: window, sidebar, tab + sliding indicator, groupbox, footer
