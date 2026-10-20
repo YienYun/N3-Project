@@ -138,20 +138,22 @@ local CONFIG = {
 	-- ID wallpaper lu, dipakai sebagai default pas window dibikin.
 	-- Semua field ini sekarang beneran dibaca sama library (bukan cuma preview):
 	-- Templates.Window.BackgroundImage* + BackgroundOverlay*
+	-- RACIKAN USER — DISETUJUI 2026-10-20 ("nih brok ini bagus jir").
+	-- Persis dari output Print resep Lua yang user paste balik.
+	-- Ini sekarang DEFAULT permanen preview + kepasang di Games/N3-SAE.lua.
 	Wallpaper = {
 		Image = "111593326989465",
-		Transparency = 0.35, -- 0 = gambar penuh, 1 = ilang total
-		ScaleType = "Crop", -- member asli: Stretch | Slice | Tile | Fit | Crop
-		--   "Crop" = kayak CSS background-size: cover (nutupin penuh, aspect ratio dijaga)
-		--   ⚠️ "Fill" BUKAN member Enum.ScaleType — cuma alias yang gue bikin di library
-		Color = Color3.fromRGB(255, 255, 255), -- tint (ImageColor3)
-		Layer = "back", -- "back" = wallpaper di belakang konten | "front" = wash di atas
-
-		Overlay = false, -- scrim. Default OFF biar warna wallpaper ASLI.
-		-- Nyala-kan kalau wallpaper lu terlalu terang & teks jadi susah kebaca.
-		OverlayColor = Color3.fromRGB(0, 0, 0),
-		OverlayTransparency = 0.45,
+		Transparency = 0.70,
+		ScaleType = "Stretch",
+		Color = Color3.fromRGB(55, 55, 55),
+		Layer = "front",
+		Overlay = true,
+		OverlayColor = Color3.fromRGB(46, 46, 46),
+		OverlayTransparency = 0.90,
 	},
+
+	-- Kalau lu mau eksperimen lagi, member ScaleType asli:
+	-- Stretch | Slice | Tile | Fit | Crop  ("Fill" cuma alias -> Crop)
 
 	--// SURFACE \\--
 	-- Default = wallpaper KELIATAN sebagai background kartu, tapi kartu group
@@ -159,21 +161,11 @@ local CONFIG = {
 	-- Semua angka & warna di bawah cuma titik awal — lu yang atur lewat
 	-- slider + color picker di tab Wallpaper.
 	Surface = {
-		-- 100% = area konten + sidebar dibolongin -> wallpaper keliatan.
-		-- 0% = solid (wallpaper ketutup, tampilan "kosong").
-		CanvasTransparency = 1,
-
-		-- 0 = kartu group SOLID (button/dropdown/slider/text nggak tembus)
-		GroupTransparency = 0,
-
-		-- 0 = warna kartu SAMA PERSIS sama warna asli theme (nggak di-grey).
-		-- Naikin cuma kalau mau kartu sengaja dibedain.
-		GroupContrast = 0,
-
-		-- Override warna manual. nil = ikut theme / ikut contrast.
-		-- Nanti bisa lu set lewat color picker di tab Wallpaper.
-		GroupColor = nil,
-		CanvasColor = nil,
+		CanvasTransparency = 0.64,
+		GroupTransparency = 0.11,
+		GroupContrast = 11,
+		GroupColor = Color3.fromRGB(0, 0, 0),
+		CanvasColor = Color3.fromRGB(0, 0, 0),
 	},
 
 	-- false = mulai tanpa wallpaper (buat bandingin sebelum/sesudah)
@@ -1671,11 +1663,13 @@ Try("Wallpaper: R1 Presets", function()
 		SafeNotify({ Title = "Preset", Description = Name, Icon = "sparkles", Time = 2 })
 	end
 
-	Box:AddButton("Resep: wallpaper keliatan", function()
-		LoadPreset("Wallpaper keliatan", {
-			Image = CONFIG.Wallpaper.Image, Transparency = 0.35, ScaleType = "Crop",
-			Layer = "back", Overlay = true, OverlayTransparency = 0.45,
-			Canvas = 1, Group = 0, Contrast = 0,
+	Box:AddButton("RESEP USER (yang disetujui)", function()
+		LoadPreset("Resep user", {
+			Image = CONFIG.Wallpaper.Image, Transparency = 0.70, ScaleType = "Stretch",
+			Color = Color3.fromRGB(55, 55, 55), Layer = "front",
+			Overlay = true, OverlayColor = Color3.fromRGB(46, 46, 46), OverlayTransparency = 0.90,
+			Canvas = 0.64, Group = 0.11, Contrast = 11,
+			GroupColor = Color3.fromRGB(0, 0, 0), CanvasColor = Color3.fromRGB(0, 0, 0),
 		})
 	end)
 

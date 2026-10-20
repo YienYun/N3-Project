@@ -152,6 +152,10 @@ Toggle UI: `RightCtrl`
 
 **Simetri:** tiap tab groupbox kiri = kanan (2/2, 3/3, 3/3, 3/3, 3/3, 3/3, 5/5).
 
+> 🏆 **Default sekarang = RESEP USER yang disetujui** (2026-10-20):
+> wallpaper front 70% + tint abu, overlay 90%, canvas 64%, group 11% + hitam.
+> Racikan ini juga kepasang di `Games/N3-SAE.lua` (pcall, aman).
+>
 > 🔎 **Cek versi copy-an lu:** footer window harus tertulis **v4.4.2**.
 > Kalau masih v4/v4.2/v4.3 berarti LocalScript lu copy-an lama — copy ulang.
 

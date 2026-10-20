@@ -242,6 +242,52 @@ Library:SetWallpaper({
 ```
 Atau langsung di `CreateWindow({ BackgroundImage = ..., BackgroundImageLayer = ..., ... })`.
 
+### 🏆 RESEP USER YANG DISETUJUI (2026-10-20)
+User ngetes sendiri lewat slider, terus paste balik output "Print resep Lua"
+dan bilang **"nih brok ini bagus jir"**. Ini racikannya — VERBATIM, jangan
+diubah tanpa user minta:
+
+```lua
+Library:SetWallpaper({
+	Image = "111593326989465",
+	Transparency = 0.70,
+	ScaleType = "Stretch",
+	Color = Color3.fromRGB(55, 55, 55),
+	Layer = "front",
+	Overlay = true,
+	OverlayColor = Color3.fromRGB(46, 46, 46),
+	OverlayTransparency = 0.90,
+})
+Library:SetSurface({
+	CanvasTransparency = 0.64,
+	GroupTransparency = 0.11,
+	GroupContrast = 11,
+	GroupColor = Color3.fromRGB(0, 0, 0),
+	CanvasColor = Color3.fromRGB(0, 0, 0),
+})
+```
+
+Catatan rasa: layer `front` + transparency tinggi (0.70) + tint abu gelap =
+wash halus di atas konten; overlay 90% = hampir invisble, cuma nyatu-in nada;
+canvas 64% + group 11% + warna hitam = kartu gelap semi-transparan yang
+tetep kebaca. Ini kombinasi yang user suka — BUKAN resep "back + canvas 100%"
+yang gue rekomendasiin dulu. **Selera user menang.**
+
+**Terpasang di:**
+- `Preview/N3V4_Preview.client.lua` → `CONFIG.Wallpaper` + `CONFIG.Surface`
+  (default boot) + preset "RESEP USER (yang disetujui)"
+- `Games/N3-SAE.lua` → tepat setelah `CreateWindow`, dibungkus **pcall**
+  (no-op aman kalau library yang ke-load versi lama)
+
+**⚠️ Hub load library dari raw URL repo LAIN:**
+`https://raw.githubusercontent.com/ZedFu3/N3-Hub/refs/heads/main/Library/N3V3.luau`
+(N3-SAE.lua line 8-9). Perubahan library gue ada di repo INI
+(YienYun/N3-Project). Jadi wallpaper di hub baru NYALA setelah library baru
+ke-push ke URL itu (atau URL loader-nya diganti). Sampai situ, pcall bikin
+hub tetep jalan normal tanpa wallpaper.
+
+---
+
 ### 🐛 Bug class: hardcoded member Enum yang nggak ada
 **Sempat kejadian:** `Fill = Enum.ScaleType.Fill` di top-level →
 `Fill is not a valid member of "Enum.ScaleType"` → **seluruh library gagal
@@ -446,7 +492,7 @@ N3-Project/
 
 - [x] **Phase 0** — Preview Kit
 - [x] **Phase 0.5** — Animasi ON, CornerRadius 10, offline icon fallback (semua di library)
-- [x] **Phase 0.6** — Wallpaper system + Surface system (library + tab preview, 4/4 groupbox + 6 preset + print resep)
+- [x] **Phase 0.6** — Wallpaper + Surface system ✅ + **resep user dikunci jadi default & kepasang di N3-SAE.lua**
 - [ ] **Phase 0.7** — Rebalance simetri `N3-SAE.lua` (12 kiri vs 9 kanan) ← *butuh go dari lu*
 - [ ] **Phase 1** — Design tokens: tarik semua angka visual ke satu tabel `Design`
 - [ ] **Phase 2** — Chrome: window, sidebar, tab + sliding indicator, groupbox, footer
