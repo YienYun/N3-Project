@@ -13,6 +13,12 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.6.9: FIX bug STOMP: CreateWindow dulu seed Surface unconditional dari
+--        Templates.Window -> resep group 0.35/contrast 40 ke-reset jadi 0/30
+--        tiap paste baru ("group kok ga transparan padahal udah gue setting").
+--        Sekarang seed cuma kalau caller eksplisit ngirim field-nya.
+--        THEME v6: main 45 / outline 65 (print user). PREVIEW: wallpaper
+--        DIMATIIN (showcase theme doang, perintah user).
 -- v4.6.8: RESEP v5 USER DIBAKE (print LENGKAP 2026-10-20): wallpaper FULL
 --        (transparency 0) + scrim 0.55, tint 195, window 0.90, canvas 1,
 --        group 0.35 (pilihan user sendiri di layer back), contrast 40, kartu
@@ -333,8 +339,8 @@ function Settings:Attach(Library, Window, Options)
 		Box:AddButton("Reset scheme", function()
 			Library.Scheme.AccentColor = Color3.fromRGB(218, 68, 255)
 			Library.Scheme.BackgroundColor = Color3.fromRGB(15, 15, 15)
-			Library.Scheme.MainColor = Color3.fromRGB(36, 36, 36)
-			Library.Scheme.OutlineColor = Color3.fromRGB(59, 59, 59)
+			Library.Scheme.MainColor = Color3.fromRGB(45, 45, 45)
+			Library.Scheme.OutlineColor = Color3.fromRGB(65, 65, 65)
 			Library.Scheme.FontColor = Color3.fromRGB(255, 255, 255)
 			Library:UpdateColorsUsingRegistry()
 		end)

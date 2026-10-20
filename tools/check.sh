@@ -17,6 +17,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN="$ROOT/tools/bin/luau-analyze"
 LIB="$ROOT/Library/N3V3-NoObfus.lua"
 MOD="$ROOT/Preview/N3V4_UISettings.module.lua"
+PREV="$ROOT/Preview/N3V4_Preview.client.lua"
 PRE="$ROOT/Preview/N3V4_Preview.client.lua"
 LUAU_TAG="0.743"
 
@@ -66,7 +67,7 @@ chk "slider: berhenti lewat InputEnded (SliderReleaseConn)" "grep -q SliderRelea
 chk "WindowTransparency ada" "grep -q WindowTransparency '$LIB'"
 chk "Tab:AddKeyBox ada" "grep -q 'function Tab:AddKeyBox' '$LIB'"
 chk "theme v4 user jadi default di LIBRARY (bg 18 / main 33 / outline 61 + radius 15)" \
-	"grep -q 'AccentColor = Color3.fromRGB(218, 68, 255)' '$LIB' && grep -q 'BackgroundColor = Color3.fromRGB(15, 15, 15),' '$LIB' && grep -q 'MainColor = Color3.fromRGB(36, 36, 36),' '$LIB' && grep -q 'OutlineColor = Color3.fromRGB(59, 59, 59),' '$LIB' && grep -q 'CornerRadius = 15,' '$LIB'"
+	"grep -q 'AccentColor = Color3.fromRGB(218, 68, 255)' '$LIB' && grep -q 'BackgroundColor = Color3.fromRGB(15, 15, 15),' '$LIB' && grep -q 'MainColor = Color3.fromRGB(45, 45, 45),' '$LIB' && grep -q 'OutlineColor = Color3.fromRGB(65, 65, 65),' '$LIB' && grep -q 'CornerRadius = 15,' '$LIB'"
 chk "resep v5 default di LIBRARY (wallpaper 0 + scrim 0.55 + group 0.35 + contrast 40)" \
 	"grep -q 'BackgroundImageTransparency = 0,' '$LIB' && grep -q 'GroupContrast = 40,' '$LIB' && grep -q 'CanvasColor = Color3.fromRGB(156, 156, 156)' '$LIB' && grep -q 111593326989465 '$LIB'"
 chk "group HITAM + contrast 30 baseline tetep (v4.6.5)" \
@@ -79,6 +80,10 @@ chk "v4.6.7: preset Load() nggak matiin GroupColor/CanvasColor custom user" \
 	"! sed -n '/local function Load/,/SafeNotify/p' '$MOD' | grep -qE 'S\.(Group|Canvas)Color'"
 chk "v4.6.8: navbar bawah corner BAWAH-aja (SpecificCorners, tinggi 20)" \
 	"grep -q 'BottomRightRadius = UDim.new(0, WindowInfo.CornerRadius)' '$LIB' && grep -q 'Size = UDim2.new(1, 0, 0, 20), -- v4.6.8' '$LIB'"
+chk "v4.6.9: CreateWindow NGGAK stomp Surface default lagi (seed conditional)" \
+	"grep -q 'local RawGroupT = WindowInfo and WindowInfo.GroupTransparency' '$LIB'"
+chk "v4.6.9: preview theme-only (wallpaper dimatiin di preview)" \
+	"grep -q 'Library:SetWallpaper({ Image = \"\" })' '$PREV'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
 	"grep -q 'Transparency = 0,' '$MOD' && grep -q 'Contrast = 40' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.fromRGB(156, 156, 156)' '$MOD'"
 chk "state S di-init SEBELUM BuildResep/BuildTema (bug 'index nil with Image')" \

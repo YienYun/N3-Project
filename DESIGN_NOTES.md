@@ -8,8 +8,8 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 
 ```lua
 Library.Scheme.BackgroundColor = Color3.fromRGB(15, 15, 15)
-Library.Scheme.MainColor = Color3.fromRGB(36, 36, 36)
-Library.Scheme.OutlineColor = Color3.fromRGB(59, 59, 59)
+Library.Scheme.MainColor = Color3.fromRGB(45, 45, 45)   -- v6 (print user 15:42)
+Library.Scheme.OutlineColor = Color3.fromRGB(65, 65, 65) -- v6
 -- accent 218,68,255 / font 255 / radius 15 tetep
 Library:SetWallpaper({
 	Image = "111593326989465", Transparency = 0, ScaleType = "Stretch",
@@ -25,6 +25,15 @@ Library:SetSurface({
 Catatan: group 0.35 = PILIHAN user sendiri via slider di layer back (bukan veil
 front) — menimpa baseline lama "group solid 0". Resep v4 (bg18/main33/outline61,
 wallpaper 0.80) = sejarah, ada di bagian bawah.
+
+FIX v4.6.9: CreateWindow dulu seed Library.Surface UNCONDITIONAL dari
+Templates.Window (GroupTransparency 0 / GroupContrast 30) -> resep user
+(0.35/40) ke-stomp tiap paste baru = "group kok ga transparan padahal udah
+gue setting". Sekarang seed conditional ( cuma kalau caller eksplisit ngirim
+field ). Templates.Window disync ke angka v5 sebagai double-safety.
+PREVIEW v4.6.9: wallpaper dimatiin + surface solid = showcase theme doang
+(perintah user: "preview mattin saja! hapus kecuali theme!"). Seting wallpaper
+tetep hidup di file UISettings + window script user sendiri.
 
 FIX v4.6.8: navbar bawah (BottomBackground) dulu UICorner FULL radius + tinggi
 20+radius -> corner atas ikutan bulat = notch/garis "bablas ke atas" waktu radius

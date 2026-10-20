@@ -267,9 +267,9 @@ local Library = {
 	IsLightTheme = false,
 	Scheme = {
 		BackgroundColor = Color3.fromRGB(15, 15, 15),
-		MainColor = Color3.fromRGB(36, 36, 36),
+		MainColor = Color3.fromRGB(45, 45, 45),
 		AccentColor = Color3.fromRGB(218, 68, 255),
-		OutlineColor = Color3.fromRGB(59, 59, 59),
+		OutlineColor = Color3.fromRGB(65, 65, 65),
 		FontColor = Color3.fromRGB(255, 255, 255),
 		Font = Font.fromEnum(Enum.Font.Code),
 
@@ -432,9 +432,9 @@ local Templates = {
 		WindowTransparency = 0.90, -- v4.6.8: dump user v5
 		ContentTransparency = 1, -- v4.6.6: canvas full transparan (wallpaper keliatan di sela kartu)
 		-- Kartu groupbox/tabbox/depbox.
-		GroupTransparency = 0,
+		GroupTransparency = 0.35, -- v4.6.9: sync sama Library.Surface (resep v5)
 		-- Persen (0-100): kartu group dibedain dari background window.
-		GroupContrast = 30,
+		GroupContrast = 40, -- v4.6.9: sync sama Library.Surface (resep v5)
 
 		--// Animations \\--
 		-- N3V4: default di-nyalain semua. Sebelumnya false semua, jadi hub yang
@@ -9681,13 +9681,29 @@ end
 
 
 function Library:CreateWindow(WindowInfo)
+	-- N3V4 v4.6.9 FIX: seed Surface HANYA kalau caller CreateWindow EMANG
+	-- ngirim field-nya eksplisit. Dulu unconditional dari Templates.Window ->
+	-- default Library.Surface (resep user: group 0.35, contrast 40) ke-STOMP
+	-- jadi 0/30 tiap CreateWindow = bug "group kok ga transparan padahal udah
+	-- gue setting" (print user: GroupTransparency live 0.25 jalan, tapi paste
+	-- baru = solid lagi).
+	local RawWindowT = WindowInfo and WindowInfo.WindowTransparency
+	local RawContentT = WindowInfo and WindowInfo.ContentTransparency
+	local RawGroupT = WindowInfo and WindowInfo.GroupTransparency
+	local RawContrast = WindowInfo and WindowInfo.GroupContrast
 	WindowInfo = Library:Validate(WindowInfo, Templates.Window)
-
-	-- N3V4: seed Surface state dari WindowInfo, biar bisa di-set lewat CreateWindow
-	Library.Surface.WindowTransparency = ClampTransparency(WindowInfo.WindowTransparency)
-	Library.Surface.CanvasTransparency = ClampTransparency(WindowInfo.ContentTransparency)
-	Library.Surface.GroupTransparency = ClampTransparency(WindowInfo.GroupTransparency)
-	Library.Surface.GroupContrast = math.clamp(tonumber(WindowInfo.GroupContrast) or 0, 0, 100)
+	if RawWindowT ~= nil then
+		Library.Surface.WindowTransparency = ClampTransparency(RawWindowT)
+	end
+	if RawContentT ~= nil then
+		Library.Surface.CanvasTransparency = ClampTransparency(RawContentT)
+	end
+	if RawGroupT ~= nil then
+		Library.Surface.GroupTransparency = ClampTransparency(RawGroupT)
+	end
+	if RawContrast ~= nil then
+		Library.Surface.GroupContrast = math.clamp(tonumber(RawContrast) or 0, 0, 100)
+	end
 	local ViewportSize: Vector2 = workspace.CurrentCamera.ViewportSize
 	if RunService:IsStudio() and ViewportSize.X <= 5 and ViewportSize.Y <= 5 then
 		repeat
