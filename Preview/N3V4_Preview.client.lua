@@ -7,6 +7,18 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.7.9 — DIALOG: BUTTON CONFIRM KELIATAN + ICON OPSIONAL:
+	   • BUG: footer button dialog (Batal/Coba lagi/Eksekusi dll) nggak pernah
+	     nongol kalau ditambah setelah AddDialog — AddFooterButton nggak
+	     manggil Resize, jadi holder button tetep Visible=false dari Resize
+	     awal. Sekarang AddFooterButton/RemoveFooterButton manggil Resize =>
+	     button confirm SELALU keliatan.
+	   • Icon dialog sekarang OPSI gaya notif: Info.Icon = nama icon =>
+	     glyph accent (atau Info.IconColor) di POJOK KANAN ATAS baris judul;
+	     Info.Icon nil = dialog bersih tanpa icon. Demo: "Konfirmasi Aksi"
+	     (icon info), "Reset Semua Config?" (icon zap merah), "Form dalam
+	     Dialog" (no-icon).
+
 	 CHANGELOG v4.7.8 — RESEP DURASI BUKA/TUTUP DIBAKE:
 	   • User dial 10% dan bilang "10% bagus!" => 0.10 detik jadi DEFAULT
 	     TERKUNCI (library WindowAnimationInfo + DEFAULTS.AnimTime).
@@ -234,7 +246,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.7.8" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.7.9" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -266,7 +278,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.7.8",
+	Footer = "N3V4 • UI Preview Kit v4.7.9",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -921,6 +933,7 @@ Try("Advanced: R3 Dialog", function()
 		local Dialog = Window:AddDialog("Dialog_Demo", {
 			Title = "Konfirmasi Aksi",
 			Description = "Dialog modal: overlay gelap, scale-in animation, footer button 4 variant.",
+			Icon = "info", -- v4.7.9: icon pojok kanan atas (opsi WITH icon)
 			AutoDismiss = true,
 			OutsideClickDismiss = true,
 		})
@@ -942,6 +955,7 @@ Try("Advanced: R3 Dialog", function()
 		local Dialog = Window:AddDialog("Dialog_Destructive", {
 			Title = "Reset Semua Config?",
 			Description = "Semua setting balik ke default. Nggak bisa di-undo.",
+			Icon = "zap", IconColor = Color3.fromRGB(255, 90, 90), -- v4.7.9: icon custom color
 		})
 		Dialog:AddFooterButton("No", { Title = "Jangan", Variant = "Secondary", Order = 1 })
 		Dialog:AddFooterButton("Yes", { Title = "Ya, reset", Variant = "Destructive", Order = 2, WaitTime = 3 })
@@ -950,7 +964,7 @@ Try("Advanced: R3 Dialog", function()
 	Box:AddButton("Dialog + komponen di dalamnya", function()
 		local Dialog = Window:AddDialog("Dialog_Form", {
 			Title = "Form dalam Dialog",
-			Description = "Dialog inherit BaseGroupbox, jadi bisa diisi komponen.",
+			Description = "Dialog inherit BaseGroupbox, jadi bisa diisi komponen. Tanpa Info.Icon = tanpa icon (opsi NO-ICON).",
 		})
 		Dialog:AddToggle("Dlg_Toggle", { Text = "Opsi tambahan", Default = true })
 		Dialog:AddSlider("Dlg_Slider", { Text = "Nilai", Default = 50, Min = 0, Max = 100, Suffix = "%" })

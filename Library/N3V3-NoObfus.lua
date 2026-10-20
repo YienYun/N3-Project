@@ -1632,7 +1632,7 @@ Library.TabAppearance = {
 Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per tab sidebar
 -- v4.7.2: version print biar nggak ada lagi debat "library lu lama/belum":
 -- baris ini MUNCUL di Output tiap require kalau library yang ke-paste emang baru.
-print("[N3V4 Library] v4.7.8 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.7.9 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
 function Library:GetCanvasColor(): Color3
@@ -12468,34 +12468,36 @@ function Library:CreateWindow(WindowInfo)
 			Parent = TitleRow,
 		})
 
+		-- v4.7.9: icon dialog = OPSI. Info.Icon nil/false = tanpa icon.
+		-- Kalau diisi: glyph di POJOK KANAN ATAS baris judul (mirip notif:
+		-- warna AccentColor, atau Info.IconColor), judul nyisihin tempat.
+		local DialogIconWidth = 0
 		if Info.Icon then
 			local ParsedIcon = Library:GetCustomIcon(Info.Icon)
 			if ParsedIcon then
-				local IconImg = New("ImageLabel", {
+				DialogIconWidth = 24
+				New("ImageLabel", {
 					BackgroundTransparency = 1,
-					Size = UDim2.fromOffset(16, 16),
+					Size = UDim2.fromOffset(18, 18),
 					Image = ParsedIcon.Url,
-					ImageColor3 = "FontColor",
+					ImageColor3 = Info.IconColor or "AccentColor",
 					ImageRectOffset = ParsedIcon.ImageRectOffset,
 					ImageRectSize = ParsedIcon.ImageRectSize,
-					LayoutOrder = 1,
+					LayoutOrder = 2,
 					ZIndex = 9002,
 					Parent = TitleRow,
 				})
-				if Info.TitleColor then
-					IconImg.ImageColor3 = Info.TitleColor
-				end
 			end
 		end
 
 		local TitleLabel = New("TextLabel", {
 			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, 18),
+			Size = UDim2.new(1, -DialogIconWidth, 0, 18),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			Text = Info.Title,
 			TextSize = 18,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			LayoutOrder = 2,
+			LayoutOrder = 1,
 			ZIndex = 9002,
 			Parent = TitleRow,
 		})
@@ -12663,6 +12665,7 @@ function Library:CreateWindow(WindowInfo)
 			if FooterButtonsList[ButtonIdx] then
 				FooterButtonsList[ButtonIdx].Container:Destroy()
 				FooterButtonsList[ButtonIdx] = nil
+				Dialog:Resize() -- v4.7.9: holder/separator nyusul update
 			end
 		end
 
@@ -12840,6 +12843,12 @@ function Library:CreateWindow(WindowInfo)
 			end
 
 			FooterButtonsList[ButtonIdx] = ButtonWrap
+
+			-- v4.7.9: BUG LAMA — tombol yang ditambah SETELAH AddDialog nggak
+			-- pernah keliatan: Resize awal jalan pas FooterButtonsList masih
+			-- kosong => ButtonsHolder/_Sep2 Visible=false, nggak di-update
+			-- lagi. Resize di sini bikin holder + separator langsung muncul.
+			Dialog:Resize()
 		end
 
 		for BIdx, BInfo in Info.FooterButtons do

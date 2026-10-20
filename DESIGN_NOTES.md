@@ -4,6 +4,24 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 
 ---
 
+## 🎯 v4.7.9 — DIALOG: BUTTON CONFIRM KELIATAN + ICON OPSIONAL
+
+Bug (screenshot user: dialog "Konfirmasi Aksi" & "Reset Semua Config?" tanpa
+button): AddFooterButton nggak manggil Dialog:Resize(). Resize awal (akhir
+AddDialog) jalan saat FooterButtonsList masih kosong => ButtonsHolder dan
+separator di-set Visible=false, dan tombol yang ditambah setelah itu masuk
+holder hidden. Library EMANG udah punya mekanisme button lengkap
+(AddFooterButton + Variant Primary/Secondary/Destructive/Ghost + WaitTime +
+progress bar) — cuma visibility-nya yang bocor. Fix: AddFooterButton &
+RemoveFooterButton manggil Dialog:Resize() (total panggilan Resize = 6).
+
+Icon dialog (request user: "opsi no icons dan icons di pojok kanan atas mirip
+notif"): Info.Icon = nama lucide => ImageLabel 18x18, ImageColor3 =
+Info.IconColor or AccentColor, LayoutOrder 2 di TitleRow (kanan); TitleLabel
+LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
+tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
+no-icon.
+
 ## 🔒 v4.7.8 — RESEP DURASI BUKA/TUTUP = TERKUNCI (user: "10% bagus!")
 
 Library.WindowAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
