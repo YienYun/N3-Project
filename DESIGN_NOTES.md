@@ -4,6 +4,35 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 
 ---
 
+## 🎯 v4.8.1 — POPUP V2 MULUS, WARNA IKUT THEME, CODE ENGLISH
+
+Tiga keluhan user atas v4.8.0, tiga akar:
+1. "Animasi kaku / ga mulus": popup cuma nge-tween scale + overlay; frame &
+   isi nongol INSTAN (pop-in) dan hilang INSTAN (pop-out). Fix: isi popup
+   dibungkus CanvasGroup (PopupContent) — GroupTransparency 1->0 (buka) /
+   0->1 (tutup) + BackgroundTransparency frame + UIScale + overlay, empat
+   tween serentak di Library.TweenInfo; destroy SETELAH tween kelar.
+   CanvasGroup = satu properti buat fade seluruh subtree = mulus & murah.
+2. "Ada bug": klik luar nggak nutup popup. Penyebab: overlay TextButton
+   ke-set Active=false (copas pola dialog upstream) => MouseButton1Click
+   mati total. Fix: Active=true. (Catatan: dialog upstream punya pola sama;
+   OutsideClickDismiss dialog juga kena — belum disentuh, bukan keluhan.)
+3. "Jangan hardcode color": footer button popup & dialog make TextColor3 =
+   Library.Scheme.* PAS DIBUAT = snapshot Color3 = ganti theme nggak ikut.
+   Fix: string theme ("BackgroundColor"/"FontColor") yang ke-register di
+   color registry => UpdateColorsUsingRegistry() ikut ngubah. Jawaban buat
+   user: YA sekarang selected dot (AccentColor), row (MainColor), icon
+   (FontColor/AccentColor), button, scrollbar (OutlineColor), overlay
+   (DarkColor), frame (BackgroundColor) SEMUA ikut theme.
+
+Aturan baru user: KODE = INGGRIS (komentar + string UI library), obrolan
+gue-lu tetap Indonesia. v4.8.1 nerjemahin SELURUH komentar Indonesia di
+Library/N3V3-NoObfus.lua (±235 baris, 2 pass, line-stable) + string UI
+(Bersihkan/Selesai -> Clear/Done, placeholder "Select..."). check.sh punya
+guard bahasa: komentar library nggak boleh kena kosakata Indonesia inti.
+Preview/module = testbed berdua → label UI & changelog tetap Indo (keputusan
+gue, user boleh veto).
+
 ## 🎯 v4.8.0 — DROPDOWN V2 = versi POPUP (V1 tidak disentuh)
 
 Request user: dropdown model popup/dialog, V1 tetap ada (nama API

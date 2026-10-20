@@ -7,6 +7,24 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.8.1 — POPUP V2 MULUS + WARNA IKUT THEME + CODE ENGLISH:
+	   • Animasi popup dulu "kaku": frame+isi nongol/hilang INSTAN (cuma
+	     scale+overlay yang fade) = pop. Sekarang isi popup dibungkus
+	     CanvasGroup: GroupTransparency + BackgroundTransparency frame +
+	     scale + overlay fade BARENGAN pas buka DAN tutup, destroy setelah
+	     tween kelar = masuk/keluar mulus.
+	   • BUG: klik luar nggak nutup popup — overlay ke-set Active=false
+	     (copas dari dialog) = MouseButton1Click mati. Sekarang Active=true.
+	   • NOL HARDCODE WARNA: footer button popup & dialog dulu baca
+	     Library.Scheme.* pas dibuat (snapshot Color3) = ganti theme nggak
+	     ikut. Sekarang pakai STRING theme ("FontColor"/"BackgroundColor"/
+	     "MainColor") = registry update ikut ganti theme. Jawab: YA, sekarang
+	     semua warna selected/button/icon ikut theme lu.
+	   • CODE = ENGLISH: seluruh komentar + string UI di LIBRARY diterjemahin
+	     (Bersihkan/Selesai -> Clear/Done, placeholder "Select..."). Aturan
+	     baru: kode & komentar library Inggris; obrolan gue-lu tetap Indo.
+	     (Preview/module = testbed kita, label masih Indo biar enak lu pakai.)
+
 	 CHANGELOG v4.8.0 — DROPDOWN V2 (versi POPUP, V1 TETAP ADA):
 	   • AddDropdownV2: baris kompak di groupbox; klik = popup modal gaya
 	     dialog: header judul+icon kanan-atas, summary "Total Selected:
@@ -261,7 +279,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.8.0" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.8.1" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -293,7 +311,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.8.0",
+	Footer = "N3V4 • UI Preview Kit v4.8.1",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

@@ -95,7 +95,7 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.8.0 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.8.1 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + halo stroke + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconStrokeHalo' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
@@ -108,6 +108,12 @@ chk "v4.7.9: footer button dialog di-Resize (holder nggak hidden) = 6x Resize" \
 	"[ \$(grep -c 'Dialog:Resize()' '$LIB') -eq 6 ]"
 chk "v4.8.0: DropdownV2 ada di library (popup modal + API lengkap)" \
 	"grep -q 'function Funcs:AddDropdownV2' '$LIB' && grep -q 'Type = \"DropdownV2\"' '$LIB' && grep -q 'Total Selected: %d/%d' '$LIB' && grep -q 'DropdownV2 = {' '$LIB'"
+chk "v4.8.1: popup V2 fade mulus (CanvasGroup) + klik-luar hidup" \
+	"grep -q 'PopupContent' '$LIB' && grep -q 'GroupTransparency = 1,' '$LIB' && grep -q 'Active = true, -- v4.8.1' '$LIB'"
+chk "v4.8.1: nol hardcode warna di footer button (theme strings)" \
+	"grep -q 'TextColor3 = Primary and \"BackgroundColor\" or \"FontColor\"' '$LIB' && grep -q 'local TextColor = Variant == \"Primary\" and \"BackgroundColor\" or \"FontColor\"' '$LIB'"
+chk "v4.8.1: komentar library full ENGLISH (guard bahasa)" \
+	"! grep -qE '^\\s*--.*\\b(yang|nggak|gue|lu|biar|kayak|gitu|udah|belum|kalo|jangan|tetep|bener|nongol|pake|doang|aja|dong|nih|durasi|layar|hitam|ungu|merah|gelap|terang|pojok|pencet|animasi|semua|setiap|banyak|sedikit|kosong|penuh|baru|lama|awal|akhir|sebelum|setelah|saat|waktu|dan|atau|untuk|dengan|tanpa|masih|sudah|bisa|tidak|bukan|nya|kita|kami|mereka|dia|saya|aku|kamu|anda|mulus|sebagai|serta|antara|selama|sekarang|sini|satu|dua|tiga|kalau|karena|jadi|maka|oleh|pada|depan|belakang|bagian|cara|jenis|bentuk|fitur|fungsi|hasil|nilai|angka|nama|teks|kata|baris|tabel|daftar|grup|isi|konten|elemen|komponen|pilihan|opsi|tombol|ikon|gambar|warna|ukuran|posisi|arah|titik|garis|kotak|sudut|tepi|ujung|mulai|selesai|berhenti|aktif|mati|hidup|nyala|tampil|sembunyi|muncul|ada|contoh|catatan|penting|gagal|berhasil|pasti|mungkin|versi)\\b' '$LIB'"
 chk "v4.8.0: popup V2 ditutup saat window close + demo preview simetris" \
 	"grep -q 'Option:ClosePopup(true)' '$LIB' && grep -q 'AddDropdownV2(\"DD2_Rarity\"' '$PRE' && grep -q 'AddDropdownV2(\"DD2_Mode\"' '$PRE'"
 chk "v4.7.9: icon dialog opsional kanan-atas gaya notif (lib + demo preview)" \
@@ -138,7 +144,7 @@ chk "simetris" "python3 '$ROOT/tools/symmetry.py' '$PRE'"
 chk "ggak manggil SetWallpaper/SetSurface (setingan cuma di file setingan)" \
 	"! grep -qE '^\s*[^-].*Library:Set(Wallpaper|Surface)' '$PRE'"
 chk "AddKeyBox di-guard typeof" "grep -q 'typeof(AdvancedTab.AddKeyBox)' '$PRE'"
-chk "footer v4.8.0" "grep -q 'Preview Kit v4.8.0' '$PRE'"
+chk "footer v4.8.1" "grep -q 'Preview Kit v4.8.1' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \
