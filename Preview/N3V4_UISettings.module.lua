@@ -13,6 +13,10 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.7.7: animasi BUKA/TUTUP WINDOW dibenerin di library (fade barengan =
+--        total waktu persis durasi, nol "layar hitam", tween di-cache =
+--        nol hitch, reversal mulus). Knob baru ST_AnimTime (Font & Animasi)
+--        + durasi ikut ke-print di RESEP THEMA.
 -- v4.7.6: RESEP TAB user DIBAKE (print 18:21) + refactor nol-duplikasi:
 --        halo+UIScale sekarang satu helper Library:CreateTabIconStroke,
 --        zoom satu helper Library:TweenTabZoom (UIScale = mulus), blok
@@ -105,6 +109,7 @@ Settings.DEFAULTS = {
 		ZoomTime = 0.20,
 	},
 	TabHoverZoom = true,
+	AnimTime = 0.20, -- v4.7.7: durasi buka/tutup window (detik; library default sama)
 	GroupColor = Color3.fromRGB(0, 0, 0), -- HITAM (user v4.6.5: balik hitam)
 	CanvasColor = Color3.fromRGB(156, 156, 156), -- dump user v5
 }
@@ -281,6 +286,11 @@ function Settings:Attach(Library, Window, Options)
 				On = Library.Animations[Key] and true or false
 			end
 			table.insert(lines, string.format("Library.Animations.%s = %s", Key, tostring(On)))
+		end
+
+		local AnimTime = Library.WindowAnimationInfo and tonumber(Library.WindowAnimationInfo.Time)
+		if AnimTime then
+			table.insert(lines, string.format("Library.WindowAnimationInfo = TweenInfo.new(%.2f, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)", AnimTime))
 		end
 
 		return table.concat(lines, "\n")
@@ -541,6 +551,18 @@ function Settings:Attach(Library, Window, Options)
 				end,
 			})
 		end
+
+		-- v4.7.7: durasi animasi buka/tutup WINDOW (library default 0.20s).
+		-- Nilai = persen dari 1 detik (20% = 0.20s). Dial di sini, terus
+		-- print RESEP THEMA — durasi pilihan lu ikut ke-print buat dibake.
+		Box:AddSlider("ST_AnimTime", {
+			Text = "Durasi buka/tutup window (% dari 1 detik)",
+			Default = math.floor(((Library.WindowAnimationInfo and Library.WindowAnimationInfo.Time) or DEFAULTS.AnimTime) * 100 + 0.5),
+			Min = 5, Max = 60, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				Library.WindowAnimationInfo = TweenInfo.new(Value / 100, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			end,
+		})
 	end)
 
 	Try("Settings: window", function()
@@ -908,6 +930,7 @@ function Settings:Attach(Library, Window, Options)
 				if Library.Animations then
 					Library.Animations.TabHoverZoom = DEFAULTS.TabHoverZoom ~= false
 				end
+				Library.WindowAnimationInfo = TweenInfo.new(DEFAULTS.AnimTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 			end)
 			SafeNotify({ Title = "Wallpaper", Description = "Resep user dipasang.", Icon = "sparkles", Time = 3 })
 		end)

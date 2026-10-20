@@ -215,7 +215,7 @@ local Library = {
 	TabSwipeOffset = 26,
 	TabSwipeFrom = "bottom",
 
-	WindowAnimationInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+	WindowAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), -- v4.7.7: 0.35 -> 0.2 (buka/tutup gesit; knob ST_AnimTime di settings)
 	DropdownTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 	KeyPickerTransitionInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
@@ -1632,7 +1632,7 @@ Library.TabAppearance = {
 Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per tab sidebar
 -- v4.7.2: version print biar nggak ada lagi debat "library lu lama/belum":
 -- baris ini MUNCUL di Output tiap require kalau library yang ke-paste emang baru.
-print("[N3V4 Library] v4.7.6 loaded — TabAppearance/TabVisuals OK (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.7.7 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
 function Library:GetCanvasColor(): Color3
@@ -2431,6 +2431,7 @@ end
 
 --// Animations \\--
 local TransparencyCache = {}
+local FadeTweenCache = setmetatable({}, { __mode = "k" }) -- v4.7.7: tween fade window di-cache & dipakai ulang (weak key = instance mati ke-GC)
 local ActiveTabTweens = setmetatable({}, { __mode = "k" })
 
 function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnComplete: (() -> ())?)
@@ -10488,6 +10489,7 @@ function Library:CreateWindow(WindowInfo)
 	--// Window Table \\--
 	local Window = {}
 	local Fading = false
+	local FadeToken = 0 -- v4.7.7: token toggle terakhir (reversal aman, finalizer lama batal)
 
 	local function SetUICorner(UICorner, Corner, HalfCurrent, HalfValue, Value)
 		local Current = UICorner[Corner]
@@ -12861,31 +12863,72 @@ function Library:CreateWindow(WindowInfo)
 	local TextProperties = { "BackgroundTransparency", "TextTransparency" }
 	local StrokeProperties = { "Transparency" }
 
-	local function FadeInstance(Desc, Properties)
+	-- v4.7.7: fade buka/tutup window DITULIS ULANG. Bug versi lama:
+	-- (1) buka makan 1.5x durasi — task.wait(FadeTime/2) nge-block, shell
+	--     nongol duluan, konten nyusul = fase "layar hitam";
+	-- (2) ratusan TweenService:Create tiap toggle = frame drop pas baru kebuka;
+	-- (3) guard Fading versi lama nelan pencetan cepet + cache rest-value
+	--     bisa ke-capture mid-tween = transparency basi = glitch abis buka.
+	-- Sekarang: semua elemen fade BARENGAN (total = FadeTime persis, dark
+	-- surface & konten naik proporsional = nggak ada layar hitam); 1 tween
+	-- gabungan per instance, DI-CACHE & dipakai ulang (steady state cuma
+	-- Play(), mulai dari nilai sekarang = reversal mulus, nol Create = nol
+	-- hitch; Sig ngikut TweenInfo jadi knob durasi langsung kepake); token
+	-- = toggle di tengah fade jadi reversal, bukan ditelan; cache rest HANYA
+	-- di-capture pas rest; open pertama (belum ada cache) fade beneran.
+	local function FadeInstance(Desc, Properties, Opening, CanCapture)
 		local Cache = TransparencyCache[Desc]
 		if not Cache then
 			Cache = {}
 			TransparencyCache[Desc] = Cache
 		end
 
+		local Info = Library.WindowAnimationInfo
+		local Goals = {}
+		local Sig = Info.Time .. "|" .. Info.EasingStyle.Name .. "|" .. Info.EasingDirection.Name .. "|"
+
 		for _, Prop in Properties do
-			if not Library.Toggled then
-				Cache[Prop] = Desc[Prop]
+			local Rest = Cache[Prop]
+
+			if Rest == nil then
+				-- pertama kali ketemu: nilai sekarang = rest value authored
+				Rest = Desc[Prop]
+				Cache[Prop] = Rest
+				if Opening and Rest ~= 1 then
+					Desc[Prop] = 1 -- sembunyiin tanpa jeda frame biar ikut fade
+				end
+			elseif not Opening and CanCapture then
+				-- close pas rest: refresh cache (nilai bisa berubah pas kebuka)
+				Rest = Desc[Prop]
+				Cache[Prop] = Rest
 			end
 
-			if Cache[Prop] ~= nil and Cache[Prop] ~= 1 then
-				TweenService:Create(Desc, Library.WindowAnimationInfo, {
-					[Prop] = Library.Toggled and Cache[Prop] or 1,
-				}):Play()
+			if Rest ~= nil and Rest ~= 1 then
+				local Target = if Opening then Rest else 1
+				Goals[Prop] = Target
+				Sig ..= Prop .. "=" .. Target .. ";"
 			end
 		end
-	end
 
-	function Window:Toggle(Value: boolean?)
-		if Fading then
+		if next(Goals) == nil then
 			return
 		end
 
+		local Dir = if Opening then "in" else "out"
+		local Tweens = FadeTweenCache[Desc]
+		if not Tweens then
+			Tweens = {}
+			FadeTweenCache[Desc] = Tweens
+		end
+
+		if Tweens[Dir] == nil or Tweens[Dir .. "Sig"] ~= Sig then
+			Tweens[Dir] = TweenService:Create(Desc, Info, Goals)
+			Tweens[Dir .. "Sig"] = Sig
+		end
+		Tweens[Dir]:Play()
+	end
+
+	function Window:Toggle(Value: boolean?)
 		if Library.ActiveLoading then
 			if Value == true then
 				return
@@ -12900,18 +12943,18 @@ function Library:CreateWindow(WindowInfo)
 
 		if Library.Animations and Library.Animations.ToggleWindow == true then
 			local FadeTime = Library.WindowAnimationInfo.Time
+			local Reverse = Fading -- fade lama masih jalan = reversal, jangan telan pencetan
+			local CanCapture = not Reverse
 			Fading = true
+			FadeToken += 1
+			local Token = FadeToken
+			local Opening = Library.Toggled
 
-			if Library.Toggled then
+			if Opening then
 				MainFrame.Visible = true
 			end
 
-			if Library.Toggled then
-				FadeInstance(MainFrame, { "BackgroundTransparency" })
-				task.wait(FadeTime / 2)
-			else
-				task.delay(FadeTime / 2, FadeInstance, MainFrame, { "BackgroundTransparency" })
-			end
+			FadeInstance(MainFrame, GuiProperties, Opening, CanCapture)
 
 			for _, Instance in MainFrame:GetDescendants() do
 				if Instance == TopBar then
@@ -12921,24 +12964,28 @@ function Library:CreateWindow(WindowInfo)
 				if Instance:IsA("GuiObject") then
 					local ClassName = Instance.ClassName
 					if ClassName == "ImageLabel" or ClassName == "ImageButton" then
-						FadeInstance(Instance, ImageProperties)
+						FadeInstance(Instance, ImageProperties, Opening, CanCapture)
 					elseif ClassName == "TextLabel" or ClassName == "TextBox" or ClassName == "TextButton" then
-						FadeInstance(Instance, TextProperties)
+						FadeInstance(Instance, TextProperties, Opening, CanCapture)
 					else
-						FadeInstance(Instance, GuiProperties)
+						FadeInstance(Instance, GuiProperties, Opening, CanCapture)
 					end
 				elseif Instance.ClassName == "UIStroke" then
-					FadeInstance(Instance, StrokeProperties)
+					FadeInstance(Instance, StrokeProperties, Opening, CanCapture)
 				end
 			end
 
 			task.delay(FadeTime, function()
+				if Token ~= FadeToken then
+					return -- toggle yang lebih baru udah ambil alih
+				end
 				MainFrame.Visible = Library.Toggled
 				Fading = false
 			end)
 		else
 			MainFrame.Visible = Library.Toggled
 		end
+
 
 		if WindowInfo.UnlockMouseWhileOpen then
 			ModalElement.Modal = Library.Toggled
@@ -14539,6 +14586,7 @@ function Library:Unload()
 	table.clear(Library.DependencyBoxes)
 
 	table.clear(TransparencyCache)
+	table.clear(FadeTweenCache)
 	table.clear(ActiveTabTweens)
 
 	Library.Toggle = function(...) end

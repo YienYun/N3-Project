@@ -4,6 +4,35 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 
 ---
 
+## 🎯 v4.7.7 — ANIMASI BUKA/TUTUP WINDOW (fix, bukan fitur)
+
+Keluhan user: buka terlalu lama, kadang glitch pas baru kebuka, "biasanya ada
+layar hitam" pas buka. Root cause di Window:Toggle + FadeInstance lama:
+1. Buka = 1.5x FadeTime: FadeInstance(MainFrame) duluan, task.wait(FadeTime/2)
+   nge-block, konten baru fade setelahnya => shell/permukaan gelap nongol
+   duluan = fase LAYAR HITAM.
+2. TweenService:Create per properti per instance, ratusan tiap toggle, dibuat
+   ulang setiap kali => hitch/frame drop pas baru kebuka.
+3. `if Fading then return` nelan pencetan cepet; Fading dilepas di FadeTime
+   padahal konten masih fade sampai 1.5x => close di jendela itu nge-capture
+   nilai MID-TWEEN ke TransparencyCache => rest value basi => glitch abis buka.
+4. Open pertama: cache kosong => semua skip => window POP instan tanpa fade.
+
+Fix (rewrite FadeInstance + blok animasi Toggle, tetap 1 implementasi):
+- Fade BARENGAN semua elemen (buka & tutup), total = FadeTime persis.
+- 1 tween gabungan per instance, di-cache di FadeTweenCache (weak key) dan
+  dipakai ulang; Sig = TweenInfo + target props => ganti durasi via knob
+  langsung invalidate tween lama. Steady state = cuma Play() (mulai dari
+  nilai sekarang => reversal mid-fade mulus).
+- FadeToken: finalizer (Visible/Fading) cuma jalan utk toggle terakhir.
+- Cache rest HANYA di-capture pas rest (CanCapture = not Reverse); elemen
+  pertama ketemu di-capture + di-set 1 tanpa jeda frame => open pertama fade.
+- Default WindowAnimationInfo 0.35 -> 0.20 (L218). Knob ST_AnimTime di
+  module (Font & Animasi, 5-60% detik), ikut ke-print di RESEP THEMA,
+  DEFAULTS.AnimTime = 0.20, dipulihkan tombol RESEP USER (disetujui).
+Lokasi: FadeInstance+Toggle ~L12864+ (CreateWindow), FadeToken L10491,
+FadeTweenCache L2434, clear di Unload L14542, print versi v4.7.7 L1635.
+
 ## 🔒 RESEP TAB = TERKUNCI (print user 18:21, v4.7.6)
 
 Library:SetTabAppearance({

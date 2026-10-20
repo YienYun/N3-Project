@@ -7,6 +7,23 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.7.7 — ANIMASI BUKA/TUTUP WINDOW DIBENERIN:
+	   • Buka nggak lagi 1.5x durasi: stagger task.wait dihapus, shell +
+	     konten fade BARENGAN => total waktu = durasi persis (default baru
+	     0.20s, dulu 0.35s + stagger = ~0.53s).
+	   • "Layar hitam pas buka" hilang: dulu permukaan gelap (wallpaper/
+	     overlay/kartu) nongol duluan baru konten nyusul; sekarang semua
+	     naik proporsional sekaligus.
+	   • Glitch/hitch pas baru kebuka hilang: tween fade sekarang 1 per
+	     instance (properti digabung) + DI-CACHE dipakai ulang — steady
+	     state cuma Play(), nol TweenService:Create ratusan per toggle.
+	   • Pencetan cepet nggak ketelen: toggle di tengah animasi = reversal
+	     mulus (token), cache transparency cuma di-capture pas rest
+	     (bug mid-tween capture = nilai basi, dibenerin).
+	   • Open pertama juga fade beneran (dulu pop instan tanpa animasi).
+	   • Knob baru: "Durasi buka/tutup window" (tab UI Settings > Font &
+	     Animasi) + durasi ikut ke-print di RESEP THEMA.
+
 	 CHANGELOG v4.7.6 — RESEP TAB LU DIBAKE + NOL CODE SAMPAH:
 	   • Print RESEP TAB lu (stroke 1px/20%/ungu 107-0-181, bg tab 100%,
 	     bg aktif 85% abu 128, zoom hover 130%, zoom aktif 140%, durasi 0.20)
@@ -213,7 +230,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.7.6" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.7.7" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -245,7 +262,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.7.6",
+	Footer = "N3V4 • UI Preview Kit v4.7.7",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
