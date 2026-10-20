@@ -117,6 +117,22 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🔒 v4.8.5 — RESEP TAB v3 = TERKUNCI (screenshot user + warna dari chat)
+
+Card recipe v2 (menggantikan baseline v4.8.4): tebal 1px · transparansi
+0.36 · napas 3px · radius 5px · garis Color3.fromRGB(135,135,135) ·
+bg semua tab 0.90. (Zoom/aktif tetep: 0.60 hitam, 1.25/1.25, 0.20.)
+Bake di Library.TabAppearance + Settings.DEFAULTS.Tab; checker dikunci
+ke nilai v3 (lib+mod).
+
+Fix UX (user: "gimana gue mau copy anj?"): tombol print resep tab
+sebelumnya nyelip di BAWAH TEST/DEBUG di groupbox kanan ("Tab Aktif &
+Zoom"), dan tab nggak punya tombol copy padahal tema & wallpaper punya
+pasangan print+copy. Sekarang print+copy resep tab nempel DI groupbox
+"Tab Card & Bg" (sebelah knob card); copy pakai CopyClip (setclipboard +
+fallback Output) — pola yang sama persis kayak Copy resep tema. Tombol
+print lama di groupbox kanan DIHAPUS (pindah, bukan duplikat).
+
 ## 🎯 v4.8.4 — TAB ICON CARD (halo stroke DIGANTI garis kotak simetris)
 
 Request user ("bukan stroke jelek jir!"): icon tab jangan di-halo glyph,

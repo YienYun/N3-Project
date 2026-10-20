@@ -13,6 +13,10 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.8.5: RESEP TAB v3 DIBAKE (screenshot user: tebal 1, transparansi 36%,
+--        napas 3, radius 5, bg semua tab 90%; warna garis 135 dari chat).
+--        Print+copy resep tab pindah ke groupbox "Tab Card & Bg" (sebelah
+--        knob card) — sebelumnya nyelip bawah TEST/DEBUG & tanpa copy.
 -- v4.8.4: TAB ICON CARD — halo stroke glyph DIGANTI garis kotak simetris
 --        (card) di seputar ICON doang, bukan full tab (user: "bukan stroke
 --        jelek jir"). Card = anak icon -> ikut zoom, padding tetep simetris.
@@ -107,14 +111,14 @@ Settings.DEFAULTS = {
 	Canvas = 1,
 	Group = 0.5, -- v4.8.3: dump user v7
 	Contrast = 40,
-	Tab = { -- v4.8.4 = TAB ICON CARD (halo stroke diganti garis kotak icon)
+	Tab = { -- v4.8.5 = RESEP TAB USER v3 TERKUNCI (screenshot + warna 135)
 		IconCardEnabled = true,
-		IconCardPadding = 4,
-		IconCardThickness = 1.5,
-		IconCardTransparency = 0.30,
-		IconCardRadius = 6,
-		IconCardColor = Color3.fromRGB(0, 0, 0),
-		TabBackgroundTransparency = 1,
+		IconCardPadding = 3,
+		IconCardThickness = 1,
+		IconCardTransparency = 0.36,
+		IconCardRadius = 5,
+		IconCardColor = Color3.fromRGB(135, 135, 135),
+		TabBackgroundTransparency = 0.90,
 		ActiveBackgroundTransparency = 0.60,
 		ActiveBackgroundColor = Color3.fromRGB(0, 0, 0),
 		HoverZoom = 1.25,
@@ -551,6 +555,21 @@ function Settings:Attach(Library, Window, Options)
 				Library:SetTabAppearance({ TabBackgroundTransparency = Value / 100 })
 			end,
 		})
+		-- v4.8.5: print+copy resep TAB nempel DI groupbox card (user: "gimana
+		-- gue mau copy anj?" — sebelumnya nyelip bawah TEST/DEBUG & tanpa copy)
+		Box:AddButton("Print resep tab", function()
+			print("[N3V4 RESEP TAB] paste ini balik:\n" .. BuildTab())
+			SafeNotify({ Title = "Resep tab", Description = "Cek Output.", Icon = "copy", Time = 3 })
+		end)
+		Box:AddButton("Copy resep tab", function()
+			local Text = BuildTab()
+			if CopyClip(Text) then
+				SafeNotify({ Title = "Resep tab", Description = "Copied ke clipboard.", Icon = "clipboard-check", Time = 3 })
+			else
+				print("[N3V4 RESEP TAB]\n" .. Text)
+				SafeNotify({ Title = "Resep tab", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+			end
+		end)
 
 		local Box = T1:AddRightGroupbox("Font & Animasi", "type")
 
@@ -753,9 +772,6 @@ function Settings:Attach(Library, Window, Options)
 					break
 				end
 			end
-		end)
-		Box:AddButton("Print resep tab", function()
-			print("[N3V4 RESEP TAB]\n" .. BuildTab())
 		end)
 
 	local T2 = Window:AddTab("Wallpaper & Surface", "image", "Wallpaper, warna, transparansi")
