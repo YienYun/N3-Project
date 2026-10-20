@@ -95,11 +95,13 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.7.4 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.7.5 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + halo stroke + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconStrokeHalo' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
 	"grep -q 'function Library:ZoomTabEnabled' '$LIB' && grep -q 'window ready: tabVisuals' '$LIB' && grep -q 'TabHoverZoom = true, -- v4.7.4' '$PREV'"
+chk "v4.7.5: patch tab ada di AddTab ASLI (bukan AddKeyTab doang)" \
+	"[ \$(grep -c 'table.insert(Library.TabVisuals, TabRec)' '$LIB') -eq 2 ] && [ \$(grep -c 'BackgroundTransparency = Library.TabAppearance.TabBackgroundTransparency,' '$LIB') -eq 4 ]"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
 	"grep -q 'Transparency = 0,' '$MOD' && grep -q 'Contrast = 40' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.fromRGB(156, 156, 156)' '$MOD'"
 chk "state S di-init SEBELUM BuildResep/BuildTema (bug 'index nil with Image')" \
@@ -122,7 +124,7 @@ chk "simetris" "python3 '$ROOT/tools/symmetry.py' '$PRE'"
 chk "ggak manggil SetWallpaper/SetSurface (setingan cuma di file setingan)" \
 	"! grep -qE '^\s*[^-].*Library:Set(Wallpaper|Surface)' '$PRE'"
 chk "AddKeyBox di-guard typeof" "grep -q 'typeof(AdvancedTab.AddKeyBox)' '$PRE'"
-chk "footer v4.7.4" "grep -q 'Preview Kit v4.7.4' '$PRE'"
+chk "footer v4.7.5" "grep -q 'Preview Kit v4.7.5' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \

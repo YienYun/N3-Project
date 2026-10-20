@@ -1632,7 +1632,7 @@ Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per tab side
 Library.TabIconBaseSize = 24 -- px, ukuran dasar icon tab (buat math zoom)
 -- v4.7.2: version print biar nggak ada lagi debat "library lu lama/belum":
 -- baris ini MUNCUL di Output tiap require kalau library yang ke-paste emang baru.
-print("[N3V4 Library] v4.7.4 loaded — TabAppearance/TabVisuals OK (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.7.5 loaded — TabAppearance/TabVisuals OK (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
 function Library:GetCanvasColor(): Color3
@@ -10779,6 +10779,11 @@ function Library:CreateWindow(WindowInfo)
 		local TabButton: TextButton
 		local TabLabel
 		local TabIcon
+		local TabIconStroke
+		local TabIconScale
+		local TabRec -- v4.7.5: scope function (BUG v4.7.0-7.4: semua patch tab
+		-- malah masuk AddKeyTab; AddTab asli = fungsi ini, nggak kepatch sama
+		-- sekali -> rec=0, zoom mati, stroke mati. Ketemu dari DEBUG rec=0.)
 
 		local TabContainer
 		local TabCanvas
@@ -10789,7 +10794,8 @@ function Library:CreateWindow(WindowInfo)
 		do
 			TabButton = New("TextButton", {
 				BackgroundColor3 = "MainColor",
-				BackgroundTransparency = 1,
+				-- v4.7.5: background dikit di SEMUA tab (AddTab asli)
+				BackgroundTransparency = Library.TabAppearance.TabBackgroundTransparency,
 				Size = UDim2.new(1, 0, 0, 44),
 				Text = "",
 				Parent = Tabs,
@@ -10827,6 +10833,23 @@ function Library:CreateWindow(WindowInfo)
 					Size = UDim2.fromOffset(24, 24),
 					Parent = TabButton,
 				})
+				-- v4.7.5: halo stroke + zoom Size di AddTab asli
+				TabIcon.ZIndex = 3
+				TabIconStroke = New("ImageLabel", {
+					Name = "TabIconStrokeHalo",
+					Image = Icon.Url,
+					ImageRectOffset = Icon.ImageRectOffset,
+					ImageRectSize = Icon.ImageRectSize,
+					ImageColor3 = Library.TabAppearance.IconStrokeColor,
+					ImageTransparency = Library.TabAppearance.IconStrokeTransparency,
+					BackgroundTransparency = 1,
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.new(1, 2 * Library.TabAppearance.IconStrokeThickness, 1, 2 * Library.TabAppearance.IconStrokeThickness),
+					ZIndex = 2,
+					Parent = TabIcon,
+				})
+				TabIconScale = nil
 			end
 
 			table.insert(Library.TabButtons, {
@@ -10834,6 +10857,10 @@ function Library:CreateWindow(WindowInfo)
 				Padding = ButtonPadding,
 				Icon = TabIcon,
 			})
+
+			-- v4.7.5: rec ApplyTabAppearance di AddTab asli
+			TabRec = { Button = TabButton, Icon = TabIcon, Stroke = TabIconStroke, Scale = TabIconScale }
+			table.insert(Library.TabVisuals, TabRec)
 
 			--// Tab Canvas \\--
 			TabCanvas = New("CanvasGroup", {
@@ -11829,6 +11856,14 @@ function Library:CreateWindow(WindowInfo)
 					ImageTransparency = Hovering and 0.25 or 0.5,
 				}):Play()
 			end
+			-- v4.7.5: zoom hover di AddTab asli
+			if TabIcon and Library:ZoomTabEnabled() then
+				local Z = Hovering and Library.TabAppearance.HoverZoom or 1
+				local Base = Library.TabIconBaseSize
+				TweenService:Create(TabIcon, Library:GetZoomTweenInfo(), {
+					Size = UDim2.fromOffset(Base * Z, Base * Z),
+				}):Play()
+			end
 		end
 
 		function Tab:Show()
@@ -11840,8 +11875,10 @@ function Library:CreateWindow(WindowInfo)
 				Library.ActiveTab:Hide()
 			end
 
+			-- v4.7.5: bg aktif + zoom aktif di AddTab asli
+			TabButton.BackgroundColor3 = Library.TabAppearance.ActiveBackgroundColor
 			TweenService:Create(TabButton, Library.TweenInfo, {
-				BackgroundTransparency = 0,
+				BackgroundTransparency = Library.TabAppearance.ActiveBackgroundTransparency,
 			}):Play()
 			TweenService:Create(TabLabel, Library.TweenInfo, {
 				TextTransparency = 0,
@@ -11850,6 +11887,15 @@ function Library:CreateWindow(WindowInfo)
 				TweenService:Create(TabIcon, Library.TweenInfo, {
 					ImageTransparency = 0,
 				}):Play()
+			end
+			if TabIcon then
+				local Base = Library.TabIconBaseSize
+				local Target = UDim2.fromOffset(Base * Library.TabAppearance.ActiveZoom, Base * Library.TabAppearance.ActiveZoom)
+				if Library:ZoomTabEnabled() then
+					TweenService:Create(TabIcon, Library:GetZoomTweenInfo(), { Size = Target }):Play()
+				else
+					TabIcon.Size = Target
+				end
 			end
 
 			if Description then
@@ -11867,8 +11913,10 @@ function Library:CreateWindow(WindowInfo)
 		end
 
 		function Tab:Hide()
+			-- v4.7.5: bg semua tab + zoom balik di AddTab asli
+			TabButton.BackgroundColor3 = Library.Scheme.MainColor
 			TweenService:Create(TabButton, Library.TweenInfo, {
-				BackgroundTransparency = 1,
+				BackgroundTransparency = Library.TabAppearance.TabBackgroundTransparency,
 			}):Play()
 
 			TweenService:Create(TabLabel, Library.TweenInfo, {
@@ -11879,6 +11927,15 @@ function Library:CreateWindow(WindowInfo)
 				TweenService:Create(TabIcon, Library.TweenInfo, {
 					ImageTransparency = 0.5,
 				}):Play()
+			end
+			if TabIcon then
+				local Base = Library.TabIconBaseSize
+				local Target = UDim2.fromOffset(Base, Base)
+				if Library:ZoomTabEnabled() then
+					TweenService:Create(TabIcon, Library:GetZoomTweenInfo(), { Size = Target }):Play()
+				else
+					TabIcon.Size = Target
+				end
 			end
 
 			Library:PlayTabAnimation(TabCanvas, false)
@@ -11960,6 +12017,7 @@ function Library:CreateWindow(WindowInfo)
 			Tab:Show()
 		end)
 
+		TabRec.Tab = Tab -- v4.7.5: AddTab asli
 		Library.Tabs[Name] = Tab
 
 		return Tab

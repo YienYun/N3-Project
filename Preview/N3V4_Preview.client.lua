@@ -7,6 +7,15 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.7.5 — AKHIRNYA KE FUNGSI YANG BENER (Window:AddTab):
+	   • v4.7.0-7.4 semua patch tab (stroke halo, bg, zoom, TabRec) MASUK KE
+	     Window:AddKeyTab, bukan Window:AddTab. Tab sidebar kiri lu dibuat
+	     lewat AddTab -> nggak kepatch sama sekali. DEBUG rec=0 dari user
+	     yang ngebongkar ini. Sekarang AddTab (fungsi asli tab sidebar)
+	     punya semua: halo stroke, bg semua tab, bg aktif, zoom hover/aktif.
+	   • Bukti: Output "[N3V4 Library] window ready: tabVisuals=N" sekarang
+	     N = jumlah tab sidebar lu (bukan 0).
+
 	 CHANGELOG v4.7.4 — ZOOM MATI KARENA ANIMATIONS KE-NIMPA + bukti otomatis:
 	   • WindowInfo.Animations caller (preview) cuma bawa 5 bool -> tabel
 	     Animations ke-replace tanpa TabHoverZoom -> nil = gate zoom MATI.
@@ -193,7 +202,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.7.4" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.7.5" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -225,7 +234,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.7.4",
+	Footer = "N3V4 • UI Preview Kit v4.7.5",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

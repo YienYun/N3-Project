@@ -17,6 +17,15 @@ Baseline (Library.TabAppearance + Settings.DEFAULTS.Tab):
   HoverZoom 1.12 | ActiveZoom 1.08 | ZoomTime 0.15s (Quad Out)
   Matinya: Library.Animations.TabHoverZoom = false
 
+KESALAHAN PALING BODOH (v4.7.5): semua patch tab v4.7.0-7.4 masuk ke
+Window:AddKeyTab (fungsi tab key-picker), BUKAN Window:AddTab (pembuat tab
+sidebar kiri). Gejala: rec=0 di DEBUG, zoom/stroke/bg mati total di tab
+sidebar walau library baru. User bener terus dari awal; gue yang salah
+baca struktur file (dua fungsi AddTab* dengan bentuk kode mirip, beda
+indent). v4.7.5: AddTab asli kepatch penuh; AddKeyTab tetep kepatch juga
+(konsisten). Pelajaran: verifikasi fungsi target pakai boundary function,
+bukan kemiripan blok kode.
+
 v4.7.4: gate zoom dulu `Library.Animations.TabHoverZoom` langsung — tabel
 Animations bisa ke-REPLACE sama WindowInfo.Animations caller (preview cuma
 bawa 5 bool) -> key ilang -> nil -> zoom mati. Sekarang Library:ZoomTabEnabled()

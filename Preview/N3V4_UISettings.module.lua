@@ -13,6 +13,9 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.7.5: PATCH TAB MASUK KE FUNGSI YANG BENER (Window:AddTab). v4.7.0-7.4
+--        salah masuk AddKeyTab -> rec=0 & zoom/stroke mati di tab sidebar.
+--        DEBUG activeTab sekarang print boolean bener.
 -- v4.7.4: TEST ikut nyalain toggle stroke/bg-aktif + TabHoverZoom; gate zoom
 --        nil-safe di library; CreateWindow auto-apply + print tabVisuals.
 -- v4.7.3: FIX BUG BESAR: local TabRec kedelep di dalam do-block library ->
@@ -681,7 +684,7 @@ function Settings:Attach(Library, Window, Options)
 			-- v4.7.3: ground-truth dump kalau efek tab dikira mati lagi:
 			-- jumlah rec, size icon (zoom), halo stroke (warna/transp/visible).
 			local TV = Library.TabVisuals or {}
-			print(string.format("[N3V4 DEBUG TAB] rec=%d activeTab=%s", #TV, tostring(Library.ActiveTab and Library.ActiveTab.Name or nil)))
+			print(string.format("[N3V4 DEBUG TAB] rec=%d activeTab=%s", #TV, tostring(Library.ActiveTab ~= nil)))
 			for I, Rec in ipairs(TV) do
 				local Icon = Rec.Icon
 				local St = Rec.Stroke
