@@ -348,6 +348,7 @@ nyetel apa-apa nggak berubah tampilan.
 
 | API | Return | Jebakan |
 |---|---|---|
+| `Funcs:AddColorPicker(Idx, Info)` | `ColorPicker` | **HARUS nempel ke object yang punya `.TextLabel`** = Toggle / Button. Nempel ke **groupbox = crash runtime** (`Parent = nil`) dan picker nggak ke-render. Pernah kejadian v4.4 → fix v4.4.2 (host = toggle) |
 | `Library:SetBackgroundImage(img)` | — | **Dulu bug**: assert-nya nerima `string \| number` tapi `Window:SetBackgroundImage` cuma handle string → angka ID diem-diem gagal. **Udah di-fix** (normalisasi ke `rbxassetid://%d`) |
 | `Library:Notify(...)` | `Data` table | `ChangeTitle`/`ChangeDescription`/`ChangeStep`/`Resize`/`Destroy`. **BUKAN** `SetStep`/`Dismiss` |
 | `Library:CreateOverlay(Info)` | `Self` | Panel **key-value**: `SetRow(K,V,Color)`/`RemoveRow`/`ClearRows`/`SetVisible`/`Destroy`. Nggak ada `AddLabel`/`AddButton` |

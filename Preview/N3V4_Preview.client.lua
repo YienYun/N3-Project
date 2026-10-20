@@ -3,6 +3,18 @@
 	 N3V4 — PREVIEW KIT v4   (LocalScript)
 	================================================================================
 
+	 FIX (v4.4.2) — PICKER AKHIRNYA BENERAN MUNCUL:
+	   • BUG: AddColorPicker di library ini HARUS nempel ke object yang punya
+	     .TextLabel (Toggle / Button). Gue sempat nempel-in ke GROUPBOX ->
+	     TextLabel nil -> crash runtime -> groupbox WARNA isinya label doang,
+	     picker-nya nggak ke-render. (Keliatan di screenshot user.)
+	   • Sekarang tiap warna punya TOGGLE sendiri sebagai host:
+	     "Tint aktif" / "Overlay aktif" / "Canvas warna custom" /
+	     "Group warna custom". Toggle OFF = ikut bawaan/theme, ON = pakai
+	     warna lu. Klik kotak warna di kanan baris = picker.
+	   • Toggle & warna overlay pindah dari box Overlay ke box WARNA
+	     (biar semua warna satu tempat). Box Overlay sisa slider + reset.
+
 	 CHANGELOG v4.4.1:
 	   • Groupbox BARU "WARNA — custom lengkap" (kiri): SEMUA color picker
 	     dikumpulin di satu tempat biar nggak mungkin kelewat — tint wallpaper,
@@ -1573,17 +1585,10 @@ end)
 Try("Wallpaper: L2 Overlay (scrim)", function()
 	local Box = WallpaperTab:AddLeftGroupbox("Overlay / Scrim", "square-check")
 
-	Box:AddLabel("Overlay = lapisan warna di antara wallpaper dan konten.", true)
-	Box:AddLabel("Gunanya: wallpaper ramai/terang nggak bikin teks susah dibaca.", true)
-
-	Box:AddToggle("WP_OverlayEnabled", {
-		Text = "Aktifin overlay",
-		Default = WP.Overlay,
-		Callback = function(Value)
-			WP.Overlay = Value
-			ApplyWallpaper()
-		end,
-	})
+	Box:AddLabel("Overlay = lapisan warna di atas wallpaper.", true)
+	Box:AddLabel("Gunanya biar teks tetep kebaca waktu", true)
+	Box:AddLabel("wallpaper lu terang/rame.", true)
+	Box:AddLabel("Toggle ON/OFF + warna-nya ada di box WARNA.", true)
 
 	Box:AddSlider("WP_OverlayTransparency", {
 		Text = "Overlay transparency",
@@ -1592,13 +1597,18 @@ Try("Wallpaper: L2 Overlay (scrim)", function()
 		Max = 100,
 		Rounding = 0,
 		Suffix = "%",
-		Tooltip = "0% = overlay nutupin penuh · 100% = overlay ilang",
+		Tooltip = "0% = overlay nutupin penuh\n100% = overlay ilang",
 		Callback = function(Value)
 			WP.OverlayTransparency = Value / 100
 			ApplyWallpaper()
 		end,
 	})
 
+	Box:AddButton("Overlay: reset hitam 45%", function()
+		WP.OverlayColor = Color3.fromRGB(0, 0, 0)
+		WP.OverlayTransparency = 0.45
+		ApplyWallpaper()
+	end)
 end)
 
 Try("Wallpaper: L3 Rendering", function()
@@ -1889,67 +1899,116 @@ Try("Wallpaper: L4 Canvas & kartu group", function()
 end)
 
 Try("Wallpaper: L5 Warna custom", function()
+	-- PENTING: di library ini AddColorPicker HARUS nempel ke object yang punya
+	-- .TextLabel (Toggle/Button). Nempel ke groupbox = TextLabel nil = crash
+	-- runtime & picker-nya nggak ke-render. Makanya tiap warna punya toggle.
 	local Box = WallpaperTab:AddLeftGroupbox("WARNA — custom lengkap", "palette")
 
-	Box:AddLabel("Semua warna di sini bisa lu pilih sendiri.", true)
-	Box:AddLabel("Klik kotak warna di kanan tiap baris.", true)
+	Box:AddLabel("Tiap warna nempel di toggle-nya.", true)
+	Box:AddLabel("Toggle OFF = ikut bawaan / theme.", true)
+	Box:AddLabel("Toggle ON  = pakai warna pilihan lu.", true)
+	Box:AddLabel("Klik KOTAK WARNA di kanan baris buat milih.", true)
 
-	Box:AddDivider({ Text = "1 · Wallpaper", Margin = 4 })
-	Box:AddColorPicker("WP_Tint", {
-		Title = "Tint wallpaper",
-		Default = WP.Color,
-		Tooltip = "Putih = warna asli gambar.\nWarna lain = gambar di-tint warna itu.",
-		Callback = function(Color)
-			WP.Color = Color
+	Box:AddDivider({ Text = "1 · Tint wallpaper", Margin = 4 })
+	local LastTint = WP.Color
+	local TintTog = Box:AddToggle("WP_TintToggle", {
+		Text = "Tint aktif",
+		Default = WP.Color ~= Color3.fromRGB(255, 255, 255),
+		Callback = function(On)
+			WP.Color = On and LastTint or Color3.fromRGB(255, 255, 255)
 			ApplyWallpaper()
 		end,
 	})
-	Box:AddButton("Tint: reset ke putih", function()
-		WP.Color = Color3.fromRGB(255, 255, 255)
+	TintTog:AddColorPicker("WP_Tint", {
+		Title = "Tint wallpaper",
+		Default = WP.Color,
+		Tooltip = "Putih = warna asli gambar.\nWarna lain = gambar di-tint.",
+		Callback = function(Color)
+			LastTint = Color
+			if TintTog.Value then
+				WP.Color = Color
+				ApplyWallpaper()
+			end
+		end,
+	})
+	Box:AddButton("Tint: matiin + reset putih", function()
+		LastTint = Color3.fromRGB(255, 255, 255)
+		TintTog:SetValue(false)
+		WP.Color = LastTint
 		ApplyWallpaper()
 	end)
 
 	Box:AddDivider({ Text = "2 · Overlay / scrim", Margin = 4 })
-	Box:AddColorPicker("WP_OverlayColor", {
+	local OvTog = Box:AddToggle("WP_OverlayToggle", {
+		Text = "Overlay aktif",
+		Default = WP.Overlay,
+		Callback = function(On)
+			WP.Overlay = On
+			ApplyWallpaper()
+		end,
+	})
+	OvTog:AddColorPicker("WP_OverlayColor", {
 		Title = "Warna overlay",
 		Default = WP.OverlayColor,
-		Tooltip = "Hitam = scrim gelap (teks kebaca).\nWarna lain = tint suasana di atas wallpaper.",
+		Tooltip = "Hitam = scrim gelap (teks kebaca).\nWarna lain = tint suasana.",
 		Callback = function(Color)
 			WP.OverlayColor = Color
 			ApplyWallpaper()
 		end,
 	})
-	Box:AddButton("Overlay: reset ke hitam", function()
-		WP.OverlayColor = Color3.fromRGB(0, 0, 0)
-		ApplyWallpaper()
-	end)
 
-	Box:AddDivider({ Text = "3 · Latar / canvas", Margin = 4 })
-	Box:AddColorPicker("WP_CanvasColor", {
-		Title = "Warna canvas",
-		Default = WP.CanvasColor or Color3.fromRGB(32, 32, 32),
-		Tooltip = "Warna latar konten + sidebar\n(keliatan waktu wallpaper mati / transparan).",
-		Callback = function(Color)
-			WP.CanvasColor = Color
+	Box:AddDivider({ Text = "3 · Warna canvas", Margin = 4 })
+	local LastCanvas = WP.CanvasColor or Color3.fromRGB(32, 32, 32)
+	local CanTog = Box:AddToggle("WP_CanvasToggle", {
+		Text = "Canvas warna custom",
+		Default = typeof(WP.CanvasColor) == "Color3",
+		Callback = function(On)
+			WP.CanvasColor = On and LastCanvas or false
 			ApplyWallpaper()
 		end,
 	})
+	CanTog:AddColorPicker("WP_CanvasColor", {
+		Title = "Warna canvas",
+		Default = LastCanvas,
+		Tooltip = "Warna latar konten + sidebar\n(keliatan waktu wallpaper mati/transparan).",
+		Callback = function(Color)
+			LastCanvas = Color
+			if CanTog.Value then
+				WP.CanvasColor = Color
+				ApplyWallpaper()
+			end
+		end,
+	})
 	Box:AddButton("Canvas: ikut theme lagi", function()
+		CanTog:SetValue(false)
 		WP.CanvasColor = false
 		ApplyWallpaper()
 	end)
 
-	Box:AddDivider({ Text = "4 · Kartu group", Margin = 4 })
-	Box:AddColorPicker("WP_GroupColor", {
-		Title = "Warna kartu group",
-		Default = WP.GroupColor or Color3.fromRGB(30, 30, 30),
-		Tooltip = "Warna kartu groupbox / tabbox / depbox.\nKalau di-set, slider contrast di-ignore.",
-		Callback = function(Color)
-			WP.GroupColor = Color
+	Box:AddDivider({ Text = "4 · Warna kartu group", Margin = 4 })
+	local LastGroup = WP.GroupColor or Color3.fromRGB(30, 30, 30)
+	local GrpTog = Box:AddToggle("WP_GroupToggle", {
+		Text = "Group warna custom",
+		Default = typeof(WP.GroupColor) == "Color3",
+		Callback = function(On)
+			WP.GroupColor = On and LastGroup or false
 			ApplyWallpaper()
 		end,
 	})
+	GrpTog:AddColorPicker("WP_GroupColor", {
+		Title = "Warna kartu group",
+		Default = LastGroup,
+		Tooltip = "Warna kartu groupbox / tabbox / depbox.\nON = contrast slider di-ignore.",
+		Callback = function(Color)
+			LastGroup = Color
+			if GrpTog.Value then
+				WP.GroupColor = Color
+				ApplyWallpaper()
+			end
+		end,
+	})
 	Box:AddButton("Group: ikut theme lagi", function()
+		GrpTog:SetValue(false)
 		WP.GroupColor = false
 		WP.GroupContrast = 0
 		ApplyWallpaper()
@@ -1957,8 +2016,14 @@ Try("Wallpaper: L5 Warna custom", function()
 
 	Box:AddDivider({ Text = "Sapu jagat", Margin = 4 })
 	Box:AddButton("SEMUA WARNA: balik bawaan", function()
-		WP.Color = Color3.fromRGB(255, 255, 255)
+		LastTint = Color3.fromRGB(255, 255, 255)
+		LastCanvas = Color3.fromRGB(32, 32, 32)
+		LastGroup = Color3.fromRGB(30, 30, 30)
 		WP.OverlayColor = Color3.fromRGB(0, 0, 0)
+		TintTog:SetValue(false)
+		CanTog:SetValue(false)
+		GrpTog:SetValue(false)
+		WP.Color = LastTint
 		WP.CanvasColor = false
 		WP.GroupColor = false
 		ApplyWallpaper()
