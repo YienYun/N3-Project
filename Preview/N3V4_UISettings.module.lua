@@ -13,6 +13,11 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.8.4: TAB ICON CARD — halo stroke glyph DIGANTI garis kotak simetris
+--        (card) di seputar ICON doang, bukan full tab (user: "bukan stroke
+--        jelek jir"). Card = anak icon -> ikut zoom, padding tetep simetris.
+--        Default: padding 4, tebal 1.5, transparency 30%, radius 6, hitam.
+--        Knob stroke lama dihapus, diganti 6 knob IconCard* (box Card & Bg).
 -- v4.8.3: RESEP v7 + RESEP TAB v2 user DIBAKE (print 00:41-00:46):
 --        main 36, outline 65-62-62, radius 10, tint 148, overlay 0.40,
 --        group 0.5, canvas 119; tab: stroke 1.5/0.53 hitam, aktif 0.60
@@ -23,7 +28,7 @@
 --        nol hitch, reversal mulus). Knob baru ST_AnimTime (Font & Animasi)
 --        + durasi ikut ke-print di RESEP THEMA.
 -- v4.7.6: RESEP TAB user DIBAKE (print 18:21) + refactor nol-duplikasi:
---        halo+UIScale sekarang satu helper Library:CreateTabIconStroke,
+--        halo+UIScale satu helper (v4.8.4: helper-nya CreateTabIconCard),
 --        zoom satu helper Library:TweenTabZoom (UIScale = mulus), blok
 --        duplikat di AddTab/AddKeyTab dihapus -> file library mengecil.
 -- v4.7.5: PATCH TAB MASUK KE FUNGSI YANG BENER (Window:AddTab). v4.7.0-7.4
@@ -102,10 +107,13 @@ Settings.DEFAULTS = {
 	Canvas = 1,
 	Group = 0.5, -- v4.8.3: dump user v7
 	Contrast = 40,
-	Tab = { -- v4.8.3 = RESEP TAB USER v2 TERKUNCI (print 00:46)
-		IconStrokeThickness = 1.5,
-		IconStrokeTransparency = 0.53,
-		IconStrokeColor = Color3.fromRGB(0, 0, 0),
+	Tab = { -- v4.8.4 = TAB ICON CARD (halo stroke diganti garis kotak icon)
+		IconCardEnabled = true,
+		IconCardPadding = 4,
+		IconCardThickness = 1.5,
+		IconCardTransparency = 0.30,
+		IconCardRadius = 6,
+		IconCardColor = Color3.fromRGB(0, 0, 0),
 		TabBackgroundTransparency = 1,
 		ActiveBackgroundTransparency = 0.60,
 		ActiveBackgroundColor = Color3.fromRGB(0, 0, 0),
@@ -126,10 +134,10 @@ function Settings:Attach(Library, Window, Options)
 	shared.N3V4_UISettings_Attached = true
 
 	-- v4.7.1: STALE-PASTE DETECTOR buat LIBRARY. Kalau ModuleScript N3V4 di
-	-- ReplicatedStorage belum v4.7.0+, knob Tab (stroke/bg/zoom) manggil
-	-- fungsi yang nggak ada -> slider gerak tapi NIR efek + error di Output.
-	if type(Library.SetTabAppearance) ~= "function" or type(Library.TabAppearance) ~= "table" then
-		warn("[N3V4 Settings] LIBRARY LAMA terdeteksi (SetTabAppearance/TabAppearance nil)! Paste ulang Library/N3V3-NoObfus.lua ke ModuleScript N3V4 di ReplicatedStorage, kalau nggak knob Tab Stroke/Bg/Zoom nggak akan ngaruh.")
+	-- ReplicatedStorage belum v4.8.4+, knob Tab (card/bg/zoom) nyetel nilai
+	-- yang nggak dikenal -> slider gerak tapi NIR efek. v4.8.4: cek IconCard.
+	if type(Library.SetTabAppearance) ~= "function" or type(Library.TabAppearance) ~= "table" or Library.TabAppearance.IconCardEnabled == nil then
+		warn("[N3V4 Settings] LIBRARY LAMA terdeteksi (SetTabAppearance/TabAppearance/knob IconCard nil)! Paste ulang Library/N3V3-NoObfus.lua ke ModuleScript N3V4 di ReplicatedStorage, kalau nggak knob Tab Card/Bg/Zoom nggak akan ngaruh.")
 	end
 
 	Options = Options or {}
@@ -336,9 +344,12 @@ function Settings:Attach(Library, Window, Options)
 		local lines = {
 			"--[[ N3V4 RESEP TAB ]]",
 			"Library:SetTabAppearance({",
-			string.format("\tIconStrokeThickness = %.2f,", T.IconStrokeThickness or 0),
-			string.format("\tIconStrokeTransparency = %.2f,", T.IconStrokeTransparency or 0),
-			string.format("\tIconStrokeColor = %s,", RGB(T.IconStrokeColor or Color3.fromRGB(0, 0, 0))),
+			string.format("\tIconCardEnabled = %s,", tostring(T.IconCardEnabled ~= false)),
+			string.format("\tIconCardPadding = %.2f,", T.IconCardPadding or 0),
+			string.format("\tIconCardThickness = %.2f,", T.IconCardThickness or 0),
+			string.format("\tIconCardTransparency = %.2f,", T.IconCardTransparency or 0),
+			string.format("\tIconCardRadius = %.2f,", T.IconCardRadius or 0),
+			string.format("\tIconCardColor = %s,", RGB(T.IconCardColor or Color3.fromRGB(0, 0, 0))),
 			string.format("\tTabBackgroundTransparency = %.2f,", T.TabBackgroundTransparency or 0),
 			string.format("\tActiveBackgroundTransparency = %.2f,", T.ActiveBackgroundTransparency or 0),
 			string.format("\tActiveBackgroundColor = %s,", RGB(T.ActiveBackgroundColor or Color3.fromRGB(218, 68, 255))),
@@ -491,40 +502,47 @@ function Settings:Attach(Library, Window, Options)
 	end)
 
 	Try("Settings: font & animasi", function()
-		local Box = T1:AddLeftGroupbox("Tab Stroke & Bg", "sparkles")
+		local Box = T1:AddLeftGroupbox("Tab Card & Bg", "sparkles")
 
-		-- v4.7.0: stroke icon + background semua tab (sidebar). Baseline dari
-		-- Library.TabAppearance; user seting manual dulu, print, baru dibake.
+		-- v4.8.4: card outline icon (ganti stroke halo) + background semua tab
+		-- (sidebar). Baseline dari Library.TabAppearance; user seting manual
+		-- dulu di preview, print, baru dibake.
 		local TA0 = Library.TabAppearance or {}
-		local LastStrokeT = TA0.IconStrokeThickness or 1
-		local StrokeTog = Box:AddToggle("TB_StrokeOn", {
-			Text = "Stroke icon tab", Default = (TA0.IconStrokeThickness or 0) > 0,
+		local CardTog = Box:AddToggle("TB_CardOn", {
+			Text = "Card outline icon tab", Default = TA0.IconCardEnabled ~= false,
 			Callback = function(On)
-				if On then
-					Library:SetTabAppearance({ IconStrokeThickness = LastStrokeT })
-				else
-					Library:SetTabAppearance({ IconStrokeThickness = 0 })
-				end
+				Library:SetTabAppearance({ IconCardEnabled = On })
 			end,
 		})
-		StrokeTog:AddColorPicker("TB_StrokeC", {
-			Title = "Stroke color",
-			Default = TA0.IconStrokeColor or Color3.fromRGB(0, 0, 0),
+		CardTog:AddColorPicker("TB_CardC", {
+			Title = "Warna garis card",
+			Default = TA0.IconCardColor or Color3.fromRGB(0, 0, 0),
 			Callback = function(Color)
-				Library:SetTabAppearance({ IconStrokeColor = Color })
+				Library:SetTabAppearance({ IconCardColor = Color })
 			end,
 		})
-		local Sl_StrokeT = Box:AddSlider("TB_StrokeT", {
-			Text = "Tebal stroke", Default = TA0.IconStrokeThickness or 1, Min = 0, Max = 3, Rounding = 1, Suffix = "px",
+		local Sl_CardT = Box:AddSlider("TB_CardT", {
+			Text = "Tebal garis card", Default = TA0.IconCardThickness or 1.5, Min = 0, Max = 3, Rounding = 1, Suffix = "px",
 			Callback = function(Value)
-				LastStrokeT = Value
-				Library:SetTabAppearance({ IconStrokeThickness = Value })
+				Library:SetTabAppearance({ IconCardThickness = Value })
 			end,
 		})
-		local Sl_StrokeTr = Box:AddSlider("TB_StrokeTr", {
-			Text = "Stroke transparency (100% = ILANG)", Default = math.floor((TA0.IconStrokeTransparency or 0.4) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+		local Sl_CardTr = Box:AddSlider("TB_CardTr", {
+			Text = "Card transparency (100% = ILANG)", Default = math.floor((TA0.IconCardTransparency or 0.3) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
-				Library:SetTabAppearance({ IconStrokeTransparency = Value / 100 })
+				Library:SetTabAppearance({ IconCardTransparency = Value / 100 })
+			end,
+		})
+		Box:AddSlider("TB_CardPad", {
+			Text = "Napas card ke icon (simetris)", Default = TA0.IconCardPadding or 4, Min = 0, Max = 10, Rounding = 0, Suffix = "px",
+			Callback = function(Value)
+				Library:SetTabAppearance({ IconCardPadding = Value })
+			end,
+		})
+		Box:AddSlider("TB_CardRad", {
+			Text = "Radius sudut card", Default = TA0.IconCardRadius or 6, Min = 0, Max = 16, Rounding = 0, Suffix = "px",
+			Callback = function(Value)
+				Library:SetTabAppearance({ IconCardRadius = Value })
 			end,
 		})
 		local Sl_BgAll = Box:AddSlider("TB_BgAll", {
@@ -683,11 +701,12 @@ function Settings:Attach(Library, Window, Options)
 		})
 		Box:AddButton("TEST: bikin efek KELIATAN", function()
 			-- v4.7.2: tombol panik buat buktiin sistemnya jalan: set nilai yang
-			-- PASTI keliatan (stroke pekat, bg jelas, zoom gede) + sync slider.
+			-- PASTI keliatan (card pekat, bg jelas, zoom gede) + sync slider.
 			pcall(function()
 				Library:SetTabAppearance({
-					IconStrokeThickness = 1.5,
-					IconStrokeTransparency = 0,
+					IconCardEnabled = true,
+					IconCardThickness = 1.5,
+					IconCardTransparency = 0,
 					TabBackgroundTransparency = 0.35,
 					ActiveBackgroundTransparency = 0.45,
 					HoverZoom = 1.25,
@@ -699,32 +718,34 @@ function Settings:Attach(Library, Window, Options)
 					Library.Animations.TabHoverZoom = true
 				end
 			end)
-			pcall(function() StrokeTog:SetValue(true) end)
+			pcall(function() CardTog:SetValue(true) end)
 			pcall(function() ActiveTog:SetValue(true) end)
-			pcall(function() Sl_StrokeT:SetValue(1.5) end)
-			pcall(function() Sl_StrokeTr:SetValue(0) end)
+			pcall(function() Sl_CardT:SetValue(1.5) end)
+			pcall(function() Sl_CardTr:SetValue(0) end)
 			pcall(function() Sl_BgAll:SetValue(35) end)
 			pcall(function() Sl_BgAct:SetValue(45) end)
 			pcall(function() Sl_ZoomH:SetValue(125) end)
 			pcall(function() Sl_ZoomA:SetValue(115) end)
 			pcall(function()
-				Library:Notify({ Title = "TEST tab", Description = "Nilai diset KELIATAN: stroke 1.5px pekat, bg 35%/45%, zoom 125%/115%. Sekarang hover tab sidebar!", Time = 4 })
+				Library:Notify({ Title = "TEST tab", Description = "Nilai diset KELIATAN: card 1.5px pekat, bg 35%/45%, zoom 125%/115%. Sekarang hover tab sidebar!", Time = 4 })
 			end)
 		end)
 		Box:AddButton("DEBUG: dump tab visuals", function()
-			-- v4.7.3: ground-truth dump kalau efek tab dikira mati lagi:
-			-- jumlah rec, size icon (zoom), halo stroke (warna/transp/visible).
+			-- v4.8.4: ground-truth dump kalau efek tab dikira mati lagi:
+			-- jumlah rec, size icon (zoom), card outline (size/vis + stroke).
 			local TV = Library.TabVisuals or {}
 			print(string.format("[N3V4 DEBUG TAB] rec=%d activeTab=%s", #TV, tostring(Library.ActiveTab ~= nil)))
 			for I, Rec in ipairs(TV) do
 				local Icon = Rec.Icon
-				local St = Rec.Stroke
+				local Cd = Rec.Card
+				local St = Cd and Cd:FindFirstChildOfClass("UIStroke")
 				print(string.format(
-					"  tab%d | icon size=%s z=%s | halo=%s transp=%s thick-size=%s vis=%s | isActive=%s",
+					"  tab%d | icon size=%s z=%s | card=%s size=%s vis=%s | stroke transp=%s thick=%s | isActive=%s",
 					I,
 					tostring(Icon and Icon.Size), tostring(Icon and Icon.ZIndex),
-					tostring(St and St.Name or "NIL"),
-					tostring(St and St.ImageTransparency), tostring(St and St.Size), tostring(St and St.Visible),
+					tostring(Cd and Cd.Name or "NIL"),
+					tostring(Cd and Cd.Size), tostring(Cd and Cd.Visible),
+					tostring(St and St.Transparency), tostring(St and St.Thickness),
 					tostring(Rec.Tab ~= nil and Library.ActiveTab == Rec.Tab)
 				))
 				if I >= 4 then

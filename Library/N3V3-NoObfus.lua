@@ -1636,10 +1636,15 @@ Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
 -- the icon ... the active tab zooms a bit". All numbers = baseline,
 -- user tunes manually in preview then sends the print -> baked later.
 Library.TabAppearance = {
-	-- v4.8.3 = LOCKED USER TAB RECIPE v2 (print 00:46 after manual tuning)
-	IconStrokeThickness = 1.5, -- px, halo stroke glyph icon
-	IconStrokeTransparency = 0.53,
-	IconStrokeColor = Color3.fromRGB(0, 0, 0),
+	-- v4.8.4 = TAB ICON CARD (user request: the glyph halo stroke looked
+	-- ugly -> symmetric box outline around each icon only, NOT the full
+	-- tab). Halo removed entirely; single implementation, zero dead code.
+	IconCardEnabled = true, -- outline on/off
+	IconCardPadding = 4, -- px breathing room, glyph -> card line (symmetric)
+	IconCardThickness = 1.5, -- px, card line thickness
+	IconCardTransparency = 0.30, -- 30% = the number from the user
+	IconCardRadius = 6, -- px, rounded corners (same on all 4 corners)
+	IconCardColor = Color3.fromRGB(0, 0, 0), -- line color (black, as dialed)
 	TabBackgroundTransparency = 1, -- plain tabs without bg (user choice)
 	ActiveBackgroundTransparency = 0.60,
 	ActiveBackgroundColor = Color3.fromRGB(0, 0, 0),
@@ -1647,10 +1652,10 @@ Library.TabAppearance = {
 	ActiveZoom = 1.25, -- icon scale on active tab (holds)
 	ZoomTime = 0.20, -- seconds, Quad Out tween
 }
-Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per sidebar tab
+Library.TabVisuals = {} -- rec { Button, Icon, Card, Scale, Tab } per sidebar tab
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.8.3 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.8.4 loaded — TAB ICON CARD: garis kotak simetris di seputar icon tab (ganti stroke halo) + RESEP v7 tetep (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -1722,30 +1727,41 @@ function Library:IsInsideSurfaceCard(Obj: GuiObject?): boolean
 	return false
 end
 
--- v4.7.6: ONE place for tab icon visuals (AddTab & AddKeyTab call this,
--- zero duplication): halo stroke (ImageLabel behind the icon) + UIScale for
--- zoom (transform-only = smoother than a Size tween).
-function Library:CreateTabIconStroke(Icon: any, TabIcon: ImageLabel): (ImageLabel, UIScale)
+-- v4.8.4: ONE place for tab icon visuals (AddTab & AddKeyTab call this,
+-- zero duplication): icon CARD = symmetric rounded box outline behind the
+-- glyph (icon only, never the full tab) + UIScale for zoom (transform-only
+-- = smoother than a Size tween). The card is a CHILD of TabIcon, so the
+-- hover/active zoom scales glyph and card together -> the padding stays
+-- symmetric at every zoom level.
+function Library:CreateTabIconCard(TabIcon: ImageLabel): (Frame, UIScale)
 	TabIcon.ZIndex = 3
-	local Halo = New("ImageLabel", {
-		Name = "TabIconStrokeHalo",
-		Image = Icon.Url,
-		ImageRectOffset = Icon.ImageRectOffset,
-		ImageRectSize = Icon.ImageRectSize,
-		ImageColor3 = Library.TabAppearance.IconStrokeColor,
-		ImageTransparency = Library.TabAppearance.IconStrokeTransparency,
-		BackgroundTransparency = 1,
+	local T = Library.TabAppearance
+	local Card = New("Frame", {
+		Name = "TabIconCard",
 		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1, -- outline only, no fill
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.new(1, 2 * Library.TabAppearance.IconStrokeThickness, 1, 2 * Library.TabAppearance.IconStrokeThickness),
+		Size = UDim2.new(1, 2 * T.IconCardPadding, 1, 2 * T.IconCardPadding),
+		Visible = T.IconCardEnabled ~= false,
 		ZIndex = 2,
 		Parent = TabIcon,
+	})
+	New("UICorner", {
+		CornerRadius = UDim.new(0, T.IconCardRadius),
+		Parent = Card,
+	})
+	New("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = T.IconCardColor,
+		Thickness = T.IconCardThickness,
+		Transparency = T.IconCardTransparency,
+		Parent = Card,
 	})
 	local Scale = New("UIScale", {
 		Scale = 1,
 		Parent = TabIcon,
 	})
-	return Halo, Scale
+	return Card, Scale
 end
 
 function Library:TweenTabZoom(ScaleObj: UIScale?, Zoom: number)
@@ -1785,11 +1801,19 @@ end
 function Library:ApplyTabAppearance()
 	local T = Library.TabAppearance
 	for _, Rec in ipairs(Library.TabVisuals) do
-		if Rec.Stroke and Rec.Stroke.Parent then
-			Rec.Stroke.ImageColor3 = T.IconStrokeColor
-			Rec.Stroke.ImageTransparency = T.IconStrokeTransparency
-			Rec.Stroke.Size = UDim2.new(1, 2 * T.IconStrokeThickness, 1, 2 * T.IconStrokeThickness)
-			Rec.Stroke.Visible = T.IconStrokeThickness > 0
+		if Rec.Card and Rec.Card.Parent then
+			Rec.Card.Visible = T.IconCardEnabled ~= false
+			Rec.Card.Size = UDim2.new(1, 2 * T.IconCardPadding, 1, 2 * T.IconCardPadding)
+			local Corner = Rec.Card:FindFirstChildOfClass("UICorner")
+			if Corner then
+				Corner.CornerRadius = UDim.new(0, T.IconCardRadius)
+			end
+			local Stroke = Rec.Card:FindFirstChildOfClass("UIStroke")
+			if Stroke then
+				Stroke.Color = T.IconCardColor
+				Stroke.Thickness = T.IconCardThickness
+				Stroke.Transparency = T.IconCardTransparency
+			end
 		end
 		if Rec.Button and Rec.Button.Parent then
 			local Active = Rec.Tab ~= nil and Library.ActiveTab == Rec.Tab
@@ -11698,7 +11722,7 @@ function Library:CreateWindow(WindowInfo)
 		local TabButton: TextButton
 		local TabLabel
 		local TabIcon
-		local TabIconStroke
+		local TabIconCard
 		local TabIconScale
 		local TabRec -- v4.7.5: function scope (BUG v4.7.0-7.4: all tab patches
 		-- landed in AddKeyTab instead; the real AddTab = this function, never patched
@@ -11752,8 +11776,8 @@ function Library:CreateWindow(WindowInfo)
 					Size = UDim2.fromOffset(24, 24),
 					Parent = TabButton,
 				})
-				-- v4.7.6: one helper, no duplicates
-				TabIconStroke, TabIconScale = Library:CreateTabIconStroke(Icon, TabIcon)
+				-- v4.8.4: one helper, no duplicates
+				TabIconCard, TabIconScale = Library:CreateTabIconCard(TabIcon)
 			end
 
 			table.insert(Library.TabButtons, {
@@ -11763,7 +11787,7 @@ function Library:CreateWindow(WindowInfo)
 			})
 
 			-- v4.7.5: rec ApplyTabAppearance di AddTab asli
-			TabRec = { Button = TabButton, Icon = TabIcon, Stroke = TabIconStroke, Scale = TabIconScale }
+			TabRec = { Button = TabButton, Icon = TabIcon, Card = TabIconCard, Scale = TabIconScale }
 			table.insert(Library.TabVisuals, TabRec)
 
 			--// Tab Canvas \\--
@@ -12928,7 +12952,7 @@ function Library:CreateWindow(WindowInfo)
 		local TabButton: TextButton
 		local TabLabel
 		local TabIcon
-		local TabIconStroke
+		local TabIconCard
 		local TabIconScale
 		local TabRec -- v4.7.3: MUST sit outside the do-block (bug v4.7.0-7.2:
 		-- the local sank inside a do-block -> "TabRec.Tab = Tab" at AddTab end
@@ -12979,8 +13003,8 @@ function Library:CreateWindow(WindowInfo)
 					Size = UDim2.fromOffset(24, 24),
 					Parent = TabButton,
 				})
-				-- v4.7.6: one helper, no duplicates
-				TabIconStroke, TabIconScale = Library:CreateTabIconStroke(Icon, TabIcon)
+				-- v4.8.4: one helper, no duplicates
+				TabIconCard, TabIconScale = Library:CreateTabIconCard(TabIcon)
 			end
 
 			table.insert(Library.TabButtons, {
@@ -12989,8 +13013,8 @@ function Library:CreateWindow(WindowInfo)
 				Icon = TabIcon,
 			})
 
-			-- v4.7.0: rec for ApplyTabAppearance (stroke/bg/zoom on all tabs)
-			TabRec = { Button = TabButton, Icon = TabIcon, Stroke = TabIconStroke, Scale = TabIconScale }
+			-- v4.7.0: rec for ApplyTabAppearance (card/bg/zoom on all tabs)
+			TabRec = { Button = TabButton, Icon = TabIcon, Card = TabIconCard, Scale = TabIconScale }
 			table.insert(Library.TabVisuals, TabRec)
 
 			--// Tab Canvas \\--

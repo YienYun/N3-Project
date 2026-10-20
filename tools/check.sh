@@ -88,16 +88,16 @@ chk "v4.6.11: nested surface card ikut induk (IsInsideSurfaceCard dipake x3)" \
 	"[ \$(grep -c 'Library:IsInsideSurfaceCard(BoxHolder)' '$LIB') -eq 3 ] && grep -q 'function Library:IsInsideSurfaceCard' '$LIB'"
 chk "v4.7.0: TabAppearance + setter/applier di LIBRARY" \
 	"grep -q 'Library.TabAppearance = {' '$LIB' && grep -q 'function Library:SetTabAppearance' '$LIB' && grep -q 'function Library:ApplyTabAppearance' '$LIB'"
-chk "v4.7.0/7.6: stroke halo + zoom icon sidebar (TabHoverZoom lib+mod)" \
-	"grep -q 'TabIconStrokeHalo' '$LIB' && grep -q 'function Library:CreateTabIconStroke' '$LIB' && grep -q 'TabHoverZoom' '$LIB' && grep -q 'TabHoverZoom' '$MOD'"
+chk "v4.8.4: icon CARD ganti halo (helper + nol sisa stroke lama)" \
+	"grep -q 'TabIconCard' '$LIB' && grep -q 'function Library:CreateTabIconCard' '$LIB' && ! grep -q 'IconStroke' '$LIB' && grep -q 'TabHoverZoom' '$LIB' && grep -q 'TabHoverZoom' '$MOD'"
 chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 	"grep -q 'local function BuildTab' '$MOD' && grep -q 'N3V4 RESEP TAB' '$MOD'"
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.8.3 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
-chk "v4.7.3: scope TabRec bener (local di luar do-block) + halo stroke + DEBUG dump" \
-	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconStrokeHalo' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
+	"grep -q 'N3V4 Library] v4.8.4 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+chk "v4.7.3: scope TabRec bener (local di luar do-block) + card icon + DEBUG dump" \
+	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconCard' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
 	"grep -q 'function Library:ZoomTabEnabled' '$LIB' && grep -q 'window ready: tabVisuals' '$LIB' && grep -q 'TabHoverZoom = true, -- v4.7.4' '$PREV'"
 chk "v4.7.5: patch tab ada di AddTab ASLI (bukan AddKeyTab doang)" \
@@ -122,8 +122,10 @@ chk "v4.7.9: icon dialog opsional kanan-atas gaya notif (lib + demo preview)" \
 	"grep -q 'DialogIconWidth' '$LIB' && grep -q 'Info.IconColor or \"AccentColor\"' '$LIB' && grep -q 'Icon = \"info\"' '$PRE' && grep -q 'Icon = \"zap\"' '$PRE'"
 chk "v4.7.8: knob durasi + RESEP USER 10% dibake (lib 0.1 + mod AnimTime 0.10)" \
 	"grep -q 'ST_AnimTime' '$MOD' && grep -q 'AnimTime = 0.10' '$MOD' && grep -q 'WindowAnimationInfo = TweenInfo.new(0.1' '$LIB' && grep -q 'Library.WindowAnimationInfo = TweenInfo.new' '$MOD'"
-chk "v4.7.6: NOL duplikasi (halo dibuat 1x di helper) + RESEP TAB locked lib+mod" \
-	"[ \$(grep -c 'Name = \"TabIconStrokeHalo\"' '$LIB') -eq 1 ] && grep -q 'IconStrokeColor = Color3.fromRGB(0, 0, 0)' '$LIB' && grep -q 'IconStrokeTransparency = 0.53' '$LIB' && grep -q 'IconStrokeColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'HoverZoom = 1.25' '$LIB'"
+chk "v4.8.4: NOL duplikasi (card dibuat 1x di helper) + default card locked lib+mod" \
+	"[ \$(grep -c 'Name = \"TabIconCard\"' '$LIB') -eq 1 ] && grep -q 'IconCardColor = Color3.fromRGB(0, 0, 0)' '$LIB' && grep -q 'IconCardTransparency = 0.30' '$LIB' && grep -q 'IconCardColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'HoverZoom = 1.25' '$LIB'"
+chk "v4.8.4: knob card LENGKAP di module (6 knob + print IconCard* + nol sisa)" \
+	"grep -q 'TB_CardOn' '$MOD' && grep -q 'TB_CardPad' '$MOD' && grep -q 'TB_CardRad' '$MOD' && grep -q 'IconCardEnabled = %s' '$MOD' && ! grep -q 'IconStroke' '$MOD'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
 	"grep -q 'Transparency = 0,' '$MOD' && grep -q 'Contrast = 40' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.fromRGB(119, 119, 119)' '$MOD' && grep -q 'Group = 0.5' '$MOD' && grep -q 'OverlayTransparency = 0.40' '$MOD'"
 chk "state S di-init SEBELUM BuildResep/BuildTema (bug 'index nil with Image')" \
@@ -146,7 +148,7 @@ chk "simetris" "python3 '$ROOT/tools/symmetry.py' '$PRE'"
 chk "ggak manggil SetWallpaper/SetSurface (setingan cuma di file setingan)" \
 	"! grep -qE '^\s*[^-].*Library:Set(Wallpaper|Surface)' '$PRE'"
 chk "AddKeyBox di-guard typeof" "grep -q 'typeof(AdvancedTab.AddKeyBox)' '$PRE'"
-chk "footer v4.8.3" "grep -q 'Preview Kit v4.8.3' '$PRE'"
+chk "footer v4.8.4" "grep -q 'Preview Kit v4.8.4' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \

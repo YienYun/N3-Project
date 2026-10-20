@@ -117,6 +117,38 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🎯 v4.8.4 — TAB ICON CARD (halo stroke DIGANTI garis kotak simetris)
+
+Request user ("bukan stroke jelek jir!"): icon tab jangan di-halo glyph,
+tapi dikasih GARIS KOTAK SIMETRIS (card outline) di seputar ICON doang —
+bukan box full tab — transparansi ±30%. User bilang "gas" tanpa jawab 2
+pertanyaan desain -> gue yang putusin (alasan di bawah), dia tinggal dial
+di preview kalau mau geser.
+
+Keputusan desain:
+- Card = Frame kosong (BackgroundTransparency 1) + UICorner + UIStroke mode
+  Border. Cuma GARIS tanpa isi ("garis kotak" kata user, "bukan full").
+- Card = ANAK TabIcon (anchor+position 0.5/0.5) -> ikut UIScale zoom
+  hover/aktif: napas card tetap simetris di semua level zoom. Kalau card
+  diam sementara icon zoom 1.25, gap berubah = nggak simetris = melanggar
+  aturan simetris user.
+- Halo stroke glyph DIHAPUS TOTAL (bukan disimpen mati): satu implementasi,
+  nol code sampah. Nilai TAB v2 v4.8.3 untuk stroke (1.5/0.53/hitam)
+  digantikan; tebal 1.5 + warna hitam dipindah jadi default card.
+- Default: Enabled true · Padding 4px (napas) · Thickness 1.5px ·
+  Transparency 0.30 (angka user) · Radius 6px · Color hitam.
+
+Knob baru: IconCardEnabled / Padding / Thickness / Transparency / Radius /
+Color di Library.TabAppearance (+ SetTabAppearance otomatis support).
+Knob stroke lama DIHAPUS di lib+module+print RESEP TAB. Detector
+library-lama (module+preview) sekarang juga cek IconCardEnabled.
+
+Lokasi: helper Library:CreateTabIconCard (pengganti CreateTabIconStroke),
+ApplyTabAppearance blok Rec.Card, TabRec.Card (AddTab+AddKeyTab), module
+DEFAULTS.Tab + groupbox "Tab Card & Bg" (toggle+warna+tebal+transparansi+
+napas+radius) + tombol TEST/DEBUG/Print diupdate. Preview: changelog +
+footer v4.8.4. Checker: 57 cek (halo negative-grep + knob card lengkap).
+
 ## 🔒 v4.8.3 — RESEP v7 + RESEP TAB v2 = TERKUNCI (print user 00:41-00:46)
 
 THEMA v7:
@@ -136,9 +168,7 @@ Bake di: Library.Scheme/Templates/WindowInfo defaults, Library.Surface,
 Library.TabAppearance, Settings.DEFAULTS (+ tombol Reset scheme module).
 Checker mengunci nilai v7 (check theme/resep/tab di-update).
 
-CATATAN ANTRIAN (diskusi berikutnya, user): ganti stroke halo icon tab jadi
-CARD outline — "garis kotak simetris" di seputar SETIAP icon tab (bukan box
-full tab), transparansi card ±30%, hanya di icon. Belum dikoding.
+Antrian "card outline icon tab" (request di atas) SUDAH dieksekusi -> v4.8.4.
 
 ## 🔒 v4.7.8 — RESEP DURASI BUKA/TUTUP = TERKUNCI (user: "10% bagus!")
 

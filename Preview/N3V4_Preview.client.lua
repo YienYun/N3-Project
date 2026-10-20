@@ -7,6 +7,18 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.8.4 — TAB ICON CARD (halo stroke DIGANTI garis kotak):
+	   • User: "bukan stroke jelek jir" — halo glyph (salinan sprite yang
+	     digedein, biang stroke blur) DIHAPUS TOTAL dari library.
+	   • Gantinya CARD: garis kotak simetris (rounded box outline) yang
+	     nempel di seputar ICON doang — bukan box full tab.
+	   • Card = anak TabIcon -> ikut zoom hover/aktif bareng glyph; padding
+	     tetap simetris di semua level zoom.
+	   • Default: napas 4px, tebal 1.5px, transparency 30% (angka user),
+	     radius 6px, warna hitam. Semua bisa didial di tab UI Settings
+	     (groupbox "Tab Card & Bg": on/off + warna + tebal + transparansi
+	     + napas + radius). Print RESEP TAB sekarang ngeluarin IconCard*.
+
 	 CHANGELOG v4.8.3 — RESEP v7 + RESEP TAB v2 DIBAKE (print user):
 	   • THEMA: MainColor 36, OutlineColor 65-62-62, radius 10 (Accent/
 	     Background/Font tetep), animasi + durasi 0.10s tetep.
@@ -306,7 +318,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.8.3" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.8.4" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -338,7 +350,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.8.3",
+	Footer = "N3V4 • UI Preview Kit v4.8.4",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -495,10 +507,10 @@ print(string.format(
 ))
 
 -- v4.7.1: stale-paste detector LIBRARY masuk report preview juga
-if type(Library.SetTabAppearance) == "function" and type(Library.TabAppearance) == "table" then
-	table.insert(Report.OK, "Library v4.7+ (SetTabAppearance + TabAppearance ada)")
+if type(Library.SetTabAppearance) == "function" and type(Library.TabAppearance) == "table" and Library.TabAppearance.IconCardEnabled ~= nil then
+	table.insert(Report.OK, "Library v4.8.4+ (SetTabAppearance + TabAppearance + knob IconCard ada)")
 else
-	table.insert(Report.Failed, "LIBRARY LAMA: SetTabAppearance/TabAppearance nil -> paste ulang ModuleScript N3V4  ->  knob tab mati")
+	table.insert(Report.Failed, "LIBRARY LAMA: SetTabAppearance/TabAppearance/IconCard nil -> paste ulang ModuleScript N3V4  ->  knob tab mati")
 end
 
 local function SafeNotify(Info)
