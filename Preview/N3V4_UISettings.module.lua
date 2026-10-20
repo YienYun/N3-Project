@@ -13,6 +13,10 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.6.2: DEFAULTS = RESEP v3 user (theme hitam-ungu + radius 15 + wallpaper v3).
+--        FIX BUG: state S dulu dibaca SETELAH BuildResep didefinisiin ->
+--        S ke-resolve global nil -> "attempt to index nil with 'Image'".
+--        State sekarang di-inisialisasi SEBELUM semua helper.
 -- v4.6.1: DEFAULTS = RESEP v2 user (sama persis kayak default library).
 -- v4.6: tombol PRINT/COPY RESEP THEMA (scheme colors + font + radius + DPI +
 --       animasi) di tab "UI Settings", dan "Print resep LENGKAP" (thema +
@@ -23,20 +27,20 @@ local Settings = {}
 
 Settings.DEFAULTS = {
 	Image = "111593326989465",
-	Transparency = 0.85,
+	Transparency = 0.80,
 	ScaleType = "Stretch",
-	Color = Color3.fromRGB(252, 241, 255),
+	Color = Color3.new(0.59, 0.59, 0.59), -- tint abu netral (dump user 0.59)
 	Layer = "front",
 	Overlay = false,
 	OverlayColor = Color3.fromRGB(0, 0, 0),
-	OverlayTransparency = 0.21,
+	OverlayTransparency = 0.40,
 
 	Window = 0, -- transparency dasar window
 	Canvas = 0.20,
 	Group = 0,
-	Contrast = 6,
+	Contrast = 10,
 	GroupColor = Color3.fromRGB(0, 0, 0),
-	CanvasColor = Color3.fromRGB(20, 20, 20),
+	CanvasColor = Color3.new(0.045, 0.045, 0.045), -- dump user 0.045
 }
 
 function Settings:Attach(Library, Window, Options)
@@ -83,6 +87,36 @@ function Settings:Attach(Library, Window, Options)
 		end)
 		return OK and Font or nil
 	end
+
+	--// state awal: baca yang lagi aktif, fallback ke DEFAULTS \\--
+	local Info0 = nil
+	pcall(function()
+		if typeof(Window.GetWallpaperInfo) == "function" then
+			Info0 = Window:GetWallpaperInfo()
+		end
+	end)
+
+	local S = {
+		Image = (Info0 and Info0.Image ~= "" and Info0.Image) or DEFAULTS.Image,
+		Transparency = (Info0 and Info0.Transparency) or DEFAULTS.Transparency,
+		ScaleType = (Info0 and Info0.ScaleTypeName) or DEFAULTS.ScaleType,
+		Color = (Info0 and Info0.Color) or DEFAULTS.Color,
+		Layer = (Info0 and Info0.Layer) or DEFAULTS.Layer,
+		Overlay = (Info0 and Info0.OverlayEnabled ~= nil) and Info0.OverlayEnabled or DEFAULTS.Overlay,
+		OverlayColor = (Info0 and Info0.OverlayColor) or DEFAULTS.OverlayColor,
+		OverlayTransparency = (Info0 and Info0.OverlayTransparency) or DEFAULTS.OverlayTransparency,
+
+		Window = (Info0 and Info0.WindowTransparency) or DEFAULTS.Window,
+		Canvas = (Info0 and Info0.CanvasTransparency) or DEFAULTS.Canvas,
+		Group = (Info0 and Info0.GroupTransparency) or DEFAULTS.Group,
+		Contrast = (Info0 and Info0.GroupContrast) or DEFAULTS.Contrast,
+		GroupColor = (Info0 and Info0.GroupColorOverride) or DEFAULTS.GroupColor,
+		CanvasColor = (Info0 and Info0.CanvasColorOverride) or DEFAULTS.CanvasColor,
+	}
+
+	local LastTint = S.Color
+	local LastCanvas = S.CanvasColor
+	local LastGroup = S.GroupColor
 
 	--//========================================================================
 	-- RESEP / PRINT  (dipakai dua tab: tema + wallpaper)
@@ -209,35 +243,7 @@ function Settings:Attach(Library, Window, Options)
 		return table.concat(lines, "\n")
 	end
 
-	--// state awal: baca yang lagi aktif, fallback ke DEFAULTS \\--
-	local Info0 = nil
-	pcall(function()
-		if typeof(Window.GetWallpaperInfo) == "function" then
-			Info0 = Window:GetWallpaperInfo()
-		end
-	end)
 
-	local S = {
-		Image = (Info0 and Info0.Image ~= "" and Info0.Image) or DEFAULTS.Image,
-		Transparency = (Info0 and Info0.Transparency) or DEFAULTS.Transparency,
-		ScaleType = (Info0 and Info0.ScaleTypeName) or DEFAULTS.ScaleType,
-		Color = (Info0 and Info0.Color) or DEFAULTS.Color,
-		Layer = (Info0 and Info0.Layer) or DEFAULTS.Layer,
-		Overlay = (Info0 and Info0.OverlayEnabled ~= nil) and Info0.OverlayEnabled or DEFAULTS.Overlay,
-		OverlayColor = (Info0 and Info0.OverlayColor) or DEFAULTS.OverlayColor,
-		OverlayTransparency = (Info0 and Info0.OverlayTransparency) or DEFAULTS.OverlayTransparency,
-
-		Window = (Info0 and Info0.WindowTransparency) or DEFAULTS.Window,
-		Canvas = (Info0 and Info0.CanvasTransparency) or DEFAULTS.Canvas,
-		Group = (Info0 and Info0.GroupTransparency) or DEFAULTS.Group,
-		Contrast = (Info0 and Info0.GroupContrast) or DEFAULTS.Contrast,
-		GroupColor = (Info0 and Info0.GroupColorOverride) or DEFAULTS.GroupColor,
-		CanvasColor = (Info0 and Info0.CanvasColorOverride) or DEFAULTS.CanvasColor,
-	}
-
-	local LastTint = S.Color
-	local LastCanvas = S.CanvasColor
-	local LastGroup = S.GroupColor
 
 	local function Apply()
 		pcall(function()
@@ -303,11 +309,11 @@ function Settings:Attach(Library, Window, Options)
 		SchemeRow("FontColor", "Font / teks")
 
 		Box:AddButton("Reset scheme", function()
-			Library.Scheme.AccentColor = Color3.fromRGB(218, 98, 255)
-			Library.Scheme.BackgroundColor = Color3.fromRGB(30, 30, 30)
-			Library.Scheme.MainColor = Color3.fromRGB(40, 40, 40)
-			Library.Scheme.OutlineColor = Color3.fromRGB(50, 50, 50)
-			Library.Scheme.FontColor = Color3.fromRGB(238, 238, 238)
+			Library.Scheme.AccentColor = Color3.fromRGB(218, 68, 255)
+			Library.Scheme.BackgroundColor = Color3.fromRGB(0, 0, 0)
+			Library.Scheme.MainColor = Color3.fromRGB(31, 31, 31)
+			Library.Scheme.OutlineColor = Color3.fromRGB(45, 45, 45)
+			Library.Scheme.FontColor = Color3.fromRGB(255, 255, 255)
 			Library:UpdateColorsUsingRegistry()
 		end)
 	end)

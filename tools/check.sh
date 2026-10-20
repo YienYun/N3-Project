@@ -65,10 +65,14 @@ chk "color picker: DragBegin(satvib/hue/alpha) + InputEnded watcher" \
 chk "slider: berhenti lewat InputEnded (SliderReleaseConn)" "grep -q SliderReleaseConn '$LIB'"
 chk "WindowTransparency ada" "grep -q WindowTransparency '$LIB'"
 chk "Tab:AddKeyBox ada" "grep -q 'function Tab:AddKeyBox' '$LIB'"
-chk "resep v2 user jadi default di LIBRARY (0.85 + canvas 0.20 + contrast 6)" \
-	"grep -q 'BackgroundImageTransparency = 0.85' '$LIB' && grep -q 'CanvasTransparency = 0.20' '$LIB' && grep -q 'GroupContrast = 6,' '$LIB' && grep -q 111593326989465 '$LIB'"
-chk "resep v2 user jadi default di MODULE (DEFAULTS)" \
-	"grep -q 'Transparency = 0.85' '$MOD' && grep -q 'Canvas = 0.20' '$MOD' && grep -q 'Contrast = 6' '$MOD'"
+chk "resep v3 user jadi default di LIBRARY (scheme hitam-ungu + radius 15)" \
+	"grep -q 'AccentColor = Color3.fromRGB(218, 68, 255)' '$LIB' && grep -q 'BackgroundColor = Color3.fromRGB(0, 0, 0),' '$LIB' && grep -q 'CornerRadius = 15,' '$LIB'"
+chk "resep v3 wallpaper jadi default di LIBRARY (0.80 + contrast 10 + canvas 0.045)" \
+	"grep -q 'BackgroundImageTransparency = 0.80' '$LIB' && grep -q 'GroupContrast = 10,' '$LIB' && grep -q 'CanvasColor = Color3.new(0.045' '$LIB' && grep -q 111593326989465 '$LIB'"
+chk "resep v3 jadi default di MODULE (DEFAULTS)" \
+	"grep -q 'Transparency = 0.80' '$MOD' && grep -q 'Contrast = 10' '$MOD' && grep -q 'CanvasColor = Color3.new(0.045' '$MOD'"
+chk "state S di-init SEBELUM BuildResep/BuildTema (bug 'index nil with Image')" \
+	"test \$(grep -n 'local S = {' '$MOD' | cut -d: -f1) -lt \$(grep -n 'local function BuildResep' '$MOD' | cut -d: -f1)"
 
 echo "== 3. SETTINGS MODULE =="
 chk "2 tab" "test \$(grep -c 'Window:AddTab(' '$MOD') -eq 2"

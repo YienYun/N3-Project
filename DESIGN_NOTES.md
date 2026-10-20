@@ -9,7 +9,7 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 | Preferensi | Detail | Status |
 |---|---|---|
 | **SIMETRIS** | "gue suka ui yang simteris banget ok? simteris." | 🔒 HARD RULE — lihat catatan penting di bawah |
-| **Corner radius 10px** | "gue di preview di slider ke di 10px cornernya. ini bagus!" | ✅ **Udah di-apply ke library** |
+| **Corner radius** | 10 dulu ("ini bagus!"), terus user seting ulang ke **15** di resep v3 | ✅ **15 sekarang** (library + templates) |
 | **Motion level** | Balanced — spring + micro-interaction; efek mahal (blur/glow/ripple) opsional & auto-off di mobile | 🔒 Kekunci |
 | **Icon = lucide** | "pake icons yang ada di library gue jir. di situ ada link iconsnya kan?" | ✅ **Udah dibenerin** |
 | **Arah visual** | Belum diputusin ("abaikan dulu") | ⏳ Pending |
@@ -395,32 +395,54 @@ Library:SetWallpaper({
 ```
 Atau langsung di `CreateWindow({ BackgroundImage = ..., BackgroundImageLayer = ..., ... })`.
 
-### 🏆 RESEP USER YANG DISETUJUI — **v2, DEFAULT SEKARANG** (2026-10-20)
-User ngetes sendiri lewat slider, paste balik output print, dan bilang
-**"wah gue suka yang ini brok sumpah gas implementasikan ke code utama"**.
-Jadi resep v2 ini sekarang **default di LIBRARY + di file setingan** — buka
-Studio tanpa nyentuh apa pun = tampilan ini. VERBATIM, jangan diubah tanpa
-user minta:
+### 🏆 RESEP USER YANG DISETUJUI — **v3, DEFAULT SEKARANG** (2026-10-20)
+User seting ulang lewat slider + color picker, paste balik output
+**"Print resep thema"** + dump `GetWallpaperInfo`, dan bilang
+**"mantap terapin nih brok ke library"**. Jadi v3 ini default di LIBRARY
+(`Library.Scheme`, `Library.CornerRadius`, `Templates.Window`, `Library.Surface`)
+DAN di `Settings.DEFAULTS`. VERBATIM, jangan diubah tanpa user minta:
 
 ```lua
+-- THEMA
+Library.Scheme.AccentColor = Color3.fromRGB(218, 68, 255)
+Library.Scheme.BackgroundColor = Color3.fromRGB(0, 0, 0)
+Library.Scheme.MainColor = Color3.fromRGB(31, 31, 31)
+Library.Scheme.OutlineColor = Color3.fromRGB(45, 45, 45)
+Library.Scheme.FontColor = Color3.fromRGB(255, 255, 255)
+Window:SetCornerRadius(15)
+Library:SetDPIScale(100)
+-- (animasi semua true — udah default dari v0.5)
+
+-- WALLPAPER + SURFACE
 Library:SetWallpaper({
 	Image = "111593326989465",
-	Transparency = 0.85,
+	Transparency = 0.80,
 	ScaleType = "Stretch",
-	Color = Color3.fromRGB(252, 241, 255),
+	Color = Color3.new(0.59, 0.59, 0.59),
 	Layer = "front",
 	Overlay = false,
 	OverlayColor = Color3.fromRGB(0, 0, 0),
-	OverlayTransparency = 0.21,
+	OverlayTransparency = 0.40,
 })
 Library:SetSurface({
 	WindowTransparency = 0.00,
 	CanvasTransparency = 0.20,
 	GroupTransparency = 0.00,
-	GroupContrast = 6,
+	GroupContrast = 10,
 	GroupColor = Color3.fromRGB(0, 0, 0),
-	CanvasColor = Color3.fromRGB(20, 20, 20),
+	CanvasColor = Color3.new(0.045, 0.045, 0.045),
 })
+```
+
+Catatan: tint & canvas color disimpan sebagai `Color3.new(float)` biar SAMA
+PERSIS sama dump user (0.59 / 0.045 bukan hasil pembulatan fromRGB). Tombol
+"Reset scheme" di file setingan sekarang balikin ke warna v3 ini.
+
+### 🗄️ Resep v2 (sebelumnya)
+```lua
+-- wallpaper: Transparency 0.85, tint (252,241,255), overlay OFF 0.21
+-- surface  : Canvas 0.20, Group 0, Contrast 6, CanvasColor (20,20,20)
+-- theme    : masih scheme obsidian bawaan, radius 10
 ```
 
 ### 🗄️ Resep v1 (SEBELUMNYA, udah diganti)

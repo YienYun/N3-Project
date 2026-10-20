@@ -7,6 +7,15 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.6.2 — RESEP v3 LU JADI DEFAULT + FIX BUG PRINT:
+	   • Default BARU (library + setingan): scheme hitam-ungu lu
+	     (accent 218/68/255, bg 0, main 31, outline 45, font putih),
+	     corner radius 15, wallpaper v3 (transparency 0.80, tint 0.59 abu,
+	     overlay 0.40 OFF, canvas 0.20, contrast 10, canvas color 0.045).
+	   • FIX BUG "attempt to index nil with 'Image'" pas Print resep:
+	     state `S` dulu ke-init SETELAH BuildResep didefinisiin (forward-ref
+	     nil lagi). Sekarang state di-init paling awal di Attach.
+
 	 CHANGELOG v4.6.1 — DEFAULT = RESEP v2 LU:
 	   • Library + file setingan sekarang BAWAAN-nya resep yang lu seting sendiri
 	     (transparency 0.85, tint 252/241/255, overlay OFF, canvas 0.20, group 0,
@@ -48,7 +57,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6.1" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.6.2" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -65,7 +74,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6.1",
+	Footer = "N3V4 • UI Preview Kit v4.6.2",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

@@ -261,16 +261,16 @@ local Library = {
 	OriginalMinSize = Vector2.new(480, 360),
 	MinSize = Vector2.new(480, 360),
 	DPIScale = 1,
-	CornerRadius = 10, -- N3V4: 4 -> 10 (di-approve user lewat slider di Theme Lab)
+	CornerRadius = 15, -- N3V4: 4 -> 10 -> 15 (user seting ulang, dump resep thema v4.6.2)
 
 	--// Scheme \\--
 	IsLightTheme = false,
 	Scheme = {
-		BackgroundColor = Color3.fromRGB(30, 30, 30),
-		MainColor = Color3.fromRGB(40, 40, 40),
-		AccentColor = Color3.fromRGB(218, 98, 255),
-		OutlineColor = Color3.fromRGB(50, 50, 50),
-		FontColor = Color3.fromRGB(238, 238, 238),
+		BackgroundColor = Color3.fromRGB(0, 0, 0),
+		MainColor = Color3.fromRGB(31, 31, 31),
+		AccentColor = Color3.fromRGB(218, 68, 255),
+		OutlineColor = Color3.fromRGB(45, 45, 45),
+		FontColor = Color3.fromRGB(255, 255, 255),
 		Font = Font.fromEnum(Enum.Font.Code),
 
 		RedColor = Color3.fromRGB(255, 50, 50),
@@ -373,7 +373,7 @@ local Templates = {
 		SearchbarSize = UDim2.fromScale(1, 1),
 		GlobalSearch = false,
 
-		CornerRadius = 10, -- N3V4: 4 -> 10, disamain sama Library.CornerRadius
+		CornerRadius = 15, -- N3V4: disamain sama Library.CornerRadius
 		NotifySide = "Right",
 		ShowCustomCursor = true,
 
@@ -410,17 +410,17 @@ local Templates = {
 		-- apa-apa. Tetep bisa di-override per-window atau lewat
 		-- Library:SetWallpaper / Library:SetSurface.
 		BackgroundImage = "111593326989465",
-		BackgroundImageTransparency = 0.85,
+		BackgroundImageTransparency = 0.80,
 		BackgroundImageScaleType = "Stretch", -- member asli: Stretch | Slice | Tile | Fit | Crop
 		--   alias yang gue tambahin: Fill/Cover -> Crop, Contain -> Fit
-		BackgroundImageColor = Color3.fromRGB(252, 241, 255), -- tint (ImageColor3)
+		BackgroundImageColor = Color3.new(0.59, 0.59, 0.59), -- tint (ImageColor3) dump user 0.59
 		BackgroundImageLayer = "front", -- "front" = wash di atas konten (pilihan user)
 		--   | "back" = wallpaper di belakang konten
 
 		-- Overlay = scrim di antara wallpaper dan konten
 		BackgroundOverlayEnabled = false,
 		BackgroundOverlayColor = Color3.fromRGB(0, 0, 0),
-		BackgroundOverlayTransparency = 0.21,
+		BackgroundOverlayTransparency = 0.40,
 
 		--// Surface \\--
 		-- N3V4: biar wallpaper beneran keliatan SEBAGAI background kartu, area
@@ -431,7 +431,7 @@ local Templates = {
 		-- Kartu groupbox/tabbox/depbox.
 		GroupTransparency = 0,
 		-- Persen (0-100): kartu group dibedain dari background window.
-		GroupContrast = 6,
+		GroupContrast = 10,
 
 		--// Animations \\--
 		-- N3V4: default di-nyalain semua. Sebelumnya false semua, jadi hub yang
@@ -1591,9 +1591,9 @@ end
 Library.Surface = {
 	CanvasTransparency = 0.20, -- Container + sidebar
 	GroupTransparency = 0, -- kartu groupbox / tabbox / depbox
-	GroupContrast = 6, -- persen 0-100
+	GroupContrast = 10, -- persen 0-100
 	GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu
-	CanvasColor = Color3.fromRGB(20, 20, 20), -- override warna latar
+	CanvasColor = Color3.new(0.045, 0.045, 0.045), -- override warna latar, dump user 0.045
 	WindowTransparency = 0, -- MainFrame (dasar window). 0 = solid
 }
 Library.SurfaceWindow = nil -- MainFrame
