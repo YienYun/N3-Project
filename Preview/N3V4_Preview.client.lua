@@ -7,6 +7,14 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.6.1 — DEFAULT = RESEP v2 LU:
+	   • Library + file setingan sekarang BAWAAN-nya resep yang lu seting sendiri
+	     (transparency 0.85, tint 252/241/255, overlay OFF, canvas 0.20, group 0,
+	     contrast 6, canvas color 20/20/20). Buka Studio TANPA seting apa pun =
+	     langsung tampilan lu. Print resep juga langsung = resep lu.
+	   • Sebelumnya default masih resep v1 — itu kenapa lu lihat "ga ada
+	     perubahan" dan harus seting ulang. Salah gue, sorry.
+
 	 CHANGELOG v4.6 — 3 BUG LIBRARY DIBENERIN + PRINT RESEP THEMA:
 	   • BUG 1 (Dependency groupbox error "attempt to call a nil value"):
 	     ClampTransparency / Library.Surface / Library.SurfaceGroups dipakai
@@ -40,7 +48,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.6.1" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -57,7 +65,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6",
+	Footer = "N3V4 • UI Preview Kit v4.6.1",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

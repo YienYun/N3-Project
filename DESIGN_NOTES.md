@@ -395,36 +395,48 @@ Library:SetWallpaper({
 ```
 Atau langsung di `CreateWindow({ BackgroundImage = ..., BackgroundImageLayer = ..., ... })`.
 
-### 🏆 RESEP USER YANG DISETUJUI (2026-10-20)
-User ngetes sendiri lewat slider, terus paste balik output "Print resep Lua"
-dan bilang **"nih brok ini bagus jir"**. Ini racikannya — VERBATIM, jangan
-diubah tanpa user minta:
+### 🏆 RESEP USER YANG DISETUJUI — **v2, DEFAULT SEKARANG** (2026-10-20)
+User ngetes sendiri lewat slider, paste balik output print, dan bilang
+**"wah gue suka yang ini brok sumpah gas implementasikan ke code utama"**.
+Jadi resep v2 ini sekarang **default di LIBRARY + di file setingan** — buka
+Studio tanpa nyentuh apa pun = tampilan ini. VERBATIM, jangan diubah tanpa
+user minta:
 
 ```lua
 Library:SetWallpaper({
 	Image = "111593326989465",
-	Transparency = 0.70,
+	Transparency = 0.85,
 	ScaleType = "Stretch",
-	Color = Color3.fromRGB(55, 55, 55),
+	Color = Color3.fromRGB(252, 241, 255),
 	Layer = "front",
-	Overlay = true,
-	OverlayColor = Color3.fromRGB(46, 46, 46),
-	OverlayTransparency = 0.90,
+	Overlay = false,
+	OverlayColor = Color3.fromRGB(0, 0, 0),
+	OverlayTransparency = 0.21,
 })
 Library:SetSurface({
-	CanvasTransparency = 0.64,
-	GroupTransparency = 0.11,
-	GroupContrast = 11,
+	WindowTransparency = 0.00,
+	CanvasTransparency = 0.20,
+	GroupTransparency = 0.00,
+	GroupContrast = 6,
 	GroupColor = Color3.fromRGB(0, 0, 0),
-	CanvasColor = Color3.fromRGB(0, 0, 0),
+	CanvasColor = Color3.fromRGB(20, 20, 20),
 })
 ```
 
-Catatan rasa: layer `front` + transparency tinggi (0.70) + tint abu gelap =
-wash halus di atas konten; overlay 90% = hampir invisble, cuma nyatu-in nada;
-canvas 64% + group 11% + warna hitam = kartu gelap semi-transparan yang
-tetep kebaca. Ini kombinasi yang user suka — BUKAN resep "back + canvas 100%"
-yang gue rekomendasiin dulu. **Selera user menang.**
+### 🗄️ Resep v1 (SEBELUMNYA, udah diganti)
+```lua
+-- wallpaper: Transparency 0.70, Color (55,55,55), Overlay true 0.90 (46,46,46)
+-- surface  : Canvas 0.64, Group 0.11, Contrast 11, Group/CanvasColor (0,0,0)
+```
+Masih bisa dipanggil manual lewat preset / `Library:SetWallpaper`. Kalau user
+balik minta v1, angka-angkanya ada di atas.
+
+Catatan rasa v2: tint hampir putih (252,241,255) + transparency 0.85 = wallpaper
+jadi wash TERANG tipis di atas konten; overlay MATI (warna cuma disimpan buat
+kalau dinyalain lagi); canvas 20% + warna (20,20,20) = area konten gelap tapi
+wallpaper masih kebaca samar; kartu group SOLID hitam (contrast 6). Ini kombinasi
+yang user suka — BUKAN resep "back + canvas 100%" yang gue rekomendasiin dulu.
+**Selera user menang.**
 
 **Terpasang di:**
 - **`Library/N3V3-NoObfus.lua`** → `Templates.Window` + `Library.Surface`

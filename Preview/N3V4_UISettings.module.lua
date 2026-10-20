@@ -9,8 +9,11 @@
 --   B) Paste sebagai MODULESCRIPT (ReplicatedStorage > "N3V4_UISettings")
 --      -> preview auto-require, atau manual: Settings:Attach(Library, Window)
 --
--- Default = RESEP USER yang disetujui 2026-10-20.
+-- Default = RESEP USER v2 yang disetujui 2026-10-20 (yang lu seting sendiri
+-- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
+-- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.6.1: DEFAULTS = RESEP v2 user (sama persis kayak default library).
 -- v4.6: tombol PRINT/COPY RESEP THEMA (scheme colors + font + radius + DPI +
 --       animasi) di tab "UI Settings", dan "Print resep LENGKAP" (thema +
 --       wallpaper + surface) di kedua tab. Copy pakai setclipboard kalau ada.
@@ -20,20 +23,20 @@ local Settings = {}
 
 Settings.DEFAULTS = {
 	Image = "111593326989465",
-	Transparency = 0.70,
+	Transparency = 0.85,
 	ScaleType = "Stretch",
-	Color = Color3.fromRGB(55, 55, 55),
+	Color = Color3.fromRGB(252, 241, 255),
 	Layer = "front",
-	Overlay = true,
-	OverlayColor = Color3.fromRGB(46, 46, 46),
-	OverlayTransparency = 0.90,
+	Overlay = false,
+	OverlayColor = Color3.fromRGB(0, 0, 0),
+	OverlayTransparency = 0.21,
 
 	Window = 0, -- transparency dasar window
-	Canvas = 0.64,
-	Group = 0.11,
-	Contrast = 11,
+	Canvas = 0.20,
+	Group = 0,
+	Contrast = 6,
 	GroupColor = Color3.fromRGB(0, 0, 0),
-	CanvasColor = Color3.fromRGB(0, 0, 0),
+	CanvasColor = Color3.fromRGB(20, 20, 20),
 }
 
 function Settings:Attach(Library, Window, Options)
