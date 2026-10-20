@@ -7,6 +7,18 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.6.6 — KARTU GROUP 100% SOLID (layer "back"):
+	   • Wallpaper pindah ke layer "back" (DI BELAKANG konten). Dulu "front" =
+	     gambar nutup SEMUA (veil 20%) -> kartu kebaca "transparan" walau
+	     GroupTransparency 0. Sekarang kartu hitam lu BENERAN solid nge-blok
+	     wallpaper; wallpaper cuma keliatan di sela-sela kartu.
+	   • WindowTransparency 0 -> 1 & Canvas 0.20 -> 1 biar wallpaper back-nya
+	     keliatan (kalau 0, MainFrame solid nutup wallpaper).
+	   • Overlay scrim ON 0.50 (baseline) biar teks kebaca di atas wallpaper.
+	   • Slider yang HIDUP buat lu seting: Canvas/latar, Overlay, Window,
+	     Kartu group, Group contrast (kalau custom OFF). Puter -> Print ->
+	     kirim ke gue, gue bake angka lu.
+
 	 CHANGELOG v4.6.5 — GROUP BALIK HITAM (revert kesalahan v4.6.4):
 	   • v4.6.4 gue bikin GroupColor AUTO -> kartu jadi ABU-ABU. User:
 	     "kok abu abu cok? woi gue group warna hitam anj!" -> REVERT ke hitam.
@@ -76,7 +88,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6.5" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.6.6" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -93,7 +105,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6.5",
+	Footer = "N3V4 • UI Preview Kit v4.6.6",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

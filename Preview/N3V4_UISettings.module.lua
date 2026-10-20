@@ -13,6 +13,10 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.6.6: WALLPAPER LAYER "back" + window/canvas full transparan -> kartu group
+--        100% SOLID ("ga transparan" kata user). Overlay scrim ON 0.50 biar teks
+--        kebaca di atas wallpaper. User bakal seting persen-nya sendiri terus
+--        kirim print balik -> bake lagi nanti.
 -- v4.6.5: GROUP BALIK HITAM (revert AUTO abu-abu v4.6.4 — user: "gue group
 --        warna hitam anj!"). Contrast 30 tetep disimpen sebagai baseline lu,
 --        kepake kalau "Group custom" OFF.
@@ -38,13 +42,13 @@ Settings.DEFAULTS = {
 	Transparency = 0.80,
 	ScaleType = "Stretch",
 	Color = Color3.new(0.59, 0.59, 0.59), -- tint abu netral (dump user 0.59)
-	Layer = "front",
-	Overlay = false,
+	Layer = "back",
+	Overlay = true,
 	OverlayColor = Color3.fromRGB(0, 0, 0),
-	OverlayTransparency = 0.40,
+	OverlayTransparency = 0.50,
 
-	Window = 0, -- transparency dasar window
-	Canvas = 0.20,
+	Window = 1, -- transparency dasar window (v4.6.6: 1 = wallpaper back keliatan)
+	Canvas = 1,
 	Group = 0,
 	Contrast = 30,
 	GroupColor = Color3.fromRGB(0, 0, 0), -- HITAM (user v4.6.5: balik hitam)

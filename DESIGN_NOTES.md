@@ -439,6 +439,13 @@ Library:SetSurface({
 	GroupColor = Color3.fromRGB(0, 0, 0),  -- v4.6.5: BALIK HITAM (auto abu = salah)
 	CanvasColor = Color3.new(0.045, 0.045, 0.045),
 })
+
+-- v4.6.6: LAYER BACK — kartu group 100% SOLID ("ga transparan" kata user).
+-- Wallpaper sekarang DI BELAKANG konten; yang keliatan cuma sela-sela kartu.
+Library:SetWallpaper({ Layer = "back", Overlay = true, OverlayTransparency = 0.50 })
+Library:SetSurface({ WindowTransparency = 1.00, CanvasTransparency = 1.00 })
+-- ^ angka persen canvas/overlay/window = BASELINE; user mau seting sendiri
+--   terus kirim print balik. JANGAN dikunci sampe print user datang.
 ```
 
 Catatan: tint & canvas color disimpan sebagai `Color3.new(float)` biar SAMA

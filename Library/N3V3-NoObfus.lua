@@ -414,20 +414,23 @@ local Templates = {
 		BackgroundImageScaleType = "Stretch", -- member asli: Stretch | Slice | Tile | Fit | Crop
 		--   alias yang gue tambahin: Fill/Cover -> Crop, Contain -> Fit
 		BackgroundImageColor = Color3.new(0.59, 0.59, 0.59), -- tint (ImageColor3) dump user 0.59
-		BackgroundImageLayer = "front", -- "front" = wash di atas konten (pilihan user)
+		BackgroundImageLayer = "back", -- v4.6.6: "back" = wallpaper DI BELAKANG konten,
+		--   jadi kartu group 100% SOLID / nggak "transparan" lagi (permintaan user:
+		--   "bikin 100% lebih jelas/ga transparan"). "front" = wash nutup semua
+		--   (resep v2-v4) — itu yang bikin kartu kebaca tembus.
 		--   | "back" = wallpaper di belakang konten
 
 		-- Overlay = scrim di antara wallpaper dan konten
-		BackgroundOverlayEnabled = false,
+		BackgroundOverlayEnabled = true, -- v4.6.6: scrim antara wallpaper & konten (back mode)
 		BackgroundOverlayColor = Color3.fromRGB(0, 0, 0),
-		BackgroundOverlayTransparency = 0.40,
+		BackgroundOverlayTransparency = 0.50, -- v4.6.6: baseline scrim, user bakal seting sendiri
 
 		--// Surface \\--
 		-- N3V4: biar wallpaper beneran keliatan SEBAGAI background kartu, area
 		-- konten (Container + sidebar) harus bisa dibikin transparan. Default 0
 		-- = perilaku lama (solid), jadi hub yang nggak pakai wallpaper aman.
-		WindowTransparency = 0,
-		ContentTransparency = 0.20,
+		WindowTransparency = 1, -- v4.6.6: MainFrame transparan biar wallpaper back keliatan
+		ContentTransparency = 1, -- v4.6.6: canvas full transparan (wallpaper keliatan di sela kartu)
 		-- Kartu groupbox/tabbox/depbox.
 		GroupTransparency = 0,
 		-- Persen (0-100): kartu group dibedain dari background window.
@@ -1589,7 +1592,7 @@ end
 --     wallpaper. User minta group tetep solid & beda ~10% dari background.
 -- State awal = RESEP USER yang disetujui (sama kayak default Templates.Window)
 Library.Surface = {
-	CanvasTransparency = 0.20, -- Container + sidebar
+	CanvasTransparency = 1, -- Container + sidebar (v4.6.6: full; kartu tetep SOLID di atasnya)
 	GroupTransparency = 0, -- kartu groupbox / tabbox / depbox
 	GroupContrast = 30, -- persen 0-100 (user v4.6.4: "30% lebih jelas", dulu 10%)
 	GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu = HITAM (user
@@ -1599,7 +1602,7 @@ Library.Surface = {
 	--            (itu semantik library: override menang). Contrast 30 kepake
 	--            kalau override dimatiin (toggle "Group custom" OFF).
 	CanvasColor = Color3.new(0.045, 0.045, 0.045), -- override warna latar, dump user 0.045
-	WindowTransparency = 0, -- MainFrame (dasar window). 0 = solid
+	WindowTransparency = 1, -- MainFrame (dasar window). v4.6.6: 1 biar layer back keliatan
 }
 Library.SurfaceWindow = nil -- MainFrame
 Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
