@@ -17,6 +17,12 @@ Baseline (Library.TabAppearance + Settings.DEFAULTS.Tab):
   HoverZoom 1.12 | ActiveZoom 1.08 | ZoomTime 0.15s (Quad Out)
   Matinya: Library.Animations.TabHoverZoom = false
 
+CATATAN UX (v4.7.2): user DUA KALI mentokin slider transparency ke 100%
+(stroke transparency, bg tab aktif) lalu marah "ga work" — 100% transparency
+= ILANG. Label slider sekarang "(100% = ILANG)" + ada tombol TEST efek
+keliatan + library print versi sendiri di Output tiap require (anti-debat
+"lu paste nggak sih"). Arah knob: makin KECIL transparency = makin KELIATAN.
+
 Mekanik: UIStroke di ImageLabel icon ngikut alpha glyph (outline bentuk icon,
 bukan kotak). UIScale per icon buat zoom. Library.TabVisuals = rec per tab;
 ApplyTabAppearance() sync stroke/bg/scale semua tab (dipanggil SetTabAppearance

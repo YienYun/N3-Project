@@ -1629,6 +1629,9 @@ Library.TabAppearance = {
 	ZoomTime = 0.15, -- detik, tween Quad Out
 }
 Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per tab sidebar
+-- v4.7.2: version print biar nggak ada lagi debat "library lu lama/belum":
+-- baris ini MUNCUL di Output tiap require kalau library yang ke-paste emang baru.
+print("[N3V4 Library] v4.7.2 loaded — TabAppearance/TabVisuals OK (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
 function Library:GetCanvasColor(): Color3

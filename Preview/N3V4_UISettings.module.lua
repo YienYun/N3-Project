@@ -13,6 +13,8 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.7.2: label slider transparency dijelasin ("100% = ILANG") + tombol TEST
+--        efek keliatan. Library print versi sendiri di Output tiap require.
 -- v4.7.1: stale-paste detector LIBRARY di Attach (warn kalau N3V4 lama).
 -- v4.7.0: UPGRADE TAB sidebar (borongan): stroke glyph icon (UIStroke), bg
 --        dikit di semua tab, bg accent tipis tab aktif, zoom hover + zoom
@@ -483,21 +485,21 @@ function Settings:Attach(Library, Window, Options)
 				Library:SetTabAppearance({ IconStrokeColor = Color })
 			end,
 		})
-		Box:AddSlider("TB_StrokeT", {
+		local Sl_StrokeT = Box:AddSlider("TB_StrokeT", {
 			Text = "Tebal stroke", Default = TA0.IconStrokeThickness or 1, Min = 0, Max = 3, Rounding = 1, Suffix = "px",
 			Callback = function(Value)
 				LastStrokeT = Value
 				Library:SetTabAppearance({ IconStrokeThickness = Value })
 			end,
 		})
-		Box:AddSlider("TB_StrokeTr", {
-			Text = "Stroke transparency", Default = math.floor((TA0.IconStrokeTransparency or 0.4) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+		local Sl_StrokeTr = Box:AddSlider("TB_StrokeTr", {
+			Text = "Stroke transparency (100% = ILANG)", Default = math.floor((TA0.IconStrokeTransparency or 0.4) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
 				Library:SetTabAppearance({ IconStrokeTransparency = Value / 100 })
 			end,
 		})
-		Box:AddSlider("TB_BgAll", {
-			Text = "Bg semua tab", Default = math.floor((TA0.TabBackgroundTransparency or 0.7) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+		local Sl_BgAll = Box:AddSlider("TB_BgAll", {
+			Text = "Bg semua tab (100% = ILANG)", Default = math.floor((TA0.TabBackgroundTransparency or 0.7) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
 				Library:SetTabAppearance({ TabBackgroundTransparency = Value / 100 })
 			end,
@@ -605,20 +607,20 @@ function Settings:Attach(Library, Window, Options)
 				Library:SetTabAppearance({ ActiveBackgroundColor = Color })
 			end,
 		})
-		Box:AddSlider("TB_BgAct", {
-			Text = "Bg tab aktif", Default = math.floor((TA1.ActiveBackgroundTransparency or 0.55) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+		local Sl_BgAct = Box:AddSlider("TB_BgAct", {
+			Text = "Bg tab aktif (100% = ILANG)", Default = math.floor((TA1.ActiveBackgroundTransparency or 0.55) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
 				LastActiveBgT = Value / 100
 				Library:SetTabAppearance({ ActiveBackgroundTransparency = Value / 100 })
 			end,
 		})
-		Box:AddSlider("TB_ZoomH", {
+		local Sl_ZoomH = Box:AddSlider("TB_ZoomH", {
 			Text = "Zoom hover", Default = math.floor((TA1.HoverZoom or 1.12) * 100 + 0.5), Min = 100, Max = 150, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
 				Library:SetTabAppearance({ HoverZoom = Value / 100 })
 			end,
 		})
-		Box:AddSlider("TB_ZoomA", {
+		local Sl_ZoomA = Box:AddSlider("TB_ZoomA", {
 			Text = "Zoom tab aktif", Default = math.floor((TA1.ActiveZoom or 1.08) * 100 + 0.5), Min = 100, Max = 150, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
 				Library:SetTabAppearance({ ActiveZoom = Value / 100 })
@@ -638,6 +640,29 @@ function Settings:Attach(Library, Window, Options)
 				end
 			end,
 		})
+		Box:AddButton("TEST: bikin efek KELIATAN", function()
+			-- v4.7.2: tombol panik buat buktiin sistemnya jalan: set nilai yang
+			-- PASTI keliatan (stroke pekat, bg jelas, zoom gede) + sync slider.
+			pcall(function()
+				Library:SetTabAppearance({
+					IconStrokeThickness = 1.5,
+					IconStrokeTransparency = 0,
+					TabBackgroundTransparency = 0.35,
+					ActiveBackgroundTransparency = 0.45,
+					HoverZoom = 1.25,
+					ActiveZoom = 1.15,
+				})
+			end)
+			pcall(function() Sl_StrokeT:SetValue(1.5) end)
+			pcall(function() Sl_StrokeTr:SetValue(0) end)
+			pcall(function() Sl_BgAll:SetValue(35) end)
+			pcall(function() Sl_BgAct:SetValue(45) end)
+			pcall(function() Sl_ZoomH:SetValue(125) end)
+			pcall(function() Sl_ZoomA:SetValue(115) end)
+			pcall(function()
+				Library:Notify({ Title = "TEST tab", Description = "Nilai diset KELIATAN: stroke 1.5px pekat, bg 35%/45%, zoom 125%/115%. Sekarang hover tab sidebar!", Time = 4 })
+			end)
+		end)
 		Box:AddButton("Print resep tab", function()
 			print("[N3V4 RESEP TAB]\n" .. BuildTab())
 		end)

@@ -7,6 +7,16 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.7.2 — ANTI-DEBAT "library lama?" + anti-salah-arti slider:
+	   • Library sekarang PRINT versi sendiri waktu di-require:
+	     "[N3V4 Library] v4.7.2 loaded ..." — kalau baris itu nggak ada di
+	     Output, berarti ModuleScript N3V4 yang ke-require masih file lama.
+	   • Label slider transparency dijelasin: "(100% = ILANG)". Dua kali user
+	     mentokin 100% (stroke transparency & bg tab aktif) = efeknya ILANG,
+	     dikira bug. 100% transparency = fully invisible, brok.
+	   • Tombol "TEST: bikin efek KELIATAN" di box Tab Aktif & Zoom: set nilai
+	     pasti-keliatan + sync slider, buat buktiin hover/zoom/stroke jalan.
+
 	 CHANGELOG v4.7.1 — STALE-PASTE DETECTOR LIBRARY:
 	   • Kalau ModuleScript N3V4 di ReplicatedStorage masih lama, settings
 	     warn keras + report preview masuk GAGAL: "LIBRARY LAMA ... paste
@@ -157,7 +167,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.7.1" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.7.2" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -189,7 +199,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.7.1",
+	Footer = "N3V4 • UI Preview Kit v4.7.2",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
