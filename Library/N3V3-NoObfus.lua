@@ -231,6 +231,7 @@ local Library = {
 		Groupbox = true,
 		Dropdown = true,
 		KeyPicker = true,
+		TabHoverZoom = true, -- v4.7.0: zoom icon tab pas hover/aktif
 	},
 
 	--// States \\--
@@ -446,6 +447,7 @@ local Templates = {
 			Groupbox = true,
 			Dropdown = true,
 			KeyPicker = true,
+		TabHoverZoom = true, -- v4.7.0: zoom icon tab pas hover/aktif
 		},
 
 		TabTransitionTime = 0.22,
@@ -1610,6 +1612,24 @@ Library.SurfaceWindow = nil -- MainFrame
 Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
 Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
 
+-- N3V4 v4.7.0: TAB APPEARANCE (sidebar tab switcher). Permintaan user:
+-- "tab harusnya ada sedikit stroke di iconsnya ... kasih sedikit background
+-- dikit saja di semua tab ... kalo cursor ke arah tab ada animasi sedikit
+-- zoom iconnya ... tab aktif akan sedikit zoom". Semua angka = baseline,
+-- user bakal seting manual di preview terus kirim print -> bake nanti.
+Library.TabAppearance = {
+	IconStrokeThickness = 1, -- px, stroke glyph icon (UIStroke ngikut alpha)
+	IconStrokeTransparency = 0.40,
+	IconStrokeColor = Color3.fromRGB(0, 0, 0),
+	TabBackgroundTransparency = 0.70, -- background dikit di SEMUA tab
+	ActiveBackgroundTransparency = 0.55, -- bg tab aktif (tint accent tipis)
+	ActiveBackgroundColor = Color3.fromRGB(218, 68, 255),
+	HoverZoom = 1.12, -- scale icon pas hover
+	ActiveZoom = 1.08, -- scale icon tab aktif (nantahan)
+	ZoomTime = 0.15, -- detik, tween Quad Out
+}
+Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per tab sidebar
+
 -- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -1678,6 +1698,41 @@ function Library:IsInsideSurfaceCard(Obj: GuiObject?): boolean
 		Cur = Cur.Parent
 	end
 	return false
+end
+
+function Library:GetZoomTweenInfo(): TweenInfo
+	local T = Library.TabAppearance
+	return TweenInfo.new(math.clamp(T.ZoomTime, 0.02, 1), Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+end
+
+function Library:SetTabAppearance(Info: { [string]: any })
+	local T = Library.TabAppearance
+	for Key, Val in pairs(Info or {}) do
+		if T[Key] ~= nil then
+			T[Key] = Val
+		end
+	end
+	Library:ApplyTabAppearance()
+end
+
+function Library:ApplyTabAppearance()
+	local T = Library.TabAppearance
+	for _, Rec in ipairs(Library.TabVisuals) do
+		if Rec.Stroke and Rec.Stroke.Parent then
+			Rec.Stroke.Thickness = T.IconStrokeThickness
+			Rec.Stroke.Transparency = T.IconStrokeTransparency
+			Rec.Stroke.Color = T.IconStrokeColor
+		end
+		if Rec.Button and Rec.Button.Parent then
+			local Active = Rec.Tab ~= nil and Library.ActiveTab == Rec.Tab
+			Rec.Button.BackgroundColor3 = Active and T.ActiveBackgroundColor or Library.Scheme.MainColor
+			Rec.Button.BackgroundTransparency = Active and T.ActiveBackgroundTransparency or T.TabBackgroundTransparency
+		end
+		if Rec.Scale and Rec.Scale.Parent then
+			local Active = Rec.Tab ~= nil and Library.ActiveTab == Rec.Tab
+			Rec.Scale.Scale = Active and T.ActiveZoom or 1
+		end
+	end
 end
 
 function Library:SetBackgroundImage(Image: string | number)
@@ -11916,6 +11971,8 @@ function Library:CreateWindow(WindowInfo)
 		local TabButton: TextButton
 		local TabLabel
 		local TabIcon
+		local TabIconStroke
+		local TabIconScale
 
 		local TabCanvas
 		local TabContainer
@@ -11924,7 +11981,8 @@ function Library:CreateWindow(WindowInfo)
 		do
 			TabButton = New("TextButton", {
 				BackgroundColor3 = "MainColor",
-				BackgroundTransparency = 1,
+				-- v4.7.0: background dikit di SEMUA tab (baseline 70% transparency)
+				BackgroundTransparency = Library.TabAppearance.TabBackgroundTransparency,
 				Size = UDim2.new(1, 0, 0, 44),
 				Text = "",
 				Parent = Tabs,
@@ -11961,6 +12019,18 @@ function Library:CreateWindow(WindowInfo)
 					Size = UDim2.fromOffset(24, 24),
 					Parent = TabButton,
 				})
+				-- v4.7.0: stroke tipis ngikut bentuk glyph icon (UIStroke pakai
+				-- alpha edge, bukan kotak) + UIScale buat animasi zoom.
+				TabIconStroke = New("UIStroke", {
+					Thickness = Library.TabAppearance.IconStrokeThickness,
+					Transparency = Library.TabAppearance.IconStrokeTransparency,
+					Color = Library.TabAppearance.IconStrokeColor,
+					Parent = TabIcon,
+				})
+				TabIconScale = New("UIScale", {
+					Scale = 1,
+					Parent = TabIcon,
+				})
 			end
 
 			table.insert(Library.TabButtons, {
@@ -11968,6 +12038,10 @@ function Library:CreateWindow(WindowInfo)
 				Padding = ButtonPadding,
 				Icon = TabIcon,
 			})
+
+			-- v4.7.0: rec buat ApplyTabAppearance (stroke/bg/zoom semua tab)
+			local TabRec = { Button = TabButton, Icon = TabIcon, Stroke = TabIconStroke, Scale = TabIconScale }
+			table.insert(Library.TabVisuals, TabRec)
 
 			--// Tab Canvas \\--
 			TabCanvas = New("CanvasGroup", {
@@ -12120,6 +12194,12 @@ function Library:CreateWindow(WindowInfo)
 					ImageTransparency = Hovering and 0.25 or 0.5,
 				}):Play()
 			end
+			-- v4.7.0: zoom icon sedikit pas cursor masuk/keluar
+			if TabIconScale and Library.Animations.TabHoverZoom then
+				TweenService:Create(TabIconScale, Library:GetZoomTweenInfo(), {
+					Scale = Hovering and Library.TabAppearance.HoverZoom or 1,
+				}):Play()
+			end
 		end
 
 		function Tab:Show()
@@ -12131,8 +12211,10 @@ function Library:CreateWindow(WindowInfo)
 				Library.ActiveTab:Hide()
 			end
 
+			-- v4.7.0: bg tab aktif = tint accent tipis + icon zoom nantahan
+			TabButton.BackgroundColor3 = Library.TabAppearance.ActiveBackgroundColor
 			TweenService:Create(TabButton, Library.TweenInfo, {
-				BackgroundTransparency = 0,
+				BackgroundTransparency = Library.TabAppearance.ActiveBackgroundTransparency,
 			}):Play()
 
 			TweenService:Create(TabLabel, Library.TweenInfo, {
@@ -12143,6 +12225,15 @@ function Library:CreateWindow(WindowInfo)
 				TweenService:Create(TabIcon, Library.TweenInfo, {
 					ImageTransparency = 0,
 				}):Play()
+			end
+			if TabIconScale then
+				if Library.Animations.TabHoverZoom then
+					TweenService:Create(TabIconScale, Library:GetZoomTweenInfo(), {
+						Scale = Library.TabAppearance.ActiveZoom,
+					}):Play()
+				else
+					TabIconScale.Scale = Library.TabAppearance.ActiveZoom
+				end
 			end
 
 			Library:PlayTabAnimation(TabCanvas, true)
@@ -12161,8 +12252,10 @@ function Library:CreateWindow(WindowInfo)
 		end
 
 		function Tab:Hide()
+			-- v4.7.0: balik ke bg semua tab + zoom icon balik 1
+			TabButton.BackgroundColor3 = Library.Scheme.MainColor
 			TweenService:Create(TabButton, Library.TweenInfo, {
-				BackgroundTransparency = 1,
+				BackgroundTransparency = Library.TabAppearance.TabBackgroundTransparency,
 			}):Play()
 
 			TweenService:Create(TabLabel, Library.TweenInfo, {
@@ -12173,6 +12266,15 @@ function Library:CreateWindow(WindowInfo)
 				TweenService:Create(TabIcon, Library.TweenInfo, {
 					ImageTransparency = 0.5,
 				}):Play()
+			end
+			if TabIconScale then
+				if Library.Animations.TabHoverZoom then
+					TweenService:Create(TabIconScale, Library:GetZoomTweenInfo(), {
+						Scale = 1,
+					}):Play()
+				else
+					TabIconScale.Scale = 1
+				end
 			end
 
 			Library:PlayTabAnimation(TabCanvas, false)
@@ -12205,6 +12307,7 @@ function Library:CreateWindow(WindowInfo)
 		Tab.Container = TabContainer
 		setmetatable(Tab, BaseGroupbox)
 
+		TabRec.Tab = Tab -- v4.7.0: buat ApplyTabAppearance tau tab aktif
 		Library.Tabs[Name] = Tab
 
 		return Tab

@@ -13,6 +13,10 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.7.0: UPGRADE TAB sidebar (borongan): stroke glyph icon (UIStroke), bg
+--        dikit di semua tab, bg accent tipis tab aktif, zoom hover + zoom
+--        aktif (UIScale + tween). Knob lengkap di tab UI Settings (box baru
+--        4/4 simetris). Print LENGKAP sekarang include RESEP TAB.
 -- v4.6.11: nested box (tabbox/groupbox/depbox di dalam kartu) ikut transparan:
 --         lapis double dihapus lewat Library:IsInsideSurfaceCard().
 -- v4.6.10: PREVIEW OFF TOTAL (state wallpaper/surface GLOBAL -> preview
@@ -72,6 +76,18 @@ Settings.DEFAULTS = {
 	Canvas = 1,
 	Group = 0.35,
 	Contrast = 40,
+	Tab = { -- v4.7.0 baseline (BUKAN locked — nunggu print user dari preview)
+		IconStrokeThickness = 1,
+		IconStrokeTransparency = 0.40,
+		IconStrokeColor = Color3.fromRGB(0, 0, 0),
+		TabBackgroundTransparency = 0.70,
+		ActiveBackgroundTransparency = 0.55,
+		ActiveBackgroundColor = Color3.fromRGB(218, 68, 255),
+		HoverZoom = 1.12,
+		ActiveZoom = 1.08,
+		ZoomTime = 0.15,
+	},
+	TabHoverZoom = true,
 	GroupColor = Color3.fromRGB(0, 0, 0), -- HITAM (user v4.6.5: balik hitam)
 	CanvasColor = Color3.fromRGB(156, 156, 156), -- dump user v5
 }
@@ -276,7 +292,25 @@ function Settings:Attach(Library, Window, Options)
 		return table.concat(lines, "\n")
 	end
 
-
+	local function BuildTab()
+		local T = Library.TabAppearance or {}
+		local lines = {
+			"--[[ N3V4 RESEP TAB ]]",
+			"Library:SetTabAppearance({",
+			string.format("\tIconStrokeThickness = %.2f,", T.IconStrokeThickness or 0),
+			string.format("\tIconStrokeTransparency = %.2f,", T.IconStrokeTransparency or 0),
+			string.format("\tIconStrokeColor = %s,", RGB(T.IconStrokeColor or Color3.fromRGB(0, 0, 0))),
+			string.format("\tTabBackgroundTransparency = %.2f,", T.TabBackgroundTransparency or 0),
+			string.format("\tActiveBackgroundTransparency = %.2f,", T.ActiveBackgroundTransparency or 0),
+			string.format("\tActiveBackgroundColor = %s,", RGB(T.ActiveBackgroundColor or Color3.fromRGB(218, 68, 255))),
+			string.format("\tHoverZoom = %.2f,", T.HoverZoom or 1),
+			string.format("\tActiveZoom = %.2f,", T.ActiveZoom or 1),
+			string.format("\tZoomTime = %.2f,", T.ZoomTime or 0.15),
+			"})",
+			string.format("Library.Animations.TabHoverZoom = %s", tostring(Library.Animations and Library.Animations.TabHoverZoom == true)),
+		}
+		return table.concat(lines, "\n")
+	end
 
 	local function Apply()
 		pcall(function()
@@ -304,7 +338,7 @@ function Settings:Attach(Library, Window, Options)
 	end
 
 	--============================================================================
-	-- TAB: UI SETTINGS   (3 kiri / 3 kanan)
+	-- TAB: UI SETTINGS   (4 kiri / 4 kanan — v4.7.0: box Tab Stroke & Bg + Tab Aktif & Zoom)
 	--============================================================================
 	local T1 = Window:AddTab("UI Settings", "palette", "Warna scheme, font, radius, animasi")
 
@@ -418,6 +452,49 @@ function Settings:Attach(Library, Window, Options)
 	end)
 
 	Try("Settings: font & animasi", function()
+		local Box = T1:AddLeftGroupbox("Tab Stroke & Bg", "sparkles")
+
+		-- v4.7.0: stroke icon + background semua tab (sidebar). Baseline dari
+		-- Library.TabAppearance; user seting manual dulu, print, baru dibake.
+		local TA0 = Library.TabAppearance or {}
+		local LastStrokeT = TA0.IconStrokeThickness or 1
+		local StrokeTog = Box:AddToggle("TB_StrokeOn", {
+			Text = "Stroke icon tab", Default = (TA0.IconStrokeThickness or 0) > 0,
+			Callback = function(On)
+				if On then
+					Library:SetTabAppearance({ IconStrokeThickness = LastStrokeT })
+				else
+					Library:SetTabAppearance({ IconStrokeThickness = 0 })
+				end
+			end,
+		})
+		StrokeTog:AddColorPicker("TB_StrokeC", {
+			Title = "Stroke color",
+			Default = TA0.IconStrokeColor or Color3.fromRGB(0, 0, 0),
+			Callback = function(Color)
+				Library:SetTabAppearance({ IconStrokeColor = Color })
+			end,
+		})
+		Box:AddSlider("TB_StrokeT", {
+			Text = "Tebal stroke", Default = TA0.IconStrokeThickness or 1, Min = 0, Max = 3, Rounding = 1, Suffix = "px",
+			Callback = function(Value)
+				LastStrokeT = Value
+				Library:SetTabAppearance({ IconStrokeThickness = Value })
+			end,
+		})
+		Box:AddSlider("TB_StrokeTr", {
+			Text = "Stroke transparency", Default = math.floor((TA0.IconStrokeTransparency or 0.4) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				Library:SetTabAppearance({ IconStrokeTransparency = Value / 100 })
+			end,
+		})
+		Box:AddSlider("TB_BgAll", {
+			Text = "Bg semua tab", Default = math.floor((TA0.TabBackgroundTransparency or 0.7) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				Library:SetTabAppearance({ TabBackgroundTransparency = Value / 100 })
+			end,
+		})
+
 		local Box = T1:AddRightGroupbox("Font & Animasi", "type")
 
 		Box:AddDropdown("ST_Font", {
@@ -488,7 +565,7 @@ function Settings:Attach(Library, Window, Options)
 			end
 		end)
 		Box:AddButton("Print SEMUA (tema+wallpaper)", function()
-			print("[N3V4 RESEP LENGKAP]\n" .. BuildTema() .. "\n\n" .. BuildResep())
+			print("[N3V4 RESEP LENGKAP]\n" .. BuildTema() .. "\n\n" .. BuildResep() .. "\n\n" .. BuildTab())
 			SafeNotify({ Title = "Resep", Description = "LENGKAP di Output.", Icon = "copy", Time = 4 })
 		end)
 
@@ -499,6 +576,64 @@ function Settings:Attach(Library, Window, Options)
 	--============================================================================
 	-- TAB: WALLPAPER & SURFACE   (4 kiri / 4 kanan)
 	--============================================================================
+		local Box = T1:AddRightGroupbox("Tab Aktif & Zoom", "zap")
+
+		local TA1 = Library.TabAppearance or {}
+		local LastActiveBgT = TA1.ActiveBackgroundTransparency or 0.55
+		local ActiveTog = Box:AddToggle("TB_ActiveOn", {
+			Text = "Bg accent tab aktif", Default = (TA1.ActiveBackgroundTransparency or 1) < 1,
+			Callback = function(On)
+				if On then
+					Library:SetTabAppearance({ ActiveBackgroundTransparency = LastActiveBgT })
+				else
+					Library:SetTabAppearance({ ActiveBackgroundTransparency = 1 })
+				end
+			end,
+		})
+		ActiveTog:AddColorPicker("TB_ActiveC", {
+			Title = "Warna bg aktif",
+			Default = TA1.ActiveBackgroundColor or Color3.fromRGB(218, 68, 255),
+			Callback = function(Color)
+				Library:SetTabAppearance({ ActiveBackgroundColor = Color })
+			end,
+		})
+		Box:AddSlider("TB_BgAct", {
+			Text = "Bg tab aktif", Default = math.floor((TA1.ActiveBackgroundTransparency or 0.55) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				LastActiveBgT = Value / 100
+				Library:SetTabAppearance({ ActiveBackgroundTransparency = Value / 100 })
+			end,
+		})
+		Box:AddSlider("TB_ZoomH", {
+			Text = "Zoom hover", Default = math.floor((TA1.HoverZoom or 1.12) * 100 + 0.5), Min = 100, Max = 150, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				Library:SetTabAppearance({ HoverZoom = Value / 100 })
+			end,
+		})
+		Box:AddSlider("TB_ZoomA", {
+			Text = "Zoom tab aktif", Default = math.floor((TA1.ActiveZoom or 1.08) * 100 + 0.5), Min = 100, Max = 150, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				Library:SetTabAppearance({ ActiveZoom = Value / 100 })
+			end,
+		})
+		Box:AddSlider("TB_ZoomT", {
+			Text = "Durasi zoom (x0.01s)", Default = math.floor((TA1.ZoomTime or 0.15) * 100 + 0.5), Min = 5, Max = 50, Rounding = 0, Suffix = "",
+			Callback = function(Value)
+				Library:SetTabAppearance({ ZoomTime = Value / 100 })
+			end,
+		})
+		Box:AddToggle("TB_ZoomOn", {
+			Text = "Animasi zoom hover", Default = Library.Animations and Library.Animations.TabHoverZoom ~= false,
+			Callback = function(On)
+				if Library.Animations then
+					Library.Animations.TabHoverZoom = On
+				end
+			end,
+		})
+		Box:AddButton("Print resep tab", function()
+			print("[N3V4 RESEP TAB]\n" .. BuildTab())
+		end)
+
 	local T2 = Window:AddTab("Wallpaper & Surface", "image", "Wallpaper, warna, transparansi")
 
 	Try("WP: source", function()
@@ -692,6 +827,12 @@ function Settings:Attach(Library, Window, Options)
 			S.GroupColor = DEFAULTS.GroupColor
 			S.CanvasColor = DEFAULTS.CanvasColor
 			Apply()
+			pcall(function()
+				Library:SetTabAppearance(DEFAULTS.Tab)
+				if Library.Animations then
+					Library.Animations.TabHoverZoom = DEFAULTS.TabHoverZoom ~= false
+				end
+			end)
 			SafeNotify({ Title = "Wallpaper", Description = "Resep user dipasang.", Icon = "sparkles", Time = 3 })
 		end)
 
@@ -775,11 +916,11 @@ function Settings:Attach(Library, Window, Options)
 			SafeNotify({ Title = "Resep", Description = "Wallpaper + surface di Output.", Icon = "copy", Time = 3 })
 		end)
 		Box:AddButton("Print resep LENGKAP", function()
-			print("[N3V4 RESEP LENGKAP] tema + wallpaper + surface:\n" .. BuildTema() .. "\n\n" .. BuildResep())
+			print("[N3V4 RESEP LENGKAP] tema + wallpaper + surface + tab:\n" .. BuildTema() .. "\n\n" .. BuildResep() .. "\n\n" .. BuildTab())
 			SafeNotify({ Title = "Resep", Description = "LENGKAP (tema + wallpaper) di Output.", Icon = "copy", Time = 4 })
 		end)
 		Box:AddButton("Copy resep LENGKAP", function()
-			local Text = BuildTema() .. "\n\n" .. BuildResep()
+			local Text = BuildTema() .. "\n\n" .. BuildResep() .. "\n\n" .. BuildTab()
 			if CopyClip(Text) then
 				SafeNotify({ Title = "Resep", Description = "Copied ke clipboard.", Icon = "clipboard-check", Time = 3 })
 			else

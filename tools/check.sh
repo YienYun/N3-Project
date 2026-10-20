@@ -86,6 +86,12 @@ chk "v4.6.10: preview OFF total (nggak nyetomp state global lagi)" \
 	"grep -q 'local PREVIEW_ENABLED = true' '$PREV' && ! grep -q 'Library:SetSurface' '$PREV'"
 chk "v4.6.11: nested surface card ikut induk (IsInsideSurfaceCard dipake x3)" \
 	"[ \$(grep -c 'Library:IsInsideSurfaceCard(BoxHolder)' '$LIB') -eq 3 ] && grep -q 'function Library:IsInsideSurfaceCard' '$LIB'"
+chk "v4.7.0: TabAppearance + setter/applier di LIBRARY" \
+	"grep -q 'Library.TabAppearance = {' '$LIB' && grep -q 'function Library:SetTabAppearance' '$LIB' && grep -q 'function Library:ApplyTabAppearance' '$LIB'"
+chk "v4.7.0: stroke+zoom icon sidebar (UIStroke/UIScale/TabHoverZoom lib+mod)" \
+	"grep -q 'TabIconStroke = New' '$LIB' && grep -q 'TabIconScale = New' '$LIB' && grep -q 'TabHoverZoom' '$LIB' && grep -q 'TabHoverZoom' '$MOD'"
+chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
+	"grep -q 'local function BuildTab' '$MOD' && grep -q 'N3V4 RESEP TAB' '$MOD'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
 	"grep -q 'Transparency = 0,' '$MOD' && grep -q 'Contrast = 40' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.fromRGB(156, 156, 156)' '$MOD'"
 chk "state S di-init SEBELUM BuildResep/BuildTema (bug 'index nil with Image')" \
@@ -108,7 +114,7 @@ chk "simetris" "python3 '$ROOT/tools/symmetry.py' '$PRE'"
 chk "ggak manggil SetWallpaper/SetSurface (setingan cuma di file setingan)" \
 	"! grep -qE '^\s*[^-].*Library:Set(Wallpaper|Surface)' '$PRE'"
 chk "AddKeyBox di-guard typeof" "grep -q 'typeof(AdvancedTab.AddKeyBox)' '$PRE'"
-chk "footer v4.6" "grep -q 'Preview Kit v4.6' '$PRE'"
+chk "footer v4.7.0" "grep -q 'Preview Kit v4.7.0' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \

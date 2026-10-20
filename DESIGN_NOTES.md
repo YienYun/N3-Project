@@ -4,6 +4,24 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 
 ---
 
+## 🎯 v4.7.0 — UPGRADE TAB SIDEBAR (baseline, BELUM locked — nunggu print user)
+
+Diskusi user: stroke di icon (biar keliatan), background dikit di semua tab,
+zoom hover + zoom tab aktif. Scope: SIDEBAR tabs aja (pilihan user), borongan
+sekali paste (pilihan user), bg tab aktif = tint accent (pilihan user).
+
+Baseline (Library.TabAppearance + Settings.DEFAULTS.Tab):
+  IconStrokeThickness 1 px | IconStrokeTransparency 0.40 | IconStrokeColor hitam
+  TabBackgroundTransparency 0.70 (semua tab, MainColor)
+  ActiveBackgroundTransparency 0.55 | ActiveBackgroundColor accent 218,68,255
+  HoverZoom 1.12 | ActiveZoom 1.08 | ZoomTime 0.15s (Quad Out)
+  Matinya: Library.Animations.TabHoverZoom = false
+
+Mekanik: UIStroke di ImageLabel icon ngikut alpha glyph (outline bentuk icon,
+bukan kotak). UIScale per icon buat zoom. Library.TabVisuals = rec per tab;
+ApplyTabAppearance() sync stroke/bg/scale semua tab (dipanggil SetTabAppearance
++ Show/Hide). Print LENGKAP sekarang nambah section RESEP TAB.
+
 ## 🔒 RESEP v5 = DEFAULT TERKUNCI (print LENGKAP user, 2026-10-20, v4.6.8)
 
 ```lua

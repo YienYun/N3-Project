@@ -7,6 +7,17 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.7.0 — UPGRADE TAB SIDEBAR (borongan, sesuai diskusi):
+	   • Stroke tipis di GLYPH icon tab (UIStroke ngikut bentuk icon, bukan
+	     kotak) biar keliatan di atas wallpaper. Baseline 1px / 40% / hitam.
+	   • Background dikit di SEMUA tab (baseline 70% transparency, MainColor).
+	   • Tab aktif: bg tint accent tipis (55%) + icon zoom nantahan (108%).
+	   • Hover: icon zoom sedikit (112%), tween Quad Out 0.15s; mati lewat
+	     Library.Animations.TabHoverZoom = false.
+	   • Knob lengkap di file setingan (tab UI Settings, box "Tab Stroke & Bg"
+	     + "Tab Aktif & Zoom", simetris 4/4). Print LENGKAP include RESEP TAB.
+	   • Preview = testbed lu: puter knob, liat sidebar window ini, print.
+
 	 CHANGELOG v4.6.12 — PREVIEW NYALA LAGI (aman):
 	   • User mau seting manual upgrade TAB (stroke icon, background tab, zoom
 	     hover/aktif) -> PREVIEW_ENABLED = true lagi. Beda sama era v4.6.9:
@@ -140,7 +151,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6.12" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.7.0" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -172,7 +183,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6.12",
+	Footer = "N3V4 • UI Preview Kit v4.7.0",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
