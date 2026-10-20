@@ -1,0 +1,8 @@
+# Build artifacts / tooling (jangan masuk git)
+build/
+*.o
+*.a
+luau-analyze
+luau
+node_modules/
+package-lock.json

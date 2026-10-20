@@ -1,13 +1,21 @@
-# N3V4 — Preview Kit (v4.5)
+# N3V4 — Preview Kit (v4.6)
 
-> 🧱 **v4.5: preview BERSIH.** Preview = murni showcase komponen.
-> SEMUA setingan desain pindah ke **`N3V4_UISettings.module.lua`**.
-> Kalau ModuleScript itu ada di ReplicatedStorage, preview otomatis
-> nambah tab "UI Settings" + "Wallpaper & Surface". Kalau nggak, preview
-> jalan normal tanpa setingan.
+> 🧱 **Preview = murni showcase komponen** (5 tab, kiri/kanan simetris).
+> SEMUA setingan desain ada di **`N3V4_UISettings.module.lua`** → nambah
+> 2 tab: **"UI Settings"** + **"Wallpaper & Surface"**.
 >
-> 🖼️ **Wallpaper aktif otomatis** — default-nya sekarang di LIBRARY
-> (resep user yang disetujui), jadi nggak perlu seting apa-apa.
+> 🖼️ **Wallpaper aktif otomatis** — default-nya di LIBRARY (resep user),
+> jadi tanpa seting apa pun wallpaper udah nyala.
+>
+> 🖨️ **v4.6: print resep THEMA.** Tab "UI Settings" punya tombol
+> *Print resep tema* / *Copy resep tema* → nge-print scheme colors
+> (accent, background, main, outline, font), font, corner radius, DPI scale,
+> dan animasi dalam bentuk Lua siap paste. Ada juga *Print resep LENGKAP*
+> (thema + wallpaper + surface) di kedua tab.
+>
+> 🐛 **v4.6: 3 bug LIBRARY dibenerin** (lihat `../DESIGN_NOTES.md`):
+> Dependency groupbox crash, Viewport 3D assert, color picker drag runaway.
+> **Wajib copy ulang library-nya** — kalau nggak, bug-nya masih ada.
 
 Preview lengkap semua fitur UI library N3, buat dites di **Roblox Studio**.
 
@@ -40,7 +48,25 @@ StarterPlayer
 Isi = **seluruh kode** `N3V4_Preview.client.lua`. Nama bebas, yang wajib tipenya
 **LocalScript** dan lokasinya di **StarterPlayerScripts**.
 
-### 3. HTTP Requests — sekarang beneran **OPSIONAL**
+### 3. File setingan UI — DUAL MODE (pilih salah satu)
+
+```
+StarterPlayerScripts
+└── N3V4_UISettings   <- LocalScript   (cara yang lu pakai)
+```
+atau
+```
+ReplicatedStorage
+└── N3V4_UISettings   <- ModuleScript  (preview auto-require)
+```
+
+Isi = seluruh kode `Preview/N3V4_UISettings.module.lua`.
+Dua-duanya jalan: sebagai LocalScript dia nempel sendiri lewat
+`shared.N3V4_UISettings` (nunggu library + window siap), sebagai ModuleScript
+dia di-require preview. Flag `shared.N3V4_UISettings_Attached` mencegah tab
+kembar kalau dua-duanya kebetulan ada.
+
+### 4. HTTP Requests — sekarang beneran **OPSIONAL**
 
 `File > Game Settings > Security > Allow HTTP Requests`
 
@@ -227,3 +253,21 @@ Kalau `Radius: 4` atau `Animations: nil` → berarti ModuleScript `N3V4` lu
 
 Tiap section dibungkus `pcall`. Yang gagal cuma di-skip + dicatat, script tetep jalan.
 Lihat ulang: **Theme Lab → Window Controls → "Print laporan ke Output"**.
+
+---
+
+## Checker (luau asli, bukan bikinan)
+
+```bash
+./tools/check.sh
+```
+
+Isinya:
+1. **Syntax** — pakai `luau-analyze` beneran (di-download + di-build sekali,
+   ke-cache di `tools/bin/`, folder itu di-gitignore).
+2. **Struktur** — bridge AddViewport, urutan definisi Surface system,
+   drag fix color picker/slider, jumlah tab, simetri kiri/kanan per tab,
+   print resep thema, dual-mode settings, game script nggak kesentuh.
+
+Build pertama ±3 menit (`make config=release luau-analyze`), berikutnya instan.
+Paksa build ulang: `./tools/check.sh --rebuild`.

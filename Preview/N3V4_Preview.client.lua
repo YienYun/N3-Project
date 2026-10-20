@@ -1,125 +1,46 @@
 --[[
 	================================================================================
-	 N3V4 — PREVIEW KIT v4   (LocalScript)
+	 N3V4 — PREVIEW KIT v4.6   (LocalScript)
 	================================================================================
 
-	 CHANGELOG v4.5 — PREVIEW BERSIH:
-	   • SEMUA setingan UI DIHAPUS dari preview (Theme Lab + Wallpaper tab).
-	     Preview sekarang MURNI showcase komponen: button, toggle, dropdown,
-	     slider, image, viewport, feed, notify, dialog, dll.
-	   • Setingan desain pindah ke FILE BARU: Preview/N3V4_UISettings.module.lua
-	     (ModuleScript "N3V4_UISettings"). Preview auto-require kalau ada ->
-	     tab "UI Settings" + "Wallpaper & Surface" muncul sendiri.
-	   • Wallpaper & surface NGGAK di-set di preview lagi: default-nya udah
-	     di LIBRARY (resep user), jadi begitu require langsung aktif.
-	   • Game script (N3-SAE.lua) dibalikin original — fokus UI, bukan script game.
+	 ISI FILE INI: MURNI showcase komponen (5 tab, kiri/kanan simetris).
+	 ZERO setingan desain — semua setingan ada di file terpisah:
+	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
-	 FIX (v4.4.2) — PICKER AKHIRNYA BENERAN MUNCUL:
-	   • BUG: AddColorPicker di library ini HARUS nempel ke object yang punya
-	     .TextLabel (Toggle / Button). Gue sempat nempel-in ke GROUPBOX ->
-	     TextLabel nil -> crash runtime -> groupbox WARNA isinya label doang,
-	     picker-nya nggak ke-render. (Keliatan di screenshot user.)
-	   • Sekarang tiap warna punya TOGGLE sendiri sebagai host:
-	     "Tint aktif" / "Overlay aktif" / "Canvas warna custom" /
-	     "Group warna custom". Toggle OFF = ikut bawaan/theme, ON = pakai
-	     warna lu. Klik kotak warna di kanan baris = picker.
-	   • Toggle & warna overlay pindah dari box Overlay ke box WARNA
-	     (biar semua warna satu tempat). Box Overlay sisa slider + reset.
+	 CHANGELOG v4.6 — 3 BUG LIBRARY DIBENERIN + PRINT RESEP THEMA:
+	   • BUG 1 (Dependency groupbox error "attempt to call a nil value"):
+	     ClampTransparency / Library.Surface / Library.SurfaceGroups dipakai
+	     AddDependencyGroupbox, tapi didefinisiin DI BAWAH-nya. Local Lua cuma
+	     kebaca SETELAH baris deklarasinya -> nil pas dipakai. Seluruh blok
+	     Surface & Wallpaper sekarang DIPINDAH ke atas (tepat setelah New()).
+	   • BUG 2 (Viewport 3D error "Instance must be a BasePart or Model"):
+	     library punya DUA `Funcs:AddViewport` dan yang bawah (wajib Info.Object)
+	     menimpa yang atas (Height/Spin/Interactive/SetModel). Sekarang ada
+	     bridge: kalau Object nggak dikasih -> pakai versi ringan. Dua API hidup.
+	   • BUG 3 (color picker "kadang ga work" + UI berat):
+	     drag loop lama muter selamanya karena InputBegan GuiObject juga kepicu
+	     MouseMovement (state Change) -> coroutine numpuk tiap mouse gerak, warna
+	     suka lompat sendiri. Sekarang: drag mulai cuma dari klik beneran, berhenti
+	     dari InputEnded global (aman walau mouse lepas di luar elemen). Slider
+	     kena fix yang sama.
+	   • AddKeyBox: preview sekarang cek dulu method-nya ada (library lama = skip,
+	     bukan error).
+	   • Setingan: tombol PRINT/COPY RESEP THEMA (accent, background, main,
+	     outline, font color + font, radius, DPI, animasi) di tab "UI Settings",
+	     plus "Print resep LENGKAP" (thema + wallpaper + surface) di dua tab.
 
-	 CHANGELOG v4.4.1:
-	   • Groupbox BARU "WARNA — custom lengkap" (kiri): SEMUA color picker
-	     dikumpulin di satu tempat biar nggak mungkin kelewat — tint wallpaper,
-	     warna overlay, warna canvas, warna kartu group + tombol reset per warna.
-	   • Groupbox BARU "Master" (kanan): RESET SEMUA / Wallpaper OFF /
-	     Wallpaper ON + cara cek versi copy-an lu lewat footer.
-	   • Overlay default OFF — scrim hitam inilah yang bikin wallpaper keliatan
-	     ABU-ABU/kusam waktu nyala. Nyala-in manual kalau butuh.
-	   • Footer window = v4.4: kalau footer lu belum v4.4, copy-an lu LAMA.
+	 CARA PAKAI (3 paste):
+	   1. ReplicatedStorage > ModuleScript "N3V4"          = Library/N3V3-NoObfus.lua
+	      ^ WAJIB copy ulang tiap gue update — bug fix di atas adanya DI SINI.
+	   2. StarterPlayerScripts > LocalScript "N3V4_Preview" = file ini
+	   3. Setingan UI (pilih SATU, dua-duanya jalan):
+	      a. StarterPlayerScripts > LocalScript "N3V4_UISettings"   <- cara lu
+	      b. ReplicatedStorage    > ModuleScript "N3V4_UISettings"  <- auto-require
+	   Allow HTTP Requests = OPSIONAL (icon udah ada fallback offline).
+	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
-	 CHANGELOG v4.4 — WALLPAPER STUDIO LENGKAP:
-	   • Default BALIK ke wallpaper keliatan (canvas 100%) tapi kartu group
-	     SOLID pakai warna ASLI theme (contrast 0) — nggak diabu-abuin lagi.
-	   • COLOR PICKER langsung (nggak disembunyiin di toggle):
-	     tint wallpaper, warna overlay, warna canvas, warna kartu group.
-	   • Tiap picker punya tombol reset / "ikut theme lagi".
-	   • Groupbox L4 dijelasin ATURAN LAYER biar nggak bingung kenapa
-	     "group transparency kayak ga ngaruh" (jawabannya: cuma keliatan
-	     kalau canvas-nya transparan).
-	   • Preset baru "Kartu nongol (contrast 15)"; preset lama contrast-nya
-	     di-nol-in biar nggak maksa grey.
-	   • Print resep sekarang ikut nyertain GroupColor/CanvasColor override.
-
-	 FIX (v4.3) — BALIKIN NORMAL:
-	   • BUG KRITIS: ClampTransparency didefinisiin DI BAWAH Library:SetSurface.
-	     Di Lua, local yang dideklarasinya belakangan nggak keliatan dari function
-	     di atasnya -> jadi global nil -> "attempt to call a nil value".
-	     Efeknya SEMUA slider/button surface "ga work". Helper block udah
-	     dipindah ke ATAS Library:SetBackgroundImage di library.
-	   • Default Surface BALIK NORMAL: Canvas 0 (solid), Group 0 (solid),
-	     Contrast 0 (warna kartu sama kayak semula, nggak diabu-abuin).
-	   • Tombol reset diganti: "BALIKIN NORMAL (semula)" + "Coba: wallpaper
-	     keliatan". Preset "Matiin semua" -> "Matiin semua (balik normal)".
-	   • Live Info tambah baris status: nge-warn kalau image GAGAL load
-	     (yang nembus itu game-nya, bukan wallpaper).
-	   • Sekarang LU yang atur angka lewat slider — default nggak maksa tampilan.
-
-	 FIX (v4.2) — SURFACE SYSTEM:
-	   • Wallpaper mode "back" dulu NGGAK keliatan karena Container (area konten)
-	     SOLID nutupin dia. Sekarang ada Canvas transparency -> set 100%.
-	   • Mode "front" bikin button/dropdown/slider/text keliatan TEMBUS — itu
-	     karena wallpaper digambar DI ATAS komponen (ZIndex 999). Buat
-	     wallpaper-as-background, pakai "back" + canvas 100%.
-	   • Kartu group sekarang SOLID default + GroupContrast (default 10%) biar
-	     kebaca sebagai kartu di atas wallpaper, beda dari background window.
-	   • Groupbox baru: "Canvas & Kartu Group" (kiri) + "Resep Aktif" (kanan).
-	     Tombol "Print resep Lua" nge-print SetWallpaper+SetSurface siap paste.
-	   • CONFIG.Surface baru: CanvasTransparency=1, GroupTransparency=0,
-	     GroupContrast=10.
-
-	 FIX (v4.1):
-	   • Enum.ScaleType.Fill itu NGGAK ADA di Roblox — bikin seluruh library
-	     gagal di-require. Member asli cuma: Stretch, Slice, Tile, Fit, Crop.
-	   • Sekarang tabel ScaleType dibangun dari GetEnumItems() (nggak mungkin
-	     ngarang lagi) + alias Fill/Cover -> Crop, Contain -> Fit
-	   • Dropdown ScaleType di tab Media juga kena bug yang sama (crash pas
-	     dipilih). Udah dibenerin lewat ResolveScale()
-
-	 CHANGELOG v4 (WALLPAPER):
-	   • Tab baru "Wallpaper" — 3 groupbox kiri / 3 kanan (simetris)
-	   • Kontrol: Asset ID (paste), transparency, tint, ScaleType, Layer
-	     (back/front), Overlay/scrim (toggle + warna + transparency)
-	   • 6 preset: Wallpaper gue / Subtle / Bold / Wash / Accent tint / Off
-	   • Live Info pakai Window:GetWallpaperInfo()
-	   • ID wallpaper lu (111593326989465) jadi default di CONFIG.Wallpaper
-	   • SEMUA kontrol manggil API LIBRARY (Library:SetWallpaper), bukan hack
-	     preview -> yang lu lihat di sini = yang bakal hub lu dapet
-	   • Grup "Font & Background" di Theme Lab dirampingin jadi "Font"
-	     (kontrol background pindah ke tab Wallpaper, nggak dobel)
-
-	 CHANGELOG v3 (revisi icon):
-	   • Icon balik ke NAMA LUCIDE — sama persis kayak hub lu ("house", "paw-print",
-	     "egg", "settings", ...). Bukan rbxassetid tambangan lagi.
-	   • v2 gue salah: gue pakai asset ID dari Games/Source/*.lua yang ternyata
-	     PRIVATE punya game -> "The experience doesn't have access permission".
-	   • Solusinya di LIBRARY, bukan di preview: gue tambahin OfflineLucideIcons
-	     (117 icon, spritesheet PUBLIK) + mirror GitHub. Jadi lucide tetep muncul
-	     walaupun HTTP off / gitlab down.
-	   • Corner radius default 4 -> 10 (lu approve lewat slider Theme Lab)
-
-	 CHANGELOG v2:
-	   • FIX: AddDraggableLabel error "Icon must be a valid Roblox asset..."
-	   • FIX: AddContextMenu error "AddButton is not a valid member of Frame"
-	   • Layout SIMETRIS: groupbox kiri = kanan di tiap tab
-	   • Animasi library di-nyalain dari default (Library/N3V3-NoObfus.lua)
-
-	 CARA PAKAI:
-	   1. ReplicatedStorage > ModuleScript "N3V4"  = isi N3V3-NoObfus.lua
-	      ^ WAJIB copy ulang, library-nya berubah (icon fallback + animasi + radius)
-	   2. StarterPlayer > StarterPlayerScripts > LocalScript "N3V4_Preview" = file ini
-	   3. Game Settings > Security > Allow HTTP Requests = ON  ->  OPSIONAL.
-	      Icon udah punya fallback offline, jadi HTTP nggak dibutuhin lagi.
-	   Tekan Play.
-
+	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
+	   footer "v4.6" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -136,7 +57,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.5",
+	Footer = "N3V4 • UI Preview Kit v4.6",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -821,6 +742,12 @@ end)
 
 -- KeyBox = elemen level Tab (muncul di area atas tab), nggak ngaruh simetri kiri/kanan
 Try("Advanced: KeyBox (execute key)", function()
+	-- AddKeyBox itu method level Tab (ada di library utama). Kalau library yang
+	-- di-paste versi lama, method-nya belum ada -> kita skip, jangan error.
+	if typeof(AdvancedTab.AddKeyBox) ~= "function" then
+		warn("[N3V4 Preview] AddKeyBox nggak ada di library ini — paste ulang Library/N3V3-NoObfus.lua terbaru.")
+		return
+	end
 	AdvancedTab:AddKeyBox(function(KeyText)
 		SafeNotify({ Title = "KeyBox", Description = "Key masuk: " .. tostring(KeyText), Time = 3 })
 	end)

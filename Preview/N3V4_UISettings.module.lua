@@ -10,6 +10,10 @@
 --      -> preview auto-require, atau manual: Settings:Attach(Library, Window)
 --
 -- Default = RESEP USER yang disetujui 2026-10-20.
+--
+-- v4.6: tombol PRINT/COPY RESEP THEMA (scheme colors + font + radius + DPI +
+--       animasi) di tab "UI Settings", dan "Print resep LENGKAP" (thema +
+--       wallpaper + surface) di kedua tab. Copy pakai setclipboard kalau ada.
 --================================================================================
 
 local Settings = {}
@@ -75,6 +79,131 @@ function Settings:Attach(Library, Window, Options)
 			return Enum.Font[Name]
 		end)
 		return OK and Font or nil
+	end
+
+	--//========================================================================
+	-- RESEP / PRINT  (dipakai dua tab: tema + wallpaper)
+	--//========================================================================
+	local function RGB(C)
+		if typeof(C) ~= "Color3" then
+			return "Color3.fromRGB(0, 0, 0)"
+		end
+		return string.format(
+			"Color3.fromRGB(%d, %d, %d)",
+			math.floor(C.R * 255 + 0.5),
+			math.floor(C.G * 255 + 0.5),
+			math.floor(C.B * 255 + 0.5)
+		)
+	end
+
+	local function CopyClip(Text)
+		if setclipboard then
+			pcall(function()
+				setclipboard(Text)
+			end)
+			return true
+		end
+		return false
+	end
+
+	-- Baca satu nilai dari library tanpa pernah error (API lama/baru aman).
+	local function Pick(Obj, Keys, Fallback)
+		if type(Obj) ~= "table" then
+			return Fallback
+		end
+		for _, K in ipairs(Keys) do
+			local OK, V = pcall(function()
+				return Obj[K]
+			end)
+			if OK and V ~= nil then
+				return V
+			end
+		end
+		return Fallback
+	end
+
+	local SCHEME_KEYS = {
+		{ "AccentColor", "AccentColor" },
+		{ "BackgroundColor", "BackgroundColor" },
+		{ "MainColor", "MainColor" },
+		{ "OutlineColor", "OutlineColor" },
+		{ "FontColor", "FontColor" },
+	}
+
+	local ANIM_KEYS = { "ToggleWindow", "TabSwitch", "Groupbox", "Dropdown", "KeyPicker" }
+
+	-- Resep THEMA: scheme colors + font + radius + DPI + animasi.
+	-- Ini yang diminta user: "kasih print juga di theme".
+	local function BuildTema()
+		local lines = { "--[[ N3V4 RESEP THEMA — paste balik ke script lu ]]" }
+
+		for _, Pair in ipairs(SCHEME_KEYS) do
+			local Key = Pair[1]
+			local Color = Library.Scheme and Library.Scheme[Key]
+			if typeof(Color) == "Color3" then
+				table.insert(lines, string.format("Library.Scheme.%s = %s", Key, RGB(Color)))
+			end
+		end
+		table.insert(lines, "Library:UpdateColorsUsingRegistry()")
+
+		local Font = Pick(Library.Scheme, { "Font" }, nil)
+		local FontName = nil
+		pcall(function()
+			FontName = Font and Font.Name
+		end)
+		if type(FontName) == "string" and FontName ~= "" then
+			table.insert(lines, string.format("Library:SetFont(Enum.Font.%s)", FontName))
+		end
+
+		local Radius = tonumber(Library.CornerRadius)
+		if Radius then
+			table.insert(lines, string.format("Window:SetCornerRadius(%d)", math.floor(Radius + 0.5)))
+		end
+
+		local DPI = tonumber(Library.DPIScale)
+		if DPI then
+			table.insert(lines, string.format("Library:SetDPIScale(%d)", math.floor(DPI * 100 + 0.5)))
+		end
+
+		for _, Key in ipairs(ANIM_KEYS) do
+			local On = true
+			if Library.Animations and Library.Animations[Key] ~= nil then
+				On = Library.Animations[Key] and true or false
+			end
+			table.insert(lines, string.format("Library.Animations.%s = %s", Key, tostring(On)))
+		end
+
+		return table.concat(lines, "\n")
+	end
+
+	-- Resep WALLPAPER + SURFACE (transparansi, warna kartu/latar).
+	local function BuildResep()
+		local lines = {
+			"--[[ N3V4 RESEP WALLPAPER + SURFACE ]]",
+			"Library:SetWallpaper({",
+			string.format('\tImage = "%s",', tostring(S.Image)),
+			string.format("\tTransparency = %.2f,", S.Transparency),
+			string.format('\tScaleType = "%s",', tostring(S.ScaleType)),
+			string.format("\tColor = %s,", RGB(S.Color)),
+			string.format('\tLayer = "%s",', tostring(S.Layer)),
+			string.format("\tOverlay = %s,", tostring(S.Overlay == true)),
+			string.format("\tOverlayColor = %s,", RGB(S.OverlayColor)),
+			string.format("\tOverlayTransparency = %.2f,", S.OverlayTransparency),
+			"})",
+			"Library:SetSurface({",
+			string.format("\tWindowTransparency = %.2f,", S.Window),
+			string.format("\tCanvasTransparency = %.2f,", S.Canvas),
+			string.format("\tGroupTransparency = %.2f,", S.Group),
+			string.format("\tGroupContrast = %d,", math.floor(S.Contrast + 0.5)),
+			(typeof(S.GroupColor) == "Color3")
+				and ("\tGroupColor = " .. RGB(S.GroupColor) .. ",")
+				or "\tGroupColor = false, -- ikut theme",
+			(typeof(S.CanvasColor) == "Color3")
+				and ("\tCanvasColor = " .. RGB(S.CanvasColor) .. ",")
+				or "\tCanvasColor = false, -- ikut theme",
+			"})",
+		}
+		return table.concat(lines, "\n")
 	end
 
 	--// state awal: baca yang lagi aktif, fallback ke DEFAULTS \\--
@@ -300,10 +429,29 @@ function Settings:Attach(Library, Window, Options)
 	end)
 
 	Try("Settings: info", function()
-		local Box = T1:AddRightGroupbox("Info", "info")
-		Box:AddLabel("File ini = semua setingan desain.", true)
+		local Box = T1:AddRightGroupbox("Resep Tema", "copy")
+
+		-- yang diminta user: print resep THEME (accent/outline/main/font/bg)
+		Box:AddButton("Print resep tema", function()
+			print("[N3V4 RESEP THEMA] paste ini balik:\n" .. BuildTema())
+			SafeNotify({ Title = "Resep tema", Description = "Cek Output.", Icon = "copy", Time = 3 })
+		end)
+		Box:AddButton("Copy resep tema", function()
+			local Text = BuildTema()
+			if CopyClip(Text) then
+				SafeNotify({ Title = "Resep tema", Description = "Copied ke clipboard.", Icon = "clipboard-check", Time = 3 })
+			else
+				print("[N3V4 RESEP THEMA]\n" .. Text)
+				SafeNotify({ Title = "Resep tema", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+			end
+		end)
+		Box:AddButton("Print SEMUA (tema+wallpaper)", function()
+			print("[N3V4 RESEP LENGKAP]\n" .. BuildTema() .. "\n\n" .. BuildResep())
+			SafeNotify({ Title = "Resep", Description = "LENGKAP di Output.", Icon = "copy", Time = 4 })
+		end)
+
+		Box:AddLabel("Setingan desain semua di file ini.", true)
 		Box:AddLabel("Preview = showcase komponen aja.", true)
-		Box:AddLabel("Tab sebelah: wallpaper & surface.", true)
 	end)
 
 	--============================================================================
@@ -572,39 +720,22 @@ function Settings:Attach(Library, Window, Options)
 	Try("WP: resep", function()
 		local Box = T2:AddRightGroupbox("Resep", "copy")
 
-		local function BuildResep()
-			local C = S.OverlayColor
-			local T = S.Color
-			local lines = {
-				"Library:SetWallpaper({",
-				string.format('\tImage = "%s",', tostring(S.Image)),
-				string.format("\tTransparency = %.2f,", S.Transparency),
-				string.format('\tScaleType = "%s",', tostring(S.ScaleType)),
-				string.format("\tColor = Color3.fromRGB(%d, %d, %d),", math.floor(T.R * 255 + 0.5), math.floor(T.G * 255 + 0.5), math.floor(T.B * 255 + 0.5)),
-				string.format('\tLayer = "%s",', tostring(S.Layer)),
-				string.format("\tOverlay = %s,", tostring(S.Overlay == true)),
-				string.format("\tOverlayColor = Color3.fromRGB(%d, %d, %d),", math.floor(C.R * 255 + 0.5), math.floor(C.G * 255 + 0.5), math.floor(C.B * 255 + 0.5)),
-				string.format("\tOverlayTransparency = %.2f,", S.OverlayTransparency),
-				"})",
-				"Library:SetSurface({",
-				string.format("\tWindowTransparency = %.2f,", S.Window),
-				string.format("\tCanvasTransparency = %.2f,", S.Canvas),
-				string.format("\tGroupTransparency = %.2f,", S.Group),
-				string.format("\tGroupContrast = %d,", math.floor(S.Contrast + 0.5)),
-				(typeof(S.GroupColor) == "Color3")
-					and string.format("\tGroupColor = Color3.fromRGB(%d, %d, %d),", math.floor(S.GroupColor.R * 255 + 0.5), math.floor(S.GroupColor.G * 255 + 0.5), math.floor(S.GroupColor.B * 255 + 0.5))
-					or "\tGroupColor = false, -- ikut theme",
-				(typeof(S.CanvasColor) == "Color3")
-					and string.format("\tCanvasColor = Color3.fromRGB(%d, %d, %d),", math.floor(S.CanvasColor.R * 255 + 0.5), math.floor(S.CanvasColor.G * 255 + 0.5), math.floor(S.CanvasColor.B * 255 + 0.5))
-					or "\tCanvasColor = false, -- ikut theme",
-				"})",
-			}
-			return table.concat(lines, "\n")
-		end
-
-		Box:AddButton("Print resep Lua", function()
-			print("[N3V4 RESEP] paste ini balik:\n" .. BuildResep())
-			SafeNotify({ Title = "Resep", Description = "Cek Output.", Icon = "copy", Time = 3 })
+		Box:AddButton("Print resep wallpaper", function()
+			print("[N3V4 RESEP WALLPAPER] paste ini balik:\n" .. BuildResep())
+			SafeNotify({ Title = "Resep", Description = "Wallpaper + surface di Output.", Icon = "copy", Time = 3 })
+		end)
+		Box:AddButton("Print resep LENGKAP", function()
+			print("[N3V4 RESEP LENGKAP] tema + wallpaper + surface:\n" .. BuildTema() .. "\n\n" .. BuildResep())
+			SafeNotify({ Title = "Resep", Description = "LENGKAP (tema + wallpaper) di Output.", Icon = "copy", Time = 4 })
+		end)
+		Box:AddButton("Copy resep LENGKAP", function()
+			local Text = BuildTema() .. "\n\n" .. BuildResep()
+			if CopyClip(Text) then
+				SafeNotify({ Title = "Resep", Description = "Copied ke clipboard.", Icon = "clipboard-check", Time = 3 })
+			else
+				print("[N3V4 RESEP LENGKAP]\n" .. Text)
+				SafeNotify({ Title = "Resep", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+			end
 		end)
 		Box:AddButton("Print info lengkap", function()
 			pcall(function()

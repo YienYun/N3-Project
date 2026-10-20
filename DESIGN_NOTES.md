@@ -18,6 +18,148 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 
 ---
 
+## 🐛 v4.6 — 3 BUG LIBRARY (ketemu dari log Studio user, 2026-10-20)
+
+Log user waktu itu: `✅ 26 / ❌ 4`. Empat gagalnya bukan "komponen nggak ada",
+tapi **bug beneran di library**. Ketiganya udah dibenerin di
+`Library/N3V3-NoObfus.lua`.
+
+### 1. `AddDependencyGroupbox` → "attempt to call a nil value"
+
+`AddDependencyGroupbox` bikin frame dengan:
+
+```lua
+BackgroundColor3 = function() return Library:GetGroupSurfaceColor() end,
+BackgroundTransparency = ClampTransparency(Library.Surface.GroupTransparency),
+...
+Library.SurfaceGroups[DepGroupboxContainer] = true
+```
+
+Masalahnya `ClampTransparency` itu **local function** yang dideklarasikan
+±200 baris DI BAWAH pemakaian. Di Lua, local cuma kelihatan **setelah** baris
+deklarasinya — jadi di baris pemakaian namanya ke-resolve sebagai **global nil**
+→ `attempt to call a nil value`. (`FillInstance` langsung manggil function
+property, makanya error-nya kejadian pas komponen dibuat.)
+
+**Fix:** seluruh blok *Surface & Wallpaper system* (`WallpaperScaleTypes`,
+`ResolveScaleType`, `ResolveWallpaperLayer`, `ClampTransparency`,
+`Library.Surface*`, `GetCanvasColor`, `GetGroupSurfaceColor`, `ApplySurfaces`,
+`SetBackgroundImage`, `SetWallpaper`, `SetSurface`) **dipindah ke atas**, tepat
+setelah `New()` / sebelum instance pertama dibuat. Isi blok nggak diubah, cuma
+posisinya.
+
+> Ini bug class yang sama kayak v4.3 dulu. Aturannya sekarang: **helper surface
+> HARUS di atas semua pembuat komponen.** `tools/check.sh` ngecek urutan ini.
+
+### 2. Viewport 3D → "Instance must be a BasePart or Model."
+
+Di file ada **DUA** `function Funcs:AddViewport`:
+
+| Baris (lama) | API | Nasib |
+|---|---|---|
+| ~4734 | `Height` / `Spin` / `Interactive` + `SetModel()` (WorldModel) | **ketimpa** |
+| ~7899 | `Object` / `Camera` / `Clone` / `AutoFocus` + `assert(Object)` | menang |
+
+Karena dua-duanya nulis ke key tabel yang sama, yang bawah menang → setiap
+panggilan tanpa `Info.Object` kena `assert` → komponen gagal dibuat.
+
+**Fix:** bridge. Sebelum definisi yang kedua, versi pertama di-capture:
+
+```lua
+local RichAddViewport = Funcs.AddViewport
+
+function Funcs:AddViewport(Idx, Info)
+    ...
+    Info = Library:Validate(Info, Templates.Viewport)
+    if not Info.Object and RichAddViewport then
+        return RichAddViewport(self, Idx, Info)   -- API ringan
+    end
+    ...                                            -- API Object/Camera tetap jalan
+```
+
+Dua API hidup bareng, nggak ada yang dihapus.
+
+### 3. Color picker "kadang ga work" + UI makin berat
+
+Handler drag lama:
+
+```lua
+SatVipMap.InputBegan:Connect(function(Input)
+    while IsDragInput(Input) and not ColorPicker.Destroyed do ... end
+end)
+```
+
+`IsDragInput` nerima state `Begin` **atau `Change`**, dan `InputBegan` GuiObject
+**juga kepicu MouseMovement** (state Change). Akibatnya:
+
+- tiap mouse gerak di atas picker → **coroutine baru** yang nggak pernah mati
+  (InputObject-nya nggak pernah "End" buat movement) → numpuk tiap frame;
+- coroutine-coroutine itu semua manggil `Update()` → warna **lompat-lompat
+  sendiri** walau mouse cuma numpang lewat → "kadang ga work";
+- makin lama makin berat.
+
+**Fix:** satu blok drag per picker:
+
+- mulai **cuma** dari klik beneran (`IsClickInput`);
+- satu drag aktif per picker (`DragActive`);
+- berhenti dari **`UserInputService.InputEnded`** (bukan InputEnded GuiObject),
+  jadi tetap berhenti walaupun mouse dilepas di luar elemen;
+- guard `Max > Min` biar nggak ada bagi-nol kalau ukuran belum ke-layout.
+
+Slider (`Bar.InputBegan`) dapat fix yang sama (`SliderReleaseConn`).
+`IsDragInput` sekarang nggak dipakai lagi tapi **sengaja nggak dihapus** — API
+internal, siapa tau ada yang nyantol.
+
+### Bonus: `AddKeyBox` "missing method"
+
+Method-nya **ADA** di library (`function Tab:AddKeyBox`, level Tab). Error di
+log user artinya library yang di-paste **versi lama**. Preview sekarang
+nge-guard:
+
+```lua
+if typeof(AdvancedTab.AddKeyBox) ~= "function" then
+    warn("...paste ulang library terbaru.")
+    return
+end
+```
+
+---
+
+## 🖨️ v4.6 — Print resep THEMA (yang diminta user)
+
+Sebelumnya cuma wallpaper + surface yang bisa di-print. Sekarang
+`Preview/N3V4_UISettings.module.lua` punya `BuildTema()` (attach scope, dipakai
+dua tab):
+
+```lua
+--[[ N3V4 RESEP THEMA — paste balik ke script lu ]]
+Library.Scheme.AccentColor = Color3.fromRGB(218, 98, 255)
+Library.Scheme.BackgroundColor = Color3.fromRGB(30, 30, 30)
+Library.Scheme.MainColor = Color3.fromRGB(40, 40, 40)
+Library.Scheme.OutlineColor = Color3.fromRGB(50, 50, 50)
+Library.Scheme.FontColor = Color3.fromRGB(238, 238, 238)
+Library:UpdateColorsUsingRegistry()
+Library:SetFont(Enum.Font.Code)
+Window:SetCornerRadius(10)
+Library:SetDPIScale(100)
+Library.Animations.ToggleWindow = true
+... (TabSwitch, Groupbox, Dropdown, KeyPicker)
+```
+
+Tombolnya:
+
+| Tab | Box | Tombol |
+|---|---|---|
+| UI Settings | **Resep Tema** (kanan bawah) | `Print resep tema` · `Copy resep tema` · `Print SEMUA (tema+wallpaper)` |
+| Wallpaper & Surface | **Resep** | `Print resep wallpaper` · `Print resep LENGKAP` · `Copy resep LENGKAP` · `Print info lengkap` |
+
+`Copy` pakai `setclipboard` kalau ada (executor), kalau nggak → fallback print.
+Semua nilai dibaca **live** dari `Library.Scheme` / `Library.Animations` /
+`Library.CornerRadius` / `Library.DPIScale` + state wallpaper `S`, jadi yang
+ke-print = yang beneran lagi aktif.
+
+---
+
 ## ⚠️ CATATAN PENTING SOAL SIMETRI
 
 **Simetri itu BUKAN properti library. Itu properti layout di HUB.**
@@ -37,7 +179,11 @@ Kondisi sekarang:
 `AddLeftGroupbox` 12x tapi `AddRightGroupbox` cuma 9x. Nggak ada yang bisa
 dibenerin di library — harus **rebalance di N3-SAE.lua**.
 
-👉 Ini kerjaan terpisah. Kalau mau, gue audit per-tab mana yang berat sebelah
+👉 **UPDATE: rebalance hub DIBATALIN sama user** ("ga usah woi kita fokus ui
+bukan script game anj!") — `Games/*.lua` haram disentuh. Tabel di atas cuma
+penjelasan kenapa hub lu nggak simetris, bukan kerjaan yang akan dikerjain.
+
+Kalau mau, gue audit per-tab mana yang berat sebelah
 terus gue usulin pemindahannya.
 
 ---
@@ -150,7 +296,8 @@ Templates.Window.Animations
 
 ## 📝 RINGKASAN: apa aja yang gue ubah di LIBRARY
 
-Semua di `Library/N3V3-NoObfus.lua`. **4 perubahan**, semua permanen (bukan preview-only):
+Semua di `Library/N3V3-NoObfus.lua` — permanen (bukan preview-only), jadi hub lu
+kebagian semuanya begitu library-nya di-copy ulang:
 
 | # | Perubahan | Lokasi | Efek |
 |---|---|---|---|
@@ -160,6 +307,12 @@ Semua di `Library/N3V3-NoObfus.lua`. **4 perubahan**, semua permanen (bukan prev
 | 4 | Alias 13 nama lucide lama | `OfflineLucideAliases` | `sliders`/`bar-chart-2`/`home`/`chat` dll tetep resolve |
 | 5 | **Wallpaper system** — 7 template field, 5 helper, 7 method | `Templates.Window` + sebelum `CreateWindow` + `BackgroundImage`/`BackgroundOverlay` + setters | Wallpaper configurable penuh: transparency, tint, scaletype, layer, overlay/scrim |
 | 6 | **FIX** `Window:SetBackgroundImage` nggak handle number | awal fungsi | Paste angka ID sekarang jalan (dulu diem-diem gagal) |
+| 7 | **Surface system** — canvas/group/window transparency + override warna | blok di atas (sekarang tepat setelah `New()`) | Wallpaper beneran jadi background; kartu group tetap solid & bisa dibedain |
+| 8 | **Resep user jadi default** | `Templates.Window` + `Library.Surface` | Wallpaper + surface aktif tanpa seting apa pun |
+| 9 | `Surface.WindowTransparency` + `Library.SurfaceWindow` | `ApplySurfaces`, `GetWallpaperInfo`, `Templates.Window` | Transparansi dasar MainFrame bisa diatur (default 0 = solid) |
+| 10 | **FIX v4.6** blok Surface/Wallpaper dipindah ke atas | setelah `New()`, sebelum instance pertama | `AddDependencyGroupbox` nggak crash "attempt to call a nil value" lagi |
+| 11 | **FIX v4.6** bridge dua `Funcs:AddViewport` | sebelum definisi AddViewport kedua | Viewport `Height/Spin/Interactive/SetModel` jalan lagi; API `Object/Camera` tetap hidup |
+| 12 | **FIX v4.6** drag color picker + slider | `Funcs:AddColorPicker`, `Funcs:AddSlider` | Warna nggak lompat sendiri, coroutine nggak numpuk, UI nggak makin berat |
 
 **Yang BELUM di library:** simetri (itu urusan hub), design tokens, warna/font baru,
 motion system tambahan, wallpaper di Loading/Dashboard/Notification.
@@ -473,7 +626,7 @@ buat semua helper N3V4.
 
 ---
 
-## 🧱 ARSITEKTUR PREVIEW vs SETTINGS (v4.5, permintaan user)
+## 🧱 ARSITEKTUR PREVIEW vs SETTINGS (v4.5 → v4.6, permintaan user)
 User: *"bersihin ui previewnya jangan ada setingan color dll ... bikin 1 file
 lagi namanya setting ui ... di preview hanya preview gambaran image button dll
 ... setingan ui itu harusnya full di file baru, nanti kita panggil di preview
@@ -482,7 +635,7 @@ utama biar muncul tab baru."*
 | File | Isi |
 |---|---|
 | `Preview/N3V4_Preview.client.lua` | **MURNI showcase komponen** (5 tab): button, toggle, dropdown, slider, image, viewport, feed, notify, dialog, dll. **NOL setingan UI.** |
-| `Preview/N3V4_UISettings.module.lua` | **SEMUA setingan desain** (2 tab: "UI Settings" 3/3 + "Wallpaper & Surface" 5/5): wallpaper, overlay, surface, warna scheme, font, radius, animasi, preset, print resep |
+| `Preview/N3V4_UISettings.module.lua` | **SEMUA setingan desain** (2 tab: "UI Settings" 3/3 + "Wallpaper & Surface" 4/4): wallpaper, overlay, surface, warna scheme, font, radius, animasi, preset, **print/copy resep thema + wallpaper** |
 | `Library/N3V3-NoObfus.lua` | Engine + **default resep user** (wallpaper aktif otomatis) |
 
 **DUAL MODE** (v4.5.1, setelah user paste sebagai LocalScript dan tab-nya
@@ -501,15 +654,21 @@ nggak muncul — detektor gue dulu cuma cari ModuleScript):
 
 ```
 N3-Project/
-├── Library/N3V3-NoObfus.lua     14.432 baris — engine UI (fork Obsidian) ← DIUBAH
-├── Games/
-│   ├── N3-SAE.lua               18.659 baris — hub Steal An Egg (8 tab)
-│   ├── ride-an-pets.lua          6.128 baris — hub kedua (2 icon broken)
-│   └── Source/StealAnEgg/      200.515 baris — 4 source lama
+├── Library/N3V3-NoObfus.lua       14.547 baris — engine UI (fork Obsidian) ← DIUBAH
+├── Games/                         ← HARAM DISENTUH (user: "fokus ui bukan script game")
+│   ├── N3-SAE.lua                 18.659 baris — hub Steal An Egg
+│   ├── ride-an-pets.lua            6.128 baris — hub kedua
+│   └── Source/StealAnEgg/         source lama
 ├── Preview/
-│   ├── N3V4_Preview.client.lua   1.922 baris — LocalScript preview v4 ← DIUBAH
+│   ├── N3V4_Preview.client.lua     1.196 baris — showcase 5 tab (v4.6) ← DIUBAH
+│   ├── N3V4_UISettings.module.lua    834 baris — setingan desain, dual-mode ← DIUBAH
 │   └── README.md
-└── DESIGN_NOTES.md               ← file ini
+├── tools/
+│   ├── check.sh                    syntax (luau-analyze asli) + cek struktur
+│   ├── symmetry.py                 kiri == kanan per tab
+│   └── bin/                        cache binary luau-analyze (di-gitignore)
+├── .gitignore
+└── DESIGN_NOTES.md                 ← file ini
 ```
 
 ---
@@ -518,8 +677,12 @@ N3-Project/
 
 - [x] **Phase 0** — Preview Kit
 - [x] **Phase 0.5** — Animasi ON, CornerRadius 10, offline icon fallback (semua di library)
-- [x] **Phase 0.6** — Wallpaper + Surface system ✅ + **resep user dikunci jadi default & kepasang di N3-SAE.lua**
-- [ ] **Phase 0.7** — Rebalance simetri `N3-SAE.lua` (12 kiri vs 9 kanan) ← *butuh go dari lu*
+- [x] **Phase 0.6** — Wallpaper + Surface system ✅ + **resep user dikunci jadi default library**
+      (pasang ke `N3-SAE.lua` **di-revert** — user: *"ga usah woi kita fokus ui bukan script game anj!"*)
+- [x] **Phase 0.7** — Setingan dipisah ke file sendiri + preview jadi showcase murni (v4.5)
+- [x] **Phase 0.8** — **v4.6**: 3 bug library dibenerin (dependency / viewport / color drag)
+      + print & copy **resep thema** + checker luau asli (`tools/check.sh`)
+- [ ] ~~Rebalance simetri `N3-SAE.lua`~~ — **DIBATALIN** (game script haram disentuh)
 - [ ] **Phase 1** — Design tokens: tarik semua angka visual ke satu tabel `Design`
 - [ ] **Phase 2** — Chrome: window, sidebar, tab + sliding indicator, groupbox, footer
 - [ ] **Phase 3** — Komponen: button, toggle, slider, dropdown, keybind, colorpicker, input

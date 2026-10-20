@@ -1502,6 +1502,256 @@ local function New(ClassName: string, Properties: { [string]: any }): any
 	return Instance
 end
 
+--// N3V4: Surface & Wallpaper system (dipindah ke atas) \\--
+-- PENTING: blok ini HARUS jalan sebelum komponen apa pun dibikin.
+-- AddDependencyGroupbox (BaseGroupbox) pakai ClampTransparency + Library.Surface
+-- + Library.SurfaceGroups pas frame-nya dibuat. Local Lua cuma kebaca SETELAH
+-- baris deklarasinya, jadi kalau blok ini tetap di bawah, pemanggilan itu
+-- crash: "attempt to call a nil value" (ClampTransparency) / index nil.
+-- Dipindah ke sini = semua definisi udah ada sebelum komponen pertama lahir.
+--// N3V4: Wallpaper helpers \\--
+-- PENTING: tabel ini dibangun dari Enum.ScaleType:GetEnumItems(), BUKAN
+-- hardcoded `Enum.ScaleType.X`. Soalnya kalau ada satu nama ngarang, error
+-- "X is not a valid member of Enum.ScaleType" muncul pas module di-require
+-- -> SELURUH LIBRARY GAGAL LOAD. Pernah kejadian pake "Fill" (nggak ada).
+local WallpaperScaleTypes = {}
+for _, ScaleItem in Enum.ScaleType:GetEnumItems() do
+	WallpaperScaleTypes[ScaleItem.Name] = ScaleItem
+end
+
+-- Ambil member Enum.ScaleType dengan aman (nil kalau nggak ada), biar alias di
+-- bawah nggak pernah bisa bikin crash walaupun Studio-nya versi lama.
+local function SafeScaleType(Name: string)
+	return WallpaperScaleTypes[Name]
+end
+
+-- Alias nama yang sering dipake orang tapi BUKAN member asli Roblox.
+-- Roblox cuma punya: Stretch, Slice, Tile, Fit, Crop.
+--   Fill / Cover = CSS `background-size: cover` -> Roblox "Crop"
+--                  (nutupin penuh, aspect ratio dijaga, lebihannya di-crop)
+--   Contain      = CSS `background-size: contain` -> Roblox "Fit"
+for AliasName, TargetName in {
+	Fill = "Crop",
+	Cover = "Crop",
+	Contain = "Fit",
+} do
+	local Target = SafeScaleType(TargetName)
+	if Target and WallpaperScaleTypes[AliasName] == nil then
+		WallpaperScaleTypes[AliasName] = Target
+	end
+end
+
+-- Terima EnumItem ATAU string ("Crop"/"Fit"/"Fill"/...). Fallback ke Stretch.
+-- Nggak akan pernah error, cuma balik ke Stretch kalau namanya nggak dikenal.
+local function ResolveScaleType(Value: any): Enum.ScaleType
+	if typeof(Value) == "EnumItem" then
+		return Value :: Enum.ScaleType
+	end
+	if typeof(Value) == "string" then
+		return WallpaperScaleTypes[Value] or WallpaperScaleTypes.Stretch or Enum.ScaleType.Stretch
+	end
+	return Enum.ScaleType.Stretch
+end
+
+-- ZIndex wallpaper + overlay berdasarkan layer mode.
+-- ScreenGui library pakai ZIndexBehavior Legacy (nggak di-set), jadi ZIndex
+-- cuma berlaku antar sibling. Wallpaper & overlay dua-duanya child MainFrame,
+-- dan background MainFrame sendiri selalu di belakang semua child — jadi
+-- ZIndex negatif tetep keliatan, cuma kalah sama konten (TopBar/Container, ZIndex 1+).
+local WallpaperLayers = {
+	back = { Image = -2, Overlay = -1 }, -- wallpaper paling belakang, overlay di atasnya, konten di atas semua
+	front = { Image = 999, Overlay = 998 }, -- wash di atas konten (perilaku lama library)
+}
+
+local function ResolveWallpaperLayer(Value: any): { Image: number, Overlay: number }
+	if typeof(Value) == "string" and WallpaperLayers[Value:lower()] then
+		return WallpaperLayers[Value:lower()]
+	end
+	return WallpaperLayers.back
+end
+
+local function ClampTransparency(Value: any): number
+	local N = tonumber(Value)
+	if not N then
+		return 0.75
+	end
+	return math.clamp(N, 0, 1)
+end
+
+--// N3V4: Surface system \\--
+-- Dua masalah yang ini solve:
+--  1. Wallpaper mode "back" NGGAK keliatan, karena Container (seluruh area
+--     konten tab) SOLID dan nutupin wallpaper yang ada di belakangnya.
+--  2. Kartu groupbox pakai warna "BackgroundColor" yang SAMA PERSIS sama
+--     background window, jadi group nggak kebaca sebagai kartu di atas
+--     wallpaper. User minta group tetep solid & beda ~10% dari background.
+-- State awal = RESEP USER yang disetujui (sama kayak default Templates.Window)
+Library.Surface = {
+	CanvasTransparency = 0.64, -- Container + sidebar
+	GroupTransparency = 0.11, -- kartu groupbox / tabbox / depbox
+	GroupContrast = 11, -- persen 0-100
+	GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu
+	CanvasColor = Color3.fromRGB(0, 0, 0), -- override warna latar
+	WindowTransparency = 0, -- MainFrame (dasar window). 0 = solid
+}
+Library.SurfaceWindow = nil -- MainFrame
+Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
+Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
+
+-- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
+function Library:GetCanvasColor(): Color3
+	if typeof(Library.Surface.CanvasColor) == "Color3" then
+		return Library.Surface.CanvasColor
+	end
+	return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
+end
+
+function Library:GetGroupSurfaceColor(): Color3
+	if typeof(Library.Surface.GroupColor) == "Color3" then
+		return Library.Surface.GroupColor
+	end
+
+	local Base = Library.Scheme.BackgroundColor
+	local Percent = math.clamp(tonumber(Library.Surface.GroupContrast) or 0, 0, 100) / 100
+
+	if Percent <= 0 then
+		return Base
+	end
+
+	-- dark theme: kartu lebih TERANG dari bg; light theme: lebih GELAP
+	local Target = Library.IsLightTheme and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)
+	return Base:Lerp(Target, Percent)
+end
+
+-- Re-apply transparency canvas & group ke semua instance yang udah dibikin.
+-- Warna group nggak perlu di-loop manual: dia di-register ke Registry sebagai
+-- function, jadi UpdateColorsUsingRegistry() yang nge-set ulang.
+function Library:ApplySurfaces()
+	local CanvasT = ClampTransparency(Library.Surface.CanvasTransparency)
+	local GroupT = ClampTransparency(Library.Surface.GroupTransparency)
+
+	if Library.SurfaceWindow and Library.SurfaceWindow.Parent then
+		Library.SurfaceWindow.BackgroundTransparency =
+			ClampTransparency(Library.Surface.WindowTransparency)
+	end
+
+	for CanvasInstance in pairs(Library.SurfaceCanvas) do
+		if CanvasInstance.Parent then
+			CanvasInstance.BackgroundTransparency = CanvasT
+		end
+	end
+
+	for GroupInstance in pairs(Library.SurfaceGroups) do
+		if GroupInstance.Parent then
+			GroupInstance.BackgroundTransparency = GroupT
+		end
+	end
+
+	Library:UpdateColorsUsingRegistry()
+end
+
+function Library:SetBackgroundImage(Image: string | number)
+	assert(typeof(Image) == "string" or typeof(Image) == "number", "Expected string/number got " .. typeof(Image))
+
+	Library.Scheme.BackgroundImage = Image
+	if Library.Window then
+		Library.Window:SetBackgroundImage(Image)
+	end
+
+	Library:UpdateColorsUsingRegistry()
+end
+
+--// N3V4: one-shot Wallpaper API \\--
+-- Semua field OPSIONAL — yang nil nggak diubah. Contoh:
+--
+--   Library:SetWallpaper({
+--       Image = "111593326989465",      -- angka polos, "rbxassetid://...", atau URL
+--       Transparency = 0.35,            -- 0 = gambar penuh, 1 = ilang
+--       ScaleType = "Crop",             -- Stretch | Slice | Tile | Fit | Crop (+ alias Fill/Cover/Contain)
+--       Color = Color3.fromRGB(255,255,255),  -- tint
+--       Layer = "back",                 -- "back" (wallpaper) | "front" (wash di atas konten)
+--       Overlay = true,                 -- scrim gelap biar teks kebaca
+--       OverlayColor = Color3.fromRGB(0, 0, 0),
+--       OverlayTransparency = 0.45,
+--   })
+function Library:SetWallpaper(Info: { [string]: any })
+	if typeof(Info) ~= "table" then
+		return false, "Info must be a table"
+	end
+
+	local Window = Library.Window
+	if not Window then
+		return false, "No active window (panggil setelah CreateWindow)"
+	end
+
+	if Info.Image ~= nil then
+		Library:SetBackgroundImage(Info.Image)
+	end
+	if Info.Transparency ~= nil then
+		Window:SetBackgroundImageTransparency(Info.Transparency)
+	end
+	if Info.ScaleType ~= nil then
+		Window:SetBackgroundImageScaleType(Info.ScaleType)
+	end
+	if Info.Color ~= nil then
+		Window:SetBackgroundImageColor(Info.Color)
+	end
+	if Info.Layer ~= nil then
+		Window:SetBackgroundImageLayer(Info.Layer)
+	end
+	if Info.Overlay ~= nil or Info.OverlayColor ~= nil or Info.OverlayTransparency ~= nil then
+		Window:SetBackgroundOverlay(Info.Overlay, Info.OverlayColor, Info.OverlayTransparency)
+	end
+
+	return true
+end
+
+--// N3V4: Surface API \\--
+-- Kontrol latar & kartu group, TERPISAH dari wallpaper. Semua field opsional.
+--
+--   Library:SetSurface({
+--       CanvasTransparency = 1,   -- area konten + sidebar. 1 = wallpaper keliatan
+--       GroupTransparency = 0,    -- kartu group. 0 = SOLID (biar isinya nggak tembus)
+--       GroupContrast = 10,       -- % kartu group dibedain dari background window
+--       GroupColor = Color3...,   -- override warna kartu. false = balik ke auto
+--       CanvasColor = Color3...,  -- override warna latar. false = balik ikut theme
+--   })
+function Library:SetSurface(Info: { [string]: any })
+	if typeof(Info) ~= "table" then
+		return false, "Info must be a table"
+	end
+
+	if Info.CanvasTransparency ~= nil then
+		Library.Surface.CanvasTransparency = ClampTransparency(Info.CanvasTransparency)
+	end
+	if Info.GroupTransparency ~= nil then
+		Library.Surface.GroupTransparency = ClampTransparency(Info.GroupTransparency)
+	end
+	if Info.GroupContrast ~= nil then
+		Library.Surface.GroupContrast = math.clamp(tonumber(Info.GroupContrast) or 0, 0, 100)
+	end
+	if Info.GroupColor ~= nil then
+		if Info.GroupColor == false then
+			Library.Surface.GroupColor = nil
+		elseif typeof(Info.GroupColor) == "Color3" then
+			Library.Surface.GroupColor = Info.GroupColor
+		end
+	end
+	if Info.CanvasColor ~= nil then
+		if Info.CanvasColor == false then
+			Library.Surface.CanvasColor = nil
+		elseif typeof(Info.CanvasColor) == "Color3" then
+			Library.Surface.CanvasColor = Info.CanvasColor
+		end
+	end
+	if Info.WindowTransparency ~= nil then
+		Library.Surface.WindowTransparency = ClampTransparency(Info.WindowTransparency)
+	end
+
+	Library:ApplySurfaces()
+	return true
+end
+
 --// Main Instances \\-
 local function SafeParentUI(Instance: Instance, Parent: Instance | () -> Instance)
 	local success, _error = pcall(function()
@@ -4575,73 +4825,101 @@ do
 		table.insert(ColorPicker.Connections, Holder.MouseButton1Click:Connect(ColorMenu.Toggle))
 		table.insert(ColorPicker.Connections, Holder.MouseButton2Click:Connect(ContextMenu.Toggle))
 
-		table.insert(
-			ColorPicker.Connections,
-			SatVipMap.InputBegan:Connect(function(Input: InputObject)
-				while IsDragInput(Input) and not ColorPicker.Destroyed do
-					local MinX = SatVipMap.AbsolutePosition.X
-					local MaxX = MinX + SatVipMap.AbsoluteSize.X
-					local LocationX = math.clamp(Mouse.X, MinX, MaxX)
+		--// N3V4 FIX: drag warna \\--
+		-- Loop lama cuma cek `IsDragInput(Input)`, dan InputBegan GuiObject juga
+		-- kepicu MouseMovement (state Change). Efeknya: (1) tiap gerakin mouse DI
+		-- ATAS picker lahir coroutine baru yang nggak pernah mati, (2) warna
+		-- suka lompat sendiri / berasa "kadang ga work", (3) lama-lama berat.
+		-- Sekarang: mulai cuma dari klik beneran (IsClickInput), berhenti dari
+		-- InputEnded level UserInputService (tetep jalan walau mouse lepas di
+		-- luar elemen), plus satu drag aktif per picker.
+		do
+			local DragKind = nil
+			local DragActive = false
 
-					local MinY = SatVipMap.AbsolutePosition.Y
-					local MaxY = MinY + SatVipMap.AbsoluteSize.Y
-					local LocationY = math.clamp(Mouse.Y, MinY, MaxY)
-
-					local OldSat = ColorPicker.Sat
-					local OldVib = ColorPicker.Vib
-					ColorPicker.Sat = (LocationX - MinX) / (MaxX - MinX)
-					ColorPicker.Vib = 1 - ((LocationY - MinY) / (MaxY - MinY))
-
-					if ColorPicker.Sat ~= OldSat or ColorPicker.Vib ~= OldVib then
-						ColorPicker:Update()
-					end
-
-					RunService.RenderStepped:Wait()
+			local function DragRelease(Input: InputObject)
+				if DragKind and Input.UserInputType == DragKind then
+					DragActive = false
+					DragKind = nil
 				end
-			end)
-		)
+			end
 
-		table.insert(
-			ColorPicker.Connections,
-			HueSelector.InputBegan:Connect(function(Input: InputObject)
-				while IsDragInput(Input) and not ColorPicker.Destroyed do
-					local Min = HueSelector.AbsolutePosition.Y
-					local Max = Min + HueSelector.AbsoluteSize.Y
-					local Location = math.clamp(Mouse.Y, Min, Max)
-
-					local OldHue = ColorPicker.Hue
-					ColorPicker.Hue = (Location - Min) / (Max - Min)
-
-					if ColorPicker.Hue ~= OldHue then
-						ColorPicker:Update()
-					end
-
-					RunService.RenderStepped:Wait()
+			local function DragBegin(Input: InputObject, Kind: string)
+				if not IsClickInput(Input) or ColorPicker.Destroyed then
+					return
 				end
-			end)
-		)
+				if DragActive then
+					return
+				end
 
-		if TransparencySelector then
-			table.insert(
-				ColorPicker.Connections,
-				TransparencySelector.InputBegan:Connect(function(Input: InputObject)
-					while IsDragInput(Input) and not ColorPicker.Destroyed do
-						local Min = TransparencySelector.AbsolutePosition.Y
-						local Max = TransparencySelector.AbsolutePosition.Y + TransparencySelector.AbsoluteSize.Y
-						local Location = math.clamp(Mouse.Y, Min, Max)
+				DragActive = true
+				DragKind = Input.UserInputType
 
-						local OldTransparency = ColorPicker.Transparency
-						ColorPicker.Transparency = (Location - Min) / (Max - Min)
+				task.spawn(function()
+					while DragActive and not ColorPicker.Destroyed do
+						if Kind == "satvib" then
+							local MinX = SatVipMap.AbsolutePosition.X
+							local MaxX = MinX + SatVipMap.AbsoluteSize.X
+							local LocationX = math.clamp(Mouse.X, MinX, MaxX)
 
-						if ColorPicker.Transparency ~= OldTransparency then
-							ColorPicker:Update()
+							local MinY = SatVipMap.AbsolutePosition.Y
+							local MaxY = MinY + SatVipMap.AbsoluteSize.Y
+							local LocationY = math.clamp(Mouse.Y, MinY, MaxY)
+
+							local OldSat = ColorPicker.Sat
+							local OldVib = ColorPicker.Vib
+							ColorPicker.Sat = (MaxX > MinX) and ((LocationX - MinX) / (MaxX - MinX)) or ColorPicker.Sat
+							ColorPicker.Vib = (MaxY > MinY) and (1 - ((LocationY - MinY) / (MaxY - MinY))) or ColorPicker.Vib
+
+							if ColorPicker.Sat ~= OldSat or ColorPicker.Vib ~= OldVib then
+								ColorPicker:Update()
+							end
+						elseif Kind == "hue" then
+							local Min = HueSelector.AbsolutePosition.Y
+							local Max = Min + HueSelector.AbsoluteSize.Y
+							local Location = math.clamp(Mouse.Y, Min, Max)
+
+							local OldHue = ColorPicker.Hue
+							ColorPicker.Hue = (Max > Min) and ((Location - Min) / (Max - Min)) or ColorPicker.Hue
+
+							if ColorPicker.Hue ~= OldHue then
+								ColorPicker:Update()
+							end
+						elseif Kind == "alpha" and TransparencySelector then
+							local Min = TransparencySelector.AbsolutePosition.Y
+							local Max = Min + TransparencySelector.AbsoluteSize.Y
+							local Location = math.clamp(Mouse.Y, Min, Max)
+
+							local OldTransparency = ColorPicker.Transparency
+							ColorPicker.Transparency = (Max > Min) and ((Location - Min) / (Max - Min)) or ColorPicker.Transparency
+
+							if ColorPicker.Transparency ~= OldTransparency then
+								ColorPicker:Update()
+							end
 						end
 
 						RunService.RenderStepped:Wait()
 					end
+
+					DragActive = false
+					DragKind = nil
 				end)
-			)
+			end
+
+			table.insert(ColorPicker.Connections, SatVipMap.InputBegan:Connect(function(Input: InputObject)
+				DragBegin(Input, "satvib")
+			end))
+			table.insert(ColorPicker.Connections, HueSelector.InputBegan:Connect(function(Input: InputObject)
+				DragBegin(Input, "hue")
+			end))
+			if TransparencySelector then
+				table.insert(ColorPicker.Connections, TransparencySelector.InputBegan:Connect(function(Input: InputObject)
+					DragBegin(Input, "alpha")
+				end))
+			end
+			table.insert(ColorPicker.Connections, UserInputService.InputEnded:Connect(DragRelease))
 		end
+
 
 		table.insert(
 			ColorPicker.Connections,
@@ -7053,9 +7331,30 @@ do
 					Library.ActiveLoading.Sidebar.Container.ScrollingEnabled = false
 				end
 
-				while IsDragInput(Input) and not Slider.Destroyed do
+				--// N3V4 FIX: drag slider \\--
+				-- Sama kayak color picker: stop-nya lewat InputEnded global, bukan
+				-- nebak dari state Input di InputBegan (MouseMovement ikut kepicu).
+				local SliderDragging = true
+				local SliderDragKind = Input.UserInputType
+
+				local SliderReleaseConn = nil
+				SliderReleaseConn = UserInputService.InputEnded:Connect(function(EndInput: InputObject)
+					if EndInput.UserInputType == SliderDragKind then
+						SliderDragging = false
+						if SliderReleaseConn then
+							SliderReleaseConn:Disconnect()
+							SliderReleaseConn = nil
+						end
+					end
+				end)
+				table.insert(Slider.Connections, SliderReleaseConn)
+
+				while SliderDragging and not Slider.Destroyed do
 					local Location = Mouse.X
-					local Scale = math.clamp((Location - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
+					local BarWidth = Bar.AbsoluteSize.X
+					local Scale = (BarWidth > 0)
+						and math.clamp((Location - Bar.AbsolutePosition.X) / BarWidth, 0, 1)
+						or 0
 
 					local OldValue = Slider.Value
 					Slider.Value = Round(Slider.Min + ((Slider.Max - Slider.Min) * Scale), Slider.Rounding)
@@ -7066,6 +7365,12 @@ do
 					end
 
 					RunService.RenderStepped:Wait()
+				end
+
+				SliderDragging = false
+				if SliderReleaseConn then
+					SliderReleaseConn:Disconnect()
+					SliderReleaseConn = nil
 				end
 
 				if Library.ActiveTab then
@@ -7896,12 +8201,25 @@ do
 		return Dropdown
 	end
 
+	--// N3V4: BRIDGE dua API AddViewport \\--
+	-- Di file ini ADA DUA `Funcs:AddViewport`. Yang bawah (versi Object/Camera/
+	-- Clone/AutoFocus) menimpa yang atas (versi ringan: Height/Spin/Interactive/
+	-- SetModel) karena nama tabelnya sama. Akibatnya panggilan tanpa `Object`
+	-- kena `assert(... "Instance must be a BasePart or Model.")` dan component
+	-- gagal dibuat. Bridge ini jaga DUA-DUANYA: kalau `Object` nggak dikasih,
+	-- lempar ke versi ringan yang udah di-capture di RichAddViewport.
+	local RichAddViewport = Funcs.AddViewport
+
 	function Funcs:AddViewport(Idx, Info)
 		if self.Destroyed then
 			return nil
 		end
 
 		Info = Library:Validate(Info, Templates.Viewport)
+
+		if not Info.Object and RichAddViewport then
+			return RichAddViewport(self, Idx, Info)
+		end
 
 		local Groupbox = self
 		local Container = Groupbox.Container
@@ -8953,249 +9271,6 @@ function Library:SetFont(FontFace)
 
 	Library.Scheme.Font = FontFace
 	Library:UpdateColorsUsingRegistry()
-end
-
---// N3V4: Wallpaper helpers \\--
--- PENTING: tabel ini dibangun dari Enum.ScaleType:GetEnumItems(), BUKAN
--- hardcoded `Enum.ScaleType.X`. Soalnya kalau ada satu nama ngarang, error
--- "X is not a valid member of Enum.ScaleType" muncul pas module di-require
--- -> SELURUH LIBRARY GAGAL LOAD. Pernah kejadian pake "Fill" (nggak ada).
-local WallpaperScaleTypes = {}
-for _, ScaleItem in Enum.ScaleType:GetEnumItems() do
-	WallpaperScaleTypes[ScaleItem.Name] = ScaleItem
-end
-
--- Ambil member Enum.ScaleType dengan aman (nil kalau nggak ada), biar alias di
--- bawah nggak pernah bisa bikin crash walaupun Studio-nya versi lama.
-local function SafeScaleType(Name: string)
-	return WallpaperScaleTypes[Name]
-end
-
--- Alias nama yang sering dipake orang tapi BUKAN member asli Roblox.
--- Roblox cuma punya: Stretch, Slice, Tile, Fit, Crop.
---   Fill / Cover = CSS `background-size: cover` -> Roblox "Crop"
---                  (nutupin penuh, aspect ratio dijaga, lebihannya di-crop)
---   Contain      = CSS `background-size: contain` -> Roblox "Fit"
-for AliasName, TargetName in {
-	Fill = "Crop",
-	Cover = "Crop",
-	Contain = "Fit",
-} do
-	local Target = SafeScaleType(TargetName)
-	if Target and WallpaperScaleTypes[AliasName] == nil then
-		WallpaperScaleTypes[AliasName] = Target
-	end
-end
-
--- Terima EnumItem ATAU string ("Crop"/"Fit"/"Fill"/...). Fallback ke Stretch.
--- Nggak akan pernah error, cuma balik ke Stretch kalau namanya nggak dikenal.
-local function ResolveScaleType(Value: any): Enum.ScaleType
-	if typeof(Value) == "EnumItem" then
-		return Value :: Enum.ScaleType
-	end
-	if typeof(Value) == "string" then
-		return WallpaperScaleTypes[Value] or WallpaperScaleTypes.Stretch or Enum.ScaleType.Stretch
-	end
-	return Enum.ScaleType.Stretch
-end
-
--- ZIndex wallpaper + overlay berdasarkan layer mode.
--- ScreenGui library pakai ZIndexBehavior Legacy (nggak di-set), jadi ZIndex
--- cuma berlaku antar sibling. Wallpaper & overlay dua-duanya child MainFrame,
--- dan background MainFrame sendiri selalu di belakang semua child — jadi
--- ZIndex negatif tetep keliatan, cuma kalah sama konten (TopBar/Container, ZIndex 1+).
-local WallpaperLayers = {
-	back = { Image = -2, Overlay = -1 }, -- wallpaper paling belakang, overlay di atasnya, konten di atas semua
-	front = { Image = 999, Overlay = 998 }, -- wash di atas konten (perilaku lama library)
-}
-
-local function ResolveWallpaperLayer(Value: any): { Image: number, Overlay: number }
-	if typeof(Value) == "string" and WallpaperLayers[Value:lower()] then
-		return WallpaperLayers[Value:lower()]
-	end
-	return WallpaperLayers.back
-end
-
-local function ClampTransparency(Value: any): number
-	local N = tonumber(Value)
-	if not N then
-		return 0.75
-	end
-	return math.clamp(N, 0, 1)
-end
-
---// N3V4: Surface system \\--
--- Dua masalah yang ini solve:
---  1. Wallpaper mode "back" NGGAK keliatan, karena Container (seluruh area
---     konten tab) SOLID dan nutupin wallpaper yang ada di belakangnya.
---  2. Kartu groupbox pakai warna "BackgroundColor" yang SAMA PERSIS sama
---     background window, jadi group nggak kebaca sebagai kartu di atas
---     wallpaper. User minta group tetep solid & beda ~10% dari background.
--- State awal = RESEP USER yang disetujui (sama kayak default Templates.Window)
-Library.Surface = {
-	CanvasTransparency = 0.64, -- Container + sidebar
-	GroupTransparency = 0.11, -- kartu groupbox / tabbox / depbox
-	GroupContrast = 11, -- persen 0-100
-	GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu
-	CanvasColor = Color3.fromRGB(0, 0, 0), -- override warna latar
-	WindowTransparency = 0, -- MainFrame (dasar window). 0 = solid
-}
-Library.SurfaceWindow = nil -- MainFrame
-Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
-Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
-
--- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
-function Library:GetCanvasColor(): Color3
-	if typeof(Library.Surface.CanvasColor) == "Color3" then
-		return Library.Surface.CanvasColor
-	end
-	return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
-end
-
-function Library:GetGroupSurfaceColor(): Color3
-	if typeof(Library.Surface.GroupColor) == "Color3" then
-		return Library.Surface.GroupColor
-	end
-
-	local Base = Library.Scheme.BackgroundColor
-	local Percent = math.clamp(tonumber(Library.Surface.GroupContrast) or 0, 0, 100) / 100
-
-	if Percent <= 0 then
-		return Base
-	end
-
-	-- dark theme: kartu lebih TERANG dari bg; light theme: lebih GELAP
-	local Target = Library.IsLightTheme and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)
-	return Base:Lerp(Target, Percent)
-end
-
--- Re-apply transparency canvas & group ke semua instance yang udah dibikin.
--- Warna group nggak perlu di-loop manual: dia di-register ke Registry sebagai
--- function, jadi UpdateColorsUsingRegistry() yang nge-set ulang.
-function Library:ApplySurfaces()
-	local CanvasT = ClampTransparency(Library.Surface.CanvasTransparency)
-	local GroupT = ClampTransparency(Library.Surface.GroupTransparency)
-
-	if Library.SurfaceWindow and Library.SurfaceWindow.Parent then
-		Library.SurfaceWindow.BackgroundTransparency =
-			ClampTransparency(Library.Surface.WindowTransparency)
-	end
-
-	for CanvasInstance in pairs(Library.SurfaceCanvas) do
-		if CanvasInstance.Parent then
-			CanvasInstance.BackgroundTransparency = CanvasT
-		end
-	end
-
-	for GroupInstance in pairs(Library.SurfaceGroups) do
-		if GroupInstance.Parent then
-			GroupInstance.BackgroundTransparency = GroupT
-		end
-	end
-
-	Library:UpdateColorsUsingRegistry()
-end
-
-function Library:SetBackgroundImage(Image: string | number)
-	assert(typeof(Image) == "string" or typeof(Image) == "number", "Expected string/number got " .. typeof(Image))
-
-	Library.Scheme.BackgroundImage = Image
-	if Library.Window then
-		Library.Window:SetBackgroundImage(Image)
-	end
-
-	Library:UpdateColorsUsingRegistry()
-end
-
---// N3V4: one-shot Wallpaper API \\--
--- Semua field OPSIONAL — yang nil nggak diubah. Contoh:
---
---   Library:SetWallpaper({
---       Image = "111593326989465",      -- angka polos, "rbxassetid://...", atau URL
---       Transparency = 0.35,            -- 0 = gambar penuh, 1 = ilang
---       ScaleType = "Crop",             -- Stretch | Slice | Tile | Fit | Crop (+ alias Fill/Cover/Contain)
---       Color = Color3.fromRGB(255,255,255),  -- tint
---       Layer = "back",                 -- "back" (wallpaper) | "front" (wash di atas konten)
---       Overlay = true,                 -- scrim gelap biar teks kebaca
---       OverlayColor = Color3.fromRGB(0, 0, 0),
---       OverlayTransparency = 0.45,
---   })
-function Library:SetWallpaper(Info: { [string]: any })
-	if typeof(Info) ~= "table" then
-		return false, "Info must be a table"
-	end
-
-	local Window = Library.Window
-	if not Window then
-		return false, "No active window (panggil setelah CreateWindow)"
-	end
-
-	if Info.Image ~= nil then
-		Library:SetBackgroundImage(Info.Image)
-	end
-	if Info.Transparency ~= nil then
-		Window:SetBackgroundImageTransparency(Info.Transparency)
-	end
-	if Info.ScaleType ~= nil then
-		Window:SetBackgroundImageScaleType(Info.ScaleType)
-	end
-	if Info.Color ~= nil then
-		Window:SetBackgroundImageColor(Info.Color)
-	end
-	if Info.Layer ~= nil then
-		Window:SetBackgroundImageLayer(Info.Layer)
-	end
-	if Info.Overlay ~= nil or Info.OverlayColor ~= nil or Info.OverlayTransparency ~= nil then
-		Window:SetBackgroundOverlay(Info.Overlay, Info.OverlayColor, Info.OverlayTransparency)
-	end
-
-	return true
-end
-
---// N3V4: Surface API \\--
--- Kontrol latar & kartu group, TERPISAH dari wallpaper. Semua field opsional.
---
---   Library:SetSurface({
---       CanvasTransparency = 1,   -- area konten + sidebar. 1 = wallpaper keliatan
---       GroupTransparency = 0,    -- kartu group. 0 = SOLID (biar isinya nggak tembus)
---       GroupContrast = 10,       -- % kartu group dibedain dari background window
---       GroupColor = Color3...,   -- override warna kartu. false = balik ke auto
---       CanvasColor = Color3...,  -- override warna latar. false = balik ikut theme
---   })
-function Library:SetSurface(Info: { [string]: any })
-	if typeof(Info) ~= "table" then
-		return false, "Info must be a table"
-	end
-
-	if Info.CanvasTransparency ~= nil then
-		Library.Surface.CanvasTransparency = ClampTransparency(Info.CanvasTransparency)
-	end
-	if Info.GroupTransparency ~= nil then
-		Library.Surface.GroupTransparency = ClampTransparency(Info.GroupTransparency)
-	end
-	if Info.GroupContrast ~= nil then
-		Library.Surface.GroupContrast = math.clamp(tonumber(Info.GroupContrast) or 0, 0, 100)
-	end
-	if Info.GroupColor ~= nil then
-		if Info.GroupColor == false then
-			Library.Surface.GroupColor = nil
-		elseif typeof(Info.GroupColor) == "Color3" then
-			Library.Surface.GroupColor = Info.GroupColor
-		end
-	end
-	if Info.CanvasColor ~= nil then
-		if Info.CanvasColor == false then
-			Library.Surface.CanvasColor = nil
-		elseif typeof(Info.CanvasColor) == "Color3" then
-			Library.Surface.CanvasColor = Info.CanvasColor
-		end
-	end
-	if Info.WindowTransparency ~= nil then
-		Library.Surface.WindowTransparency = ClampTransparency(Info.WindowTransparency)
-	end
-
-	Library:ApplySurfaces()
-	return true
 end
 
 function Library:UpdateNotificationPositions(Snap: boolean?)
