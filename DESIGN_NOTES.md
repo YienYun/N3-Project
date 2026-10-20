@@ -31,9 +31,12 @@ Templates.Window (GroupTransparency 0 / GroupContrast 30) -> resep user
 (0.35/40) ke-stomp tiap paste baru = "group kok ga transparan padahal udah
 gue setting". Sekarang seed conditional ( cuma kalau caller eksplisit ngirim
 field ). Templates.Window disync ke angka v5 sebagai double-safety.
-PREVIEW v4.6.9: wallpaper dimatiin + surface solid = showcase theme doang
-(perintah user: "preview mattin saja! hapus kecuali theme!"). Seting wallpaper
-tetep hidup di file UISettings + window script user sendiri.
+PREVIEW v4.6.9->v4.6.10: percobaan "theme-only" lewat SetWallpaper/SetSurface
+di preview itu SALAH: state wallpaper/surface GLOBAL per-Library -> window
+setingan user ke-stomp window 0/canvas 0 ("jadinya jelek cok"). v4.6.10:
+preview OFF TOTAL (PREVIEW_ENABLED=false, early return; nol window nol stomp).
+"hapus kecuali theme" = yang hidup cuma N3V4_UISettings (theme+wallpaper).
+WindowTransparency default jadi 1 (user: "window dan canvas harusnya 100").
 
 FIX v4.6.8: navbar bawah (BottomBackground) dulu UICorner FULL radius + tinggi
 20+radius -> corner atas ikutan bulat = notch/garis "bablas ke atas" waktu radius

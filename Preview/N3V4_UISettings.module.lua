@@ -13,6 +13,9 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.6.10: PREVIEW OFF TOTAL (state wallpaper/surface GLOBAL -> preview
+--         theme-only v4.6.9 nyetomp window user jadi 0/0 = jelek). Window
+--         default 0.90 -> 1 ("window dan canvas harusnya 100").
 -- v4.6.9: FIX bug STOMP: CreateWindow dulu seed Surface unconditional dari
 --        Templates.Window -> resep group 0.35/contrast 40 ke-reset jadi 0/30
 --        tiap paste baru ("group kok ga transparan padahal udah gue setting").
@@ -63,7 +66,7 @@ Settings.DEFAULTS = {
 	OverlayColor = Color3.fromRGB(0, 0, 0),
 	OverlayTransparency = 0.55,
 
-	Window = 0.90, -- transparency dasar window (dump user v5)
+	Window = 1, -- transparency dasar window (v4.6.10: 100% kata user)
 	Canvas = 1,
 	Group = 0.35,
 	Contrast = 40,

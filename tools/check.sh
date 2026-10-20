@@ -82,8 +82,8 @@ chk "v4.6.8: navbar bawah corner BAWAH-aja (SpecificCorners, tinggi 20)" \
 	"grep -q 'BottomRightRadius = UDim.new(0, WindowInfo.CornerRadius)' '$LIB' && grep -q 'Size = UDim2.new(1, 0, 0, 20), -- v4.6.8' '$LIB'"
 chk "v4.6.9: CreateWindow NGGAK stomp Surface default lagi (seed conditional)" \
 	"grep -q 'local RawGroupT = WindowInfo and WindowInfo.GroupTransparency' '$LIB'"
-chk "v4.6.9: preview theme-only (wallpaper dimatiin di preview)" \
-	"grep -q 'Library:SetWallpaper({ Image = \"\" })' '$PREV'"
+chk "v4.6.10: preview OFF total (nggak nyetomp state global lagi)" \
+	"grep -q 'local PREVIEW_ENABLED = false' '$PREV' && ! grep -q 'Library:SetSurface' '$PREV'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
 	"grep -q 'Transparency = 0,' '$MOD' && grep -q 'Contrast = 40' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.fromRGB(156, 156, 156)' '$MOD'"
 chk "state S di-init SEBELUM BuildResep/BuildTema (bug 'index nil with Image')" \

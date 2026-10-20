@@ -7,6 +7,14 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.6.10 — PREVIEW OFF TOTAL + WINDOW DEFAULT 100:
+	   • Kesalahan gue v4.6.9: preview "theme-only" lewat SetWallpaper/SetSurface
+	     = state GLOBAL -> window setingan lu ke-stomp window 0/canvas 0 = jelek.
+	     Sekarang preview DIMATIIN (PREVIEW_ENABLED = false, early return) —
+	     nggak bikin window, nggak nyentuh state. Seting = N3V4_UISettings aja.
+	   • WindowTransparency default 0.90 -> 1 (user: "window dan canvas
+	     harusnya 100 anjing malah 0").
+
 	 CHANGELOG v4.6.9 — GROUP TRANSPARENCY KEPAKE DI PASTE BARU + PREVIEW THEME-ONLY:
 	   • BUG: CreateWindow nge-STOMP Library.Surface dari Templates.Window tiap
 	     start -> group 0.35 lu jadi 0 (solid) & contrast 40 jadi 30 di paste
@@ -116,11 +124,24 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6.9" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.6.10" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
 --// SERVICES \\--
+-- v4.6.10: PREVIEW DIMATIIN TOTAL per perintah user: "ini preview mattin saja
+-- woi! udah ga kepakai wallpaper itu! hapus kecuali theme!" Percobaan v4.6.9
+-- bikin preview "theme-only" lewat SetWallpaper/SetSurface itu SALAH GUE:
+-- state wallpaper/surface itu GLOBAL per-Library, jadi window setingan lu
+-- ikut ke-stomp window 0 / canvas 0 = "jadinya jelek cok". Sekarang preview
+-- nggak jalan sama sekali (nol window, nol stomp); theme + semua seting ada
+-- di N3V4_UISettings. Mau showcase lagi? Set true.
+local PREVIEW_ENABLED = false
+if not PREVIEW_ENABLED then
+	print("[N3V4 Preview] v4.6.10: preview OFF per perintah user. Seting lengkap: N3V4_UISettings. (Set PREVIEW_ENABLED = true buat nyalain showcase lagi.)")
+	return
+end
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
@@ -133,7 +154,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6.9",
+	Footer = "N3V4 • UI Preview Kit v4.6.10",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -495,12 +516,6 @@ local WindowInfo = {
 -- ada di file terpisah: Preview/N3V4_UISettings.module.lua
 local Window = Library:CreateWindow(WindowInfo)
 
--- v4.6.9: PREVIEW = showcase THEME doang. User: "ini preview mattin saja woi!
--- udah ga kepakai wallpaper itu! hapus kecuali theme!" -> wallpaper DIMATIIN
--- khusus window preview + surface solid biar nggak jadi kaca bolong.
--- Window script lu sendiri tetep pakai resep wallpaper v5 (default library).
-Library:SetWallpaper({ Image = "" })
-Library:SetSurface({ WindowTransparency = 0, CanvasTransparency = 0 })
 
 --================================================================================
 -- TAB 1 — OVERVIEW   (2 kiri / 2 kanan — simetris)

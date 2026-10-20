@@ -429,7 +429,7 @@ local Templates = {
 		-- N3V4: biar wallpaper beneran keliatan SEBAGAI background kartu, area
 		-- konten (Container + sidebar) harus bisa dibikin transparan. Default 0
 		-- = perilaku lama (solid), jadi hub yang nggak pakai wallpaper aman.
-		WindowTransparency = 0.90, -- v4.6.8: dump user v5
+		WindowTransparency = 1, -- v4.6.10: user "window dan canvas harusnya 100"
 		ContentTransparency = 1, -- v4.6.6: canvas full transparan (wallpaper keliatan di sela kartu)
 		-- Kartu groupbox/tabbox/depbox.
 		GroupTransparency = 0.35, -- v4.6.9: sync sama Library.Surface (resep v5)
@@ -1604,7 +1604,7 @@ Library.Surface = {
 	--            (itu semantik library: override menang). Contrast 30 kepake
 	--            kalau override dimatiin (toggle "Group custom" OFF).
 	CanvasColor = Color3.fromRGB(156, 156, 156), -- override warna latar, dump user v5
-	WindowTransparency = 0.90, -- MainFrame (dasar window). dump user v5
+	WindowTransparency = 1, -- MainFrame (dasar window). v4.6.10: 100% kata user
 }
 Library.SurfaceWindow = nil -- MainFrame
 Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
