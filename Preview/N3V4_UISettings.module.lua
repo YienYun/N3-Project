@@ -13,6 +13,8 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.6.11: nested box (tabbox/groupbox/depbox di dalam kartu) ikut transparan:
+--         lapis double dihapus lewat Library:IsInsideSurfaceCard().
 -- v4.6.10: PREVIEW OFF TOTAL (state wallpaper/surface GLOBAL -> preview
 --         theme-only v4.6.9 nyetomp window user jadi 0/0 = jelek). Window
 --         default 0.90 -> 1 ("window dan canvas harusnya 100").

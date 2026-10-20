@@ -38,6 +38,13 @@ preview OFF TOTAL (PREVIEW_ENABLED=false, early return; nol window nol stomp).
 "hapus kecuali theme" = yang hidup cuma N3V4_UISettings (theme+wallpaper).
 WindowTransparency default jadi 1 (user: "window dan canvas harusnya 100").
 
+FIX v4.6.11: kartu surface yang NESTED (tabbox di dalam groupbox, dst) dulu
+numpuk lapis transparency kedua -> komposit gelap = "nested box ga ikut
+transparan". Sekarang Library:IsInsideSurfaceCard(): nested = transparency 1
+(ngikut induk, identitas dari outline), top-level = Surface + SurfaceGroups.
+Depbox dulu kelihatan aman karena parent-nya sibling kartu (BoxHolder),
+bukan di dalam kartu.
+
 FIX v4.6.8: navbar bawah (BottomBackground) dulu UICorner FULL radius + tinggi
 20+radius -> corner atas ikutan bulat = notch/garis "bablas ke atas" waktu radius
 diputer dari tab Theme. Sekarang: tinggi 20 + UICorner bottom-only lewat

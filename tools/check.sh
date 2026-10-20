@@ -84,6 +84,8 @@ chk "v4.6.9: CreateWindow NGGAK stomp Surface default lagi (seed conditional)" \
 	"grep -q 'local RawGroupT = WindowInfo and WindowInfo.GroupTransparency' '$LIB'"
 chk "v4.6.10: preview OFF total (nggak nyetomp state global lagi)" \
 	"grep -q 'local PREVIEW_ENABLED = false' '$PREV' && ! grep -q 'Library:SetSurface' '$PREV'"
+chk "v4.6.11: nested surface card ikut induk (IsInsideSurfaceCard dipake x3)" \
+	"[ \$(grep -c 'Library:IsInsideSurfaceCard(BoxHolder)' '$LIB') -eq 3 ] && grep -q 'function Library:IsInsideSurfaceCard' '$LIB'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
 	"grep -q 'Transparency = 0,' '$MOD' && grep -q 'Contrast = 40' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.fromRGB(156, 156, 156)' '$MOD'"
 chk "state S di-init SEBELUM BuildResep/BuildTema (bug 'index nil with Image')" \

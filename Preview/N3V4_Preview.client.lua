@@ -7,6 +7,16 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.6.11 — NESTED BOX IKUT TRANSPARAN (nggak dobel lapis):
+	   • Bug: tabbox/groupbox/depbox yang NESTED di dalam kartu group numpuk
+	     lapis transparency KEDUA (0.35 di atas 0.35) -> komposit gelap/solid,
+	     kebaca "ga ikut transparan". Depbox kelihatan aman dulu karena dia
+	     sibling kartu, bukan anak.
+	   • Fix: Library:IsInsideSurfaceCard() — kalau box dibuat di dalam kartu
+	     surface lain, BackgroundTransparency = 1 (komposit ngikut induk,
+	     identitas box dari outline); kalau top-level tetep pakai Surface +
+	     register ke SurfaceGroups. Slider "Kartu group" tetep ngatur semua.
+
 	 CHANGELOG v4.6.10 — PREVIEW OFF TOTAL + WINDOW DEFAULT 100:
 	   • Kesalahan gue v4.6.9: preview "theme-only" lewat SetWallpaper/SetSurface
 	     = state GLOBAL -> window setingan lu ke-stomp window 0/canvas 0 = jelek.
@@ -124,7 +134,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6.10" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.6.11" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -154,7 +164,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6.10",
+	Footer = "N3V4 • UI Preview Kit v4.6.11",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

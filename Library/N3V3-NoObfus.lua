@@ -1662,6 +1662,24 @@ function Library:ApplySurfaces()
 	Library:UpdateColorsUsingRegistry()
 end
 
+-- v4.6.11: kartu yang NESTED di dalam kartu lain (tabbox di dalam groupbox,
+-- groupbox di dalam tabbox, depbox di dalam tabbox, dst) nggak boleh numpuk
+-- lapis transparency kedua — kompositnya jadi gelap/solid ("nested box nya
+-- kok ga ikut transparan? ... jangan hardcode bro!"). Kalau nested:
+-- BackgroundTransparency = 1 (komposit NGIKUT kartu induk = kelihatan sama),
+-- identitas box tetep dari outline stroke. Kalau top-level: pakai Surface
+-- langsung + register ke SurfaceGroups biar slider "Kartu group" ngatur.
+function Library:IsInsideSurfaceCard(Obj: GuiObject?): boolean
+	local Cur = Obj
+	while Cur do
+		if Library.SurfaceGroups[Cur] then
+			return true
+		end
+		Cur = Cur.Parent
+	end
+	return false
+end
+
 function Library:SetBackgroundImage(Image: string | number)
 	assert(typeof(Image) == "string" or typeof(Image) == "number", "Expected string/number got " .. typeof(Image))
 
@@ -9127,16 +9145,20 @@ do
 		local DepGroupboxList
 
 		do
+			-- v4.6.11: nested di dalam kartu/tabbox -> transparency 1 (ngikut induk).
+			local Nested = Library:IsInsideSurfaceCard(BoxHolder)
 			DepGroupboxContainer = New("Frame", {
 				BackgroundColor3 = function()
 					return Library:GetGroupSurfaceColor()
 				end,
-				BackgroundTransparency = ClampTransparency(Library.Surface.GroupTransparency),
+				BackgroundTransparency = Nested and 1 or ClampTransparency(Library.Surface.GroupTransparency),
 				Size = UDim2.fromScale(1, 0),
 				Visible = false,
 				Parent = BoxHolder,
 			})
-			Library.SurfaceGroups[DepGroupboxContainer] = true
+			if not Nested then
+				Library.SurfaceGroups[DepGroupboxContainer] = true
+			end
 			table.insert(
 				Library.Corners,
 				New("UICorner", {
@@ -11074,15 +11096,20 @@ function Library:CreateWindow(WindowInfo)
 			local TabboxButtons
 
 			do
+				-- v4.6.11: nested di dalam kartu group -> transparency 1 biar
+				-- kompositnya sama persis sama kartu (nggak dobel gelap).
+				local Nested = Library:IsInsideSurfaceCard(BoxHolder)
 				TabboxHolder = New("Frame", {
 					BackgroundColor3 = function()
 						return Library:GetGroupSurfaceColor()
 					end,
-					BackgroundTransparency = ClampTransparency(Library.Surface.GroupTransparency),
+					BackgroundTransparency = Nested and 1 or ClampTransparency(Library.Surface.GroupTransparency),
 					Size = UDim2.fromScale(1, 0),
 					Parent = BoxHolder,
 				})
-				Library.SurfaceGroups[TabboxHolder] = true
+				if not Nested then
+					Library.SurfaceGroups[TabboxHolder] = true
+				end
 				table.insert(
 					Library.Corners,
 					New("UICorner", {
@@ -11414,6 +11441,9 @@ function Library:CreateWindow(WindowInfo)
 			local GroupboxLine
 
 			do
+				-- v4.6.11: nested (mis. groupbox di dalam tabbox di dalam kartu)
+				-- -> transparency 1, komposit ngikut kartu induk.
+				local Nested = Library:IsInsideSurfaceCard(BoxHolder)
 				GroupboxHolder = New("Frame", {
 					-- N3V4: kartu group sekarang bisa dibedain dari background window
 					-- (GroupContrast) atau di-override warnanya (GroupColor). Warna
@@ -11423,11 +11453,13 @@ function Library:CreateWindow(WindowInfo)
 					BackgroundColor3 = function()
 						return Library:GetGroupSurfaceColor()
 					end,
-					BackgroundTransparency = ClampTransparency(Library.Surface.GroupTransparency),
+					BackgroundTransparency = Nested and 1 or ClampTransparency(Library.Surface.GroupTransparency),
 					Size = UDim2.fromScale(1, 0),
 					Parent = BoxHolder,
 				})
-				Library.SurfaceGroups[GroupboxHolder] = true
+				if not Nested then
+					Library.SurfaceGroups[GroupboxHolder] = true
+				end
 				table.insert(
 					Library.Corners,
 					New("UICorner", {
