@@ -485,10 +485,15 @@ utama biar muncul tab baru."*
 | `Preview/N3V4_UISettings.module.lua` | **SEMUA setingan desain** (2 tab: "UI Settings" 3/3 + "Wallpaper & Surface" 5/5): wallpaper, overlay, surface, warna scheme, font, radius, animasi, preset, print resep |
 | `Library/N3V3-NoObfus.lua` | Engine + **default resep user** (wallpaper aktif otomatis) |
 
-Preview auto-detect: `pcall(require(ReplicatedStorage.N3V4_UISettings))` →
-kalau ModuleScript-nya ada, `Settings:Attach(Library, Window)` dipanggil dan
-tab setting muncul. Kalau nggak ada, preview jalan normal tanpa tab itu.
-Module juga bisa dipanggil manual: `Settings:Attach(Library, Window)`.
+**DUAL MODE** (v4.5.1, setelah user paste sebagai LocalScript dan tab-nya
+nggak muncul — detektor gue dulu cuma cari ModuleScript):
+- **LocalScript**: file register diri ke `shared.N3V4_UISettings` lalu
+  `task.spawn` nunggu `shared.Library` + `Library.Window` siap → **nempel
+  sendiri**, tanpa di-call siapa-siapa.
+- **ModuleScript**: preview `require` dia, atau manual `Settings:Attach(Library, Window)`.
+- Preview juga punya jalur cadangan: retry `shared.N3V4_UISettings` di background.
+- Flag `shared.N3V4_UISettings_Attached` mencegah tab dobel kalau dua jalur
+  kepake bareng.
 
 ---
 

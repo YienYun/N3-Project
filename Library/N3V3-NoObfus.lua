@@ -424,6 +424,7 @@ local Templates = {
 		-- N3V4: biar wallpaper beneran keliatan SEBAGAI background kartu, area
 		-- konten (Container + sidebar) harus bisa dibikin transparan. Default 0
 		-- = perilaku lama (solid), jadi hub yang nggak pakai wallpaper aman.
+		WindowTransparency = 0,
 		ContentTransparency = 0.64,
 		-- Kartu groupbox/tabbox/depbox.
 		GroupTransparency = 0.11,
@@ -9037,7 +9038,9 @@ Library.Surface = {
 	GroupContrast = 11, -- persen 0-100
 	GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu
 	CanvasColor = Color3.fromRGB(0, 0, 0), -- override warna latar
+	WindowTransparency = 0, -- MainFrame (dasar window). 0 = solid
 }
+Library.SurfaceWindow = nil -- MainFrame
 Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
 Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
 
@@ -9072,6 +9075,11 @@ end
 function Library:ApplySurfaces()
 	local CanvasT = ClampTransparency(Library.Surface.CanvasTransparency)
 	local GroupT = ClampTransparency(Library.Surface.GroupTransparency)
+
+	if Library.SurfaceWindow and Library.SurfaceWindow.Parent then
+		Library.SurfaceWindow.BackgroundTransparency =
+			ClampTransparency(Library.Surface.WindowTransparency)
+	end
 
 	for CanvasInstance in pairs(Library.SurfaceCanvas) do
 		if CanvasInstance.Parent then
@@ -9181,6 +9189,9 @@ function Library:SetSurface(Info: { [string]: any })
 		elseif typeof(Info.CanvasColor) == "Color3" then
 			Library.Surface.CanvasColor = Info.CanvasColor
 		end
+	end
+	if Info.WindowTransparency ~= nil then
+		Library.Surface.WindowTransparency = ClampTransparency(Info.WindowTransparency)
 	end
 
 	Library:ApplySurfaces()
@@ -9586,6 +9597,7 @@ function Library:CreateWindow(WindowInfo)
 	WindowInfo = Library:Validate(WindowInfo, Templates.Window)
 
 	-- N3V4: seed Surface state dari WindowInfo, biar bisa di-set lewat CreateWindow
+	Library.Surface.WindowTransparency = ClampTransparency(WindowInfo.WindowTransparency)
 	Library.Surface.CanvasTransparency = ClampTransparency(WindowInfo.ContentTransparency)
 	Library.Surface.GroupTransparency = ClampTransparency(WindowInfo.GroupTransparency)
 	Library.Surface.GroupContrast = math.clamp(tonumber(WindowInfo.GroupContrast) or 0, 0, 100)
@@ -10229,6 +10241,8 @@ function Library:CreateWindow(WindowInfo)
 		})
 
 		Library.WindowContainer = Container
+		Library.SurfaceWindow = MainFrame
+		MainFrame.BackgroundTransparency = ClampTransparency(Library.Surface.WindowTransparency)
 	end
 
 	--// Window Table \\--
@@ -10395,6 +10409,7 @@ function Library:CreateWindow(WindowInfo)
 			GroupColorOverride = Library.Surface.GroupColor,
 			CanvasColor = Library:GetCanvasColor(),
 			CanvasColorOverride = Library.Surface.CanvasColor,
+			WindowTransparency = Library.Surface.WindowTransparency,
 		}
 	end
 

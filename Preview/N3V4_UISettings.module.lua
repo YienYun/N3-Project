@@ -1,24 +1,19 @@
 --================================================================================
--- N3V4 — UI SETTINGS   (ModuleScript: "N3V4_UISettings")
+-- N3V4 — UI SETTINGS   (file setingan desain UI)
 --================================================================================
--- SEMUA setingan desain UI ada DI FILE INI: wallpaper, overlay, surface,
--- warna scheme, font, corner radius, animasi, preset, sampe print resep.
+-- SEMUA setingan desain ada DI SINI. Preview utama nggak punya setingan.
 --
--- Preview utama (N3V4_Preview.client.lua) NGGAK punya setingan UI — dia murni
--- showcase komponen (button, toggle, dropdown, image, viewport, dll).
--- Kalau ModuleScript ini ada di ReplicatedStorage dengan nama
--- "N3V4_UISettings", preview otomatis require dia dan tab setting muncul.
+-- DUAL MODE — dua-duanya jalan:
+--   A) Paste sebagai LOCALSCRIPT  (misal StarterPlayerScripts > "N3V4_UISettings")
+--      -> dia nempel SENDIRI: nunggu library & window siap, terus nambah tab.
+--   B) Paste sebagai MODULESCRIPT (ReplicatedStorage > "N3V4_UISettings")
+--      -> preview auto-require, atau manual: Settings:Attach(Library, Window)
 --
--- PAKAI MANUAL:
---   local Settings = require(ReplicatedStorage.N3V4_UISettings)
---   Settings:Attach(Library, Window)
---
--- Semua default = RESEP USER yang disetujui 2026-10-20.
+-- Default = RESEP USER yang disetujui 2026-10-20.
 --================================================================================
 
 local Settings = {}
 
--- Racikan user ("nih brok ini bagus jir") — jangan diubah tanpa user minta
 Settings.DEFAULTS = {
 	Image = "111593326989465",
 	Transparency = 0.70,
@@ -29,6 +24,7 @@ Settings.DEFAULTS = {
 	OverlayColor = Color3.fromRGB(46, 46, 46),
 	OverlayTransparency = 0.90,
 
+	Window = 0, -- transparency dasar window
 	Canvas = 0.64,
 	Group = 0.11,
 	Contrast = 11,
@@ -37,14 +33,18 @@ Settings.DEFAULTS = {
 }
 
 function Settings:Attach(Library, Window, Options)
+	if shared.N3V4_UISettings_Attached then
+		return false
+	end
+	shared.N3V4_UISettings_Attached = true
+
 	Options = Options or {}
 	local DEFAULTS = Settings.DEFAULTS
 
-	--// helper lokal \--
 	local function Try(Label, Func)
 		local OK, Err = pcall(Func)
 		if not OK then
-			warn("[N3V4 Settings] " .. Label .. " gagal: " .. tostring(Err))
+			warn("[N3V4 Settings] " .. Label .. ": " .. tostring(Err))
 		end
 		return OK
 	end
@@ -53,12 +53,6 @@ function Settings:Attach(Library, Window, Options)
 		pcall(function()
 			Library:Notify(Info)
 		end)
-	end
-
-	local function PrintInfo()
-		if typeof(Window.GetWallpaperInfo) == "function" then
-			print("[N3V4 Settings] ", Window:GetWallpaperInfo())
-		end
 	end
 
 	local SCALE_TYPE_NAMES = { "Crop", "Fit", "Stretch", "Slice", "Tile" }
@@ -83,861 +77,627 @@ function Settings:Attach(Library, Window, Options)
 		return OK and Font or nil
 	end
 
---================================================================================
--- TAB 6 — THEME LAB   (3 kiri / 3 kanan — simetris)
---================================================================================
-local ThemeTab = Window:AddTab("UI Settings", "palette", "Semua setingan desain UI: warna, font, radius, animasi")
+	--// state awal: baca yang lagi aktif, fallback ke DEFAULTS \\--
+	local Info0 = nil
+	pcall(function()
+		if typeof(Window.GetWallpaperInfo) == "function" then
+			Info0 = Window:GetWallpaperInfo()
+		end
+	end)
 
-Try("Theme: L1 Scheme colors", function()
-	local Box = ThemeTab:AddLeftGroupbox("Scheme Colors", "droplets")
+	local S = {
+		Image = (Info0 and Info0.Image ~= "" and Info0.Image) or DEFAULTS.Image,
+		Transparency = (Info0 and Info0.Transparency) or DEFAULTS.Transparency,
+		ScaleType = (Info0 and Info0.ScaleTypeName) or DEFAULTS.ScaleType,
+		Color = (Info0 and Info0.Color) or DEFAULTS.Color,
+		Layer = (Info0 and Info0.Layer) or DEFAULTS.Layer,
+		Overlay = (Info0 and Info0.OverlayEnabled ~= nil) and Info0.OverlayEnabled or DEFAULTS.Overlay,
+		OverlayColor = (Info0 and Info0.OverlayColor) or DEFAULTS.OverlayColor,
+		OverlayTransparency = (Info0 and Info0.OverlayTransparency) or DEFAULTS.OverlayTransparency,
 
-	local function ApplyColor(Key, Color)
-		Library.Scheme[Key] = Color
-		Library:UpdateColorsUsingRegistry()
-	end
-
-	local Pickers = {
-		{ Key = "AccentColor", Label = "Accent color", Idx = "CP_Accent" },
-		{ Key = "BackgroundColor", Label = "Background color", Idx = "CP_BG" },
-		{ Key = "MainColor", Label = "Main color", Idx = "CP_Main" },
-		{ Key = "OutlineColor", Label = "Outline color", Idx = "CP_Outline" },
-		{ Key = "FontColor", Label = "Font color", Idx = "CP_Font" },
+		Window = (Info0 and Info0.WindowTransparency) or DEFAULTS.Window,
+		Canvas = (Info0 and Info0.CanvasTransparency) or DEFAULTS.Canvas,
+		Group = (Info0 and Info0.GroupTransparency) or DEFAULTS.Group,
+		Contrast = (Info0 and Info0.GroupContrast) or DEFAULTS.Contrast,
+		GroupColor = (Info0 and Info0.GroupColorOverride) or DEFAULTS.GroupColor,
+		CanvasColor = (Info0 and Info0.CanvasColorOverride) or DEFAULTS.CanvasColor,
 	}
 
-	for _, Spec in ipairs(Pickers) do
-		local T = Box:AddToggle("Theme_" .. Spec.Idx, { Text = Spec.Label, Default = true })
-		if T and T.AddColorPicker then
-			T:AddColorPicker(Spec.Idx, {
-				Title = Spec.Key,
-				Default = Library.Scheme[Spec.Key] or Color3.fromRGB(255, 255, 255),
-				Callback = function(Color) ApplyColor(Spec.Key, Color) end,
+	local LastTint = S.Color
+	local LastCanvas = S.CanvasColor
+	local LastGroup = S.GroupColor
+
+	local function Apply()
+		pcall(function()
+			Library:SetWallpaper({
+				Image = S.Image,
+				Transparency = S.Transparency,
+				ScaleType = S.ScaleType,
+				Color = S.Color,
+				Layer = S.Layer,
+				Overlay = S.Overlay,
+				OverlayColor = S.OverlayColor,
+				OverlayTransparency = S.OverlayTransparency,
+			})
+		end)
+		pcall(function()
+			Library:SetSurface({
+				WindowTransparency = S.Window,
+				CanvasTransparency = S.Canvas,
+				GroupTransparency = S.Group,
+				GroupContrast = S.Contrast,
+				GroupColor = S.GroupColor,
+				CanvasColor = S.CanvasColor,
+			})
+		end)
+	end
+
+	--============================================================================
+	-- TAB: UI SETTINGS   (3 kiri / 3 kanan)
+	--============================================================================
+	local T1 = Window:AddTab("UI Settings", "palette", "Warna scheme, font, radius, animasi")
+
+	Try("Settings: scheme", function()
+		local Box = T1:AddLeftGroupbox("Scheme Colors", "droplets")
+
+		local function SchemeRow(Key, Label)
+			local Orig = Library.Scheme[Key]
+			local Last = Orig
+			local Tog = Box:AddToggle("SX_" .. Key, {
+				Text = Label,
+				Default = false,
+				Callback = function(On)
+					Library.Scheme[Key] = On and Last or Orig
+					Library:UpdateColorsUsingRegistry()
+				end,
+			})
+			Tog:AddColorPicker("SXC_" .. Key, {
+				Title = Label,
+				Default = Orig,
+				Callback = function(Color)
+					Last = Color
+					if Tog.Value then
+						Library.Scheme[Key] = Color
+						Library:UpdateColorsUsingRegistry()
+					end
+				end,
 			})
 		end
-	end
-end)
 
-Try("Theme: L2 Presets", function()
-	local Box = ThemeTab:AddLeftGroupbox("Theme Presets", "palette")
+		SchemeRow("AccentColor", "Accent")
+		SchemeRow("BackgroundColor", "Background")
+		SchemeRow("MainColor", "Main")
+		SchemeRow("OutlineColor", "Outline")
+		SchemeRow("FontColor", "Font / teks")
 
-	Box:AddButton("Default Obsidian", function()
-		Library.IsLightTheme = false
-		Library.Scheme.AccentColor = Color3.fromRGB(218, 98, 255)
-		Library.Scheme.BackgroundColor = Color3.fromRGB(30, 30, 30)
-		Library.Scheme.MainColor = Color3.fromRGB(40, 40, 40)
-		Library.Scheme.OutlineColor = Color3.fromRGB(50, 50, 50)
-		Library.Scheme.FontColor = Color3.fromRGB(238, 238, 238)
-		Library:UpdateColorsUsingRegistry()
+		Box:AddButton("Reset scheme", function()
+			Library.Scheme.AccentColor = Color3.fromRGB(218, 98, 255)
+			Library.Scheme.BackgroundColor = Color3.fromRGB(30, 30, 30)
+			Library.Scheme.MainColor = Color3.fromRGB(40, 40, 40)
+			Library.Scheme.OutlineColor = Color3.fromRGB(50, 50, 50)
+			Library.Scheme.FontColor = Color3.fromRGB(238, 238, 238)
+			Library:UpdateColorsUsingRegistry()
+		end)
 	end)
 
-	Box:AddButton("Midnight Cyan", function()
-		Library.IsLightTheme = false
-		Library.Scheme.AccentColor = Color3.fromRGB(90, 220, 255)
-		Library.Scheme.BackgroundColor = Color3.fromRGB(14, 17, 23)
-		Library.Scheme.MainColor = Color3.fromRGB(22, 26, 34)
-		Library.Scheme.OutlineColor = Color3.fromRGB(38, 45, 58)
-		Library.Scheme.FontColor = Color3.fromRGB(232, 240, 248)
-		Library:UpdateColorsUsingRegistry()
+	Try("Settings: presets theme", function()
+		local Box = T1:AddLeftGroupbox("Theme Presets", "wand-sparkles")
+
+		local function Load(Name, C)
+			Library.Scheme.AccentColor = C.Accent
+			Library.Scheme.BackgroundColor = C.BG
+			Library.Scheme.MainColor = C.Main
+			Library.Scheme.OutlineColor = C.Outline
+			Library.Scheme.FontColor = C.Font
+			Library:UpdateColorsUsingRegistry()
+			SafeNotify({ Title = "Theme", Description = Name, Icon = "sparkles", Time = 2 })
+		end
+
+		Box:AddButton("Default Obsidian", function()
+			Load("Obsidian", {
+				Accent = Color3.fromRGB(218, 98, 255), BG = Color3.fromRGB(30, 30, 30),
+				Main = Color3.fromRGB(40, 40, 40), Outline = Color3.fromRGB(50, 50, 50),
+				Font = Color3.fromRGB(238, 238, 238),
+			})
+		end)
+		Box:AddButton("Midnight Cyan", function()
+			Load("Midnight", {
+				Accent = Color3.fromRGB(34, 211, 238), BG = Color3.fromRGB(15, 23, 42),
+				Main = Color3.fromRGB(30, 41, 59), Outline = Color3.fromRGB(51, 65, 85),
+				Font = Color3.fromRGB(226, 232, 240),
+			})
+		end)
+		Box:AddButton("Light Mode", function()
+			Load("Light", {
+				Accent = Color3.fromRGB(124, 58, 237), BG = Color3.fromRGB(245, 245, 245),
+				Main = Color3.fromRGB(255, 255, 255), Outline = Color3.fromRGB(210, 210, 210),
+				Font = Color3.fromRGB(30, 30, 30),
+			})
+		end)
+		Box:AddButton("N3 Purple (brand)", function()
+			Load("N3", {
+				Accent = Color3.fromRGB(190, 60, 255), BG = Color3.fromRGB(20, 10, 30),
+				Main = Color3.fromRGB(35, 20, 50), Outline = Color3.fromRGB(70, 40, 100),
+				Font = Color3.fromRGB(245, 235, 255),
+			})
+		end)
 	end)
 
-	Box:AddButton("Light Mode", function()
-		Library.IsLightTheme = true
-		Library.Scheme.AccentColor = Color3.fromRGB(124, 58, 237)
-		Library.Scheme.BackgroundColor = Color3.fromRGB(244, 244, 247)
-		Library.Scheme.MainColor = Color3.fromRGB(255, 255, 255)
-		Library.Scheme.OutlineColor = Color3.fromRGB(214, 214, 222)
-		Library.Scheme.FontColor = Color3.fromRGB(28, 28, 34)
-		Library:UpdateColorsUsingRegistry()
-	end)
+	Try("Settings: geometry", function()
+		local Box = T1:AddLeftGroupbox("Geometry & Scale", "ruler")
 
-	Box:AddButton("N3 Purple (brand)", function()
-		Library.IsLightTheme = false
-		Library.Scheme.AccentColor = Color3.fromRGB(218, 98, 255)
-		Library.Scheme.BackgroundColor = Color3.fromRGB(20, 16, 26)
-		Library.Scheme.MainColor = Color3.fromRGB(32, 26, 42)
-		Library.Scheme.OutlineColor = Color3.fromRGB(58, 46, 76)
-		Library.Scheme.FontColor = Color3.fromRGB(240, 234, 248)
-		Library:UpdateColorsUsingRegistry()
-	end)
-end)
-
-Try("Theme: L3 Geometry & scale", function()
-	local Box = ThemeTab:AddLeftGroupbox("Geometry & Scale", "ruler")
-
-	Box:AddSlider("Theme_Radius", {
-		Text = "Corner radius (default 4)",
-		Default = Library.CornerRadius or 4, Min = 0, Max = 20, Rounding = 0, Suffix = "px",
-		Callback = function(Value) if Window.SetCornerRadius then Window:SetCornerRadius(Value) end end,
-	})
-	Box:AddSlider("Theme_DPI", {
-		Text = "DPI scale",
-		Default = math.floor((Library.DPIScale or 1) * 100), Min = 70, Max = 140, Rounding = 0, Suffix = "%",
-		Callback = function(Value) Library:SetDPIScale(Value) end,
-	})
-	Box:AddSlider("Theme_Sidebar", {
-		Text = "Sidebar width", Default = 128, Min = 50, Max = 260, Rounding = 0, Suffix = "px",
-		Callback = function(Value) if Window.SetSidebarWidth then Window:SetSidebarWidth(Value) end end,
-	})
-	Box:AddToggle("Theme_Compact", {
-		Text = "Compact sidebar (icon only)", Default = false,
-		Callback = function(Value) if Window.SetCompact then Window:SetCompact(Value) end end,
-	})
-end)
-
-Try("Theme: R1 Font", function()
-	local Box = ThemeTab:AddRightGroupbox("Font", "type")
-
-	Box:AddDropdown("Theme_Font", {
-		Text = "Font face",
-		Values = { "Code", "Gotham", "GothamMedium", "GothamBold", "BuilderSans", "Montserrat", "Ubuntu", "Jura", "SourceSans" },
-		Default = 1,
-		Callback = function(Value)
-			local FontEnum = GetFontEnum(Value)
-			if FontEnum then
-				Library:SetFont(FontEnum)
-			else
-				warn("[N3V4 Preview] Enum.Font." .. Value .. " nggak ada di Studio lu.")
-			end
-		end,
-	})
-
-	Box:AddButton("Reset ke Code", function()
-		Library:SetFont(Enum.Font.Code)
-	end)
-
-	Box:AddDivider({ Text = "Wallpaper", Margin = 4 })
-	Box:AddLabel("Kontrol background image pindah ke tab WALLPAPER.", true)
-	Box:AddLabel("Di sana ada: ID, transparency, tint, scaletype, layer, overlay.", true)
-end)
-
-Try("Theme: R2 Animations", function()
-	local Box = ThemeTab:AddRightGroupbox("Animations", "wind")
-
-	local AnimState = {
-		ToggleWindow = true, TabSwitch = true, Groupbox = true, Dropdown = true, KeyPicker = true,
-	}
-
-	for _, Spec in ipairs({
-		{ Key = "ToggleWindow", Label = "Toggle window" },
-		{ Key = "TabSwitch", Label = "Tab switch" },
-		{ Key = "Groupbox", Label = "Groupbox" },
-		{ Key = "Dropdown", Label = "Dropdown" },
-		{ Key = "KeyPicker", Label = "KeyPicker" },
-	}) do
-		Box:AddToggle("Anim_" .. Spec.Key, {
-			Text = Spec.Label, Default = true,
+		Box:AddSlider("ST_Radius", {
+			Text = "Corner radius", Default = Library.CornerRadius or 10, Min = 0, Max = 20, Rounding = 0, Suffix = "px",
 			Callback = function(Value)
-				AnimState[Spec.Key] = Value
-				Window:SetAnimations(AnimState)
+				pcall(function() Window:SetCornerRadius(Value) end)
 			end,
 		})
-	end
-
-	Box:AddDivider({ Text = "Timing", Margin = 4 })
-
-	Box:AddSlider("Anim_TabTime", {
-		Text = "Tab transition", Default = 22, Min = 0, Max = 100, Rounding = 0, Suffix = " ms",
-		Callback = function(Value) Window:SetAnimations(nil, Value / 100) end,
-	})
-	Box:AddDropdown("Anim_SwipeFrom", {
-		Text = "Swipe direction", Values = { "bottom", "top", "left", "right" }, Default = 1,
-		Callback = function(Value) Window:SetAnimations(nil, nil, nil, Value) end,
-	})
-	Box:AddSlider("Anim_SwipeOffset", {
-		Text = "Swipe offset", Default = 26, Min = 1, Max = 120, Rounding = 0, Suffix = "px",
-		Callback = function(Value) Window:SetAnimations(nil, nil, Value) end,
-	})
-end)
-
-Try("Theme: R3 Window controls", function()
-	local Box = ThemeTab:AddRightGroupbox("Window Controls", "settings-2")
-
-	Box:AddDropdown("Theme_NotifySide", {
-		Text = "Notification side", Values = { "Right", "Left" }, Default = 1,
-		Callback = function(Value) Library:SetNotifySide(Value) end,
-	})
-	Box:AddInput("Theme_Title", {
-		Text = "Window title", Default = "", Placeholder = "judul baru (kosongin = skip)", Finished = true,
-		Callback = function(Value) if Value and Value ~= "" and Window.ChangeTitle then Window:ChangeTitle(Value) end end,
-	})
-	Box:AddInput("Theme_Footer", {
-		Text = "Window footer", Default = "", Placeholder = "footer baru (kosongin = skip)", Finished = true,
-		Callback = function(Value) if Value and Value ~= "" and Window.SetFooter then Window:SetFooter(Value) end end,
-	})
-
-	Box:AddDivider({ Text = "Utility", Margin = 4 })
-
-	Box:AddButton("Print laporan ke Output", function() PrintInfo() end)
-	Box:AddButton("Toggle UI (atau RightCtrl)", function()
-		if Window.Toggle then
-			Window:Toggle()
-		elseif typeof(Library.Toggle) == "function" then
-			Library.Toggle()
-		end
-	end)
-	Box:AddButton({
-		Text = "Unload library", Risky = true, DoubleClick = true,
-		Func = function()
-			PrintInfo()
-			Library:Unload()
-		end,
-	})
-end)
-
---================================================================================
--- TAB 7 — WALLPAPER   (3 kiri / 3 kanan — simetris)
---================================================================================
-local WallpaperTab = Window:AddTab("Wallpaper & Surface", "image", "Wallpaper, overlay, layering, surface")
-
--- State wallpaper sekarang (dipakai bareng sama semua kontrol di bawah)
-local WP = {
-	Image = DEFAULTS.Image,
-	Transparency = DEFAULTS.Transparency,
-	ScaleType = DEFAULTS.ScaleType,
-	Color = DEFAULTS.Color,
-	Layer = DEFAULTS.Layer,
-	Overlay = DEFAULTS.Overlay,
-	OverlayColor = DEFAULTS.OverlayColor,
-	OverlayTransparency = DEFAULTS.OverlayTransparency,
-
-	-- Surface: latar konten & kartu group (terpisah dari wallpaper)
-	CanvasTransparency = DEFAULTS.Canvas,
-	GroupTransparency = DEFAULTS.Group,
-	GroupContrast = DEFAULTS.Contrast,
-	-- nil/false = ikut theme. Color3 = override manual dari color picker
-	GroupColor = DEFAULTS.GroupColor,
-	CanvasColor = DEFAULTS.CanvasColor,
-}
-
--- Satu jalur apply: selalu lewat Library:SetWallpaper (API library, bukan hack preview)
-local function ApplyWallpaper()
-	local Success, Err = Library:SetWallpaper({
-		Image = WP.Image,
-		Transparency = WP.Transparency,
-		ScaleType = WP.ScaleType,
-		Color = WP.Color,
-		Layer = WP.Layer,
-		Overlay = WP.Overlay,
-		OverlayColor = WP.OverlayColor,
-		OverlayTransparency = WP.OverlayTransparency,
-	})
-	if not Success and true then
-		warn("[N3V4 Preview] SetWallpaper gagal: " .. tostring(Err))
-	end
-
-	-- Surface di-apply bareng biar wallpaper & kartu group selalu sinkron
-	Library:SetSurface({
-		CanvasTransparency = WP.CanvasTransparency,
-		GroupTransparency = WP.GroupTransparency,
-		GroupContrast = WP.GroupContrast,
-		GroupColor = WP.GroupColor,
-		CanvasColor = WP.CanvasColor,
-	})
-
-	return Success
-end
-
-Try("Wallpaper: L1 Image source", function()
-	local Box = WallpaperTab:AddLeftGroupbox("Wallpaper", "image")
-
-	Box:AddInput("WP_Id", {
-		Text = "Asset ID wallpaper (paste di sini)",
-		Default = tostring(WP.Image),
-		Placeholder = "111593326989465  atau  rbxassetid://...",
-		Finished = true,
-		Callback = function(Value)
-			WP.Image = (Value == "" or Value == nil) and "" or Value
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddButton("Apply wallpaper gue", function()
-		WP.Image = DEFAULTS.Image
-		ApplyWallpaper()
-		SafeNotify({ Title = "Wallpaper", Description = "ID: " .. tostring(WP.Image), Icon = "image", Time = 3 })
+		Box:AddSlider("ST_DPI", {
+			Text = "UI scale", Default = 100, Min = 60, Max = 150, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				pcall(function() Library:SetDPIScale(Value) end)
+			end,
+		})
+		Box:AddToggle("ST_Compact", {
+			Text = "Compact mode", Default = false,
+			Callback = function(On)
+				pcall(function() Window:SetCompact(On) end)
+			end,
+		})
 	end)
 
-	Box:AddButton("Clear wallpaper", function()
-		WP.Image = ""
-		ApplyWallpaper()
-	end)
+	Try("Settings: font & animasi", function()
+		local Box = T1:AddRightGroupbox("Font & Animasi", "type")
 
-	Box:AddSlider("WP_Transparency", {
-		Text = "Image transparency",
-		Default = math.floor(WP.Transparency * 100),
-		Min = 0,
-		Max = 100,
-		Rounding = 0,
-		Suffix = "%",
-		Tooltip = "0% = gambar penuh · 100% = ilang total",
-		Callback = function(Value)
-			WP.Transparency = Value / 100
-			ApplyWallpaper()
-		end,
-	})
-
-end)
-
-Try("Wallpaper: L2 Overlay (scrim)", function()
-	local Box = WallpaperTab:AddLeftGroupbox("Overlay / Scrim", "square-check")
-
-	Box:AddLabel("Overlay = lapisan warna di atas wallpaper.", true)
-	Box:AddLabel("Gunanya biar teks tetep kebaca waktu", true)
-	Box:AddLabel("wallpaper lu terang/rame.", true)
-	Box:AddLabel("Toggle ON/OFF + warna-nya ada di box WARNA.", true)
-
-	Box:AddSlider("WP_OverlayTransparency", {
-		Text = "Overlay transparency",
-		Default = math.floor(WP.OverlayTransparency * 100),
-		Min = 0,
-		Max = 100,
-		Rounding = 0,
-		Suffix = "%",
-		Tooltip = "0% = overlay nutupin penuh\n100% = overlay ilang",
-		Callback = function(Value)
-			WP.OverlayTransparency = Value / 100
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddButton("Overlay: reset hitam 45%", function()
-		WP.OverlayColor = Color3.fromRGB(0, 0, 0)
-		WP.OverlayTransparency = 0.45
-		ApplyWallpaper()
-	end)
-end)
-
-Try("Wallpaper: L3 Rendering", function()
-	local Box = WallpaperTab:AddLeftGroupbox("Rendering", "ruler")
-
-	Box:AddDropdown("WP_ScaleType", {
-		Text = "ScaleType",
-		Values = SCALE_TYPE_NAMES,
-		Default = (function()
-			for i, v in ipairs(SCALE_TYPE_NAMES) do
-				if v == WP.ScaleType then
-					return i
+		Box:AddDropdown("ST_Font", {
+			Text = "Font", Values = { "Code", "Gotham", "GothamMedium", "GothamBold", "BuilderSans", "Montserrat", "Ubuntu", "Jura", "SourceSans" }, Default = 1,
+			Callback = function(Value)
+				local F = GetFontEnum(Value)
+				if F then
+					Library:SetFont(F)
 				end
-			end
-			return 1
-		end)(),
-		Tooltip = "Crop = kayak CSS background-size: cover (nutupin penuh, ratio dijaga) — paling umum buat wallpaper\nFit = muat semua tapi bisa ada sisi kosong\nStretch = dipaksa nutupin, bisa gepeng\nSlice = 9-slice (buat gambar ber-frame)\nTile = diulang sesuai TileSize",
-		Callback = function(Value)
-			WP.ScaleType = Value
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddDropdown("WP_Layer", {
-		Text = "Layer mode",
-		Values = { "back", "front" },
-		Default = WP.Layer == "front" and 2 or 1,
-		Tooltip = "back = wallpaper di belakang konten (ZIndex -2)\nfront = wash di atas konten (ZIndex 999, perilaku lama library)",
-		Callback = function(Value)
-			WP.Layer = Value
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddDivider({ Text = "ZIndex yang dipakai", Margin = 4 })
-	Box:AddLabel("back  -> image -2, overlay -1, konten 1+", false)
-	Box:AddLabel("front -> image 999, overlay 998", false)
-	Box:AddLabel("Background MainFrame selalu di belakang semua child,", true)
-	Box:AddLabel("jadi ZIndex negatif tetep keliatan.", true)
-end)
-
-Try("Wallpaper: R1 Presets", function()
-	local Box = WallpaperTab:AddRightGroupbox("Presets", "wand-sparkles")
-
-	local function LoadPreset(Name, P)
-		WP.Image = P.Image
-		WP.Transparency = P.Transparency
-		WP.ScaleType = P.ScaleType
-		WP.Color = P.Color or Color3.fromRGB(255, 255, 255)
-		WP.Layer = P.Layer or "back"
-		WP.Overlay = P.Overlay
-		WP.OverlayColor = P.OverlayColor or Color3.fromRGB(0, 0, 0)
-		WP.OverlayTransparency = P.OverlayTransparency
-		WP.CanvasTransparency = P.Canvas ~= nil and P.Canvas or DEFAULTS.Canvas
-		WP.GroupTransparency = P.Group ~= nil and P.Group or DEFAULTS.Group
-		WP.GroupContrast = P.Contrast ~= nil and P.Contrast or DEFAULTS.Contrast
-		WP.GroupColor = P.GroupColor ~= nil and P.GroupColor or false
-		WP.CanvasColor = P.CanvasColor ~= nil and P.CanvasColor or false
-		ApplyWallpaper()
-		SafeNotify({ Title = "Preset", Description = Name, Icon = "sparkles", Time = 2 })
-	end
-
-	Box:AddButton("RESEP USER (yang disetujui)", function()
-		LoadPreset("Resep user", {
-			Image = DEFAULTS.Image, Transparency = 0.70, ScaleType = "Stretch",
-			Color = Color3.fromRGB(55, 55, 55), Layer = "front",
-			Overlay = true, OverlayColor = Color3.fromRGB(46, 46, 46), OverlayTransparency = 0.90,
-			Canvas = 0.64, Group = 0.11, Contrast = 11,
-			GroupColor = Color3.fromRGB(0, 0, 0), CanvasColor = Color3.fromRGB(0, 0, 0),
+			end,
 		})
-	end)
 
-	Box:AddButton("Subtle ( wallpaper tipis )", function()
-		LoadPreset("Subtle", {
-			Image = DEFAULTS.Image, Transparency = 0.72, ScaleType = "Crop",
-			Layer = "back", Overlay = true, OverlayTransparency = 0.30,
-			Canvas = 1, Group = 0, Contrast = 0,
-		})
-	end)
-
-	Box:AddButton("Bold (wallpaper kuat)", function()
-		LoadPreset("Bold", {
-			Image = DEFAULTS.Image, Transparency = 0.10, ScaleType = "Crop",
-			Layer = "back", Overlay = true, OverlayTransparency = 0.60,
-			Canvas = 1, Group = 0, Contrast = 0,
-		})
-	end)
-
-	Box:AddButton("Wash (layer front)", function()
-		LoadPreset("Wash", {
-			Image = DEFAULTS.Image, Transparency = 0.82, ScaleType = "Stretch",
-			Layer = "front", Overlay = false, OverlayTransparency = 0.5,
-			Canvas = 0, Group = 0, Contrast = 10,
-		})
-	end)
-
-	Box:AddButton("Accent tint (ungu N3)", function()
-		LoadPreset("Accent tint", {
-			Image = DEFAULTS.Image, Transparency = 0.45, ScaleType = "Crop",
-			Color = Color3.fromRGB(218, 98, 255), Layer = "back",
-			Overlay = true, OverlayColor = Color3.fromRGB(20, 8, 30), OverlayTransparency = 0.40,
-			Canvas = 1, Group = 0, Contrast = 0,
-		})
-	end)
-
-	Box:AddButton("Kartu nongol (contrast 15)", function()
-		LoadPreset("Kartu nongol", {
-			Image = DEFAULTS.Image, Transparency = 0.35, ScaleType = "Crop",
-			Layer = "back", Overlay = true, OverlayTransparency = 0.45,
-			Canvas = 1, Group = 0, Contrast = 15,
-		})
-	end)
-
-	Box:AddButton("Matiin semua (balik normal)", function()
-		LoadPreset("Off + normal", {
-			Image = "", Transparency = 0.75, ScaleType = "Crop",
-			Layer = "back", Overlay = false, OverlayTransparency = 0.5,
-			Canvas = 0, Group = 0, Contrast = 0,
-		})
-	end)
-end)
-
-Try("Wallpaper: R2 Live info", function()
-	local Box = WallpaperTab:AddRightGroupbox("Live Info", "info")
-
-	local Labels = {}
-	local Fields = {
-		{ "Image", function(I) return tostring(I.Image) end },
-		{ "Visible", function(I) return tostring(I.Visible) end },
-		{ "Transparency", function(I) return string.format("%.2f", I.Transparency) end },
-		{ "ScaleType", function(I) return tostring(I.ScaleType) end },
-		{ "Layer", function(I) return tostring(I.Layer) end },
-		{ "ZIndex", function(I) return tostring(I.ZIndex) end },
-		{ "Overlay", function(I) return tostring(I.OverlayEnabled) end },
-		{ "OverlayTransp", function(I) return string.format("%.2f", I.OverlayTransparency) end },
-	}
-
-	for _, Spec in ipairs(Fields) do
-		Labels[Spec[1]] = Box:AddLabel(string.format("%s: -", Spec[1]), false)
-	end
-
-	Labels["WARN"] = Box:AddLabel("status: -", true)
-
-	local function Refresh()
-		if typeof(Window.GetWallpaperInfo) ~= "function" then
-			return
-		end
-		local Info = Window:GetWallpaperInfo()
-		for _, Spec in ipairs(Fields) do
-			local L = Labels[Spec[1]]
-			if L and L.SetText then
-				L:SetText(string.format("%s: %s", Spec[1], Spec[2](Info)))
-			end
-		end
-
-		local Warn = Labels["WARN"]
-		if Warn and Warn.SetText then
-			if Info.Visible == false and tostring(Info.Image) ~= "" then
-				Warn:SetText("⚠ IMAGE GAGAL LOAD — yang nembus itu GAME-nya, bukan wallpaper lu. Cek ID / permission asset.")
-			elseif tostring(Info.Image) == "" then
-				Warn:SetText("Wallpaper kosong (belum di-set).")
-			else
-				Warn:SetText("OK — wallpaper ke-load.")
-			end
-		end
-	end
-
-	Box:AddDivider({ Text = "Snapshot dari library", Margin = 4 })
-	Box:AddButton("Refresh info", Refresh)
-	Box:AddButton("Print ke Output", function()
-		if typeof(Window.GetWallpaperInfo) == "function" then
-			print("[N3V4 Wallpaper] ", Window:GetWallpaperInfo())
+		for _, Key in ipairs({ "ToggleWindow", "TabSwitch", "Groupbox", "Dropdown", "KeyPicker" }) do
+			Box:AddToggle("ST_Anim_" .. Key, {
+				Text = Key, Default = Library.Animations and Library.Animations[Key] ~= false,
+				Callback = function(On)
+					if Library.Animations then
+						Library.Animations[Key] = On
+					end
+				end,
+			})
 		end
 	end)
 
-	Refresh()
-end)
+	Try("Settings: window", function()
+		local Box = T1:AddRightGroupbox("Window", "settings-2")
 
-Try("Wallpaper: R3 Catatan", function()
-	local Box = WallpaperTab:AddRightGroupbox("Catatan", "book-open")
-
-	Box:AddLabel("Semua kontrol di tab ini manggil API LIBRARY", true)
-	Box:AddLabel("(Library:SetWallpaper / Window:SetBackground*),", true)
-	Box:AddLabel("bukan hack di sisi preview. Jadi hasil yang lu lihat", true)
-	Box:AddLabel("di sini = hasil yang bakal hub lu dapet.", true)
-
-	Box:AddDivider({ Text = "Layer mode", Margin = 4 })
-	Box:AddLabel("back  : wallpaper di belakang konten. Keliatan di", true)
-	Box:AddLabel("        area padding & elemen yang transparan.", true)
-	Box:AddLabel("front : wash di atas semua konten (ZIndex 999).", true)
-	Box:AddLabel("        Lebih keliatan, tapi nutupin teks sedikit.", true)
-
-	Box:AddDivider({ Text = "Kenapa dulu 'back' nggak keliatan?", Margin = 4 })
-	Box:AddLabel("Container (area konten) dulu SOLID nutupin", true)
-	Box:AddLabel("wallpaper. Sekarang ada Canvas transparency", true)
-	Box:AddLabel("di groupbox 'Canvas & Kartu Group' -> set 100%.", true)
-
-	Box:AddDivider({ Text = "Kenapa 'front' bikin komponen tembus?", Margin = 4 })
-	Box:AddLabel("front = wallpaper digambar DI ATAS semua", true)
-	Box:AddLabel("komponen (ZIndex 999). Kalau mau wallpaper", true)
-	Box:AddLabel("jadi background kartu, pakai 'back' + canvas 100%.", true)
-
-	Box:AddDivider({ Text = "Kalau yang keliatan langit / game?", Margin = 4 })
-	Box:AddLabel("Berarti asset ID wallpaper lu GAGAL load", true)
-	Box:AddLabel("(private / salah ID). Yang nembus itu GAME-nya,", true)
-	Box:AddLabel("bukan wallpaper. Cek groupbox 'Live Info':", true)
-	Box:AddLabel("baris status harus 'OK — wallpaper ke-load'.", true)
-
-	Box:AddDivider({ Text = "Format ID yang diterima", Margin = 4 })
-	Box:AddLabel("111593326989465          (angka polos)", false)
-	Box:AddLabel("rbxassetid://111593...   (prefix)", false)
-	Box:AddLabel("https://...  (URL, di-download)", false)
-end)
-
-Try("Wallpaper: L4 Canvas & kartu group", function()
-	local Box = WallpaperTab:AddLeftGroupbox("Canvas & Kartu Group", "layers")
-
-	Box:AddLabel("ATURAN LAYER (baca dulu biar nggak bingung):", true)
-	Box:AddLabel("1. Wallpaper ada DI BELAKANG canvas (area konten).", true)
-	Box:AddLabel("2. Canvas solid = wallpaper ketutup -> naikin Canvas", true)
-	Box:AddLabel("   transparency biar wallpaper keliatan.", true)
-	Box:AddLabel("3. Group transparency cuma KELIATAN kalau canvas-nya", true)
-	Box:AddLabel("   transparan. Kalau canvas solid, kartu transparan cuma", true)
-	Box:AddLabel("   nunjukin warna canvas -> keliatannya \"ga ngaruh\".", true)
-
-	Box:AddDivider({ Text = "Latar / canvas", Margin = 4 })
-	Box:AddSlider("WP_Canvas", {
-		Text = "Canvas transparency",
-		Default = math.floor(WP.CanvasTransparency * 100),
-		Min = 0,
-		Max = 100,
-		Rounding = 0,
-		Suffix = "%",
-		Tooltip = "Area konten + sidebar.\n100% = wallpaper keliatan sebagai background kartu\n0% = solid (wallpaper ketutup)",
-		Callback = function(Value)
-			WP.CanvasTransparency = Value / 100
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddDivider({ Text = "Kartu group", Margin = 4 })
-	Box:AddSlider("WP_GroupTransparency", {
-		Text = "Group transparency",
-		Default = math.floor(WP.GroupTransparency * 100),
-		Min = 0,
-		Max = 100,
-		Rounding = 0,
-		Suffix = "%",
-		Tooltip = "Kartu groupbox/tabbox/depbox.\n0% = SOLID: button/dropdown/slider/text nggak tembus\nIngat: efeknya cuma keliatan kalau canvas transparan",
-		Callback = function(Value)
-			WP.GroupTransparency = Value / 100
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddSlider("WP_GroupContrast", {
-		Text = "Group contrast (auto)",
-		Default = math.floor(WP.GroupContrast),
-		Min = 0,
-		Max = 40,
-		Rounding = 0,
-		Suffix = "%",
-		Tooltip = "Dipakai cuma kalau warna group = ikut theme.\n10% = kartu ~10% lebih terang (dark theme)\n0% = warna asli theme persis",
-		Callback = function(Value)
-			WP.GroupContrast = Value
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddDivider({ Text = "Cepat", Margin = 4 })
-	Box:AddButton("BALIKIN NORMAL (semula)", function()
-		WP.CanvasTransparency = 0
-		WP.GroupTransparency = 0
-		WP.GroupContrast = 0
-		WP.GroupColor = false
-		WP.CanvasColor = false
-		ApplyWallpaper()
-		SafeNotify({ Title = "Surface", Description = "Semua balik ke tampilan semula.", Icon = "rotate-3d", Time = 3 })
-	end)
-
-	Box:AddButton("Resep: wallpaper keliatan", function()
-		WP.CanvasTransparency = 1
-		WP.GroupTransparency = 0
-		WP.GroupContrast = 0
-		WP.GroupColor = false
-		WP.CanvasColor = false
-		ApplyWallpaper()
-		SafeNotify({ Title = "Surface", Description = "Wallpaper jadi background, kartu solid warna asli.", Icon = "image", Time = 4 })
-	end)
-end)
-
-Try("Wallpaper: L5 Warna custom", function()
-	-- PENTING: di library ini AddColorPicker HARUS nempel ke object yang punya
-	-- .TextLabel (Toggle/Button). Nempel ke groupbox = TextLabel nil = crash
-	-- runtime & picker-nya nggak ke-render. Makanya tiap warna punya toggle.
-	local Box = WallpaperTab:AddLeftGroupbox("WARNA — custom lengkap", "palette")
-
-	Box:AddLabel("Tiap warna nempel di toggle-nya.", true)
-	Box:AddLabel("Toggle OFF = ikut bawaan / theme.", true)
-	Box:AddLabel("Toggle ON  = pakai warna pilihan lu.", true)
-	Box:AddLabel("Klik KOTAK WARNA di kanan baris buat milih.", true)
-
-	Box:AddDivider({ Text = "1 · Tint wallpaper", Margin = 4 })
-	local LastTint = WP.Color
-	local TintTog = Box:AddToggle("WP_TintToggle", {
-		Text = "Tint aktif",
-		Default = WP.Color ~= Color3.fromRGB(255, 255, 255),
-		Callback = function(On)
-			WP.Color = On and LastTint or Color3.fromRGB(255, 255, 255)
-			ApplyWallpaper()
-		end,
-	})
-	TintTog:AddColorPicker("WP_Tint", {
-		Title = "Tint wallpaper",
-		Default = WP.Color,
-		Tooltip = "Putih = warna asli gambar.\nWarna lain = gambar di-tint.",
-		Callback = function(Color)
-			LastTint = Color
-			if TintTog.Value then
-				WP.Color = Color
-				ApplyWallpaper()
-			end
-		end,
-	})
-	Box:AddButton("Tint: matiin + reset putih", function()
-		LastTint = Color3.fromRGB(255, 255, 255)
-		TintTog:SetValue(false)
-		WP.Color = LastTint
-		ApplyWallpaper()
-	end)
-
-	Box:AddDivider({ Text = "2 · Overlay / scrim", Margin = 4 })
-	local OvTog = Box:AddToggle("WP_OverlayToggle", {
-		Text = "Overlay aktif",
-		Default = WP.Overlay,
-		Callback = function(On)
-			WP.Overlay = On
-			ApplyWallpaper()
-		end,
-	})
-	OvTog:AddColorPicker("WP_OverlayColor", {
-		Title = "Warna overlay",
-		Default = WP.OverlayColor,
-		Tooltip = "Hitam = scrim gelap (teks kebaca).\nWarna lain = tint suasana.",
-		Callback = function(Color)
-			WP.OverlayColor = Color
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddDivider({ Text = "3 · Warna canvas", Margin = 4 })
-	local LastCanvas = WP.CanvasColor or Color3.fromRGB(32, 32, 32)
-	local CanTog = Box:AddToggle("WP_CanvasToggle", {
-		Text = "Canvas warna custom",
-		Default = typeof(WP.CanvasColor) == "Color3",
-		Callback = function(On)
-			WP.CanvasColor = On and LastCanvas or false
-			ApplyWallpaper()
-		end,
-	})
-	CanTog:AddColorPicker("WP_CanvasColor", {
-		Title = "Warna canvas",
-		Default = LastCanvas,
-		Tooltip = "Warna latar konten + sidebar\n(keliatan waktu wallpaper mati/transparan).",
-		Callback = function(Color)
-			LastCanvas = Color
-			if CanTog.Value then
-				WP.CanvasColor = Color
-				ApplyWallpaper()
-			end
-		end,
-	})
-	Box:AddButton("Canvas: ikut theme lagi", function()
-		CanTog:SetValue(false)
-		WP.CanvasColor = false
-		ApplyWallpaper()
-	end)
-
-	Box:AddDivider({ Text = "4 · Warna kartu group", Margin = 4 })
-	local LastGroup = WP.GroupColor or Color3.fromRGB(30, 30, 30)
-	local GrpTog = Box:AddToggle("WP_GroupToggle", {
-		Text = "Group warna custom",
-		Default = typeof(WP.GroupColor) == "Color3",
-		Callback = function(On)
-			WP.GroupColor = On and LastGroup or false
-			ApplyWallpaper()
-		end,
-	})
-	GrpTog:AddColorPicker("WP_GroupColor", {
-		Title = "Warna kartu group",
-		Default = LastGroup,
-		Tooltip = "Warna kartu groupbox / tabbox / depbox.\nON = contrast slider di-ignore.",
-		Callback = function(Color)
-			LastGroup = Color
-			if GrpTog.Value then
-				WP.GroupColor = Color
-				ApplyWallpaper()
-			end
-		end,
-	})
-	Box:AddButton("Group: ikut theme lagi", function()
-		GrpTog:SetValue(false)
-		WP.GroupColor = false
-		WP.GroupContrast = 0
-		ApplyWallpaper()
-	end)
-
-	Box:AddDivider({ Text = "Sapu jagat", Margin = 4 })
-	Box:AddButton("SEMUA WARNA: balik bawaan", function()
-		LastTint = Color3.fromRGB(255, 255, 255)
-		LastCanvas = Color3.fromRGB(32, 32, 32)
-		LastGroup = Color3.fromRGB(30, 30, 30)
-		WP.OverlayColor = Color3.fromRGB(0, 0, 0)
-		TintTog:SetValue(false)
-		CanTog:SetValue(false)
-		GrpTog:SetValue(false)
-		WP.Color = LastTint
-		WP.CanvasColor = false
-		WP.GroupColor = false
-		ApplyWallpaper()
-		SafeNotify({ Title = "Warna", Description = "Semua warna balik bawaan.", Icon = "palette", Time = 3 })
-	end)
-end)
-
-Try("Wallpaper: R4 Resep aktif", function()
-	local Box = WallpaperTab:AddRightGroupbox("Resep Aktif", "copy")
-
-	Box:AddLabel("Angka yang lagi aktif sekarang. Tombol di bawah", true)
-	Box:AddLabel("nge-print resep Lua yang tinggal lu paste ke gue.", true)
-
-	local function BuildResep()
-		local C = WP.OverlayColor
-		local T = WP.Color
-
-		return table.concat({
-			"Library:SetWallpaper({",
-			string.format('\tImage = "%s",', tostring(WP.Image)),
-			string.format("\tTransparency = %.2f,", WP.Transparency),
-			string.format('\tScaleType = "%s",', tostring(WP.ScaleType)),
-			string.format("\tColor = Color3.fromRGB(%d, %d, %d),", math.floor(T.R * 255 + 0.5), math.floor(T.G * 255 + 0.5), math.floor(T.B * 255 + 0.5)),
-			string.format('\tLayer = "%s",', tostring(WP.Layer)),
-			string.format("\tOverlay = %s,", tostring(WP.Overlay == true)),
-			string.format("\tOverlayColor = Color3.fromRGB(%d, %d, %d),", math.floor(C.R * 255 + 0.5), math.floor(C.G * 255 + 0.5), math.floor(C.B * 255 + 0.5)),
-			string.format("\tOverlayTransparency = %.2f,", WP.OverlayTransparency),
-			"})",
-			"Library:SetSurface({",
-			string.format("\tCanvasTransparency = %.2f,", WP.CanvasTransparency),
-			string.format("\tGroupTransparency = %.2f,", WP.GroupTransparency),
-			string.format("\tGroupContrast = %d,", math.floor(WP.GroupContrast + 0.5)),
-			(typeof(WP.GroupColor) == "Color3")
-				and string.format("\tGroupColor = Color3.fromRGB(%d, %d, %d),", math.floor(WP.GroupColor.R * 255 + 0.5), math.floor(WP.GroupColor.G * 255 + 0.5), math.floor(WP.GroupColor.B * 255 + 0.5))
-				or "\tGroupColor = false, -- ikut theme",
-			(typeof(WP.CanvasColor) == "Color3")
-				and string.format("\tCanvasColor = Color3.fromRGB(%d, %d, %d),", math.floor(WP.CanvasColor.R * 255 + 0.5), math.floor(WP.CanvasColor.G * 255 + 0.5), math.floor(WP.CanvasColor.B * 255 + 0.5))
-				or "\tCanvasColor = false, -- ikut theme",
-			"})",
-		}, "\n")
-	end
-
-	local function ShowResep()
-		local Resep = BuildResep()
-		print("[N3V4 RESEP] paste ini balik ke gue:\n" .. Resep)
-
-		if typeof(Window.GetWallpaperInfo) == "function" then
-			print("[N3V4 Wallpaper] ", Window:GetWallpaperInfo())
-		end
-
-		SafeNotify({
-			Title = "Resep di-print",
-			Description = "Cek Output — copy & paste balik ke gue.",
-			Icon = "copy",
-			Time = 4,
+		Box:AddInput("ST_Title", {
+			Text = "Title", Default = "", Placeholder = "judul baru (kosongin = skip)", Finished = true,
+			Callback = function(Value)
+				if Value and Value ~= "" then
+					pcall(function() Window:ChangeTitle(Value) end)
+				end
+			end,
 		})
-	end
+		Box:AddInput("ST_Footer", {
+			Text = "Footer", Default = "", Placeholder = "footer baru (kosongin = skip)", Finished = true,
+			Callback = function(Value)
+				if Value and Value ~= "" then
+					pcall(function() Window:SetFooter(Value) end)
+				end
+			end,
+		})
+		Box:AddButton("Toggle UI (RightCtrl)", function()
+			pcall(function()
+				if Window.Toggle then
+					Window:Toggle()
+				end
+			end)
+		end)
+	end)
 
-	Box:AddDivider({ Text = "Kirim balik ke gue", Margin = 4 })
-	Box:AddButton("Print resep Lua + info", ShowResep)
-	Box:AddButton("Print info doang", function()
-		if typeof(Window.GetWallpaperInfo) == "function" then
-			print("[N3V4 Wallpaper] ", Window:GetWallpaperInfo())
+	Try("Settings: info", function()
+		local Box = T1:AddRightGroupbox("Info", "info")
+		Box:AddLabel("File ini = semua setingan desain.", true)
+		Box:AddLabel("Preview = showcase komponen aja.", true)
+		Box:AddLabel("Tab sebelah: wallpaper & surface.", true)
+	end)
+
+	--============================================================================
+	-- TAB: WALLPAPER & SURFACE   (4 kiri / 4 kanan)
+	--============================================================================
+	local T2 = Window:AddTab("Wallpaper & Surface", "image", "Wallpaper, warna, transparansi")
+
+	Try("WP: source", function()
+		local Box = T2:AddLeftGroupbox("Wallpaper", "image")
+
+		Box:AddInput("WP_Id", {
+			Text = "Asset ID", Default = tostring(S.Image), Placeholder = "111593326989465", Finished = true,
+			Callback = function(Value)
+				S.Image = (Value == "" or Value == nil) and "" or Value
+				Apply()
+			end,
+		})
+		Box:AddButton("Pakai ID default", function()
+			S.Image = DEFAULTS.Image
+			Apply()
+		end)
+		Box:AddButton("Clear", function()
+			S.Image = ""
+			Apply()
+		end)
+		Box:AddSlider("WP_Transparency", {
+			Text = "Image transparency", Default = math.floor(S.Transparency * 100), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				S.Transparency = Value / 100
+				Apply()
+			end,
+		})
+		Box:AddDropdown("WP_ScaleType", {
+			Text = "ScaleType", Values = SCALE_TYPE_NAMES,
+			Default = (function()
+				for i, v in ipairs(SCALE_TYPE_NAMES) do
+					if v == S.ScaleType then return i end
+				end
+				return 3
+			end)(),
+			Callback = function(Value)
+				S.ScaleType = Value
+				Apply()
+			end,
+		})
+		Box:AddDropdown("WP_Layer", {
+			Text = "Layer", Values = { "back", "front" }, Default = S.Layer == "front" and 2 or 1,
+			Callback = function(Value)
+				S.Layer = Value
+				Apply()
+			end,
+		})
+	end)
+
+	Try("WP: warna", function()
+		local Box = T2:AddLeftGroupbox("WARNA", "palette")
+
+		local TintTog = Box:AddToggle("WP_TintToggle", {
+			Text = "Tint wallpaper", Default = S.Color ~= Color3.fromRGB(255, 255, 255),
+			Callback = function(On)
+				S.Color = On and LastTint or Color3.fromRGB(255, 255, 255)
+				Apply()
+			end,
+		})
+		TintTog:AddColorPicker("WP_Tint", {
+			Title = "Tint wallpaper", Default = S.Color,
+			Callback = function(Color)
+				LastTint = Color
+				if TintTog.Value then
+					S.Color = Color
+					Apply()
+				end
+			end,
+		})
+
+		local OvTog = Box:AddToggle("WP_OverlayToggle", {
+			Text = "Overlay", Default = S.Overlay,
+			Callback = function(On)
+				S.Overlay = On
+				Apply()
+			end,
+		})
+		OvTog:AddColorPicker("WP_OverlayColor", {
+			Title = "Warna overlay", Default = S.OverlayColor,
+			Callback = function(Color)
+				S.OverlayColor = Color
+				Apply()
+			end,
+		})
+
+		local CanTog = Box:AddToggle("WP_CanvasToggle", {
+			Text = "Canvas custom", Default = typeof(S.CanvasColor) == "Color3",
+			Callback = function(On)
+				S.CanvasColor = On and LastCanvas or false
+				Apply()
+			end,
+		})
+		CanTog:AddColorPicker("WP_CanvasColor", {
+			Title = "Warna canvas", Default = typeof(S.CanvasColor) == "Color3" and S.CanvasColor or Color3.fromRGB(32, 32, 32),
+			Callback = function(Color)
+				LastCanvas = Color
+				if CanTog.Value then
+					S.CanvasColor = Color
+					Apply()
+				end
+			end,
+		})
+
+		local GrpTog = Box:AddToggle("WP_GroupToggle", {
+			Text = "Group custom", Default = typeof(S.GroupColor) == "Color3",
+			Callback = function(On)
+				S.GroupColor = On and LastGroup or false
+				Apply()
+			end,
+		})
+		GrpTog:AddColorPicker("WP_GroupColor", {
+			Title = "Warna kartu group", Default = typeof(S.GroupColor) == "Color3" and S.GroupColor or Color3.fromRGB(30, 30, 30),
+			Callback = function(Color)
+				LastGroup = Color
+				if GrpTog.Value then
+					S.GroupColor = Color
+					Apply()
+				end
+			end,
+		})
+
+		Box:AddButton("Semua warna: bawaan", function()
+			LastTint = Color3.fromRGB(255, 255, 255)
+			LastCanvas = Color3.fromRGB(32, 32, 32)
+			LastGroup = Color3.fromRGB(30, 30, 30)
+			S.Color = LastTint
+			S.OverlayColor = Color3.fromRGB(0, 0, 0)
+			S.CanvasColor = false
+			S.GroupColor = false
+			TintTog:SetValue(false)
+			CanTog:SetValue(false)
+			GrpTog:SetValue(false)
+			Apply()
+		end)
+	end)
+
+	Try("WP: transparansi", function()
+		local Box = T2:AddLeftGroupbox("Transparansi", "sliders-horizontal")
+
+		local sliders = {
+			{ "WP_Window", "Window", S.Window, function(v) S.Window = v end },
+			{ "WP_Canvas", "Canvas / latar", S.Canvas, function(v) S.Canvas = v end },
+			{ "WP_Group", "Kartu group", S.Group, function(v) S.Group = v end },
+			{ "WP_OverlayT", "Overlay", S.OverlayTransparency, function(v) S.OverlayTransparency = v end },
+		}
+		for _, Spec in ipairs(sliders) do
+			Box:AddSlider(Spec[1], {
+				Text = Spec[2], Default = math.floor(Spec[3] * 100), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Spec[4](Value / 100)
+					Apply()
+				end,
+			})
 		end
+
+		Box:AddSlider("WP_Contrast", {
+			Text = "Group contrast", Default = math.floor(S.Contrast), Min = 0, Max = 40, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				S.Contrast = Value
+				Apply()
+			end,
+		})
+
+		Box:AddButton("Solid semua (0%)", function()
+			S.Window = 0
+			S.Canvas = 0
+			S.Group = 0
+			Apply()
+		end)
 	end)
 
-	Box:AddDivider({ Text = "Cara pakai di hub", Margin = 4 })
-	Box:AddLabel("Dua panggilan di atas bisa lu taro persis", true)
-	Box:AddLabel("habis CreateWindow() di hub lu. Nggak perlu", true)
-	Box:AddLabel("ngubah apapun lagi — semua udah API library.", true)
-end)
+	Try("WP: cepat", function()
+		local Box = T2:AddLeftGroupbox("Cepat", "zap")
 
-Try("Wallpaper: R5 Master", function()
-	local Box = WallpaperTab:AddRightGroupbox("Master", "settings-2")
+		Box:AddButton("RESEP USER (disetujui)", function()
+			S.Image = DEFAULTS.Image
+			S.Transparency = DEFAULTS.Transparency
+			S.ScaleType = DEFAULTS.ScaleType
+			S.Color = DEFAULTS.Color
+			S.Layer = DEFAULTS.Layer
+			S.Overlay = DEFAULTS.Overlay
+			S.OverlayColor = DEFAULTS.OverlayColor
+			S.OverlayTransparency = DEFAULTS.OverlayTransparency
+			S.Window = DEFAULTS.Window
+			S.Canvas = DEFAULTS.Canvas
+			S.Group = DEFAULTS.Group
+			S.Contrast = DEFAULTS.Contrast
+			S.GroupColor = DEFAULTS.GroupColor
+			S.CanvasColor = DEFAULTS.CanvasColor
+			Apply()
+			SafeNotify({ Title = "Wallpaper", Description = "Resep user dipasang.", Icon = "sparkles", Time = 3 })
+		end)
 
-	Box:AddLabel("Tombol sapu jagat buat balik cepet", true)
-	Box:AddLabel("kalau settingan lu kebablasan.", true)
+		Box:AddButton("BALIK NORMAL (semula)", function()
+			S.Image = ""
+			S.Window = 0
+			S.Canvas = 0
+			S.Group = 0
+			S.Contrast = 0
+			S.GroupColor = false
+			S.CanvasColor = false
+			S.Overlay = false
+			Apply()
+		end)
 
-	Box:AddButton("RESET SEMUA (semula total)", function()
-		WP.Image = ""
-		WP.Transparency = 0.75
-		WP.ScaleType = "Crop"
-		WP.Color = Color3.fromRGB(255, 255, 255)
-		WP.Layer = "back"
-		WP.Overlay = false
-		WP.OverlayColor = Color3.fromRGB(0, 0, 0)
-		WP.OverlayTransparency = 0.5
-		WP.CanvasTransparency = 0
-		WP.GroupTransparency = 0
-		WP.GroupContrast = 0
-		WP.GroupColor = false
-		WP.CanvasColor = false
-		ApplyWallpaper()
-		SafeNotify({ Title = "Master", Description = "Semua balik ke semula total.", Icon = "rotate-3d", Time = 3 })
+		Box:AddButton("Wallpaper ON + canvas", function()
+			S.Image = DEFAULTS.Image
+			S.Canvas = 1
+			S.Layer = "back"
+			S.Overlay = false
+			Apply()
+		end)
+
+		Box:AddButton("Wallpaper OFF", function()
+			S.Image = ""
+			Apply()
+		end)
 	end)
 
-	Box:AddButton("Wallpaper OFF (surface tetep)", function()
-		WP.Image = ""
-		ApplyWallpaper()
+	Try("WP: presets", function()
+		local Box = T2:AddRightGroupbox("Presets", "wand-sparkles")
+
+		local function Load(Name, P)
+			S.Image = P.Image
+			S.Transparency = P.Transparency
+			S.ScaleType = P.ScaleType
+			S.Color = P.Color or Color3.fromRGB(255, 255, 255)
+			S.Layer = P.Layer or "back"
+			S.Overlay = P.Overlay
+			S.OverlayColor = P.OverlayColor or Color3.fromRGB(0, 0, 0)
+			S.OverlayTransparency = P.OverlayTransparency
+			S.Canvas = P.Canvas
+			S.Group = P.Group
+			S.Contrast = P.Contrast
+			S.GroupColor = false
+			S.CanvasColor = false
+			Apply()
+			SafeNotify({ Title = "Preset", Description = Name, Icon = "sparkles", Time = 2 })
+		end
+
+		Box:AddButton("Subtle (tipis)", function()
+			Load("Subtle", { Image = DEFAULTS.Image, Transparency = 0.78, ScaleType = "Crop", Layer = "back", Overlay = true, OverlayTransparency = 0.30, Canvas = 1, Group = 0, Contrast = 0 })
+		end)
+		Box:AddButton("Bold (kuat)", function()
+			Load("Bold", { Image = DEFAULTS.Image, Transparency = 0.12, ScaleType = "Crop", Layer = "back", Overlay = true, OverlayTransparency = 0.60, Canvas = 1, Group = 0, Contrast = 0 })
+		end)
+		Box:AddButton("Wash (front)", function()
+			Load("Wash", { Image = DEFAULTS.Image, Transparency = 0.82, ScaleType = "Stretch", Layer = "front", Overlay = false, OverlayTransparency = 0.5, Canvas = 0, Group = 0, Contrast = 0 })
+		end)
+		Box:AddButton("Accent tint ungu", function()
+			Load("Accent", { Image = DEFAULTS.Image, Transparency = 0.45, ScaleType = "Crop", Color = Color3.fromRGB(218, 98, 255), Layer = "back", Overlay = true, OverlayColor = Color3.fromRGB(20, 8, 30), OverlayTransparency = 0.40, Canvas = 1, Group = 0, Contrast = 0 })
+		end)
+		Box:AddButton("Glass (group tembus)", function()
+			Load("Glass", { Image = DEFAULTS.Image, Transparency = 0.25, ScaleType = "Crop", Layer = "back", Overlay = true, OverlayTransparency = 0.55, Canvas = 1, Group = 0.35, Contrast = 0 })
+		end)
+		Box:AddButton("Kartu nongol (15%)", function()
+			Load("Nongol", { Image = DEFAULTS.Image, Transparency = 0.35, ScaleType = "Crop", Layer = "back", Overlay = true, OverlayTransparency = 0.45, Canvas = 1, Group = 0, Contrast = 15 })
+		end)
 	end)
 
-	Box:AddButton("Wallpaper ON (ID gue + canvas)", function()
-		WP.Image = DEFAULTS.Image
-		WP.CanvasTransparency = 1
-		WP.Overlay = false
-		ApplyWallpaper()
+	Try("WP: resep", function()
+		local Box = T2:AddRightGroupbox("Resep", "copy")
+
+		local function BuildResep()
+			local C = S.OverlayColor
+			local T = S.Color
+			local lines = {
+				"Library:SetWallpaper({",
+				string.format('\tImage = "%s",', tostring(S.Image)),
+				string.format("\tTransparency = %.2f,", S.Transparency),
+				string.format('\tScaleType = "%s",', tostring(S.ScaleType)),
+				string.format("\tColor = Color3.fromRGB(%d, %d, %d),", math.floor(T.R * 255 + 0.5), math.floor(T.G * 255 + 0.5), math.floor(T.B * 255 + 0.5)),
+				string.format('\tLayer = "%s",', tostring(S.Layer)),
+				string.format("\tOverlay = %s,", tostring(S.Overlay == true)),
+				string.format("\tOverlayColor = Color3.fromRGB(%d, %d, %d),", math.floor(C.R * 255 + 0.5), math.floor(C.G * 255 + 0.5), math.floor(C.B * 255 + 0.5)),
+				string.format("\tOverlayTransparency = %.2f,", S.OverlayTransparency),
+				"})",
+				"Library:SetSurface({",
+				string.format("\tWindowTransparency = %.2f,", S.Window),
+				string.format("\tCanvasTransparency = %.2f,", S.Canvas),
+				string.format("\tGroupTransparency = %.2f,", S.Group),
+				string.format("\tGroupContrast = %d,", math.floor(S.Contrast + 0.5)),
+				(typeof(S.GroupColor) == "Color3")
+					and string.format("\tGroupColor = Color3.fromRGB(%d, %d, %d),", math.floor(S.GroupColor.R * 255 + 0.5), math.floor(S.GroupColor.G * 255 + 0.5), math.floor(S.GroupColor.B * 255 + 0.5))
+					or "\tGroupColor = false, -- ikut theme",
+				(typeof(S.CanvasColor) == "Color3")
+					and string.format("\tCanvasColor = Color3.fromRGB(%d, %d, %d),", math.floor(S.CanvasColor.R * 255 + 0.5), math.floor(S.CanvasColor.G * 255 + 0.5), math.floor(S.CanvasColor.B * 255 + 0.5))
+					or "\tCanvasColor = false, -- ikut theme",
+				"})",
+			}
+			return table.concat(lines, "\n")
+		end
+
+		Box:AddButton("Print resep Lua", function()
+			print("[N3V4 RESEP] paste ini balik:\n" .. BuildResep())
+			SafeNotify({ Title = "Resep", Description = "Cek Output.", Icon = "copy", Time = 3 })
+		end)
+		Box:AddButton("Print info lengkap", function()
+			pcall(function()
+				if typeof(Window.GetWallpaperInfo) == "function" then
+					print("[N3V4 Wallpaper] ", Window:GetWallpaperInfo())
+				end
+			end)
+		end)
 	end)
 
-	Box:AddDivider({ Text = "Cek versi copy-an lu", Margin = 4 })
-	Box:AddLabel("Footer window HARUS tertulis v4.4.2.", true)
-	Box:AddLabel("Kalau masih v4 / v4.2 / v4.3 / v4.4 berarti", true)
-	Box:AddLabel("LocalScript lu copy-an LAMA — copy ulang", true)
-	Box:AddLabel("file Preview/N3V4_Preview.client.lua.", true)
-end)
+	Try("WP: live info", function()
+		local Box = T2:AddRightGroupbox("Live Info", "info")
 
+		local Rows = {}
+		for _, Key in ipairs({ "Image", "Visible", "Layer", "ScaleTypeName", "WindowTransparency", "CanvasTransparency", "GroupTransparency" }) do
+			Rows[Key] = Box:AddLabel(Key .. ": -", false)
+		end
+		local Status = Box:AddLabel("status: -", true)
+
+		local function Refresh()
+			pcall(function()
+				if typeof(Window.GetWallpaperInfo) ~= "function" then
+					return
+				end
+				local I = Window:GetWallpaperInfo()
+				for Key, L in pairs(Rows) do
+					if L and L.SetText then
+						L:SetText(string.format("%s: %s", Key, tostring(I[Key])))
+					end
+				end
+				if Status and Status.SetText then
+					if I.Visible == false and tostring(I.Image) ~= "" then
+						Status:SetText("⚠ image gagal load (asset private/salah ID)")
+					elseif tostring(I.Image) == "" then
+						Status:SetText("wallpaper kosong")
+					else
+						Status:SetText("OK — wallpaper ke-load")
+					end
+				end
+			end)
+		end
+
+		Box:AddButton("Refresh", Refresh)
+		Refresh()
+	end)
+
+	Try("WP: combo cepat", function()
+		local Box = T2:AddRightGroupbox("Combo Cepat", "zap")
+
+		local function Combo(Scale, Layer)
+			S.ScaleType = Scale
+			S.Layer = Layer
+			Apply()
+			SafeNotify({ Title = "Combo", Description = Scale .. " + " .. Layer, Icon = "zap", Time = 2 })
+		end
+
+		Box:AddButton("Crop + back", function() Combo("Crop", "back") end)
+		Box:AddButton("Stretch + front", function() Combo("Stretch", "front") end)
+		Box:AddButton("Tile + back", function() Combo("Tile", "back") end)
+		Box:AddButton("Fit + back", function() Combo("Fit", "back") end)
+	end)
 
 	return true
 end
+
+--================================================================================
+-- DUAL MODE
+--================================================================================
+-- Biar preview (LocalScript pertama) bisa nemuin file ini lewat shared.
+shared.N3V4_UISettings = Settings
+
+-- Kalau file ini jalan sebagai LOCALSCRIPT: nempel sendiri begitu
+-- library & window siap. Kalau di-require sebagai ModuleScript, preview
+-- yang manggil Attach — flag attached mencegah double.
+task.spawn(function()
+	local Library, Window
+	for _ = 1, 60 do
+		if not shared.N3V4_UISettings_Attached then
+			Library = Library or shared.Library
+			if Library and Library.Window then
+				Window = Library.Window
+				break
+			end
+		else
+			return
+		end
+		task.wait(0.1)
+	end
+	if Library and Window and not shared.N3V4_UISettings_Attached then
+		pcall(function()
+			Settings:Attach(Library, Window)
+		end)
+	end
+end)
 
 return Settings

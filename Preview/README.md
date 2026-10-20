@@ -165,7 +165,11 @@ Toggle UI: `RightCtrl`
 > wallpaper front 70% + tint abu, overlay 90%, canvas 64%, group 11% + hitam.
 > Racikan ini juga kepasang di `Games/N3-SAE.lua` (pcall, aman).
 >
-> 🔎 **Cek versi copy-an lu:** footer window harus tertulis **v4.4.2**.
+> 🔎 **Cek versi copy-an lu:** footer window harus tertulis **v4.5**.
+>
+> 📌 **File settings bisa dipaste sebagai LOCALSCRIPT atau MODULESCRIPT.**
+> Sebagai LocalScript dia nempel sendiri (nunggu library & window siap).
+> Sebagai ModuleScript di ReplicatedStorage, preview yang require dia.
 > Kalau masih v4/v4.2/v4.3 berarti LocalScript lu copy-an lama — copy ulang.
 
 > ⚠️ Hub lu (`Games/N3-SAE.lua`) **belum** simetris: 12 `AddLeftGroupbox` vs

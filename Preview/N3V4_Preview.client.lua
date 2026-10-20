@@ -1227,6 +1227,7 @@ end)
 -- ada di ReplicatedStorage, dia di-require di sini dan nambah tab setting
 -- sendiri ("UI Settings" + "Wallpaper & Surface"). Kalau nggak ada, ya nggak
 -- muncul — preview tetep jalan normal.
+-- Jalur 1: ModuleScript "N3V4_UISettings" di ReplicatedStorage
 pcall(function()
 	local Mod = ReplicatedStorage:FindFirstChild("N3V4_UISettings")
 	if Mod then
@@ -1234,6 +1235,24 @@ pcall(function()
 		if SettingsModule and SettingsModule.Attach then
 			SettingsModule:Attach(Library, Window)
 		end
+	end
+end)
+
+-- Jalur 2: file settings dipaste sebagai LOCALSCRIPT -> dia register diri ke
+-- shared.N3V4_UISettings. Kalau dia belum sempet, tunggu sebentar di background.
+-- (File settings itu sebenernya juga bisa nempel SENDIRI; flag attached
+--  di shared mencegah tab dobel.)
+task.spawn(function()
+	for _ = 1, 30 do
+		if shared.N3V4_UISettings_Attached then
+			return
+		end
+		local SettingsModule = shared.N3V4_UISettings
+		if SettingsModule and SettingsModule.Attach then
+			SettingsModule:Attach(Library, Window)
+			return
+		end
+		task.wait(0.1)
 	end
 end)
 
