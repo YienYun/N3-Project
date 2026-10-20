@@ -62,6 +62,8 @@ Fitur baru, **full di library** (bukan preview-only):
 | **Group transparency** | kartu group. `0%` = **SOLID** — button/dropdown/slider/text nggak ikutan tembus |
 | **Group contrast** | % kartu group dibedain dari background window (10% = kebaca sebagai kartu) |
 | **Resep Aktif** 🆕 | tombol **Print resep Lua** — nge-print `SetWallpaper` + `SetSurface` siap paste balik |
+| **WARNA — custom lengkap** 🆕 | 4 color picker di SATU tempat: tint wallpaper · overlay · canvas · kartu group (+ reset per warna) |
+| **Master** 🆕 | RESET SEMUA · Wallpaper OFF · Wallpaper ON · cek versi lewat footer |
 
 Plus **fix bug asli library**: `Window:SetBackgroundImage` nggak handle angka,
 jadi paste ID polos diem-diem gagal tanpa error.
@@ -148,7 +150,10 @@ Toggle UI: `RightCtrl`
 | **Theme Lab** | Scheme Colors (5 picker live) · Theme Presets (4) · Geometry & Scale | Font (9 font) · Animations (5 toggle + timing) · Window Controls |
 | **Wallpaper** 🆕 | Wallpaper (ID/transparency/tint) · Overlay-Scrim (toggle/color/transparency) · Rendering (scaletype/layer/ZIndex) · Canvas & Kartu Group (canvas/group transparency + contrast) | Presets (6) · Live Info (GetWallpaperInfo) · Catatan · Resep Aktif (print resep Lua) |
 
-**Simetri:** tiap tab groupbox kiri = kanan (2/2, 3/3, 3/3, 3/3, 3/3, 3/3, 4/4).
+**Simetri:** tiap tab groupbox kiri = kanan (2/2, 3/3, 3/3, 3/3, 3/3, 3/3, 5/5).
+
+> 🔎 **Cek versi copy-an lu:** footer window harus tertulis **v4.4**.
+> Kalau masih v4/v4.2/v4.3 berarti LocalScript lu copy-an lama — copy ulang.
 
 > ⚠️ Hub lu (`Games/N3-SAE.lua`) **belum** simetris: 12 `AddLeftGroupbox` vs
 > 9 `AddRightGroupbox`. Simetri itu urusan layout di hub, bukan library.

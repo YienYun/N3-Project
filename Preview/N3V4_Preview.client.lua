@@ -3,6 +3,16 @@
 	 N3V4 — PREVIEW KIT v4   (LocalScript)
 	================================================================================
 
+	 CHANGELOG v4.4.1:
+	   • Groupbox BARU "WARNA — custom lengkap" (kiri): SEMUA color picker
+	     dikumpulin di satu tempat biar nggak mungkin kelewat — tint wallpaper,
+	     warna overlay, warna canvas, warna kartu group + tombol reset per warna.
+	   • Groupbox BARU "Master" (kanan): RESET SEMUA / Wallpaper OFF /
+	     Wallpaper ON + cara cek versi copy-an lu lewat footer.
+	   • Overlay default OFF — scrim hitam inilah yang bikin wallpaper keliatan
+	     ABU-ABU/kusam waktu nyala. Nyala-in manual kalau butuh.
+	   • Footer window = v4.4: kalau footer lu belum v4.4, copy-an lu LAMA.
+
 	 CHANGELOG v4.4 — WALLPAPER STUDIO LENGKAP:
 	   • Default BALIK ke wallpaper keliatan (canvas 100%) tapi kartu group
 	     SOLID pakai warna ASLI theme (contrast 0) — nggak diabu-abuin lagi.
@@ -103,7 +113,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4",
+	Footer = "N3V4 • UI Preview Kit v4.4",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -125,7 +135,8 @@ local CONFIG = {
 		Color = Color3.fromRGB(255, 255, 255), -- tint (ImageColor3)
 		Layer = "back", -- "back" = wallpaper di belakang konten | "front" = wash di atas
 
-		Overlay = true, -- scrim gelap biar teks tetep kebaca
+		Overlay = false, -- scrim. Default OFF biar warna wallpaper ASLI.
+		-- Nyala-kan kalau wallpaper lu terlalu terang & teks jadi susah kebaca.
 		OverlayColor = Color3.fromRGB(0, 0, 0),
 		OverlayTransparency = 0.45,
 	},
@@ -1557,20 +1568,6 @@ Try("Wallpaper: L1 Image source", function()
 		end,
 	})
 
-	Box:AddColorPicker("WP_Tint", {
-		Title = "Tint warna wallpaper",
-		Default = WP.Color,
-		Tooltip = "Putih = warna asli gambar. Warna lain = di-tint.",
-		Callback = function(Color)
-			WP.Color = Color
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddButton("Reset tint ke putih", function()
-		WP.Color = Color3.fromRGB(255, 255, 255)
-		ApplyWallpaper()
-	end)
 end)
 
 Try("Wallpaper: L2 Overlay (scrim)", function()
@@ -1602,20 +1599,6 @@ Try("Wallpaper: L2 Overlay (scrim)", function()
 		end,
 	})
 
-	Box:AddColorPicker("WP_OverlayColor", {
-		Title = "Warna overlay",
-		Default = WP.OverlayColor,
-		Tooltip = "Hitam = scrim gelap (teks kebaca). Warna lain = tint suasana.",
-		Callback = function(Color)
-			WP.OverlayColor = Color
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddButton("Reset overlay ke hitam", function()
-		WP.OverlayColor = Color3.fromRGB(0, 0, 0)
-		ApplyWallpaper()
-	end)
 end)
 
 Try("Wallpaper: L3 Rendering", function()
@@ -1854,21 +1837,6 @@ Try("Wallpaper: L4 Canvas & kartu group", function()
 		end,
 	})
 
-	Box:AddColorPicker("WP_CanvasColor", {
-		Title = "Warna canvas (override)",
-		Default = WP.CanvasColor or Color3.fromRGB(32, 32, 32),
-		Tooltip = "Warna latar konten kalau wallpaper mati/transparan.\nPicker ini langsung jadi override manual.",
-		Callback = function(Color)
-			WP.CanvasColor = Color
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddButton("Canvas: ikut theme lagi", function()
-		WP.CanvasColor = false
-		ApplyWallpaper()
-	end)
-
 	Box:AddDivider({ Text = "Kartu group", Margin = 4 })
 	Box:AddSlider("WP_GroupTransparency", {
 		Text = "Group transparency",
@@ -1898,22 +1866,6 @@ Try("Wallpaper: L4 Canvas & kartu group", function()
 		end,
 	})
 
-	Box:AddColorPicker("WP_GroupColor", {
-		Title = "Warna kartu group (custom)",
-		Default = WP.GroupColor or Color3.fromRGB(30, 30, 30),
-		Tooltip = "Override manual warna kartu group.\nKalau di-set, contrast di atas di-ignore.",
-		Callback = function(Color)
-			WP.GroupColor = Color
-			ApplyWallpaper()
-		end,
-	})
-
-	Box:AddButton("Group: ikut theme lagi", function()
-		WP.GroupColor = false
-		WP.GroupContrast = 0
-		ApplyWallpaper()
-	end)
-
 	Box:AddDivider({ Text = "Cepat", Margin = 4 })
 	Box:AddButton("BALIKIN NORMAL (semula)", function()
 		WP.CanvasTransparency = 0
@@ -1933,6 +1885,84 @@ Try("Wallpaper: L4 Canvas & kartu group", function()
 		WP.CanvasColor = false
 		ApplyWallpaper()
 		SafeNotify({ Title = "Surface", Description = "Wallpaper jadi background, kartu solid warna asli.", Icon = "image", Time = 4 })
+	end)
+end)
+
+Try("Wallpaper: L5 Warna custom", function()
+	local Box = WallpaperTab:AddLeftGroupbox("WARNA — custom lengkap", "palette")
+
+	Box:AddLabel("Semua warna di sini bisa lu pilih sendiri.", true)
+	Box:AddLabel("Klik kotak warna di kanan tiap baris.", true)
+
+	Box:AddDivider({ Text = "1 · Wallpaper", Margin = 4 })
+	Box:AddColorPicker("WP_Tint", {
+		Title = "Tint wallpaper",
+		Default = WP.Color,
+		Tooltip = "Putih = warna asli gambar.\nWarna lain = gambar di-tint warna itu.",
+		Callback = function(Color)
+			WP.Color = Color
+			ApplyWallpaper()
+		end,
+	})
+	Box:AddButton("Tint: reset ke putih", function()
+		WP.Color = Color3.fromRGB(255, 255, 255)
+		ApplyWallpaper()
+	end)
+
+	Box:AddDivider({ Text = "2 · Overlay / scrim", Margin = 4 })
+	Box:AddColorPicker("WP_OverlayColor", {
+		Title = "Warna overlay",
+		Default = WP.OverlayColor,
+		Tooltip = "Hitam = scrim gelap (teks kebaca).\nWarna lain = tint suasana di atas wallpaper.",
+		Callback = function(Color)
+			WP.OverlayColor = Color
+			ApplyWallpaper()
+		end,
+	})
+	Box:AddButton("Overlay: reset ke hitam", function()
+		WP.OverlayColor = Color3.fromRGB(0, 0, 0)
+		ApplyWallpaper()
+	end)
+
+	Box:AddDivider({ Text = "3 · Latar / canvas", Margin = 4 })
+	Box:AddColorPicker("WP_CanvasColor", {
+		Title = "Warna canvas",
+		Default = WP.CanvasColor or Color3.fromRGB(32, 32, 32),
+		Tooltip = "Warna latar konten + sidebar\n(keliatan waktu wallpaper mati / transparan).",
+		Callback = function(Color)
+			WP.CanvasColor = Color
+			ApplyWallpaper()
+		end,
+	})
+	Box:AddButton("Canvas: ikut theme lagi", function()
+		WP.CanvasColor = false
+		ApplyWallpaper()
+	end)
+
+	Box:AddDivider({ Text = "4 · Kartu group", Margin = 4 })
+	Box:AddColorPicker("WP_GroupColor", {
+		Title = "Warna kartu group",
+		Default = WP.GroupColor or Color3.fromRGB(30, 30, 30),
+		Tooltip = "Warna kartu groupbox / tabbox / depbox.\nKalau di-set, slider contrast di-ignore.",
+		Callback = function(Color)
+			WP.GroupColor = Color
+			ApplyWallpaper()
+		end,
+	})
+	Box:AddButton("Group: ikut theme lagi", function()
+		WP.GroupColor = false
+		WP.GroupContrast = 0
+		ApplyWallpaper()
+	end)
+
+	Box:AddDivider({ Text = "Sapu jagat", Margin = 4 })
+	Box:AddButton("SEMUA WARNA: balik bawaan", function()
+		WP.Color = Color3.fromRGB(255, 255, 255)
+		WP.OverlayColor = Color3.fromRGB(0, 0, 0)
+		WP.CanvasColor = false
+		WP.GroupColor = false
+		ApplyWallpaper()
+		SafeNotify({ Title = "Warna", Description = "Semua warna balik bawaan.", Icon = "palette", Time = 3 })
 	end)
 end)
 
@@ -1999,6 +2029,49 @@ Try("Wallpaper: R4 Resep aktif", function()
 	Box:AddLabel("Dua panggilan di atas bisa lu taro persis", true)
 	Box:AddLabel("habis CreateWindow() di hub lu. Nggak perlu", true)
 	Box:AddLabel("ngubah apapun lagi — semua udah API library.", true)
+end)
+
+Try("Wallpaper: R5 Master", function()
+	local Box = WallpaperTab:AddRightGroupbox("Master", "settings-2")
+
+	Box:AddLabel("Tombol sapu jagat buat balik cepet", true)
+	Box:AddLabel("kalau settingan lu kebablasan.", true)
+
+	Box:AddButton("RESET SEMUA (semula total)", function()
+		WP.Image = ""
+		WP.Transparency = 0.75
+		WP.ScaleType = "Crop"
+		WP.Color = Color3.fromRGB(255, 255, 255)
+		WP.Layer = "back"
+		WP.Overlay = false
+		WP.OverlayColor = Color3.fromRGB(0, 0, 0)
+		WP.OverlayTransparency = 0.5
+		WP.CanvasTransparency = 0
+		WP.GroupTransparency = 0
+		WP.GroupContrast = 0
+		WP.GroupColor = false
+		WP.CanvasColor = false
+		ApplyWallpaper()
+		SafeNotify({ Title = "Master", Description = "Semua balik ke semula total.", Icon = "rotate-3d", Time = 3 })
+	end)
+
+	Box:AddButton("Wallpaper OFF (surface tetep)", function()
+		WP.Image = ""
+		ApplyWallpaper()
+	end)
+
+	Box:AddButton("Wallpaper ON (ID gue + canvas)", function()
+		WP.Image = CONFIG.Wallpaper.Image
+		WP.CanvasTransparency = 1
+		WP.Overlay = false
+		ApplyWallpaper()
+	end)
+
+	Box:AddDivider({ Text = "Cek versi copy-an lu", Margin = 4 })
+	Box:AddLabel("Footer window HARUS tertulis v4.4.", true)
+	Box:AddLabel("Kalau masih v4 / v4.2 / v4.3 berarti", true)
+	Box:AddLabel("LocalScript lu copy-an LAMA — copy ulang", true)
+	Box:AddLabel("file Preview/N3V4_Preview.client.lua.", true)
 end)
 
 --================================================================================

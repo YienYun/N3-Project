@@ -316,6 +316,8 @@ background kartu), `GroupTransparency = 0` (kartu solid), `GroupContrast = 0`
 (kartu pakai warna ASLI theme — user kesel waktu contrast maksa kartu jadi
 abu-abu). Tombol "BALIKIN NORMAL (semula)" ada buat balik ke canvas solid.
 
+**Overlay default OFF** — scrim (apalagi warna terang) bikin wallpaper kusam/abu-abu.
+
 **Control lengkap di preview:** 4 color picker langsung (tint wallpaper,
 overlay, canvas, kartu group) + tombol reset/"ikut theme lagi" per picker,
 5 slider (image/overlay/canvas/group transparency + group contrast),
