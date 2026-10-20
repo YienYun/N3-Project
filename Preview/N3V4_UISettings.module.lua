@@ -13,6 +13,10 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.7.6: RESEP TAB user DIBAKE (print 18:21) + refactor nol-duplikasi:
+--        halo+UIScale sekarang satu helper Library:CreateTabIconStroke,
+--        zoom satu helper Library:TweenTabZoom (UIScale = mulus), blok
+--        duplikat di AddTab/AddKeyTab dihapus -> file library mengecil.
 -- v4.7.5: PATCH TAB MASUK KE FUNGSI YANG BENER (Window:AddTab). v4.7.0-7.4
 --        salah masuk AddKeyTab -> rec=0 & zoom/stroke mati di tab sidebar.
 --        DEBUG activeTab sekarang print boolean bener.
@@ -89,16 +93,16 @@ Settings.DEFAULTS = {
 	Canvas = 1,
 	Group = 0.35,
 	Contrast = 40,
-	Tab = { -- v4.7.0 baseline (BUKAN locked — nunggu print user dari preview)
+	Tab = { -- v4.7.6 = RESEP TAB USER TERKUNCI (print 18:21)
 		IconStrokeThickness = 1,
-		IconStrokeTransparency = 0.40,
-		IconStrokeColor = Color3.fromRGB(0, 0, 0),
-		TabBackgroundTransparency = 0.70,
-		ActiveBackgroundTransparency = 0.55,
-		ActiveBackgroundColor = Color3.fromRGB(218, 68, 255),
-		HoverZoom = 1.12,
-		ActiveZoom = 1.08,
-		ZoomTime = 0.15,
+		IconStrokeTransparency = 0.20,
+		IconStrokeColor = Color3.fromRGB(107, 0, 181),
+		TabBackgroundTransparency = 1,
+		ActiveBackgroundTransparency = 0.85,
+		ActiveBackgroundColor = Color3.fromRGB(128, 128, 128),
+		HoverZoom = 1.30,
+		ActiveZoom = 1.40,
+		ZoomTime = 0.20,
 	},
 	TabHoverZoom = true,
 	GroupColor = Color3.fromRGB(0, 0, 0), -- HITAM (user v4.6.5: balik hitam)

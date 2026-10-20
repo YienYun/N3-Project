@@ -4,6 +4,23 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 
 ---
 
+## 🔒 RESEP TAB = TERKUNCI (print user 18:21, v4.7.6)
+
+Library:SetTabAppearance({
+	IconStrokeThickness = 1, IconStrokeTransparency = 0.20,
+	IconStrokeColor = Color3.fromRGB(107, 0, 181),
+	TabBackgroundTransparency = 1, ActiveBackgroundTransparency = 0.85,
+	ActiveBackgroundColor = Color3.fromRGB(128, 128, 128),
+	HoverZoom = 1.30, ActiveZoom = 1.40, ZoomTime = 0.20,
+})
+Library.Animations.TabHoverZoom = true
+
+Refactor v4.7.6 (perintah user: "jangan ada code sampah / duplikasi, biar file
+nggak besar"): halo stroke + UIScale = SATU helper Library:CreateTabIconStroke;
+zoom = SATU helper Library:TweenTabZoom; blok inline duplikat di AddTab dan
+AddKeyTab DIHAPUS (library -40 baris). Zoom lewat UIScale (transform-only,
+lebih mulus dari tween Size).
+
 ## 🎯 v4.7.0 — UPGRADE TAB SIDEBAR (baseline, BELUM locked — nunggu print user)
 
 Diskusi user: stroke di icon (biar keliatan), background dikit di semua tab,

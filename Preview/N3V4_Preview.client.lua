@@ -7,6 +7,17 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.7.6 — RESEP TAB LU DIBAKE + NOL CODE SAMPAH:
+	   • Print RESEP TAB lu (stroke 1px/20%/ungu 107-0-181, bg tab 100%,
+	     bg aktif 85% abu 128, zoom hover 130%, zoom aktif 140%, durasi 0.20)
+	     jadi DEFAULT TERKUNCI di library + DEFAULTS.
+	   • Refactor sesuai perintah lu ("jangan ada code sampah / duplikasi"):
+	     halo stroke + UIScale sekarang SATU helper (CreateTabIconStroke),
+	     zoom SATU helper (TweenTabZoom), blok duplikat AddTab/AddKeyTab
+	     DIHAPUS -> library minus ~40 baris.
+	   • Zoom pakai UIScale lagi (transform-only) = lebih MULUS daripada
+	     tween Size; kekasaran yang lu rasain juga emang khas preview Studio.
+
 	 CHANGELOG v4.7.5 — AKHIRNYA KE FUNGSI YANG BENER (Window:AddTab):
 	   • v4.7.0-7.4 semua patch tab (stroke halo, bg, zoom, TabRec) MASUK KE
 	     Window:AddKeyTab, bukan Window:AddTab. Tab sidebar kiri lu dibuat
@@ -202,7 +213,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.7.5" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.7.6" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -234,7 +245,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.7.5",
+	Footer = "N3V4 • UI Preview Kit v4.7.6",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
