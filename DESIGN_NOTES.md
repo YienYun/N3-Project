@@ -435,8 +435,8 @@ Library:SetSurface({
 	WindowTransparency = 0.00,
 	CanvasTransparency = 0.20,
 	GroupTransparency = 0.00,
-	GroupContrast = 30,        -- v4.6.4: dulu 10, user minta "30% lebih jelas"
-	GroupColor = false,        -- v4.6.4: AUTO (override hitam dulu MATIKIN contrast)
+	GroupContrast = 30,        -- baseline user v4.6.4 (kepake kalau custom OFF)
+	GroupColor = Color3.fromRGB(0, 0, 0),  -- v4.6.5: BALIK HITAM (auto abu = salah)
 	CanvasColor = Color3.new(0.045, 0.045, 0.045),
 })
 ```

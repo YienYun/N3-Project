@@ -13,6 +13,9 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.6.5: GROUP BALIK HITAM (revert AUTO abu-abu v4.6.4 — user: "gue group
+--        warna hitam anj!"). Contrast 30 tetep disimpen sebagai baseline lu,
+--        kepake kalau "Group custom" OFF.
 -- v4.6.4: GROUP 30% LEBIH JELAS (user: "dulukan 10% sekarang coba bikin 30%").
 --        GroupColor override hitam dihapus biar GroupContrast BENERAN
 --        kepake; toggle "Group custom" mulai OFF (= auto).
@@ -44,7 +47,7 @@ Settings.DEFAULTS = {
 	Canvas = 0.20,
 	Group = 0,
 	Contrast = 30,
-	GroupColor = false, -- auto: ikut contrast 30% (v4.6.4)
+	GroupColor = Color3.fromRGB(0, 0, 0), -- HITAM (user v4.6.5: balik hitam)
 	CanvasColor = Color3.new(0.045, 0.045, 0.045), -- dump user 0.045
 }
 
@@ -121,7 +124,7 @@ function Settings:Attach(Library, Window, Options)
 
 	local LastTint = S.Color
 	local LastCanvas = S.CanvasColor
-	local LastGroup = (typeof(S.GroupColor) == "Color3") and S.GroupColor or Color3.fromRGB(30, 30, 30)
+	local LastGroup = (typeof(S.GroupColor) == "Color3") and S.GroupColor or Color3.fromRGB(0, 0, 0)
 
 	--//========================================================================
 	-- RESEP / PRINT  (dipakai dua tab: tema + wallpaper)

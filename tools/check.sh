@@ -69,10 +69,10 @@ chk "theme v4 user jadi default di LIBRARY (bg 18 / main 33 / outline 61 + radiu
 	"grep -q 'AccentColor = Color3.fromRGB(218, 68, 255)' '$LIB' && grep -q 'BackgroundColor = Color3.fromRGB(18, 18, 18),' '$LIB' && grep -q 'MainColor = Color3.fromRGB(33, 33, 33),' '$LIB' && grep -q 'OutlineColor = Color3.fromRGB(61, 61, 61),' '$LIB' && grep -q 'CornerRadius = 15,' '$LIB'"
 chk "wallpaper v3 default di LIBRARY (0.80 + canvas 0.045) + GROUP 30% (v4.6.4)" \
 	"grep -q 'BackgroundImageTransparency = 0.80' '$LIB' && grep -q 'GroupContrast = 30,' '$LIB' && grep -q 'CanvasColor = Color3.new(0.045' '$LIB' && grep -q 111593326989465 '$LIB'"
-chk "group color AUTO di LIBRARY (override hitam diputus, v4.6.4)" \
-	"grep -q 'GroupColor = false, -- AUTO' '$LIB'"
+chk "group HITAM lagi di LIBRARY (revert v4.6.5) + contrast 30 baseline tetep" \
+	"grep -q 'GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu = HITAM' '$LIB' && grep -q 'GroupContrast = 30,' '$LIB'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
-	"grep -q 'Transparency = 0.80' '$MOD' && grep -q 'Contrast = 30' '$MOD' && grep -q 'CanvasColor = Color3.new(0.045' '$MOD'"
+	"grep -q 'Transparency = 0.80' '$MOD' && grep -q 'Contrast = 30' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.new(0.045' '$MOD'"
 chk "state S di-init SEBELUM BuildResep/BuildTema (bug 'index nil with Image')" \
 	"test \$(grep -n 'local S = {' '$MOD' | cut -d: -f1) -lt \$(grep -n 'local function BuildResep' '$MOD' | cut -d: -f1)"
 

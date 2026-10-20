@@ -7,6 +7,14 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.6.5 — GROUP BALIK HITAM (revert kesalahan v4.6.4):
+	   • v4.6.4 gue bikin GroupColor AUTO -> kartu jadi ABU-ABU. User:
+	     "kok abu abu cok? woi gue group warna hitam anj!" -> REVERT ke hitam.
+	   • Contrast 30 baseline lu TETEP disimpen; kepake kalau "Group custom" OFF.
+	   • Penjelasan kenapa slider berasa "ga ngaruh" ada di DESIGN_NOTES
+	     (override warna menang atas contrast; overlay slider cuma aktif
+	     kalau toggle Overlay ON; wash wallpaper front nutup semua kartu).
+
 	 CHANGELOG v4.6.4 — GROUP 30% LEBIH JELAS:
 	   • GroupContrast 10 -> 30 (kartu group dibedain 30% dari background).
 	   • Override GroupColor hitam DIPUTUS (jadi auto) — soalnya override itu
@@ -68,7 +76,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6.4" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.6.5" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -85,7 +93,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6.4",
+	Footer = "N3V4 • UI Preview Kit v4.6.5",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
