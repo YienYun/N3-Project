@@ -1632,7 +1632,7 @@ Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per tab side
 Library.TabIconBaseSize = 24 -- px, ukuran dasar icon tab (buat math zoom)
 -- v4.7.2: version print biar nggak ada lagi debat "library lu lama/belum":
 -- baris ini MUNCUL di Output tiap require kalau library yang ke-paste emang baru.
-print("[N3V4 Library] v4.7.3 loaded — TabAppearance/TabVisuals OK (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.7.4 loaded — TabAppearance/TabVisuals OK (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
 function Library:GetCanvasColor(): Color3
@@ -1707,6 +1707,14 @@ end
 function Library:GetZoomTweenInfo(): TweenInfo
 	local T = Library.TabAppearance
 	return TweenInfo.new(math.clamp(T.ZoomTime, 0.02, 1), Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+end
+
+-- v4.7.4: gate zoom yang NIL-SAFE. WindowInfo.Animations dari caller (mis.
+-- preview) bisa NIMPA tabel Animations tanpa key TabHoverZoom -> nil =
+-- falsy = hover/zoom MATI diam-diam. Nil sekarang dianggap ON.
+function Library:ZoomTabEnabled(): boolean
+	local A = Library.Animations
+	return not A or A.TabHoverZoom ~= false
 end
 
 function Library:SetTabAppearance(Info: { [string]: any })
@@ -12215,7 +12223,7 @@ function Library:CreateWindow(WindowInfo)
 				}):Play()
 			end
 			-- v4.7.3: zoom icon sedikit pas cursor masuk/keluar (tween Size)
-			if TabIcon and Library.Animations.TabHoverZoom then
+			if TabIcon and Library:ZoomTabEnabled() then
 				local Z = Hovering and Library.TabAppearance.HoverZoom or 1
 				local Base = Library.TabIconBaseSize
 				TweenService:Create(TabIcon, Library:GetZoomTweenInfo(), {
@@ -12251,7 +12259,7 @@ function Library:CreateWindow(WindowInfo)
 			if TabIcon then
 				local Base = Library.TabIconBaseSize
 				local Target = UDim2.fromOffset(Base * Library.TabAppearance.ActiveZoom, Base * Library.TabAppearance.ActiveZoom)
-				if Library.Animations.TabHoverZoom then
+				if Library:ZoomTabEnabled() then
 					TweenService:Create(TabIcon, Library:GetZoomTweenInfo(), { Size = Target }):Play()
 				else
 					TabIcon.Size = Target
@@ -12292,7 +12300,7 @@ function Library:CreateWindow(WindowInfo)
 			if TabIcon then
 				local Base = Library.TabIconBaseSize
 				local Target = UDim2.fromOffset(Base, Base)
-				if Library.Animations.TabHoverZoom then
+				if Library:ZoomTabEnabled() then
 					TweenService:Create(TabIcon, Library:GetZoomTweenInfo(), { Size = Target }):Play()
 				else
 					TabIcon.Size = Target
@@ -13184,6 +13192,11 @@ function Library:CreateWindow(WindowInfo)
 	Library:GiveSignal(UserInputService.WindowFocusReleased:Connect(function()
 		Library.IsRobloxFocused = false
 	end))
+
+	-- v4.7.4: auto-apply + bukti di Output pas window pertama jadi. Kalau
+	-- tabVisuals=0 padahal tab ada, berarti rec AddTab nggak kebentuk.
+	Library:ApplyTabAppearance()
+	print(string.format("[N3V4 Library] window ready: tabVisuals=%d (0 padahal ada tab = dump DEBUG di setingan)", #Library.TabVisuals))
 
 	Library.Window = Window
 	return Window

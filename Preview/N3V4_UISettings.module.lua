@@ -13,6 +13,8 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.7.4: TEST ikut nyalain toggle stroke/bg-aktif + TabHoverZoom; gate zoom
+--        nil-safe di library; CreateWindow auto-apply + print tabVisuals.
 -- v4.7.3: FIX BUG BESAR: local TabRec kedelep di dalam do-block library ->
 --        AddTab error tiap tab = semua efek tab (stroke/bg/zoom) MATI diam-diam
 --        walau library baru. Sekarang scope bener + stroke pakai halo ImageLabel
@@ -658,6 +660,13 @@ function Settings:Attach(Library, Window, Options)
 					ActiveZoom = 1.15,
 				})
 			end)
+			pcall(function()
+				if Library.Animations then
+					Library.Animations.TabHoverZoom = true
+				end
+			end)
+			pcall(function() StrokeTog:SetValue(true) end)
+			pcall(function() ActiveTog:SetValue(true) end)
 			pcall(function() Sl_StrokeT:SetValue(1.5) end)
 			pcall(function() Sl_StrokeTr:SetValue(0) end)
 			pcall(function() Sl_BgAll:SetValue(35) end)

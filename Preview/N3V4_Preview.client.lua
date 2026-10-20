@@ -7,6 +7,17 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.7.4 — ZOOM MATI KARENA ANIMATIONS KE-NIMPA + bukti otomatis:
+	   • WindowInfo.Animations caller (preview) cuma bawa 5 bool -> tabel
+	     Animations ke-replace tanpa TabHoverZoom -> nil = gate zoom MATI.
+	     Sekarang gate NIL-SAFE (Library:ZoomTabEnabled: nil dianggap ON) dan
+	     preview eksplisit kirim TabHoverZoom = true.
+	   • CreateWindow sekarang manggil ApplyTabAppearance() sendiri + print
+	     "[N3V4 Library] window ready: tabVisuals=N" = bukti otomatis di
+	     Output tanpa lu klik apa-apa.
+	   • Tombol TEST sekarang ikut nyalain toggle stroke, toggle bg aktif,
+	     dan Animations.TabHoverZoom — sekali klik semua efek hidup.
+
 	 CHANGELOG v4.7.3 — BUG BESAR KE-TEMU & DIFIX (stroke/bg/zoom mati diam-diam):
 	   • AKAR SEMUA DRAMA INI: di library v4.7.0-7.2, `local TabRec` kedelep
 	     DI DALAM do-block AddTab, padahal `TabRec.Tab = Tab` dipanggil di
@@ -182,7 +193,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.7.3" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.7.4" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -214,7 +225,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.7.3",
+	Footer = "N3V4 • UI Preview Kit v4.7.4",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -575,6 +586,7 @@ local WindowInfo = {
 		Groupbox = true,
 		Dropdown = true,
 		KeyPicker = true,
+		TabHoverZoom = true, -- v4.7.4: jangan sampe ke-drop waktu Validate
 	},
 }
 

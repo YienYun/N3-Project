@@ -17,6 +17,13 @@ Baseline (Library.TabAppearance + Settings.DEFAULTS.Tab):
   HoverZoom 1.12 | ActiveZoom 1.08 | ZoomTime 0.15s (Quad Out)
   Matinya: Library.Animations.TabHoverZoom = false
 
+v4.7.4: gate zoom dulu `Library.Animations.TabHoverZoom` langsung — tabel
+Animations bisa ke-REPLACE sama WindowInfo.Animations caller (preview cuma
+bawa 5 bool) -> key ilang -> nil -> zoom mati. Sekarang Library:ZoomTabEnabled()
+(nil = ON), preview eksplisit kirim TabHoverZoom=true, CreateWindow manggil
+ApplyTabAppearance() + print "window ready: tabVisuals=N" sebagai bukti
+otomatis, dan tombol TEST ikut nyalain toggle stroke/bg-aktif/animasi.
+
 BUG PALING MEMALUKAN (v4.7.3, permintaan maaf terbuka ke user):
 v4.7.0-7.2 punya `local TabRec = {...}` DI DALAM do-block AddTab, sedangkan
 `TabRec.Tab = Tab` ada di luar do -> nil-global runtime error SETIAP AddTab.
