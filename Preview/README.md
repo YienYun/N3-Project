@@ -1,4 +1,13 @@
-# N3V4 — Preview Kit (v4)
+# N3V4 — Preview Kit (v4.5)
+
+> 🧱 **v4.5: preview BERSIH.** Preview = murni showcase komponen.
+> SEMUA setingan desain pindah ke **`N3V4_UISettings.module.lua`**.
+> Kalau ModuleScript itu ada di ReplicatedStorage, preview otomatis
+> nambah tab "UI Settings" + "Wallpaper & Surface". Kalau nggak, preview
+> jalan normal tanpa setingan.
+>
+> 🖼️ **Wallpaper aktif otomatis** — default-nya sekarang di LIBRARY
+> (resep user yang disetujui), jadi nggak perlu seting apa-apa.
 
 Preview lengkap semua fitur UI library N3, buat dites di **Roblox Studio**.
 

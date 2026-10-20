@@ -11570,33 +11570,6 @@ function Tasks.BuildMainInterface()
 		Icon = "rbxassetid://117688744510818",
 		AutoShow = true,
 	})
-
-	--// N3V4: WALLPAPER + SURFACE — racikan user, disetujui 2026-10-20 \\--
-	-- Angka-nya persis dari output "Print resep Lua" yang user paste balik:
-	--   wallpaper front 70% + tint abu gelap, overlay 90%, canvas 64%,
-	--   group 11% + contrast 11 + warna hitam.
-	-- Dibungkus pcall: hub TETEP jalan walau library yang ke-load versi lama
-	-- yang belum punya SetWallpaper/SetSurface (misal raw URL belum di-update).
-	pcall(function()
-		LibraryLoader:SetWallpaper({
-			Image = "111593326989465",
-			Transparency = 0.70,
-			ScaleType = "Stretch",
-			Color = Color3.fromRGB(55, 55, 55),
-			Layer = "front",
-			Overlay = true,
-			OverlayColor = Color3.fromRGB(46, 46, 46),
-			OverlayTransparency = 0.90,
-		})
-		LibraryLoader:SetSurface({
-			CanvasTransparency = 0.64,
-			GroupTransparency = 0.11,
-			GroupContrast = 11,
-			GroupColor = Color3.fromRGB(0, 0, 0),
-			CanvasColor = Color3.fromRGB(0, 0, 0),
-		})
-	end)
-
 	local HomeTab = MainWindow:AddTab("Home", "house", "Main Farm & Lifecycle")
 	local PetsTab = MainWindow:AddTab("Pets", "paw-print", "Pets Management, Fuse & Auto Sell")
 	local ProgressTab = MainWindow:AddTab("Progress", "trending-up", "Treadmill Training, Trails & Rewards")

@@ -274,17 +274,19 @@ tetep kebaca. Ini kombinasi yang user suka — BUKAN resep "back + canvas 100%"
 yang gue rekomendasiin dulu. **Selera user menang.**
 
 **Terpasang di:**
-- `Preview/N3V4_Preview.client.lua` → `CONFIG.Wallpaper` + `CONFIG.Surface`
-  (default boot) + preset "RESEP USER (yang disetujui)"
-- `Games/N3-SAE.lua` → tepat setelah `CreateWindow`, dibungkus **pcall**
-  (no-op aman kalau library yang ke-load versi lama)
+- **`Library/N3V3-NoObfus.lua`** → `Templates.Window` + `Library.Surface`
+  = resep user. Artinya wallpaper **AKTIF OTOMATIS** begitu library di-require,
+  tanpa seting apa-apa. Tetep bisa di-override per-window / lewat setter.
+- **`Preview/N3V4_UISettings.module.lua`** → `Settings.DEFAULTS` + semua
+  kontrol buat ngubah-ubahnya.
+- **NGGAK di game script.** User tegas: "fokus ui bukan script game".
+  Percobaan gue masang ke `N3-SAE.lua` udah gue **revert** (file balik original).
 
 **⚠️ Hub load library dari raw URL repo LAIN:**
 `https://raw.githubusercontent.com/ZedFu3/N3-Hub/refs/heads/main/Library/N3V3.luau`
 (N3-SAE.lua line 8-9). Perubahan library gue ada di repo INI
-(YienYun/N3-Project). Jadi wallpaper di hub baru NYALA setelah library baru
-ke-push ke URL itu (atau URL loader-nya diganti). Sampai situ, pcall bikin
-hub tetep jalan normal tanpa wallpaper.
+(YienYun/N3-Project). Wallpaper di hub baru NYALA setelah library baru
+ke-push ke URL itu (atau URL loader-nya diganti). Itu urusan deployment user.
 
 ---
 
@@ -468,6 +470,25 @@ buat semua helper N3V4.
 ### Format icon yang diterima `GetCustomIcon` (tanpa HTTP)
 `rbxassetid://<id>` · `rbxasset://textures/...` · `content://...` · `rbxthumb://type=...`
 · `roblox.com/asset/?id=...` · angka polos · **nama lucide** (via chain 3 lapis)
+
+---
+
+## 🧱 ARSITEKTUR PREVIEW vs SETTINGS (v4.5, permintaan user)
+User: *"bersihin ui previewnya jangan ada setingan color dll ... bikin 1 file
+lagi namanya setting ui ... di preview hanya preview gambaran image button dll
+... setingan ui itu harusnya full di file baru, nanti kita panggil di preview
+utama biar muncul tab baru."*
+
+| File | Isi |
+|---|---|
+| `Preview/N3V4_Preview.client.lua` | **MURNI showcase komponen** (5 tab): button, toggle, dropdown, slider, image, viewport, feed, notify, dialog, dll. **NOL setingan UI.** |
+| `Preview/N3V4_UISettings.module.lua` | **SEMUA setingan desain** (2 tab: "UI Settings" 3/3 + "Wallpaper & Surface" 5/5): wallpaper, overlay, surface, warna scheme, font, radius, animasi, preset, print resep |
+| `Library/N3V3-NoObfus.lua` | Engine + **default resep user** (wallpaper aktif otomatis) |
+
+Preview auto-detect: `pcall(require(ReplicatedStorage.N3V4_UISettings))` →
+kalau ModuleScript-nya ada, `Settings:Attach(Library, Window)` dipanggil dan
+tab setting muncul. Kalau nggak ada, preview jalan normal tanpa tab itu.
+Module juga bisa dipanggil manual: `Settings:Attach(Library, Window)`.
 
 ---
 

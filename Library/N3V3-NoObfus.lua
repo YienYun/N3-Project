@@ -403,31 +403,32 @@ local Templates = {
 		-- N3V4: dulu cuma `BackgroundImage = ""` dan sisanya hardcoded
 		-- (ImageTransparency 0.75, ScaleType Stretch, ZIndex 999 di atas konten,
 		-- tanpa overlay). Sekarang semuanya bisa dikonfigurasi.
-		BackgroundImage = "",
-		BackgroundImageTransparency = 0.75,
+		-- DEFAULT = RESEP USER YANG DISETUJUI 2026-10-20 ("nih brok ini bagus jir").
+		-- Wallpaper AKTIF otomatis begitu library dipakai — nggak perlu seting
+		-- apa-apa. Tetep bisa di-override per-window atau lewat
+		-- Library:SetWallpaper / Library:SetSurface.
+		BackgroundImage = "111593326989465",
+		BackgroundImageTransparency = 0.70,
 		BackgroundImageScaleType = "Stretch", -- member asli: Stretch | Slice | Tile | Fit | Crop
 		--   alias yang gue tambahin: Fill/Cover -> Crop, Contain -> Fit
-		--   Buat wallpaper biasanya "Crop" paling enak (kayak CSS background-size: cover)
-		BackgroundImageColor = Color3.new(1, 1, 1), -- tint (ImageColor3)
-		BackgroundImageLayer = "back", -- "back" = wallpaper beneran (di belakang konten)
-		--   | "front" = wash/texture di atas konten (perilaku lama, ZIndex 999)
+		BackgroundImageColor = Color3.fromRGB(55, 55, 55), -- tint (ImageColor3)
+		BackgroundImageLayer = "front", -- "front" = wash di atas konten (pilihan user)
+		--   | "back" = wallpaper di belakang konten
 
-		-- Overlay = scrim gelap di antara wallpaper dan konten, biar teks tetep kebaca
-		BackgroundOverlayEnabled = false,
-		BackgroundOverlayColor = Color3.new(0, 0, 0),
-		BackgroundOverlayTransparency = 0.5,
+		-- Overlay = scrim di antara wallpaper dan konten
+		BackgroundOverlayEnabled = true,
+		BackgroundOverlayColor = Color3.fromRGB(46, 46, 46),
+		BackgroundOverlayTransparency = 0.90,
 
 		--// Surface \\--
 		-- N3V4: biar wallpaper beneran keliatan SEBAGAI background kartu, area
 		-- konten (Container + sidebar) harus bisa dibikin transparan. Default 0
 		-- = perilaku lama (solid), jadi hub yang nggak pakai wallpaper aman.
-		ContentTransparency = 0,
-		-- Kartu groupbox/tabbox/depbox: 0 = solid (biar komponen di dalamnya
-		-- NGGAK ikutan tembus pandang), naikin kalau mau sedikit see-through.
-		GroupTransparency = 0,
+		ContentTransparency = 0.64,
+		-- Kartu groupbox/tabbox/depbox.
+		GroupTransparency = 0.11,
 		-- Persen (0-100): kartu group dibedain dari background window.
-		-- 10 = kartu ~10% lebih terang (dark theme) -> kebaca sebagai kartu.
-		GroupContrast = 0,
+		GroupContrast = 11,
 
 		--// Animations \\--
 		-- N3V4: default di-nyalain semua. Sebelumnya false semua, jadi hub yang
@@ -9029,12 +9030,13 @@ end
 --  2. Kartu groupbox pakai warna "BackgroundColor" yang SAMA PERSIS sama
 --     background window, jadi group nggak kebaca sebagai kartu di atas
 --     wallpaper. User minta group tetep solid & beda ~10% dari background.
+-- State awal = RESEP USER yang disetujui (sama kayak default Templates.Window)
 Library.Surface = {
-	CanvasTransparency = 0, -- Container + sidebar. 1 = wallpaper keliatan penuh
-	GroupTransparency = 0, -- kartu groupbox / tabbox / depbox. 0 = solid
-	GroupContrast = 0, -- persen 0-100: seberapa kartu group dibedain dari bg window
-	GroupColor = nil, -- Color3 override. nil = pakai BackgroundColor + GroupContrast
-	CanvasColor = nil, -- Color3 override warna latar (Container+sidebar). nil = ikut theme
+	CanvasTransparency = 0.64, -- Container + sidebar
+	GroupTransparency = 0.11, -- kartu groupbox / tabbox / depbox
+	GroupContrast = 11, -- persen 0-100
+	GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu
+	CanvasColor = Color3.fromRGB(0, 0, 0), -- override warna latar
 }
 Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
 Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
