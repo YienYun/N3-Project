@@ -395,7 +395,13 @@ Library:SetWallpaper({
 ```
 Atau langsung di `CreateWindow({ BackgroundImage = ..., BackgroundImageLayer = ..., ... })`.
 
-### 🏆 RESEP USER YANG DISETUJUI — **v3, DEFAULT SEKARANG** (2026-10-20)
+### 🏆 RESEP USER YANG DISETUJUI — **v4 (theme), DEFAULT SEKARANG** (2026-10-20)
+v4 = **theme doang** yang diganti ("sementar itu dulu ... jangan nambah fitur
+apapun itu cuma ganti jadi gitu saja dulu"): bg `(18,18,18)`, main `(33,33,33)`,
+outline `(61,61,61)`. Accent `(218,68,255)`, font putih, radius 15, DPI 100,
+dan SEMUA wallpaper/surface = **tetep v3** di bawah.
+
+### 🗄️ Resep v3 (theme sebelumnya; wallpaper/surface-nya MASIH default)
 User seting ulang lewat slider + color picker, paste balik output
 **"Print resep thema"** + dump `GetWallpaperInfo`, dan bilang
 **"mantap terapin nih brok ke library"**. Jadi v3 ini default di LIBRARY
@@ -405,9 +411,9 @@ DAN di `Settings.DEFAULTS`. VERBATIM, jangan diubah tanpa user minta:
 ```lua
 -- THEMA
 Library.Scheme.AccentColor = Color3.fromRGB(218, 68, 255)
-Library.Scheme.BackgroundColor = Color3.fromRGB(0, 0, 0)
-Library.Scheme.MainColor = Color3.fromRGB(31, 31, 31)
-Library.Scheme.OutlineColor = Color3.fromRGB(45, 45, 45)
+Library.Scheme.BackgroundColor = Color3.fromRGB(18, 18, 18)   -- v4
+Library.Scheme.MainColor = Color3.fromRGB(33, 33, 33)         -- v4
+Library.Scheme.OutlineColor = Color3.fromRGB(61, 61, 61)      -- v4
 Library.Scheme.FontColor = Color3.fromRGB(255, 255, 255)
 Window:SetCornerRadius(15)
 Library:SetDPIScale(100)

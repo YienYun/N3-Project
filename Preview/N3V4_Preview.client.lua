@@ -7,6 +7,11 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.6.3 — THEME v4 LU JADI DEFAULT (ganti angka doang, nol fitur):
+	   • bg (18,18,18) · main (33,33,33) · outline (61,61,61)
+	     (accent 218/68/255 + font putih + radius 15 tetep dari v3)
+	   • Wallpaper & surface NGGAK disentuh — masih resep v3.
+
 	 CHANGELOG v4.6.2 — RESEP v3 LU JADI DEFAULT + FIX BUG PRINT:
 	   • Default BARU (library + setingan): scheme hitam-ungu lu
 	     (accent 218/68/255, bg 0, main 31, outline 45, font putih),
@@ -57,7 +62,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6.2" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.6.3" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -74,7 +79,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6.2",
+	Footer = "N3V4 • UI Preview Kit v4.6.3",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

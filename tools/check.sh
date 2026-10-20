@@ -65,8 +65,8 @@ chk "color picker: DragBegin(satvib/hue/alpha) + InputEnded watcher" \
 chk "slider: berhenti lewat InputEnded (SliderReleaseConn)" "grep -q SliderReleaseConn '$LIB'"
 chk "WindowTransparency ada" "grep -q WindowTransparency '$LIB'"
 chk "Tab:AddKeyBox ada" "grep -q 'function Tab:AddKeyBox' '$LIB'"
-chk "resep v3 user jadi default di LIBRARY (scheme hitam-ungu + radius 15)" \
-	"grep -q 'AccentColor = Color3.fromRGB(218, 68, 255)' '$LIB' && grep -q 'BackgroundColor = Color3.fromRGB(0, 0, 0),' '$LIB' && grep -q 'CornerRadius = 15,' '$LIB'"
+chk "theme v4 user jadi default di LIBRARY (bg 18 / main 33 / outline 61 + radius 15)" \
+	"grep -q 'AccentColor = Color3.fromRGB(218, 68, 255)' '$LIB' && grep -q 'BackgroundColor = Color3.fromRGB(18, 18, 18),' '$LIB' && grep -q 'MainColor = Color3.fromRGB(33, 33, 33),' '$LIB' && grep -q 'OutlineColor = Color3.fromRGB(61, 61, 61),' '$LIB' && grep -q 'CornerRadius = 15,' '$LIB'"
 chk "resep v3 wallpaper jadi default di LIBRARY (0.80 + contrast 10 + canvas 0.045)" \
 	"grep -q 'BackgroundImageTransparency = 0.80' '$LIB' && grep -q 'GroupContrast = 10,' '$LIB' && grep -q 'CanvasColor = Color3.new(0.045' '$LIB' && grep -q 111593326989465 '$LIB'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \

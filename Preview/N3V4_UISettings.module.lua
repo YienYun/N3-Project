@@ -13,6 +13,8 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.6.3: Reset scheme = theme v4 user (bg 18, main 33, outline 61).
+--        NGGAK ada fitur baru — cuma ganti angka default, sesuai perintah.
 -- v4.6.2: DEFAULTS = RESEP v3 user (theme hitam-ungu + radius 15 + wallpaper v3).
 --        FIX BUG: state S dulu dibaca SETELAH BuildResep didefinisiin ->
 --        S ke-resolve global nil -> "attempt to index nil with 'Image'".
@@ -310,9 +312,9 @@ function Settings:Attach(Library, Window, Options)
 
 		Box:AddButton("Reset scheme", function()
 			Library.Scheme.AccentColor = Color3.fromRGB(218, 68, 255)
-			Library.Scheme.BackgroundColor = Color3.fromRGB(0, 0, 0)
-			Library.Scheme.MainColor = Color3.fromRGB(31, 31, 31)
-			Library.Scheme.OutlineColor = Color3.fromRGB(45, 45, 45)
+			Library.Scheme.BackgroundColor = Color3.fromRGB(18, 18, 18)
+			Library.Scheme.MainColor = Color3.fromRGB(33, 33, 33)
+			Library.Scheme.OutlineColor = Color3.fromRGB(61, 61, 61)
 			Library.Scheme.FontColor = Color3.fromRGB(255, 255, 255)
 			Library:UpdateColorsUsingRegistry()
 		end)
