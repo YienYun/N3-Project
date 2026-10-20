@@ -4,6 +4,11 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 
 ---
 
+## 🔒 v4.7.8 — RESEP DURASI BUKA/TUTUP = TERKUNCI (user: "10% bagus!")
+
+Library.WindowAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+DEFAULTS.AnimTime = 0.10 (slider ST_AnimTime = 10%)
+
 ## 🎯 v4.7.7 — ANIMASI BUKA/TUTUP WINDOW (fix, bukan fitur)
 
 Keluhan user: buka terlalu lama, kadang glitch pas baru kebuka, "biasanya ada

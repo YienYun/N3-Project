@@ -13,6 +13,7 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.7.8: durasi buka/tutup = 10% (0.10s) DIBAKE — user: "10% bagus!".
 -- v4.7.7: animasi BUKA/TUTUP WINDOW dibenerin di library (fade barengan =
 --        total waktu persis durasi, nol "layar hitam", tween di-cache =
 --        nol hitch, reversal mulus). Knob baru ST_AnimTime (Font & Animasi)
@@ -109,7 +110,7 @@ Settings.DEFAULTS = {
 		ZoomTime = 0.20,
 	},
 	TabHoverZoom = true,
-	AnimTime = 0.20, -- v4.7.7: durasi buka/tutup window (detik; library default sama)
+	AnimTime = 0.10, -- v4.7.8: RESEP USER TERKUNCI ("10% bagus!") = 0.10s buka/tutup window
 	GroupColor = Color3.fromRGB(0, 0, 0), -- HITAM (user v4.6.5: balik hitam)
 	CanvasColor = Color3.fromRGB(156, 156, 156), -- dump user v5
 }

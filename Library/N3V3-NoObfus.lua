@@ -215,7 +215,7 @@ local Library = {
 	TabSwipeOffset = 26,
 	TabSwipeFrom = "bottom",
 
-	WindowAnimationInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), -- v4.7.7: 0.35 -> 0.2 (buka/tutup gesit; knob ST_AnimTime di settings)
+	WindowAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), -- v4.7.8: RESEP USER "10% bagus!" = 0.10s (knob ST_AnimTime di settings)
 	DropdownTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 	KeyPickerTransitionInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
@@ -1632,7 +1632,7 @@ Library.TabAppearance = {
 Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per tab sidebar
 -- v4.7.2: version print biar nggak ada lagi debat "library lu lama/belum":
 -- baris ini MUNCUL di Output tiap require kalau library yang ke-paste emang baru.
-print("[N3V4 Library] v4.7.7 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.7.8 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
 function Library:GetCanvasColor(): Color3

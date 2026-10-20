@@ -95,17 +95,17 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.7.7 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.7.8 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + halo stroke + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconStrokeHalo' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
 	"grep -q 'function Library:ZoomTabEnabled' '$LIB' && grep -q 'window ready: tabVisuals' '$LIB' && grep -q 'TabHoverZoom = true, -- v4.7.4' '$PREV'"
 chk "v4.7.5: patch tab ada di AddTab ASLI (bukan AddKeyTab doang)" \
 	"[ \$(grep -c 'table.insert(Library.TabVisuals, TabRec)' '$LIB') -eq 2 ] && [ \$(grep -c 'BackgroundTransparency = Library.TabAppearance.TabBackgroundTransparency,' '$LIB') -eq 4 ]"
-chk "v4.7.7: fade window baru (tween cache+token, nol stagger/block, default 0.2)" \
-	"grep -q 'FadeTweenCache' '$LIB' && grep -q 'local FadeToken = 0' '$LIB' && grep -q 'WindowAnimationInfo = TweenInfo.new(0.2' '$LIB' && ! grep -q 'task.wait(FadeTime / 2)' '$LIB' && ! grep -q 'if Fading then' '$LIB'"
-chk "v4.7.7: knob durasi buka/tutup (module + DEFAULTS + restore + print)" \
-	"grep -q 'ST_AnimTime' '$MOD' && grep -q 'AnimTime = 0.20' '$MOD' && grep -q 'Library.WindowAnimationInfo = TweenInfo.new' '$MOD'"
+chk "v4.7.7: fade window baru (tween cache+token, nol stagger/block)" \
+	"grep -q 'FadeTweenCache' '$LIB' && grep -q 'local FadeToken = 0' '$LIB' && ! grep -q 'task.wait(FadeTime / 2)' '$LIB' && ! grep -q 'if Fading then' '$LIB'"
+chk "v4.7.8: knob durasi + RESEP USER 10% dibake (lib 0.1 + mod AnimTime 0.10)" \
+	"grep -q 'ST_AnimTime' '$MOD' && grep -q 'AnimTime = 0.10' '$MOD' && grep -q 'WindowAnimationInfo = TweenInfo.new(0.1' '$LIB' && grep -q 'Library.WindowAnimationInfo = TweenInfo.new' '$MOD'"
 chk "v4.7.6: NOL duplikasi (halo dibuat 1x di helper) + RESEP TAB locked lib+mod" \
 	"[ \$(grep -c 'Name = \"TabIconStrokeHalo\"' '$LIB') -eq 1 ] && grep -q 'IconStrokeColor = Color3.fromRGB(107, 0, 181)' '$LIB' && grep -q 'IconStrokeColor = Color3.fromRGB(107, 0, 181)' '$MOD' && grep -q 'HoverZoom = 1.30' '$LIB'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
@@ -130,7 +130,7 @@ chk "simetris" "python3 '$ROOT/tools/symmetry.py' '$PRE'"
 chk "ggak manggil SetWallpaper/SetSurface (setingan cuma di file setingan)" \
 	"! grep -qE '^\s*[^-].*Library:Set(Wallpaper|Surface)' '$PRE'"
 chk "AddKeyBox di-guard typeof" "grep -q 'typeof(AdvancedTab.AddKeyBox)' '$PRE'"
-chk "footer v4.7.7" "grep -q 'Preview Kit v4.7.7' '$PRE'"
+chk "footer v4.7.8" "grep -q 'Preview Kit v4.7.8' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \

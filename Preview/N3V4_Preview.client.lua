@@ -7,6 +7,10 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.7.8 — RESEP DURASI BUKA/TUTUP DIBAKE:
+	   • User dial 10% dan bilang "10% bagus!" => 0.10 detik jadi DEFAULT
+	     TERKUNCI (library WindowAnimationInfo + DEFAULTS.AnimTime).
+
 	 CHANGELOG v4.7.7 — ANIMASI BUKA/TUTUP WINDOW DIBENERIN:
 	   • Buka nggak lagi 1.5x durasi: stagger task.wait dihapus, shell +
 	     konten fade BARENGAN => total waktu = durasi persis (default baru
@@ -230,7 +234,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.7.7" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.7.8" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -262,7 +266,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.7.7",
+	Footer = "N3V4 • UI Preview Kit v4.7.8",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
