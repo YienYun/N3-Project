@@ -7,6 +7,12 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.6.12 — PREVIEW NYALA LAGI (aman):
+	   • User mau seting manual upgrade TAB (stroke icon, background tab, zoom
+	     hover/aktif) -> PREVIEW_ENABLED = true lagi. Beda sama era v4.6.9:
+	     preview sekarang NOL SetWallpaper/SetSurface, jadi nggak nyetomp
+	     state global window lu. Showcase tab = testbed visual lu.
+
 	 CHANGELOG v4.6.11 — NESTED BOX IKUT TRANSPARAN (nggak dobel lapis):
 	   • Bug: tabbox/groupbox/depbox yang NESTED di dalam kartu group numpuk
 	     lapis transparency KEDUA (0.35 di atas 0.35) -> komposit gelap/solid,
@@ -134,7 +140,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6.11" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.6.12" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -146,7 +152,9 @@
 -- ikut ke-stomp window 0 / canvas 0 = "jadinya jelek cok". Sekarang preview
 -- nggak jalan sama sekali (nol window, nol stomp); theme + semua seting ada
 -- di N3V4_UISettings. Mau showcase lagi? Set true.
-local PREVIEW_ENABLED = false
+local PREVIEW_ENABLED = true -- v4.6.12: user minta preview NYALA lagi buat
+-- seting manual upgrade tab (stroke icon + background tab + zoom animasi).
+-- Preview sekarang AMAN: nggak nyentuh SetWallpaper/SetSurface (state global).
 if not PREVIEW_ENABLED then
 	print("[N3V4 Preview] v4.6.10: preview OFF per perintah user. Seting lengkap: N3V4_UISettings. (Set PREVIEW_ENABLED = true buat nyalain showcase lagi.)")
 	return
@@ -164,7 +172,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6.11",
+	Footer = "N3V4 • UI Preview Kit v4.6.12",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

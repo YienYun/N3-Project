@@ -83,7 +83,7 @@ chk "v4.6.8: navbar bawah corner BAWAH-aja (SpecificCorners, tinggi 20)" \
 chk "v4.6.9: CreateWindow NGGAK stomp Surface default lagi (seed conditional)" \
 	"grep -q 'local RawGroupT = WindowInfo and WindowInfo.GroupTransparency' '$LIB'"
 chk "v4.6.10: preview OFF total (nggak nyetomp state global lagi)" \
-	"grep -q 'local PREVIEW_ENABLED = false' '$PREV' && ! grep -q 'Library:SetSurface' '$PREV'"
+	"grep -q 'local PREVIEW_ENABLED = true' '$PREV' && ! grep -q 'Library:SetSurface' '$PREV'"
 chk "v4.6.11: nested surface card ikut induk (IsInsideSurfaceCard dipake x3)" \
 	"[ \$(grep -c 'Library:IsInsideSurfaceCard(BoxHolder)' '$LIB') -eq 3 ] && grep -q 'function Library:IsInsideSurfaceCard' '$LIB'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
