@@ -231,7 +231,7 @@ local Library = {
 		Groupbox = true,
 		Dropdown = true,
 		KeyPicker = true,
-		TabHoverZoom = true, -- v4.7.0: zoom icon tab pas hover/aktif
+		TabHoverZoom = true, -- v4.7.0: tab icon zoom on hover/active
 	},
 
 	--// States \\--
@@ -374,7 +374,7 @@ local Templates = {
 		SearchbarSize = UDim2.fromScale(1, 1),
 		GlobalSearch = false,
 
-		CornerRadius = 15, -- N3V4: disamain sama Library.CornerRadius
+		CornerRadius = 15, -- N3V4: matched to Library.CornerRadius
 		NotifySide = "Right",
 		ShowCustomCursor = true,
 
@@ -411,18 +411,18 @@ local Templates = {
 		-- needed. Still overridable per-window or via
 		-- Library:SetWallpaper / Library:SetSurface.
 		BackgroundImage = "111593326989465",
-		BackgroundImageTransparency = 0, -- v4.6.8: dump user v5 (wallpaper FULL, scrim yang ngatur)
+		BackgroundImageTransparency = 0, -- v4.6.8: user dump v5 (wallpaper FULL, scrim does the work)
 		BackgroundImageScaleType = "Stretch", -- member asli: Stretch | Slice | Tile | Fit | Crop
 		--   aliases I added: Fill/Cover -> Crop, Contain -> Fit
 		BackgroundImageColor = Color3.fromRGB(195, 195, 195), -- tint (ImageColor3) dump user v5
-		BackgroundImageLayer = "back", -- v4.6.6: "back" = wallpaper DI BELAKANG konten,
+		BackgroundImageLayer = "back", -- v4.6.6: "back" = wallpaper BEHIND content,
 		--   so group cards are 100% SOLID / no longer "transparent" (user request:
 		--   "make it 100% clearer/not transparent"). "front" = wash covering all
 		--   (recipes v2-v4) — that is what made cards look see-through.
 		--   | "back" = wallpaper behind content
 
 		-- Overlay = scrim between wallpaper and content
-		BackgroundOverlayEnabled = true, -- v4.6.6: scrim antara wallpaper & konten (back mode)
+		BackgroundOverlayEnabled = true, -- v4.6.6: scrim between wallpaper & content (back mode)
 		BackgroundOverlayColor = Color3.fromRGB(0, 0, 0),
 		BackgroundOverlayTransparency = 0.55, -- v4.6.8: dump user v5
 
@@ -430,12 +430,12 @@ local Templates = {
 		-- N3V4: for the wallpaper to actually read AS card background, the content
 		-- area (Container + sidebar) must be make-able transparent. Default 0
 		-- = old behavior (solid), so hubs without wallpaper stay safe.
-		WindowTransparency = 1, -- v4.6.10: user "window dan canvas harusnya 100"
-		ContentTransparency = 1, -- v4.6.6: canvas full transparan (wallpaper keliatan di sela kartu)
+		WindowTransparency = 1, -- v4.6.10: user "window and canvas should be 100"
+		ContentTransparency = 1, -- v4.6.6: canvas fully transparent (wallpaper visible between cards)
 		-- Kartu groupbox/tabbox/depbox.
-		GroupTransparency = 0.35, -- v4.6.9: sync sama Library.Surface (resep v5)
+		GroupTransparency = 0.35, -- v4.6.9: synced with Library.Surface (recipe v5)
 		-- Percent (0-100): group cards differentiated from window background.
-		GroupContrast = 40, -- v4.6.9: sync sama Library.Surface (resep v5)
+		GroupContrast = 40, -- v4.6.9: synced with Library.Surface (recipe v5)
 
 		--// Animations \\--
 		-- N3V4: defaults all ON. Previously all false, so hubs that never pass
@@ -447,7 +447,7 @@ local Templates = {
 			Groupbox = true,
 			Dropdown = true,
 			KeyPicker = true,
-		TabHoverZoom = true, -- v4.7.0: zoom icon tab pas hover/aktif
+		TabHoverZoom = true, -- v4.7.0: tab icon zoom on hover/active
 		},
 
 		TabTransitionTime = 0.22,
@@ -550,10 +550,10 @@ local Templates = {
 		ItemIcons = {},
 
 		Multi = false,
-		Max = 0, -- 0 = tanpa batas
+		Max = 0, -- 0 = unlimited
 		ListHeight = 200,
 
-		Icon = nil, -- icon header popup (pojok kanan atas, gaya dialog)
+		Icon = nil, -- popup header icon (top-right corner, dialog style)
 		Placeholder = "Select...",
 
 		Callback = function() end,
@@ -1584,8 +1584,8 @@ end
 -- and MainFrame own background always sit behind all children — so
 -- negative ZIndex still shows, just loses to content (TopBar/Container, ZIndex 1+).
 local WallpaperLayers = {
-	back = { Image = -2, Overlay = -1 }, -- wallpaper paling belakang, overlay di atasnya, konten di atas semua
-	front = { Image = 999, Overlay = 998 }, -- wash di atas konten (perilaku lama library)
+	back = { Image = -2, Overlay = -1 }, -- wallpaper furthest back, overlay above it, content above all
+	front = { Image = 999, Overlay = 998 }, -- wash above content (old library behavior)
 }
 
 local function ResolveWallpaperLayer(Value: any): { Image: number, Overlay: number }
@@ -1612,19 +1612,19 @@ end
 --     User asked groups stay solid & ~10% off the background.
 -- Initial state = approved USER RECIPE (same as Templates.Window defaults)
 Library.Surface = {
-	CanvasTransparency = 1, -- Container + sidebar (v4.6.6: full; dump v5 tetep 1)
+	CanvasTransparency = 1, -- Container + sidebar (v4.6.6: full; dump v5 stays 1)
 	GroupTransparency = 0.35, -- kartu groupbox / tabbox / depbox. v4.6.8: dump user v5
 	--            (0.35 = user OWN pick now; on this back layer the slider is
 	--            aware — not the old front veil that made you mad)
-	GroupContrast = 40, -- persen 0-100 (dump user v5; baseline lama 30 v4.6.4)
-	GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu = HITAM (user
+	GroupContrast = 40, -- percent 0-100 (user dump v5; old baseline 30 in v4.6.4)
+	GroupColor = Color3.fromRGB(0, 0, 0), -- card color override = BLACK (user
 	--            v4.6.5: user: "hey my group color is black, damn!"). v4.6.4 I
 	--            once made it AUTO and cards went GRAY — my mistake, reverted.
 	--            NOTE: while this override exists, GroupContrast is unused
 	--            (library semantics: override wins). Contrast 30 is used
 	--            when the override is off (toggle "Group custom" OFF).
-	CanvasColor = Color3.fromRGB(156, 156, 156), -- override warna latar, dump user v5
-	WindowTransparency = 1, -- MainFrame (dasar window). v4.6.10: 100% kata user
+	CanvasColor = Color3.fromRGB(156, 156, 156), -- background color override, user dump v5
+	WindowTransparency = 1, -- MainFrame (window base). v4.6.10: 100% per user
 }
 Library.SurfaceWindow = nil -- MainFrame
 Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
@@ -1640,17 +1640,17 @@ Library.TabAppearance = {
 	IconStrokeThickness = 1, -- px, halo stroke glyph icon
 	IconStrokeTransparency = 0.20,
 	IconStrokeColor = Color3.fromRGB(107, 0, 181),
-	TabBackgroundTransparency = 1, -- tab biasa tanpa bg (pilihan user)
+	TabBackgroundTransparency = 1, -- plain tabs without bg (user choice)
 	ActiveBackgroundTransparency = 0.85,
 	ActiveBackgroundColor = Color3.fromRGB(128, 128, 128),
-	HoverZoom = 1.30, -- scale icon pas hover
-	ActiveZoom = 1.40, -- scale icon tab aktif (nantahan)
-	ZoomTime = 0.20, -- detik, tween Quad Out
+	HoverZoom = 1.30, -- icon scale on hover
+	ActiveZoom = 1.40, -- icon scale on active tab (holds)
+	ZoomTime = 0.20, -- seconds, Quad Out tween
 }
-Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per tab sidebar
+Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per sidebar tab
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.8.1 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.8.2 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -2449,7 +2449,98 @@ end
 
 --// Animations \\--
 local TransparencyCache = {}
-local FadeTweenCache = setmetatable({}, { __mode = "k" }) -- v4.7.7: tween fade window di-cache & dipakai ulang (weak key = instance mati ke-GC)
+local FadeTweenCache = setmetatable({}, { __mode = "k" }) -- v4.7.7: window fade tweens cached & reused (weak key = dead instances get GC-ed)
+local FadeGuiProperties = { "BackgroundTransparency" }
+local FadeImageProperties = { "BackgroundTransparency", "ImageTransparency" }
+local FadeTextProperties = { "BackgroundTransparency", "TextTransparency" }
+local FadeStrokeProperties = { "Transparency" }
+local FadeScrollProperties = { "BackgroundTransparency", "ScrollBarImageTransparency" }
+
+-- v4.7.7 rewrite, v4.8.2 promoted to a Library method: window open/close AND
+-- the DropdownV2 popup share this ONE fade implementation (zero duplication).
+-- Rest-value cache + reusable cached tweens + TweenInfo-driven signature.
+function Library:FadeInstance(Desc, Properties, Opening, CanCapture)
+	local Cache = TransparencyCache[Desc]
+	if not Cache then
+		Cache = {}
+		TransparencyCache[Desc] = Cache
+	end
+
+	local Info = Library.WindowAnimationInfo
+	local Goals = {}
+	local Sig = Info.Time .. "|" .. Info.EasingStyle.Name .. "|" .. Info.EasingDirection.Name .. "|"
+
+	for _, Prop in Properties do
+		local Rest = Cache[Prop]
+
+		if Rest == nil then
+			-- first encounter: current value = authored rest value
+			Rest = Desc[Prop]
+			Cache[Prop] = Rest
+			if Opening and Rest ~= 1 then
+				Desc[Prop] = 1 -- hide without a frame gap so it joins the fade
+			end
+		elseif not Opening and CanCapture then
+			-- close at rest: refresh the cache (values can change while open)
+			Rest = Desc[Prop]
+			Cache[Prop] = Rest
+		end
+
+		if Rest ~= nil and Rest ~= 1 then
+			local Target = if Opening then Rest else 1
+			Goals[Prop] = Target
+			Sig ..= Prop .. "=" .. Target .. ";"
+		end
+	end
+
+	if next(Goals) == nil then
+		return
+	end
+
+	local Dir = if Opening then "in" else "out"
+	local Tweens = FadeTweenCache[Desc]
+	if not Tweens then
+		Tweens = {}
+		FadeTweenCache[Desc] = Tweens
+	end
+
+	if Tweens[Dir] == nil or Tweens[Dir .. "Sig"] ~= Sig then
+		Tweens[Dir] = TweenService:Create(Desc, Info, Goals)
+		Tweens[Dir .. "Sig"] = Sig
+	end
+	Tweens[Dir]:Play()
+end
+
+-- v4.8.2: fade a whole subtree the window open/close way — every GuiObject /
+-- UIStroke dissolves together, total = WindowAnimationInfo.Time. Skip = one
+-- instance to ignore (the window passes TopBar). Root itself is included.
+function Library:FadeTree(Root, Opening, CanCapture, Skip)
+	local Queue = { Root }
+	for _, Desc in ipairs(Root:GetDescendants()) do
+		table.insert(Queue, Desc)
+	end
+
+	for _, Instance in Queue do
+		if Instance == Skip then
+			continue
+		end
+
+		if Instance:IsA("GuiObject") then
+			local ClassName = Instance.ClassName
+			if ClassName == "ImageLabel" or ClassName == "ImageButton" then
+				Library:FadeInstance(Instance, FadeImageProperties, Opening, CanCapture)
+			elseif ClassName == "TextLabel" or ClassName == "TextBox" or ClassName == "TextButton" then
+				Library:FadeInstance(Instance, FadeTextProperties, Opening, CanCapture)
+			elseif ClassName == "ScrollingFrame" then
+				Library:FadeInstance(Instance, FadeScrollProperties, Opening, CanCapture)
+			else
+				Library:FadeInstance(Instance, FadeGuiProperties, Opening, CanCapture)
+			end
+		elseif Instance.ClassName == "UIStroke" then
+			Library:FadeInstance(Instance, FadeStrokeProperties, Opening, CanCapture)
+		end
+	end
+end
 local ActiveTabTweens = setmetatable({}, { __mode = "k" })
 
 function Library:PlayTabAnimation(TabCanvas: CanvasGroup, Showing: boolean, OnComplete: (() -> ())?)
@@ -8522,7 +8613,7 @@ do
 		end
 
 		--// Popup modal \\--
-		local PopupOverlay, PopupFrame, PopupScale, PopupContent
+		local PopupOverlay, PopupFrame
 		local SummaryTotal, SummaryList
 		local RowRecs = {}
 
@@ -8562,8 +8653,8 @@ do
 			end
 			Dropdown.PopupOpen = false
 
-			local Overlay, Frame, Scale, Content = PopupOverlay, PopupFrame, PopupScale, PopupContent
-			PopupOverlay, PopupFrame, PopupScale, PopupContent = nil, nil, nil, nil
+			local Overlay, Frame = PopupOverlay, PopupFrame
+			PopupOverlay, PopupFrame = nil, nil
 			SummaryTotal, SummaryList = nil, nil
 			table.clear(RowRecs)
 
@@ -8574,17 +8665,12 @@ do
 				return
 			end
 			if Frame then
-				TweenService:Create(Frame, Library.TweenInfo, { BackgroundTransparency = 1 }):Play()
-			end
-			if Content then
-				TweenService:Create(Content, Library.TweenInfo, { GroupTransparency = 1 }):Play()
-			end
-			if Scale then
-				TweenService:Create(Scale, Library.TweenInfo, { Scale = 0.95 }):Play()
+				-- v4.8.2: window-style exit — everything dissolves out together.
+				Library:FadeTree(Frame, false, true)
 			end
 			if Overlay then
-				TweenService:Create(Overlay, Library.TweenInfo, { BackgroundTransparency = 1 }):Play()
-				task.delay(Library.TweenInfo.Time, function()
+				TweenService:Create(Overlay, Library.WindowAnimationInfo, { BackgroundTransparency = 1 }):Play()
+				task.delay(Library.WindowAnimationInfo.Time, function()
 					Overlay:Destroy()
 				end)
 			end
@@ -8614,7 +8700,7 @@ do
 					end
 				else
 					if Dropdown.Max > 0 and #Dropdown.Value >= Dropdown.Max then
-						return -- batas Max: pencetan diabaikan, bukan bug
+						return -- Max cap: extra clicks ignored, not a bug
 					end
 					Dropdown.SelectedSet[Text] = true
 					table.insert(Dropdown.Value, Text)
@@ -8670,7 +8756,7 @@ do
 				ZIndex = 9100,
 				Parent = MainFrame,
 			})
-			TweenService:Create(PopupOverlay, Library.TweenInfo, {
+			TweenService:Create(PopupOverlay, Library.WindowAnimationInfo, {
 				BackgroundTransparency = 0.5,
 			}):Play()
 			PopupOverlay.MouseButton1Click:Connect(function()
@@ -8680,7 +8766,6 @@ do
 			PopupFrame = New("TextButton", {
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				BackgroundColor3 = "BackgroundColor",
-				BackgroundTransparency = 1, -- v4.8.1: fade in, no pop
 				Position = UDim2.fromScale(0.5, 0.5),
 				Size = UDim2.fromOffset(math.min(380, MainFrame.AbsoluteSize.X * 0.8), 0),
 				AutomaticSize = Enum.AutomaticSize.Y,
@@ -8697,30 +8782,13 @@ do
 				})
 			)
 			Library:AddOutline(PopupFrame)
-			PopupScale = New("UIScale", {
-				Scale = 0.95,
-				Parent = PopupFrame,
-			})
-			TweenService:Create(PopupScale, Library.TweenInfo, { Scale = 1 }):Play()
-
-			-- v4.8.1: CanvasGroup = one-property fade for the WHOLE popup
-			-- content (GroupTransparency). Old build only tweened scale +
-			-- overlay, so frame/content popped in and out = "kaku".
-			PopupContent = New("CanvasGroup", {
-				BackgroundTransparency = 1,
-				Size = UDim2.new(1, 0, 0, 0),
-				AutomaticSize = Enum.AutomaticSize.Y,
-				GroupTransparency = 1,
-				ZIndex = 9102,
-				Parent = PopupFrame,
-			})
 
 			local Inner = New("Frame", {
 				BackgroundTransparency = 1,
 				Size = UDim2.new(1, 0, 0, 0),
 				AutomaticSize = Enum.AutomaticSize.Y,
 				ZIndex = 9102,
-				Parent = PopupContent,
+				Parent = PopupFrame,
 			})
 			New("UIListLayout", {
 				Padding = UDim.new(0, 10),
@@ -8985,12 +9053,11 @@ do
 				Dropdown:ClosePopup()
 			end)
 
-			-- v4.8.1: smooth entrance — bg + content fade + scale + overlay,
-			-- all on Library.TweenInfo so the theme speed knob drives it.
-			TweenService:Create(PopupFrame, Library.TweenInfo, { BackgroundTransparency = 0 }):Play()
-			TweenService:Create(PopupContent, Library.TweenInfo, { GroupTransparency = 0 }):Play()
-
+			-- v4.8.2: window-style entrance — the whole popup dissolves in
+			-- with the SAME fade system as window open/close (no scale pop).
+			-- Refresh first so selected-row states are the captured rest.
 			Dropdown:Refresh()
+			Library:FadeTree(PopupFrame, true, true)
 		end
 
 		DisplayContainer.MouseButton1Click:Connect(function()
@@ -10753,7 +10820,7 @@ function Library:CreateWindow(WindowInfo)
 				Parent = MainFrame,
 			})
 		)
-		Library:AddOutline(MainFrame) -- <-- HAPUS BARIS INI! (Biar ga bentrok sama MainStroke ungu)
+		Library:AddOutline(MainFrame) -- <-- legacy note: remove this line to avoid clashing with the purple MainStroke
 
 		--// 1. NEON BORDER WINDOW LUAR (KETEBALAN KONSTAN 1.8px) \\--
 		local MainStroke = New("UIStroke", {
@@ -10911,7 +10978,7 @@ function Library:CreateWindow(WindowInfo)
 					else
 						-- [FASE 2]: KETEMU DI TENGAH & LANGSUNG MELEBUR HILANG (t = 0.60 s/d 1.0)
 						-- NO PAUSE! Melts straight back to the original purple/pink!
-						local dissolve = (t - 0.60) / 0.40 -- Progress melebur dari 0 ke 1
+						local dissolve = (t - 0.60) / 0.40 -- melt progress from 0 to 1
 
 						-- Inner window beam fades out softly too
 						InnerStroke.Transparency = math.clamp(0.1 + dissolve * 0.9, 0.1, 1)
@@ -11100,7 +11167,7 @@ function Library:CreateWindow(WindowInfo)
 			AnchorPoint = Vector2.new(1, 0.5),
 			BackgroundTransparency = 1,
 			Position = UDim2.new(1, -44, 0.5, 0),
-			Size = UDim2.new(1, -InitialLeftWidth - 55, 0, 34), -- Tebal & lega atas-bawah
+			Size = UDim2.new(1, -InitialLeftWidth - 55, 0, 34), -- thick & roomy top-bottom
 			Parent = TopBar,
 		})
 
@@ -11176,7 +11243,7 @@ function Library:CreateWindow(WindowInfo)
 				return Library:GetBetterColor(Library.Scheme.BackgroundColor, 4)
 			end,
 			Position = UDim2.fromScale(0, 1),
-			Size = UDim2.new(1, 0, 0, 20), -- v4.6.8: dulu 20+radius (pasangannya UICorner full)
+			Size = UDim2.new(1, 0, 0, 20), -- v4.6.8: used to be 20+radius (paired with full UICorner)
 			--   -> TOP corners rounded along = notch "overshoots upward" when the radius
 			--   is tweaked from the Theme tab. Now height 20 + bottom corners only.
 			Parent = MainFrame,
@@ -11304,7 +11371,7 @@ function Library:CreateWindow(WindowInfo)
 	--// Window Table \\--
 	local Window = {}
 	local Fading = false
-	local FadeToken = 0 -- v4.7.7: token toggle terakhir (reversal aman, finalizer lama batal)
+	local FadeToken = 0 -- v4.7.7: last toggle token (safe reversal, stale finalizer cancelled)
 
 	local function SetUICorner(UICorner, Corner, HalfCurrent, HalfValue, Value)
 		local Current = UICorner[Corner]
@@ -11633,7 +11700,7 @@ function Library:CreateWindow(WindowInfo)
 		local TabIcon
 		local TabIconStroke
 		local TabIconScale
-		local TabRec -- v4.7.5: scope function (BUG v4.7.0-7.4: semua patch tab
+		local TabRec -- v4.7.5: function scope (BUG v4.7.0-7.4: all tab patches
 		-- landed in AddKeyTab instead; the real AddTab = this function, never patched
 		-- at all -> rec=0, zoom dead, stroke dead. Found via DEBUG rec=0.)
 
@@ -12863,7 +12930,7 @@ function Library:CreateWindow(WindowInfo)
 		local TabIcon
 		local TabIconStroke
 		local TabIconScale
-		local TabRec -- v4.7.3: HARUS di scope luar do-block (bug v4.7.0-7.2:
+		local TabRec -- v4.7.3: MUST sit outside the do-block (bug v4.7.0-7.2:
 		-- the local sank inside a do-block -> "TabRec.Tab = Tab" at AddTab end
 		-- became a nil-global = AddTab errored per tab = all tab effects dead)
 
@@ -13172,7 +13239,7 @@ function Library:CreateWindow(WindowInfo)
 		Tab.Container = TabContainer
 		setmetatable(Tab, BaseGroupbox)
 
-		TabRec.Tab = Tab -- v4.7.0: buat ApplyTabAppearance tau tab aktif
+		TabRec.Tab = Tab -- v4.7.0: lets ApplyTabAppearance know the active tab
 		Library.Tabs[Name] = Tab
 
 		return Tab
@@ -13480,7 +13547,7 @@ function Library:CreateWindow(WindowInfo)
 			if FooterButtonsList[ButtonIdx] then
 				FooterButtonsList[ButtonIdx].Container:Destroy()
 				FooterButtonsList[ButtonIdx] = nil
-				Dialog:Resize() -- v4.7.9: holder/separator nyusul update
+				Dialog:Resize() -- v4.7.9: holder/separator refresh follows
 			end
 		end
 
@@ -13679,76 +13746,6 @@ function Library:CreateWindow(WindowInfo)
 		return Dialog
 	end
 
-	local GuiProperties = { "BackgroundTransparency" }
-	local ImageProperties = { "BackgroundTransparency", "ImageTransparency" }
-	local TextProperties = { "BackgroundTransparency", "TextTransparency" }
-	local StrokeProperties = { "Transparency" }
-
-	-- v4.7.7: window open/close fade REWRITTEN. Old version bugs:
-	-- (1) open took 1.5x duration — task.wait(FadeTime/2) blocked, the shell
-	--     showed first and content followed = the "black screen" phase;
-	-- (2) hundreds of TweenService:Create per toggle = frame drop right after open;
-	-- (3) the old Fading guard swallowed fast presses + the rest-value cache
-	--     could capture mid-tween values = stale transparency = glitch after open.
-	-- Now: every element fades TOGETHER (total = exactly FadeTime, dark surfaces
-	--     & content rise proportionally = no black screen); one merged tween per
-	-- instance, CACHED & reused (steady state only calls
-	--     Play(), starting from the current value = smooth reversal, zero Create =
-	--     zero hitch; Sig follows TweenInfo so the duration knob applies at once);
-	--     token = a toggle mid-fade becomes a reversal, not swallowed; rest cache
-	--     ONLY captured at rest; first open (no cache yet) fades for real.
-	local function FadeInstance(Desc, Properties, Opening, CanCapture)
-		local Cache = TransparencyCache[Desc]
-		if not Cache then
-			Cache = {}
-			TransparencyCache[Desc] = Cache
-		end
-
-		local Info = Library.WindowAnimationInfo
-		local Goals = {}
-		local Sig = Info.Time .. "|" .. Info.EasingStyle.Name .. "|" .. Info.EasingDirection.Name .. "|"
-
-		for _, Prop in Properties do
-			local Rest = Cache[Prop]
-
-			if Rest == nil then
-				-- first encounter: current value = authored rest value
-				Rest = Desc[Prop]
-				Cache[Prop] = Rest
-				if Opening and Rest ~= 1 then
-					Desc[Prop] = 1 -- sembunyiin tanpa jeda frame biar ikut fade
-				end
-			elseif not Opening and CanCapture then
-				-- close at rest: refresh the cache (values can change while open)
-				Rest = Desc[Prop]
-				Cache[Prop] = Rest
-			end
-
-			if Rest ~= nil and Rest ~= 1 then
-				local Target = if Opening then Rest else 1
-				Goals[Prop] = Target
-				Sig ..= Prop .. "=" .. Target .. ";"
-			end
-		end
-
-		if next(Goals) == nil then
-			return
-		end
-
-		local Dir = if Opening then "in" else "out"
-		local Tweens = FadeTweenCache[Desc]
-		if not Tweens then
-			Tweens = {}
-			FadeTweenCache[Desc] = Tweens
-		end
-
-		if Tweens[Dir] == nil or Tweens[Dir .. "Sig"] ~= Sig then
-			Tweens[Dir] = TweenService:Create(Desc, Info, Goals)
-			Tweens[Dir .. "Sig"] = Sig
-		end
-		Tweens[Dir]:Play()
-	end
-
 	function Window:Toggle(Value: boolean?)
 		if Library.ActiveLoading then
 			if Value == true then
@@ -13774,7 +13771,7 @@ function Library:CreateWindow(WindowInfo)
 
 		if Library.Animations and Library.Animations.ToggleWindow == true then
 			local FadeTime = Library.WindowAnimationInfo.Time
-			local Reverse = Fading -- fade lama masih jalan = reversal, jangan telan pencetan
+			local Reverse = Fading -- old fade still running = reversal, do not swallow the press
 			local CanCapture = not Reverse
 			Fading = true
 			FadeToken += 1
@@ -13785,30 +13782,12 @@ function Library:CreateWindow(WindowInfo)
 				MainFrame.Visible = true
 			end
 
-			FadeInstance(MainFrame, GuiProperties, Opening, CanCapture)
-
-			for _, Instance in MainFrame:GetDescendants() do
-				if Instance == TopBar then
-					continue
-				end
-
-				if Instance:IsA("GuiObject") then
-					local ClassName = Instance.ClassName
-					if ClassName == "ImageLabel" or ClassName == "ImageButton" then
-						FadeInstance(Instance, ImageProperties, Opening, CanCapture)
-					elseif ClassName == "TextLabel" or ClassName == "TextBox" or ClassName == "TextButton" then
-						FadeInstance(Instance, TextProperties, Opening, CanCapture)
-					else
-						FadeInstance(Instance, GuiProperties, Opening, CanCapture)
-					end
-				elseif Instance.ClassName == "UIStroke" then
-					FadeInstance(Instance, StrokeProperties, Opening, CanCapture)
-				end
-			end
+			-- v4.8.2: ONE shared fade implementation for window AND popup.
+			Library:FadeTree(MainFrame, Opening, CanCapture, TopBar)
 
 			task.delay(FadeTime, function()
 				if Token ~= FadeToken then
-					return -- toggle yang lebih baru udah ambil alih
+					return -- a newer toggle already took over
 				end
 				MainFrame.Visible = Library.Toggled
 				Fading = false
@@ -14402,7 +14381,7 @@ function Library:CreateDashboardWindow(Info)
 			Text = "• " .. actName,
 			TextSize = 10,
 			Font = Enum.Font.GothamBold,
-			TextColor3 = Color3.fromRGB(160, 160, 170), -- Default putih/abu standar
+			TextColor3 = Color3.fromRGB(160, 160, 170), -- default white/gray standard
 			Parent = ActionGrid,
 		})
 		table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, 4), Parent = actLbl }))

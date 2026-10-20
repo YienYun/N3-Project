@@ -7,6 +7,22 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.8.2 — POPUP BUKA/TUTUP = RASA WINDOW (perfected):
+	   • Kata user: popup harus terasa kayak buka/tutup WINDOW, dan fade
+	     CanvasGroup v4.8.1 masih jelek pas hilang. CanvasGroup + UIScale
+	     DIHAPUS total. Sekarang popup pakai SISTEM FADE YANG SAMA PERSIS
+	     sama window: Library:FadeTree (per-element dissolve barengan,
+	     durasi = WindowAnimationInfo = durasi window lu 0.10s).
+	   • Refactor nol-duplikasi: FadeInstance dipromosiin jadi method
+	     Library + helper Library:FadeTree; window DAN popup manggil
+	     implementasi yang SAMA (loop fade lama di Toggle dihapus).
+	   • Buka: semua elemen popup dissolve in bareng overlay. Tutup:
+	     dissolve out bareng, destroy setelah tween kelar. Nggak ada
+	     scale-pop, nggak ada pop instan dua arah.
+	   • Sweep lanjutan: komentar INLINE Indonesia di library (36 baris)
+	     ikut diterjemahin; guard bahasa di check.sh sekarang scan komentar
+	     inline juga.
+
 	 CHANGELOG v4.8.1 — POPUP V2 MULUS + WARNA IKUT THEME + CODE ENGLISH:
 	   • Animasi popup dulu "kaku": frame+isi nongol/hilang INSTAN (cuma
 	     scale+overlay yang fade) = pop. Sekarang isi popup dibungkus
@@ -279,7 +295,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.8.1" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.8.2" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -311,7 +327,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.8.1",
+	Footer = "N3V4 • UI Preview Kit v4.8.2",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

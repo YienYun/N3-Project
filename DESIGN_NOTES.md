@@ -4,6 +4,34 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 
 ---
 
+## 🎯 v4.8.2 — POPUP BUKA/TUTUP = RASA WINDOW (sempurna atau tidak sama sekali)
+
+User: "gue mau kayak buka tutup window loh ... ini jelek banget atau jangan
+ada animasinya pas hilang ... kalo emang lu bisa sempurna ya lu benerin".
+Verdict v4.8.1: fade CanvasGroup + scale-down saat tutup masih terbaca jelek
+(mengecil sambil memudar ≠ bahasa visual window). Pilihan user dikasih dua
+(sempurna atau hapus animasi tutup) — gue ambil jalur SEMPURNA: popup sekarang
+pakai sistem fade yang SAMA PERSIS sama window open/close.
+
+Implementasi (nol duplikasi, sesuai aturan code-sampah):
+- FadeInstance (lokal CreateWindow sejak v4.7.7) DIPROMOSI jadi
+  Library:FadeInstance (module level, ~L2453) + helper baru Library:FadeTree
+  (klasifikasi GuiObject/Image/Text/ScrollingFrame/UIStroke + loop subtree).
+- Window:Toggle sekarang satu baris: Library:FadeTree(MainFrame, Opening,
+  CanCapture, TopBar). Loop + tabel properti lokal lama DIHAPUS.
+- Popup V2: CanvasGroup (PopupContent) & UIScale (PopupScale) DIHAPUS total.
+  Buka = Dropdown:Refresh() dulu (state selected jadi rest value) lalu
+  Library:FadeTree(PopupFrame, true, true). Tutup = FadeTree(false, true) +
+  overlay fade + destroy setelah WindowAnimationInfo.Time. Durasi otomatis
+  sama dengan window (knob ST_AnimTime / resep 0.10s user).
+- Bonus: ScrollingFrame ikut ke-fade (ScrollBarImageTransparency) biar
+  scrollbar nggak nongol duluan.
+
+Sweep bahasa pass-3: komentar INLINE (setelah kode) Indonesia di library
+(36 baris) diterjemahkan; guard bahasa check.sh diganti pola '--.*\b(...)\b'
+biar komentar inline ikut ke-scan (pass 1-2 dulu cuma scan komentar
+awal-baris).
+
 ## 🎯 v4.8.1 — POPUP V2 MULUS, WARNA IKUT THEME, CODE ENGLISH
 
 Tiga keluhan user atas v4.8.0, tiga akar:
