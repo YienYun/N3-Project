@@ -7,6 +7,21 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.8.0 — DROPDOWN V2 (versi POPUP, V1 TETAP ADA):
+	   • AddDropdownV2: baris kompak di groupbox; klik = popup modal gaya
+	     dialog: header judul+icon kanan-atas, summary "Total Selected:
+	     n/limit" + "List Selected: a - b - c", list SCROLLABLE di bawah,
+	     footer [Bersihkan] [Selesai]. Klik luar = tutup.
+	   • Item: string (text-only) ATAU { Text, Icon, Disabled } (versi
+	     image/icon lucide per item). Multi + Max opsional; single langsung
+	     tutup setelah milih. Indikator selected = dot accent + row highlight.
+	   • API: SetValue/SetSelected/SetItems/GetActiveValues/Clear/SetDisabled/
+	     SetVisible/SetText/OnChanged/Destroy. Window ditutup = popup V2
+	     ikut tutup duluan (nggak nyangkut di fade cache).
+	   • Demo: tab Components, box "Dropdown V2 — Popup" (multi max 4 +
+	     icon) & "Dropdown V2 — Single & API" (single + tombol API).
+	     Simetri tab tetep 4/4.
+
 	 CHANGELOG v4.7.9 — DIALOG: BUTTON CONFIRM KELIATAN + ICON OPSIONAL:
 	   • BUG: footer button dialog (Batal/Coba lagi/Eksekusi dll) nggak pernah
 	     nongol kalau ditambah setelah AddDialog — AddFooterButton nggak
@@ -246,7 +261,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.7.9" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.8.0" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -278,7 +293,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.7.9",
+	Footer = "N3V4 • UI Preview Kit v4.8.0",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -842,6 +857,64 @@ end)
 --================================================================================
 -- TAB 3 — ADVANCED   (3 kiri / 3 kanan — simetris)
 --================================================================================
+-- v4.8.0: DEMO DropdownV2 (popup modal). Dua box sekaligus biar tab
+-- Components tetep simetris 4/4 (kiri 1, kanan 1).
+local DD2StatusText = "Selected: -"
+do
+	local Box = ComponentsTab:AddLeftGroupbox("Dropdown V2 — Popup", "list")
+	local DD2Status = Box:AddLabel(DD2StatusText)
+	Box:AddDropdownV2("DD2_Rarity", {
+		Text = "Rarity (multi, max 4, icon per item)",
+		Multi = true,
+		Max = 4,
+		Icon = "sparkles",
+		Placeholder = "Belum milih...",
+		Values = {
+			{ Text = "Common", Icon = "box" },
+			{ Text = "Uncommon", Icon = "info" },
+			{ Text = "Rare", Icon = "zap" },
+			{ Text = "Epic", Icon = "sparkles" },
+			{ Text = "Legendary", Icon = "star" },
+			{ Text = "Mythic", Icon = "paw-print" },
+			"Tradeable", -- versi text-only
+			{ Text = "Locked", Disabled = true }, -- versi disabled
+		},
+		Callback = function(Value)
+			DD2StatusText = "Selected: " .. (#Value == 0 and "-" or table.concat(Value, ", "))
+			DD2Status:SetText(DD2StatusText)
+		end,
+	})
+	Box:AddButton("SetSelected {Rare, Mythic}", function()
+		local DD = Library.Options and Library.Options.DD2_Rarity or nil
+		if DD then
+			DD:SetSelected({ "Rare", "Mythic" })
+			DD2Status:SetText("Selected: " .. table.concat(DD:GetActiveValues(), ", "))
+		end
+	end)
+end
+do
+	local Box = ComponentsTab:AddRightGroupbox("Dropdown V2 — Single & API", "settings-2")
+	local ModeDD = Box:AddDropdownV2("DD2_Mode", {
+		Text = "Mode (single, langsung tutup)",
+		Icon = "settings-2",
+		Placeholder = "pilih mode...",
+		Values = {
+			{ Text = "Silent", Icon = "info" },
+			{ Text = "Loud", Icon = "bell-ring" },
+			{ Text = "Chaos", Icon = "zap" },
+		},
+	})
+	Box:AddButton("SetItems baru (A/B/C text-only)", function()
+		ModeDD:SetItems({ "A", "B", "C" })
+	end)
+	Box:AddButton("SetValue \"Chaos\"", function()
+		ModeDD:SetValue("Chaos")
+	end)
+	Box:AddButton("Clear", function()
+		ModeDD:Clear()
+	end)
+end
+
 local AdvancedTab = Window:AddTab("Advanced", "layers", "Dependency, tabbox, dialog, passthrough")
 
 Try("Advanced: L1 Dependency (Box + Groupbox)", function()

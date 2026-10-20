@@ -544,6 +544,24 @@ local Templates = {
 		Disabled = false,
 		Visible = true,
 	},
+	DropdownV2 = {
+		Values = {},
+		DisabledValues = {},
+		ItemIcons = {},
+
+		Multi = false,
+		Max = 0, -- 0 = tanpa batas
+		ListHeight = 200,
+
+		Icon = nil, -- icon header popup (pojok kanan atas, gaya dialog)
+		Placeholder = "Pilih...",
+
+		Callback = function() end,
+		Changed = function() end,
+
+		Disabled = false,
+		Visible = true,
+	},
 	Viewport = {
 		Object = nil,
 		Camera = nil,
@@ -1632,7 +1650,7 @@ Library.TabAppearance = {
 Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per tab sidebar
 -- v4.7.2: version print biar nggak ada lagi debat "library lu lama/belum":
 -- baris ini MUNCUL di Output tiap require kalau library yang ke-paste emang baru.
-print("[N3V4 Library] v4.7.9 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.8.0 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
 function Library:GetCanvasColor(): Color3
@@ -8337,6 +8355,777 @@ do
 		return Dropdown
 	end
 
+	--// N3V4 v4.8.0: DROPDOWN V2 — versi POPUP (modal, bahasa visual dialog) \\--
+	-- V1 (AddDropdown) TETAP ada, tidak disentuh. V2 = baris kompak di
+	-- groupbox; klik = buka popup modal: summary "Total Selected: n/limit" +
+	-- "List Selected: ..." di atas, list SCROLLABLE di bawah (item bisa bawa
+	-- icon lucide = "versi image", atau string = text-only), footer
+	-- [Bersihkan] [Selesai]. Multi-select + Max opsional; single-select
+	-- langsung tutup setelah milih. Satu sumber kebenaran: Dropdown:Refresh().
+	local function NormalizeDropdownItem(Entry, ItemIcons, DisabledValues)
+		local Text, Icon, Disabled
+		if type(Entry) == "table" then
+			Text = tostring(Entry.Text or Entry.Name or Entry[1] or "?")
+			Icon = Entry.Icon or ItemIcons[Text]
+			Disabled = Entry.Disabled == true or table.find(DisabledValues, Text) ~= nil
+		else
+			Text = tostring(Entry)
+			Icon = ItemIcons[Text]
+			Disabled = table.find(DisabledValues, Text) ~= nil
+		end
+		return { Text = Text, Icon = Icon, Disabled = Disabled }
+	end
+
+	function Funcs:AddDropdownV2(Idx, Info)
+		if self.Destroyed then
+			return nil
+		end
+
+		Info = Library:Validate(Info, Templates.DropdownV2)
+
+		local Groupbox = self
+		local Container = Groupbox.Container
+
+		local Dropdown = {
+			Destroyed = false,
+			PopupOpen = false,
+
+			Text = typeof(Info.Text) == "string" and Info.Text or nil,
+			Placeholder = typeof(Info.Placeholder) == "string" and Info.Placeholder or "Pilih...",
+
+			Items = {},
+			Multi = Info.Multi == true,
+			Max = tonumber(Info.Max) or 0,
+			ListHeight = tonumber(Info.ListHeight) or 200,
+
+			-- single: string | nil. multi: array text berurutan (+ SelectedSet)
+			Value = nil,
+			SelectedSet = {},
+
+			Callback = Info.Callback,
+			Changed = Info.Changed,
+
+			Disabled = Info.Disabled,
+			Visible = Info.Visible,
+
+			Type = "DropdownV2",
+		}
+		if Dropdown.Multi then
+			Dropdown.Value = {}
+		end
+
+		local function NormalizeAll()
+			Dropdown.Items = {}
+			for _, Entry in Info.Values do
+				table.insert(Dropdown.Items, NormalizeDropdownItem(Entry, Info.ItemIcons, Info.DisabledValues))
+			end
+		end
+		NormalizeAll()
+
+		local function IsSelected(Text)
+			if Dropdown.Multi then
+				return Dropdown.SelectedSet[Text] == true
+			end
+			return Dropdown.Value == Text
+		end
+
+		local function SelectedList()
+			if Dropdown.Multi then
+				return Dropdown.Value
+			end
+			return Dropdown.Value ~= nil and { Dropdown.Value } or {}
+		end
+
+		local function Limit()
+			if Dropdown.Multi and Dropdown.Max > 0 then
+				return Dropdown.Max
+			end
+			return #Dropdown.Items
+		end
+
+		--// Baris elemen di groupbox \\--
+		local Holder = New("Frame", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, Dropdown.Text and 39 or 21),
+			Visible = Dropdown.Visible,
+			Parent = Container,
+		})
+
+		local Label = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, 14),
+			Text = Dropdown.Text,
+			TextSize = 14,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Visible = not not Info.Text,
+			ZIndex = 3,
+			Parent = Holder,
+		})
+
+		local DisplayContainer = New("TextButton", {
+			AnchorPoint = Vector2.new(0, 1),
+			BackgroundColor3 = "MainColor",
+			Position = UDim2.fromScale(0, 1),
+			Size = UDim2.new(1, 0, 0, 21),
+			Text = "",
+			TextTransparency = 1,
+			Active = not Dropdown.Disabled,
+			ZIndex = 2,
+			Parent = Holder,
+		})
+		New("UIPadding", {
+			PaddingLeft = UDim.new(0, 8),
+			PaddingRight = UDim.new(0, 4),
+			Parent = DisplayContainer,
+		})
+		New("UIStroke", {
+			Color = "OutlineColor",
+			Parent = DisplayContainer,
+		})
+		local DisplayCorner = New("UICorner", {
+			TopLeftRadius = UDim.new(0, Library.CornerRadius / 2),
+			TopRightRadius = UDim.new(0, Library.CornerRadius / 2),
+			BottomRightRadius = UDim.new(0, Library.CornerRadius / 2),
+			BottomLeftRadius = UDim.new(0, Library.CornerRadius / 2),
+			Parent = DisplayContainer,
+		})
+		table.insert(Library.SpecificCorners, DisplayCorner)
+
+		local DisplayLabel = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, -26, 1, 0),
+			Text = Dropdown.Placeholder,
+			TextSize = 14,
+			TextTransparency = Dropdown.Disabled and 0.6 or 0,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Center,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			ZIndex = 3,
+			Parent = DisplayContainer,
+		})
+
+		local ChevronIcon = Library:GetCustomIcon("chevron-down")
+		if ChevronIcon then
+			New("ImageLabel", {
+				BackgroundTransparency = 1,
+				AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, -6, 0.5, 0),
+				Size = UDim2.fromOffset(14, 14),
+				Image = ChevronIcon.Url,
+				ImageColor3 = "FontColor",
+				ImageTransparency = 0.4,
+				ImageRectOffset = ChevronIcon.ImageRectOffset,
+				ImageRectSize = ChevronIcon.ImageRectSize,
+				ZIndex = 3,
+				Parent = DisplayContainer,
+			})
+		end
+
+		--// Popup modal \\--
+		local PopupOverlay, PopupFrame, PopupScale
+		local SummaryTotal, SummaryList
+		local RowRecs = {}
+
+		function Dropdown:Refresh()
+			local Sel = SelectedList()
+
+			for _, Rec in RowRecs do
+				local On = IsSelected(Rec.Item.Text)
+				Rec.Dot.Visible = On
+				Rec.Row.BackgroundTransparency = On and 0.55 or 1
+				Rec.Label.TextTransparency = Rec.Item.Disabled and 0.65 or (On and 0 or 0.35)
+			end
+
+			if SummaryTotal then
+				SummaryTotal.Text = string.format("Total Selected: %d/%d", #Sel, Limit())
+			end
+			if SummaryList then
+				SummaryList.Text = #Sel == 0 and "-" or table.concat(Sel, " - ")
+			end
+
+			if Dropdown.Multi then
+				if #Sel == 0 then
+					DisplayLabel.Text = Dropdown.Placeholder
+				elseif #Sel <= 2 then
+					DisplayLabel.Text = table.concat(Sel, ", ")
+				else
+					DisplayLabel.Text = string.format("%s, %s +%d", Sel[1], Sel[2], #Sel - 2)
+				end
+			else
+				DisplayLabel.Text = Dropdown.Value or Dropdown.Placeholder
+			end
+		end
+
+		function Dropdown:ClosePopup(Instant)
+			if not Dropdown.PopupOpen then
+				return
+			end
+			Dropdown.PopupOpen = false
+
+			local Overlay, Frame, Scale = PopupOverlay, PopupFrame, PopupScale
+			PopupOverlay, PopupFrame, PopupScale = nil, nil, nil
+			SummaryTotal, SummaryList = nil, nil
+			table.clear(RowRecs)
+
+			if Instant then
+				if Overlay then
+					Overlay:Destroy()
+				end
+				return
+			end
+			if Frame and Scale then
+				TweenService:Create(Scale, Library.TweenInfo, { Scale = 0.95 }):Play()
+			end
+			if Overlay then
+				TweenService:Create(Overlay, Library.TweenInfo, { BackgroundTransparency = 1 }):Play()
+				task.delay(Library.TweenInfo.Time, function()
+					Overlay:Destroy()
+				end)
+			end
+		end
+
+		function Dropdown:SelectItem(Text)
+			if Dropdown.Destroyed or Dropdown.Disabled then
+				return
+			end
+			local Item
+			for _, It in Dropdown.Items do
+				if It.Text == Text then
+					Item = It
+					break
+				end
+			end
+			if not Item or Item.Disabled then
+				return
+			end
+
+			if Dropdown.Multi then
+				if IsSelected(Text) then
+					Dropdown.SelectedSet[Text] = nil
+					local Pos = table.find(Dropdown.Value, Text)
+					if Pos then
+						table.remove(Dropdown.Value, Pos)
+					end
+				else
+					if Dropdown.Max > 0 and #Dropdown.Value >= Dropdown.Max then
+						return -- batas Max: pencetan diabaikan, bukan bug
+					end
+					Dropdown.SelectedSet[Text] = true
+					table.insert(Dropdown.Value, Text)
+				end
+			else
+				Dropdown.Value = Text
+			end
+
+			Dropdown:Refresh()
+			Dropdown.Callback(Dropdown.Value)
+			Dropdown.Changed(Dropdown.Value)
+
+			if not Dropdown.Multi then
+				Dropdown:ClosePopup()
+			end
+		end
+
+		function Dropdown:Clear()
+			if Dropdown.Multi then
+				Dropdown.Value = {}
+				table.clear(Dropdown.SelectedSet)
+			else
+				Dropdown.Value = nil
+			end
+			Dropdown:Refresh()
+			Dropdown.Callback(Dropdown.Value)
+			Dropdown.Changed(Dropdown.Value)
+		end
+
+		function Dropdown:OpenPopup()
+			if Dropdown.Destroyed or Dropdown.Disabled or Dropdown.PopupOpen then
+				return
+			end
+
+			local Root = Container
+			while Root.Parent and Root.Parent ~= Library.ScreenGui do
+				Root = Root.Parent
+			end
+			if not Root.Parent then
+				return
+			end
+			local MainFrame = Root
+
+			Dropdown.PopupOpen = true
+
+			PopupOverlay = New("TextButton", {
+				AutoButtonColor = false,
+				BackgroundColor3 = "DarkColor",
+				BackgroundTransparency = 1,
+				Size = UDim2.fromScale(1, 1),
+				Text = "",
+				Active = false,
+				ZIndex = 9100,
+				Parent = MainFrame,
+			})
+			TweenService:Create(PopupOverlay, Library.TweenInfo, {
+				BackgroundTransparency = 0.5,
+			}):Play()
+			PopupOverlay.MouseButton1Click:Connect(function()
+				Dropdown:ClosePopup()
+			end)
+
+			PopupFrame = New("TextButton", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				BackgroundColor3 = "BackgroundColor",
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromOffset(math.min(380, MainFrame.AbsoluteSize.X * 0.8), 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				Text = "",
+				AutoButtonColor = false,
+				ZIndex = 9101,
+				Parent = PopupOverlay,
+			})
+			table.insert(
+				Library.Corners,
+				New("UICorner", {
+					CornerRadius = UDim.new(0, Library.CornerRadius),
+					Parent = PopupFrame,
+				})
+			)
+			Library:AddOutline(PopupFrame)
+			PopupScale = New("UIScale", {
+				Scale = 0.95,
+				Parent = PopupFrame,
+			})
+			TweenService:Create(PopupScale, Library.TweenInfo, { Scale = 1 }):Play()
+
+			local Inner = New("Frame", {
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, 0, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				ZIndex = 9102,
+				Parent = PopupFrame,
+			})
+			New("UIListLayout", {
+				Padding = UDim.new(0, 10),
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Parent = Inner,
+			})
+			New("UIPadding", {
+				PaddingBottom = UDim.new(0, 12),
+				PaddingLeft = UDim.new(0, 12),
+				PaddingRight = UDim.new(0, 12),
+				PaddingTop = UDim.new(0, 12),
+				Parent = Inner,
+			})
+
+			-- header: judul kiri + icon kanan (bahasa visual dialog v4.7.9)
+			local HeaderIcon = Info.Icon and Library:GetCustomIcon(Info.Icon) or nil
+			local HeaderRow = New("Frame", {
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, 0, 0, 20),
+				LayoutOrder = 1,
+				ZIndex = 9102,
+				Parent = Inner,
+			})
+			New("UIListLayout", {
+				Padding = UDim.new(0, 6),
+				FillDirection = Enum.FillDirection.Horizontal,
+				VerticalAlignment = Enum.VerticalAlignment.Center,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Parent = HeaderRow,
+			})
+			New("TextLabel", {
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, HeaderIcon and -24 or 0, 0, 20),
+				Text = Dropdown.Text or "Pilih",
+				TextSize = 16,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				LayoutOrder = 1,
+				ZIndex = 9102,
+				Parent = HeaderRow,
+			})
+			if HeaderIcon then
+				New("ImageLabel", {
+					BackgroundTransparency = 1,
+					Size = UDim2.fromOffset(18, 18),
+					Image = HeaderIcon.Url,
+					ImageColor3 = "AccentColor",
+					ImageRectOffset = HeaderIcon.ImageRectOffset,
+					ImageRectSize = HeaderIcon.ImageRectSize,
+					LayoutOrder = 2,
+					ZIndex = 9102,
+					Parent = HeaderRow,
+				})
+			end
+
+			-- summary: total + list selected (contoh user, dirapihin)
+			local SummaryBox = New("Frame", {
+				BackgroundColor3 = "MainColor",
+				AutomaticSize = Enum.AutomaticSize.Y,
+				Size = UDim2.new(1, 0, 0, 0),
+				LayoutOrder = 2,
+				ZIndex = 9102,
+				Parent = Inner,
+			})
+			table.insert(
+				Library.SpecificCorners,
+				New("UICorner", {
+					CornerRadius = UDim.new(0, Library.CornerRadius / 2),
+					Parent = SummaryBox,
+				})
+			)
+			New("UIListLayout", {
+				Padding = UDim.new(0, 4),
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Parent = SummaryBox,
+			})
+			New("UIPadding", {
+				PaddingBottom = UDim.new(0, 8),
+				PaddingLeft = UDim.new(0, 10),
+				PaddingRight = UDim.new(0, 10),
+				PaddingTop = UDim.new(0, 8),
+				Parent = SummaryBox,
+			})
+			SummaryTotal = New("TextLabel", {
+				BackgroundTransparency = 1,
+				AutomaticSize = Enum.AutomaticSize.Y,
+				Size = UDim2.new(1, 0, 0, 14),
+				TextSize = 14,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				LayoutOrder = 1,
+				ZIndex = 9102,
+				Parent = SummaryBox,
+			})
+			New("TextLabel", {
+				BackgroundTransparency = 1,
+				AutomaticSize = Enum.AutomaticSize.Y,
+				Size = UDim2.new(1, 0, 0, 13),
+				Text = "List Selected:",
+				TextSize = 13,
+				TextTransparency = 0.4,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				LayoutOrder = 2,
+				ZIndex = 9102,
+				Parent = SummaryBox,
+			})
+			SummaryList = New("TextLabel", {
+				BackgroundTransparency = 1,
+				AutomaticSize = Enum.AutomaticSize.Y,
+				Size = UDim2.new(1, 0, 0, 13),
+				TextSize = 13,
+				TextTransparency = 0.25,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextWrapped = true,
+				LayoutOrder = 3,
+				ZIndex = 9102,
+				Parent = SummaryBox,
+			})
+
+			-- list scrollable
+			local ListScroll = New("ScrollingFrame", {
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, 0, 0, Dropdown.ListHeight),
+				AutomaticCanvasSize = Enum.AutomaticSize.Y,
+				CanvasSize = UDim2.new(),
+				ScrollBarThickness = 4,
+				ScrollBarImageColor3 = "OutlineColor",
+				ScrollBarImageTransparency = 0.4,
+				LayoutOrder = 3,
+				ZIndex = 9102,
+				Parent = Inner,
+			})
+			New("UIListLayout", {
+				Padding = UDim.new(0, 4),
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Parent = ListScroll,
+			})
+
+			for Order, Item in ipairs(Dropdown.Items) do
+				local Row = New("TextButton", {
+					BackgroundColor3 = "MainColor",
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, 26),
+					Text = "",
+					AutoButtonColor = false,
+					LayoutOrder = Order,
+					ZIndex = 9102,
+					Parent = ListScroll,
+				})
+				table.insert(
+					Library.SpecificCorners,
+					New("UICorner", {
+						CornerRadius = UDim.new(0, Library.CornerRadius / 2),
+						Parent = Row,
+					})
+				)
+
+				local RowIcon = Item.Icon and Library:GetCustomIcon(Item.Icon) or nil
+				if RowIcon then
+					New("ImageLabel", {
+						BackgroundTransparency = 1,
+						Position = UDim2.fromOffset(8, 5),
+						Size = UDim2.fromOffset(16, 16),
+						Image = RowIcon.Url,
+						ImageColor3 = "FontColor",
+						ImageTransparency = 0.3,
+						ImageRectOffset = RowIcon.ImageRectOffset,
+						ImageRectSize = RowIcon.ImageRectSize,
+						ZIndex = 9102,
+						Parent = Row,
+					})
+				end
+				local RowLabel = New("TextLabel", {
+					BackgroundTransparency = 1,
+					Position = RowIcon and UDim2.fromOffset(30, 0) or UDim2.fromOffset(10, 0),
+					Size = UDim2.new(1, RowIcon and -52 or -30, 1, 0),
+					Text = Item.Text,
+					TextSize = 14,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					ZIndex = 9102,
+					Parent = Row,
+				})
+				local Dot = New("Frame", {
+					BackgroundColor3 = "AccentColor",
+					AnchorPoint = Vector2.new(1, 0.5),
+					Position = UDim2.new(1, -10, 0.5, 0),
+					Size = UDim2.fromOffset(8, 8),
+					Visible = false,
+					ZIndex = 9102,
+					Parent = Row,
+				})
+				New("UICorner", {
+					CornerRadius = UDim.new(1, 0),
+					Parent = Dot,
+				})
+
+				table.insert(RowRecs, { Item = Item, Row = Row, Label = RowLabel, Dot = Dot })
+
+				if not Item.Disabled then
+					Row.MouseEnter:Connect(function()
+						if not IsSelected(Item.Text) then
+							TweenService:Create(Row, Library.TweenInfo, { BackgroundTransparency = 0.75 }):Play()
+						end
+					end)
+					Row.MouseLeave:Connect(function()
+						if not IsSelected(Item.Text) then
+							TweenService:Create(Row, Library.TweenInfo, { BackgroundTransparency = 1 }):Play()
+						end
+					end)
+					Row.MouseButton1Click:Connect(function()
+						Dropdown:SelectItem(Item.Text)
+					end)
+				end
+			end
+
+			-- footer: [Bersihkan] [Selesai]
+			local FooterRow = New("Frame", {
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, 0, 0, 26),
+				LayoutOrder = 4,
+				ZIndex = 9102,
+				Parent = Inner,
+			})
+			New("UIListLayout", {
+				Padding = UDim.new(0, 8),
+				FillDirection = Enum.FillDirection.Horizontal,
+				HorizontalAlignment = Enum.HorizontalAlignment.Right,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Parent = FooterRow,
+			})
+
+			local function MakeFooterButton(Title, Primary, Order, OnClick)
+				local Btn = New("TextButton", {
+					BackgroundColor3 = Primary and "FontColor" or "MainColor",
+					Size = UDim2.fromOffset(0, 26),
+					Text = Title,
+					TextColor3 = Primary and Library.Scheme.BackgroundColor or Library.Scheme.FontColor,
+					TextSize = 14,
+					AutoButtonColor = false,
+					LayoutOrder = Order,
+					ZIndex = 9102,
+					Parent = FooterRow,
+				})
+				table.insert(
+					Library.Corners,
+					New("UICorner", {
+						CornerRadius = UDim.new(0, Library.CornerRadius),
+						Parent = Btn,
+					})
+				)
+				Library:AddOutline(Btn)
+				local X = Library:GetTextBounds(Title, Library.Scheme.Font, 14, 250)
+				Btn.Size = UDim2.fromOffset(X + 24, 26)
+				Btn.MouseButton1Click:Connect(OnClick)
+			end
+
+			MakeFooterButton("Bersihkan", false, 1, function()
+				Dropdown:Clear()
+			end)
+			MakeFooterButton("Selesai", true, 2, function()
+				Dropdown:ClosePopup()
+			end)
+
+			Dropdown:Refresh()
+		end
+
+		DisplayContainer.MouseButton1Click:Connect(function()
+			if Dropdown.Disabled or Dropdown.Destroyed then
+				return
+			end
+			if Dropdown.PopupOpen then
+				Dropdown:ClosePopup()
+			else
+				Dropdown:OpenPopup()
+			end
+		end)
+
+		--// API publik \\--
+		function Dropdown:SetValue(Value)
+			if Dropdown.Multi then
+				Dropdown.Value = {}
+				table.clear(Dropdown.SelectedSet)
+				if Value ~= nil then
+					local T = tostring(Value)
+					Dropdown.SelectedSet[T] = true
+					table.insert(Dropdown.Value, T)
+				end
+			else
+				Dropdown.Value = Value ~= nil and tostring(Value) or nil
+			end
+			Dropdown:Refresh()
+		end
+
+		function Dropdown:SetSelected(Values)
+			if not Dropdown.Multi then
+				return Dropdown:SetValue(Values)
+			end
+			Dropdown.Value = {}
+			table.clear(Dropdown.SelectedSet)
+			if type(Values) == "table" then
+				for _, V in Values do
+					local T = tostring(V)
+					if Dropdown.Max > 0 and #Dropdown.Value >= Dropdown.Max then
+						break
+					end
+					if not Dropdown.SelectedSet[T] then
+						Dropdown.SelectedSet[T] = true
+						table.insert(Dropdown.Value, T)
+					end
+				end
+			end
+			Dropdown:Refresh()
+		end
+
+		function Dropdown:SetItems(Values, ItemIcons)
+			if Values then
+				Info.Values = Values
+			end
+			if ItemIcons then
+				Info.ItemIcons = ItemIcons
+			end
+			NormalizeAll()
+
+			if Dropdown.Multi then
+				local Keep, KeepSet = {}, {}
+				for _, T in Dropdown.Value do
+					for _, It in Dropdown.Items do
+						if It.Text == T and not KeepSet[T] then
+							KeepSet[T] = true
+							table.insert(Keep, T)
+							break
+						end
+					end
+				end
+				Dropdown.Value, Dropdown.SelectedSet = Keep, KeepSet
+			else
+				local Exists = false
+				for _, It in Dropdown.Items do
+					if It.Text == Dropdown.Value then
+						Exists = true
+						break
+					end
+				end
+				if not Exists then
+					Dropdown.Value = nil
+				end
+			end
+
+			if Dropdown.PopupOpen then
+				Dropdown:ClosePopup(true)
+				Dropdown:OpenPopup()
+			else
+				Dropdown:Refresh()
+			end
+		end
+
+		function Dropdown:GetActiveValues(ReturnCount)
+			local Sel = SelectedList()
+			if ReturnCount then
+				return Sel, #Sel
+			end
+			return Sel
+		end
+
+		function Dropdown:OnChanged(Func)
+			Dropdown.Changed = Func
+		end
+
+		function Dropdown:SetDisabled(Disabled)
+			Dropdown.Disabled = Disabled
+			DisplayContainer.Active = not Disabled
+			DisplayLabel.TextTransparency = Disabled and 0.6 or 0
+			if Disabled then
+				Dropdown:ClosePopup(true)
+			end
+		end
+
+		function Dropdown:SetVisible(Visible)
+			Dropdown.Visible = Visible
+			Holder.Visible = Visible
+			Groupbox:Resize()
+		end
+
+		function Dropdown:SetText(Text)
+			Dropdown.Text = Text
+			Label.Text = Text
+			Label.Visible = Text ~= nil and Text ~= ""
+			Holder.Size = UDim2.new(1, 0, 0, Dropdown.Text and 39 or 21)
+			Groupbox:Resize()
+		end
+
+		if typeof(Info.Tooltip) == "string" or typeof(Info.DisabledTooltip) == "string" then
+			Dropdown.TooltipTable = Library:AddTooltip(Info.Tooltip, Info.DisabledTooltip, DisplayContainer)
+			Dropdown.TooltipTable.Disabled = Dropdown.Disabled
+		end
+
+		Dropdown:Refresh()
+		Groupbox:Resize()
+
+		Dropdown.Holder = Holder
+		table.insert(Groupbox.Elements, Dropdown)
+		Options[Idx] = Dropdown
+
+		function Dropdown:Destroy()
+			Dropdown.Destroyed = true
+			Dropdown:ClosePopup(true)
+
+			if Dropdown.TooltipTable then
+				Dropdown.TooltipTable:Destroy()
+			end
+			if Holder then
+				Holder:Destroy()
+			end
+
+			local ElemIdx = table.find(Groupbox.Elements, Dropdown)
+			if ElemIdx then
+				table.remove(Groupbox.Elements, ElemIdx)
+			end
+			Groupbox:Resize()
+			Options[Idx] = nil
+		end
+
+		return Dropdown
+	end
+
 	--// N3V4: BRIDGE dua API AddViewport \\--
 	-- Di file ini ADA DUA `Funcs:AddViewport`. Yang bawah (versi Object/Camera/
 	-- Clone/AutoFocus) menimpa yang atas (versi ringan: Height/Spin/Interactive/
@@ -12948,6 +13737,16 @@ function Library:CreateWindow(WindowInfo)
 			Library.Toggled = Value
 		else
 			Library.Toggled = not Library.Toggled
+		end
+
+		if not Library.Toggled then
+			-- v4.8.0: popup DropdownV2 ditutup DULUAN sebelum fade mulai, biar
+			-- instance popup nggak ke-tangkap TransparencyCache waktu close.
+			for _, Option in Library.Options do
+				if Option.Type == "DropdownV2" and Option.PopupOpen then
+					Option:ClosePopup(true)
+				end
+			end
 		end
 
 		if Library.Animations and Library.Animations.ToggleWindow == true then

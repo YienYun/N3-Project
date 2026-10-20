@@ -4,6 +4,44 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 
 ---
 
+## 🎯 v4.8.0 — DROPDOWN V2 = versi POPUP (V1 tidak disentuh)
+
+Request user: dropdown model popup/dialog, V1 tetap ada (nama API
+AddDropdownV2), selected tampil di popup sebagai summary, list scrollable di
+bawahnya, versi image/text-only, lengkap & tanpa bug.
+
+Desain (dengan masukan, bukan yesman): popup = modal TERPUSAT (bukan menu
+anchored) biar list panjang nggak overflow window; bahasa visual pakai pola
+dialog yang udah ada (overlay gelap 0.5, scale-in, corner+outline theme);
+summary dirapihin dari contoh user: baris 1 "Total Selected: n/limit"
+(limit = Max kalau Multi+Max, else jumlah item), baris 2 "List Selected:",
+baris 3 nama-nama digabung " - " (wrapped); apply LANGSUNG saat klik (bukan
+confirm button) biar nggak ada state basi, footer cuma [Bersihkan][Selesai];
+single-select auto-close setelah milih (standar dropdown); indikator selected
+= dot accent + row MainColor 0.55 (bukan glyph, biar nggak tergantung nama
+icon); item disabled = text redup + nggak clickable; Max ditegakkan diam-diam
+(pencetan lewat batas diabaikan).
+
+Item: string = text-only; table { Text, Icon?, Disabled? } = versi icon
+(lucide per item via Library:GetCustomIcon). Info.ItemIcons = map text->icon
+buat yang malas nulis table. Info.Icon = icon header popup kanan-atas
+(gaya dialog v4.7.9). Info: Multi, Max, ListHeight, Placeholder, Tooltip.
+
+API element: SetValue(v), SetSelected(list) [multi], SetItems(list, icons?),
+GetActiveValues(retCount), Clear(), OpenPopup/ClosePopup(instant),
+SetDisabled/SetVisible/SetText/OnChanged/Destroy. Registry: Options[Idx],
+Type = "DropdownV2", masuk Groupbox.Elements (ikut dependency/resize).
+
+Integrasi penting: Window:Toggle(close) nutup semua popup V2 DULUAN sebelum
+fade (biar instance popup nggak ke-capture TransparencyCache = glitch buka
+berikutnya). Parent popup dicari dengan walk-up dari Container sampai anak
+Library.ScreenGui (= MainFrame window itu), jadi aman multi-window.
+ZIndex: overlay 9100 / frame 9101 / isi 9102 (di atas dialog 9000-an).
+
+Lokasi: Templates.DropdownV2 (~L546), NormalizeDropdownItem +
+Funcs:AddDropdownV2 (~L8352+, sebelum bridge AddViewport), integrasi Toggle
+(~L12995). Preview: 2 box demo di tab Components (simetri 4/4 dijaga).
+
 ## 🎯 v4.7.9 — DIALOG: BUTTON CONFIRM KELIATAN + ICON OPSIONAL
 
 Bug (screenshot user: dialog "Konfirmasi Aksi" & "Reset Semua Config?" tanpa

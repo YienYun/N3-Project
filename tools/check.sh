@@ -95,7 +95,7 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.7.9 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.8.0 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + halo stroke + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconStrokeHalo' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
@@ -106,6 +106,10 @@ chk "v4.7.7: fade window baru (tween cache+token, nol stagger/block)" \
 	"grep -q 'FadeTweenCache' '$LIB' && grep -q 'local FadeToken = 0' '$LIB' && ! grep -q 'task.wait(FadeTime / 2)' '$LIB' && ! grep -q 'if Fading then' '$LIB'"
 chk "v4.7.9: footer button dialog di-Resize (holder nggak hidden) = 6x Resize" \
 	"[ \$(grep -c 'Dialog:Resize()' '$LIB') -eq 6 ]"
+chk "v4.8.0: DropdownV2 ada di library (popup modal + API lengkap)" \
+	"grep -q 'function Funcs:AddDropdownV2' '$LIB' && grep -q 'Type = \"DropdownV2\"' '$LIB' && grep -q 'Total Selected: %d/%d' '$LIB' && grep -q 'DropdownV2 = {' '$LIB'"
+chk "v4.8.0: popup V2 ditutup saat window close + demo preview simetris" \
+	"grep -q 'Option:ClosePopup(true)' '$LIB' && grep -q 'AddDropdownV2(\"DD2_Rarity\"' '$PRE' && grep -q 'AddDropdownV2(\"DD2_Mode\"' '$PRE'"
 chk "v4.7.9: icon dialog opsional kanan-atas gaya notif (lib + demo preview)" \
 	"grep -q 'DialogIconWidth' '$LIB' && grep -q 'Info.IconColor or \"AccentColor\"' '$LIB' && grep -q 'Icon = \"info\"' '$PRE' && grep -q 'Icon = \"zap\"' '$PRE'"
 chk "v4.7.8: knob durasi + RESEP USER 10% dibake (lib 0.1 + mod AnimTime 0.10)" \
@@ -134,7 +138,7 @@ chk "simetris" "python3 '$ROOT/tools/symmetry.py' '$PRE'"
 chk "ggak manggil SetWallpaper/SetSurface (setingan cuma di file setingan)" \
 	"! grep -qE '^\s*[^-].*Library:Set(Wallpaper|Surface)' '$PRE'"
 chk "AddKeyBox di-guard typeof" "grep -q 'typeof(AdvancedTab.AddKeyBox)' '$PRE'"
-chk "footer v4.7.9" "grep -q 'Preview Kit v4.7.9' '$PRE'"
+chk "footer v4.8.0" "grep -q 'Preview Kit v4.8.0' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \
