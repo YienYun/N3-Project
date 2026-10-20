@@ -13,6 +13,7 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.7.1: stale-paste detector LIBRARY di Attach (warn kalau N3V4 lama).
 -- v4.7.0: UPGRADE TAB sidebar (borongan): stroke glyph icon (UIStroke), bg
 --        dikit di semua tab, bg accent tipis tab aktif, zoom hover + zoom
 --        aktif (UIScale + tween). Knob lengkap di tab UI Settings (box baru
@@ -97,6 +98,13 @@ function Settings:Attach(Library, Window, Options)
 		return false
 	end
 	shared.N3V4_UISettings_Attached = true
+
+	-- v4.7.1: STALE-PASTE DETECTOR buat LIBRARY. Kalau ModuleScript N3V4 di
+	-- ReplicatedStorage belum v4.7.0+, knob Tab (stroke/bg/zoom) manggil
+	-- fungsi yang nggak ada -> slider gerak tapi NIR efek + error di Output.
+	if type(Library.SetTabAppearance) ~= "function" or type(Library.TabAppearance) ~= "table" then
+		warn("[N3V4 Settings] LIBRARY LAMA terdeteksi (SetTabAppearance/TabAppearance nil)! Paste ulang Library/N3V3-NoObfus.lua ke ModuleScript N3V4 di ReplicatedStorage, kalau nggak knob Tab Stroke/Bg/Zoom nggak akan ngaruh.")
+	end
 
 	Options = Options or {}
 	local DEFAULTS = Settings.DEFAULTS

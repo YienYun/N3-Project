@@ -7,6 +7,12 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.7.1 — STALE-PASTE DETECTOR LIBRARY:
+	   • Kalau ModuleScript N3V4 di ReplicatedStorage masih lama, settings
+	     warn keras + report preview masuk GAGAL: "LIBRARY LAMA ... paste
+	     ulang". Soalnya gejala library lama = slider tab gerak tapi nol
+	     efek (fungsi SetTabAppearance belum ada) — bikin dikira bug kode.
+
 	 CHANGELOG v4.7.0 — UPGRADE TAB SIDEBAR (borongan, sesuai diskusi):
 	   • Stroke tipis di GLYPH icon tab (UIStroke ngikut bentuk icon, bukan
 	     kotak) biar keliatan di atas wallpaper. Baseline 1px / 40% / hitam.
@@ -151,7 +157,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.7.0" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.7.1" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -183,7 +189,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.7.0",
+	Footer = "N3V4 • UI Preview Kit v4.7.1",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -338,6 +344,13 @@ print(string.format(
 	tostring(Library.DPIScale), tostring(Library.CornerRadius),
 	Library.Animations and "ON" or "OFF"
 ))
+
+-- v4.7.1: stale-paste detector LIBRARY masuk report preview juga
+if type(Library.SetTabAppearance) == "function" and type(Library.TabAppearance) == "table" then
+	table.insert(Report.OK, "Library v4.7+ (SetTabAppearance + TabAppearance ada)")
+else
+	table.insert(Report.Failed, "LIBRARY LAMA: SetTabAppearance/TabAppearance nil -> paste ulang ModuleScript N3V4  ->  knob tab mati")
+end
 
 local function SafeNotify(Info)
 	local Success, Err = pcall(function()
