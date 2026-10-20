@@ -13,6 +13,11 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.6.7: SEMUA preset & combo sekarang layer "back" (preset "Wash (front)" &
+--        combo "Stretch + front" = jebakan: front = veil nutup kartu -> kartu
+--        kebaca transparan walau Group 0). Preset juga nggak lagi matiin
+--        GroupColor/CanvasColor custom user. Front masih bisa via dropdown
+--        Layer kalau emang mau (dengan konsekuensi kartu ke-veil).
 -- v4.6.6: WALLPAPER LAYER "back" + window/canvas full transparan -> kartu group
 --        100% SOLID ("ga transparan" kata user). Overlay scrim ON 0.50 biar teks
 --        kebaca di atas wallpaper. User bakal seting persen-nya sendiri terus
@@ -600,16 +605,19 @@ function Settings:Attach(Library, Window, Options)
 		})
 
 		Box:AddButton("Semua warna: bawaan", function()
-			LastTint = Color3.fromRGB(255, 255, 255)
-			LastCanvas = Color3.fromRGB(32, 32, 32)
-			LastGroup = Color3.fromRGB(30, 30, 30)
+			-- v4.6.7: "bawaan" = DEFAULTS user (tint abu 0.59, canvas 0.045,
+			-- kartu HITAM) — BUKAN warna pabrikan library. Kartu hitam lu
+			-- harus bertahan dimanapun lu klik reset.
+			LastTint = DEFAULTS.Color
+			LastCanvas = (typeof(DEFAULTS.CanvasColor) == "Color3") and DEFAULTS.CanvasColor or Color3.fromRGB(32, 32, 32)
+			LastGroup = (typeof(DEFAULTS.GroupColor) == "Color3") and DEFAULTS.GroupColor or Color3.fromRGB(0, 0, 0)
 			S.Color = LastTint
-			S.OverlayColor = Color3.fromRGB(0, 0, 0)
-			S.CanvasColor = false
-			S.GroupColor = false
-			TintTog:SetValue(false)
-			CanTog:SetValue(false)
-			GrpTog:SetValue(false)
+			S.OverlayColor = DEFAULTS.OverlayColor
+			S.CanvasColor = DEFAULTS.CanvasColor
+			S.GroupColor = DEFAULTS.GroupColor
+			TintTog:SetValue(S.Color ~= Color3.fromRGB(255, 255, 255))
+			CanTog:SetValue(typeof(S.CanvasColor) == "Color3")
+			GrpTog:SetValue(typeof(S.GroupColor) == "Color3")
 			Apply()
 		end)
 	end)
@@ -709,11 +717,14 @@ function Settings:Attach(Library, Window, Options)
 			S.Overlay = P.Overlay
 			S.OverlayColor = P.OverlayColor or Color3.fromRGB(0, 0, 0)
 			S.OverlayTransparency = P.OverlayTransparency
+			if P.Window ~= nil then
+				S.Window = P.Window
+			end
 			S.Canvas = P.Canvas
 			S.Group = P.Group
 			S.Contrast = P.Contrast
-			S.GroupColor = false
-			S.CanvasColor = false
+			-- v4.6.7: preset NGGAK boleh matiin warna custom user (kartu hitam
+			-- "group warna hitam anj!") — GroupColor/CanvasColor dibiarin apa adanya.
 			Apply()
 			SafeNotify({ Title = "Preset", Description = Name, Icon = "sparkles", Time = 2 })
 		end
@@ -724,8 +735,10 @@ function Settings:Attach(Library, Window, Options)
 		Box:AddButton("Bold (kuat)", function()
 			Load("Bold", { Image = DEFAULTS.Image, Transparency = 0.12, ScaleType = "Crop", Layer = "back", Overlay = true, OverlayTransparency = 0.60, Canvas = 1, Group = 0, Contrast = 0 })
 		end)
-		Box:AddButton("Wash (front)", function()
-			Load("Wash", { Image = DEFAULTS.Image, Transparency = 0.82, ScaleType = "Stretch", Layer = "front", Overlay = false, OverlayTransparency = 0.5, Canvas = 0, Group = 0, Contrast = 0 })
+		Box:AddButton("Wash (back terang)", function()
+			-- dulu "Wash (front)": layer front = veil nutup SEMUA termasuk kartu ->
+			-- kartu kebaca transparan walau Group 0. User marah (v4.6.7) -> back.
+			Load("Wash", { Image = DEFAULTS.Image, Transparency = 0.82, ScaleType = "Stretch", Layer = "back", Overlay = true, OverlayTransparency = 0.50, Canvas = 1, Window = 1, Group = 0, Contrast = 0 })
 		end)
 		Box:AddButton("Accent tint ungu", function()
 			Load("Accent", { Image = DEFAULTS.Image, Transparency = 0.45, ScaleType = "Crop", Color = Color3.fromRGB(218, 98, 255), Layer = "back", Overlay = true, OverlayColor = Color3.fromRGB(20, 8, 30), OverlayTransparency = 0.40, Canvas = 1, Group = 0, Contrast = 0 })
@@ -814,7 +827,7 @@ function Settings:Attach(Library, Window, Options)
 		end
 
 		Box:AddButton("Crop + back", function() Combo("Crop", "back") end)
-		Box:AddButton("Stretch + front", function() Combo("Stretch", "front") end)
+		Box:AddButton("Stretch + back", function() Combo("Stretch", "back") end)
 		Box:AddButton("Tile + back", function() Combo("Tile", "back") end)
 		Box:AddButton("Fit + back", function() Combo("Fit", "back") end)
 	end)

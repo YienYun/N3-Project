@@ -446,6 +446,12 @@ Library:SetWallpaper({ Layer = "back", Overlay = true, OverlayTransparency = 0.5
 Library:SetSurface({ WindowTransparency = 1.00, CanvasTransparency = 1.00 })
 -- ^ angka persen canvas/overlay/window = BASELINE; user mau seting sendiri
 --   terus kirim print balik. JANGAN dikunci sampe print user datang.
+
+-- v4.6.7: ATURAN BARU (user marah kedua kali soal kartu transparan):
+--   Layer "front" = VEIL di atas SEMUA -> kartu group nggak akan pernah bisa
+--   solid/terpisah selagi front. Maka: semua preset & combo di file setingan
+--   WAJIB "back"; front cuma lewat dropdown Layer kalau user sadar konsekuensinya.
+--   Preset juga dilarang matiin GroupColor/CanvasColor custom (kartu hitam).
 ```
 
 Catatan: tint & canvas color disimpan sebagai `Color3.new(float)` biar SAMA

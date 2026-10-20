@@ -7,6 +7,16 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.6.7 — JEBAKAN FRONT DIHAPUS:
+	   • Preset "Wash (front)" & combo "Stretch + front" = penyebab kartu lu
+	     "transparan" waktu lu klik itu: layer front = gambar DI ATAS semua
+	     (veil), jadi slider Window/Canvas/Group di-0-in pun veil tetep ada
+	     (kekuatan veil = slider Image transparency + layer, bukan slider lain).
+	   • Sekarang semua preset/combo = "back" (kartu selalu SOLID terpisah).
+	   • Preset nggak lagi matiin GroupColor/CanvasColor custom (kartu hitam
+	     lu bertahan walau lu gonta-ganti preset).
+	   • Balik ke baseline: klik "RESEP USER (disetujui)" di box Cepat.
+
 	 CHANGELOG v4.6.6 — KARTU GROUP 100% SOLID (layer "back"):
 	   • Wallpaper pindah ke layer "back" (DI BELAKANG konten). Dulu "front" =
 	     gambar nutup SEMUA (veil 20%) -> kartu kebaca "transparan" walau
@@ -88,7 +98,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6.6" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.6.7" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -105,7 +115,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6.6",
+	Footer = "N3V4 • UI Preview Kit v4.6.7",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
