@@ -13,6 +13,11 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.7.3: FIX BUG BESAR: local TabRec kedelep di dalam do-block library ->
+--        AddTab error tiap tab = semua efek tab (stroke/bg/zoom) MATI diam-diam
+--        walau library baru. Sekarang scope bener + stroke pakai halo ImageLabel
+--        (bukan UIStroke) + zoom pakai tween Size (bukan UIScale) = nol quirk.
+--        + tombol DEBUG dump tab visuals buat ground truth.
 -- v4.7.2: label slider transparency dijelasin ("100% = ILANG") + tombol TEST
 --        efek keliatan. Library print versi sendiri di Output tiap require.
 -- v4.7.1: stale-paste detector LIBRARY di Attach (warn kalau N3V4 lama).
@@ -662,6 +667,28 @@ function Settings:Attach(Library, Window, Options)
 			pcall(function()
 				Library:Notify({ Title = "TEST tab", Description = "Nilai diset KELIATAN: stroke 1.5px pekat, bg 35%/45%, zoom 125%/115%. Sekarang hover tab sidebar!", Time = 4 })
 			end)
+		end)
+		Box:AddButton("DEBUG: dump tab visuals", function()
+			-- v4.7.3: ground-truth dump kalau efek tab dikira mati lagi:
+			-- jumlah rec, size icon (zoom), halo stroke (warna/transp/visible).
+			local TV = Library.TabVisuals or {}
+			print(string.format("[N3V4 DEBUG TAB] rec=%d activeTab=%s", #TV, tostring(Library.ActiveTab and Library.ActiveTab.Name or nil)))
+			for I, Rec in ipairs(TV) do
+				local Icon = Rec.Icon
+				local St = Rec.Stroke
+				print(string.format(
+					"  tab%d | icon size=%s z=%s | halo=%s transp=%s thick-size=%s vis=%s | isActive=%s",
+					I,
+					tostring(Icon and Icon.Size), tostring(Icon and Icon.ZIndex),
+					tostring(St and St.Name or "NIL"),
+					tostring(St and St.ImageTransparency), tostring(St and St.Size), tostring(St and St.Visible),
+					tostring(Rec.Tab ~= nil and Library.ActiveTab == Rec.Tab)
+				))
+				if I >= 4 then
+					print("  ... (" .. (#TV - 4) .. " lagi)")
+					break
+				end
+			end
 		end)
 		Box:AddButton("Print resep tab", function()
 			print("[N3V4 RESEP TAB]\n" .. BuildTab())

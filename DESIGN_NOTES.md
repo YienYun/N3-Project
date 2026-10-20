@@ -17,6 +17,17 @@ Baseline (Library.TabAppearance + Settings.DEFAULTS.Tab):
   HoverZoom 1.12 | ActiveZoom 1.08 | ZoomTime 0.15s (Quad Out)
   Matinya: Library.Animations.TabHoverZoom = false
 
+BUG PALING MEMALUKAN (v4.7.3, permintaan maaf terbuka ke user):
+v4.7.0-7.2 punya `local TabRec = {...}` DI DALAM do-block AddTab, sedangkan
+`TabRec.Tab = Tab` ada di luar do -> nil-global runtime error SETIAP AddTab.
+Efek: tab kebentuk setengah (button+icon render) tapi rec nggak ke-link ke
+Tab object -> hover/show/hide zoom & apply stroke jalan ke objek yang
+setengah mati = SEMUA efek tab kelihatan "ga work" walau library baru,
+slider bener, dan user nggak salah apa-apa. Ketahuan dari warn Luau
+LocalShadow pas ngerjain v4.7.3. Fix: local TabRec di scope luar do.
+Sekaligus stroke diganti halo ImageLabel (bukan UIStroke sprite-atlas) dan
+zoom diganti tween Size (bukan UIScale) = nol quirk render.
+
 CATATAN UX (v4.7.2): user DUA KALI mentokin slider transparency ke 100%
 (stroke transparency, bg tab aktif) lalu marah "ga work" — 100% transparency
 = ILANG. Label slider sekarang "(100% = ILANG)" + ada tombol TEST efek

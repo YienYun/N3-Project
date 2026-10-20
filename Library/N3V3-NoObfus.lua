@@ -1629,9 +1629,10 @@ Library.TabAppearance = {
 	ZoomTime = 0.15, -- detik, tween Quad Out
 }
 Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per tab sidebar
+Library.TabIconBaseSize = 24 -- px, ukuran dasar icon tab (buat math zoom)
 -- v4.7.2: version print biar nggak ada lagi debat "library lu lama/belum":
 -- baris ini MUNCUL di Output tiap require kalau library yang ke-paste emang baru.
-print("[N3V4 Library] v4.7.2 loaded — TabAppearance/TabVisuals OK (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.7.3 loaded — TabAppearance/TabVisuals OK (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Warna latar konten (Container + sidebar). Nil = ikut theme (perilaku lama).
 function Library:GetCanvasColor(): Color3
@@ -1722,18 +1723,21 @@ function Library:ApplyTabAppearance()
 	local T = Library.TabAppearance
 	for _, Rec in ipairs(Library.TabVisuals) do
 		if Rec.Stroke and Rec.Stroke.Parent then
-			Rec.Stroke.Thickness = T.IconStrokeThickness
-			Rec.Stroke.Transparency = T.IconStrokeTransparency
-			Rec.Stroke.Color = T.IconStrokeColor
+			Rec.Stroke.ImageColor3 = T.IconStrokeColor
+			Rec.Stroke.ImageTransparency = T.IconStrokeTransparency
+			Rec.Stroke.Size = UDim2.new(1, 2 * T.IconStrokeThickness, 1, 2 * T.IconStrokeThickness)
+			Rec.Stroke.Visible = T.IconStrokeThickness > 0
 		end
 		if Rec.Button and Rec.Button.Parent then
 			local Active = Rec.Tab ~= nil and Library.ActiveTab == Rec.Tab
 			Rec.Button.BackgroundColor3 = Active and T.ActiveBackgroundColor or Library.Scheme.MainColor
 			Rec.Button.BackgroundTransparency = Active and T.ActiveBackgroundTransparency or T.TabBackgroundTransparency
 		end
-		if Rec.Scale and Rec.Scale.Parent then
+		if Rec.Icon and Rec.Icon.Parent then
 			local Active = Rec.Tab ~= nil and Library.ActiveTab == Rec.Tab
-			Rec.Scale.Scale = Active and T.ActiveZoom or 1
+			local Z = Active and T.ActiveZoom or 1
+			local Base = Library.TabIconBaseSize
+			Rec.Icon.Size = UDim2.fromOffset(Base * Z, Base * Z)
 		end
 	end
 end
@@ -11976,6 +11980,9 @@ function Library:CreateWindow(WindowInfo)
 		local TabIcon
 		local TabIconStroke
 		local TabIconScale
+		local TabRec -- v4.7.3: HARUS di scope luar do-block (bug v4.7.0-7.2:
+		-- local-nya kedelep di dalam do -> "TabRec.Tab = Tab" di akhir AddTab
+		-- jadi nil-global = AddTab error tiap tab = semua efek tab mati)
 
 		local TabCanvas
 		local TabContainer
@@ -12022,18 +12029,28 @@ function Library:CreateWindow(WindowInfo)
 					Size = UDim2.fromOffset(24, 24),
 					Parent = TabButton,
 				})
-				-- v4.7.0: stroke tipis ngikut bentuk glyph icon (UIStroke pakai
-				-- alpha edge, bukan kotak) + UIScale buat animasi zoom.
-				TabIconStroke = New("UIStroke", {
-					Thickness = Library.TabAppearance.IconStrokeThickness,
-					Transparency = Library.TabAppearance.IconStrokeTransparency,
-					Color = Library.TabAppearance.IconStrokeColor,
+				-- v4.7.3: stroke = HALO ImageLabel = glyph yang sama digambar
+				-- pakai warna stroke, sedikit lebih gede, DI BELAKANG icon
+				-- (ZIndex 2 vs icon 3). UIStroke di sprite atlas ternyata
+				-- nggak reliable di session user; halo = ImageLabel polos =
+				-- PASTI render. Zoom sekarang lewat tween Size icon (bukan
+				-- UIScale) — sama-sama property polos, nol quirk.
+				TabIcon.ZIndex = 3
+				TabIconStroke = New("ImageLabel", {
+					Name = "TabIconStrokeHalo",
+					Image = Icon.Url,
+					ImageRectOffset = Icon.ImageRectOffset,
+					ImageRectSize = Icon.ImageRectSize,
+					ImageColor3 = Library.TabAppearance.IconStrokeColor,
+					ImageTransparency = Library.TabAppearance.IconStrokeTransparency,
+					BackgroundTransparency = 1,
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.new(1, 2 * Library.TabAppearance.IconStrokeThickness, 1, 2 * Library.TabAppearance.IconStrokeThickness),
+					ZIndex = 2,
 					Parent = TabIcon,
 				})
-				TabIconScale = New("UIScale", {
-					Scale = 1,
-					Parent = TabIcon,
-				})
+				TabIconScale = nil -- zoom v4.7.3 lewat Size icon
 			end
 
 			table.insert(Library.TabButtons, {
@@ -12043,7 +12060,7 @@ function Library:CreateWindow(WindowInfo)
 			})
 
 			-- v4.7.0: rec buat ApplyTabAppearance (stroke/bg/zoom semua tab)
-			local TabRec = { Button = TabButton, Icon = TabIcon, Stroke = TabIconStroke, Scale = TabIconScale }
+			TabRec = { Button = TabButton, Icon = TabIcon, Stroke = TabIconStroke, Scale = TabIconScale }
 			table.insert(Library.TabVisuals, TabRec)
 
 			--// Tab Canvas \\--
@@ -12197,10 +12214,12 @@ function Library:CreateWindow(WindowInfo)
 					ImageTransparency = Hovering and 0.25 or 0.5,
 				}):Play()
 			end
-			-- v4.7.0: zoom icon sedikit pas cursor masuk/keluar
-			if TabIconScale and Library.Animations.TabHoverZoom then
-				TweenService:Create(TabIconScale, Library:GetZoomTweenInfo(), {
-					Scale = Hovering and Library.TabAppearance.HoverZoom or 1,
+			-- v4.7.3: zoom icon sedikit pas cursor masuk/keluar (tween Size)
+			if TabIcon and Library.Animations.TabHoverZoom then
+				local Z = Hovering and Library.TabAppearance.HoverZoom or 1
+				local Base = Library.TabIconBaseSize
+				TweenService:Create(TabIcon, Library:GetZoomTweenInfo(), {
+					Size = UDim2.fromOffset(Base * Z, Base * Z),
 				}):Play()
 			end
 		end
@@ -12229,13 +12248,13 @@ function Library:CreateWindow(WindowInfo)
 					ImageTransparency = 0,
 				}):Play()
 			end
-			if TabIconScale then
+			if TabIcon then
+				local Base = Library.TabIconBaseSize
+				local Target = UDim2.fromOffset(Base * Library.TabAppearance.ActiveZoom, Base * Library.TabAppearance.ActiveZoom)
 				if Library.Animations.TabHoverZoom then
-					TweenService:Create(TabIconScale, Library:GetZoomTweenInfo(), {
-						Scale = Library.TabAppearance.ActiveZoom,
-					}):Play()
+					TweenService:Create(TabIcon, Library:GetZoomTweenInfo(), { Size = Target }):Play()
 				else
-					TabIconScale.Scale = Library.TabAppearance.ActiveZoom
+					TabIcon.Size = Target
 				end
 			end
 
@@ -12270,13 +12289,13 @@ function Library:CreateWindow(WindowInfo)
 					ImageTransparency = 0.5,
 				}):Play()
 			end
-			if TabIconScale then
+			if TabIcon then
+				local Base = Library.TabIconBaseSize
+				local Target = UDim2.fromOffset(Base, Base)
 				if Library.Animations.TabHoverZoom then
-					TweenService:Create(TabIconScale, Library:GetZoomTweenInfo(), {
-						Scale = 1,
-					}):Play()
+					TweenService:Create(TabIcon, Library:GetZoomTweenInfo(), { Size = Target }):Play()
 				else
-					TabIconScale.Scale = 1
+					TabIcon.Size = Target
 				end
 			end
 
