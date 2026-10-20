@@ -266,10 +266,10 @@ local Library = {
 	--// Scheme \\--
 	IsLightTheme = false,
 	Scheme = {
-		BackgroundColor = Color3.fromRGB(18, 18, 18),
-		MainColor = Color3.fromRGB(33, 33, 33),
+		BackgroundColor = Color3.fromRGB(15, 15, 15),
+		MainColor = Color3.fromRGB(36, 36, 36),
 		AccentColor = Color3.fromRGB(218, 68, 255),
-		OutlineColor = Color3.fromRGB(61, 61, 61),
+		OutlineColor = Color3.fromRGB(59, 59, 59),
 		FontColor = Color3.fromRGB(255, 255, 255),
 		Font = Font.fromEnum(Enum.Font.Code),
 
@@ -410,10 +410,10 @@ local Templates = {
 		-- apa-apa. Tetep bisa di-override per-window atau lewat
 		-- Library:SetWallpaper / Library:SetSurface.
 		BackgroundImage = "111593326989465",
-		BackgroundImageTransparency = 0.80,
+		BackgroundImageTransparency = 0, -- v4.6.8: dump user v5 (wallpaper FULL, scrim yang ngatur)
 		BackgroundImageScaleType = "Stretch", -- member asli: Stretch | Slice | Tile | Fit | Crop
 		--   alias yang gue tambahin: Fill/Cover -> Crop, Contain -> Fit
-		BackgroundImageColor = Color3.new(0.59, 0.59, 0.59), -- tint (ImageColor3) dump user 0.59
+		BackgroundImageColor = Color3.fromRGB(195, 195, 195), -- tint (ImageColor3) dump user v5
 		BackgroundImageLayer = "back", -- v4.6.6: "back" = wallpaper DI BELAKANG konten,
 		--   jadi kartu group 100% SOLID / nggak "transparan" lagi (permintaan user:
 		--   "bikin 100% lebih jelas/ga transparan"). "front" = wash nutup semua
@@ -423,13 +423,13 @@ local Templates = {
 		-- Overlay = scrim di antara wallpaper dan konten
 		BackgroundOverlayEnabled = true, -- v4.6.6: scrim antara wallpaper & konten (back mode)
 		BackgroundOverlayColor = Color3.fromRGB(0, 0, 0),
-		BackgroundOverlayTransparency = 0.50, -- v4.6.6: baseline scrim, user bakal seting sendiri
+		BackgroundOverlayTransparency = 0.55, -- v4.6.8: dump user v5
 
 		--// Surface \\--
 		-- N3V4: biar wallpaper beneran keliatan SEBAGAI background kartu, area
 		-- konten (Container + sidebar) harus bisa dibikin transparan. Default 0
 		-- = perilaku lama (solid), jadi hub yang nggak pakai wallpaper aman.
-		WindowTransparency = 1, -- v4.6.6: MainFrame transparan biar wallpaper back keliatan
+		WindowTransparency = 0.90, -- v4.6.8: dump user v5
 		ContentTransparency = 1, -- v4.6.6: canvas full transparan (wallpaper keliatan di sela kartu)
 		-- Kartu groupbox/tabbox/depbox.
 		GroupTransparency = 0,
@@ -1592,17 +1592,19 @@ end
 --     wallpaper. User minta group tetep solid & beda ~10% dari background.
 -- State awal = RESEP USER yang disetujui (sama kayak default Templates.Window)
 Library.Surface = {
-	CanvasTransparency = 1, -- Container + sidebar (v4.6.6: full; kartu tetep SOLID di atasnya)
-	GroupTransparency = 0, -- kartu groupbox / tabbox / depbox
-	GroupContrast = 30, -- persen 0-100 (user v4.6.4: "30% lebih jelas", dulu 10%)
+	CanvasTransparency = 1, -- Container + sidebar (v4.6.6: full; dump v5 tetep 1)
+	GroupTransparency = 0.35, -- kartu groupbox / tabbox / depbox. v4.6.8: dump user v5
+	--            (0.35 = PILIHAN user sendiri sekarang, di layer back ini slider
+	--            sadar — bukan veil front yang dulu bikin lu marah)
+	GroupContrast = 40, -- persen 0-100 (dump user v5; baseline lama 30 v4.6.4)
 	GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu = HITAM (user
 	--            v4.6.5: "woi gue group warna hitam anj!"). v4.6.4 sempat gue
 	--            jadiin AUTO dan kartu jadi ABU-ABU — itu salah gue, direvert.
 	--            CATATAN: selama override ini ada, GroupContrast nggak dipakai
 	--            (itu semantik library: override menang). Contrast 30 kepake
 	--            kalau override dimatiin (toggle "Group custom" OFF).
-	CanvasColor = Color3.new(0.045, 0.045, 0.045), -- override warna latar, dump user 0.045
-	WindowTransparency = 1, -- MainFrame (dasar window). v4.6.6: 1 biar layer back keliatan
+	CanvasColor = Color3.fromRGB(156, 156, 156), -- override warna latar, dump user v5
+	WindowTransparency = 0.90, -- MainFrame (dasar window). dump user v5
 }
 Library.SurfaceWindow = nil -- MainFrame
 Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
@@ -10215,7 +10217,9 @@ function Library:CreateWindow(WindowInfo)
 				return Library:GetBetterColor(Library.Scheme.BackgroundColor, 4)
 			end,
 			Position = UDim2.fromScale(0, 1),
-			Size = UDim2.new(1, 0, 0, 20 + WindowInfo.CornerRadius),
+			Size = UDim2.new(1, 0, 0, 20), -- v4.6.8: dulu 20+radius (pasangannya UICorner full)
+			--   -> corner ATAS ikutan bulat = notch "bablas ke atas" waktu radius
+			--   diutak-atik dari tab Theme. Sekarang tinggi 20 + corner bawah aja.
 			Parent = MainFrame,
 		})
 		Library:MakeLine(MainFrame, {
@@ -10231,10 +10235,18 @@ function Library:CreateWindow(WindowInfo)
 			Size = UDim2.new(1, 0, 0, 20),
 			Parent = MainFrame,
 		})
+		-- v4.6.8 FIX: UICorner bottom-only via SpecificCorners. Dulu masuk
+		-- Library.Corners (full radius) -> top corner bulat -> garis/notch
+		-- nyembul di atas navbar bawah ("bablas ke atas" kata user).
+		-- SetCornerRadius() tetep update corner bawah lewat SpecificCorners
+		-- (SetUICorner skip corner yang 0), top tetep persegi selamanya.
 		table.insert(
-			Library.Corners,
+			Library.SpecificCorners,
 			New("UICorner", {
-				CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+				TopLeftRadius = UDim.new(0, 0),
+				TopRightRadius = UDim.new(0, 0),
+				BottomRightRadius = UDim.new(0, WindowInfo.CornerRadius),
+				BottomLeftRadius = UDim.new(0, WindowInfo.CornerRadius),
 				Parent = BottomBackground,
 			})
 		)

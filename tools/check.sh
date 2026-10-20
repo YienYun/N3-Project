@@ -66,19 +66,21 @@ chk "slider: berhenti lewat InputEnded (SliderReleaseConn)" "grep -q SliderRelea
 chk "WindowTransparency ada" "grep -q WindowTransparency '$LIB'"
 chk "Tab:AddKeyBox ada" "grep -q 'function Tab:AddKeyBox' '$LIB'"
 chk "theme v4 user jadi default di LIBRARY (bg 18 / main 33 / outline 61 + radius 15)" \
-	"grep -q 'AccentColor = Color3.fromRGB(218, 68, 255)' '$LIB' && grep -q 'BackgroundColor = Color3.fromRGB(18, 18, 18),' '$LIB' && grep -q 'MainColor = Color3.fromRGB(33, 33, 33),' '$LIB' && grep -q 'OutlineColor = Color3.fromRGB(61, 61, 61),' '$LIB' && grep -q 'CornerRadius = 15,' '$LIB'"
-chk "wallpaper v3 default di LIBRARY (0.80 + canvas 0.045) + GROUP 30% (v4.6.4)" \
-	"grep -q 'BackgroundImageTransparency = 0.80' '$LIB' && grep -q 'GroupContrast = 30,' '$LIB' && grep -q 'CanvasColor = Color3.new(0.045' '$LIB' && grep -q 111593326989465 '$LIB'"
+	"grep -q 'AccentColor = Color3.fromRGB(218, 68, 255)' '$LIB' && grep -q 'BackgroundColor = Color3.fromRGB(15, 15, 15),' '$LIB' && grep -q 'MainColor = Color3.fromRGB(36, 36, 36),' '$LIB' && grep -q 'OutlineColor = Color3.fromRGB(59, 59, 59),' '$LIB' && grep -q 'CornerRadius = 15,' '$LIB'"
+chk "resep v5 default di LIBRARY (wallpaper 0 + scrim 0.55 + group 0.35 + contrast 40)" \
+	"grep -q 'BackgroundImageTransparency = 0,' '$LIB' && grep -q 'GroupContrast = 40,' '$LIB' && grep -q 'CanvasColor = Color3.fromRGB(156, 156, 156)' '$LIB' && grep -q 111593326989465 '$LIB'"
 chk "group HITAM + contrast 30 baseline tetep (v4.6.5)" \
-	"grep -q 'GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu = HITAM' '$LIB' && grep -q 'GroupContrast = 30,' '$LIB'"
+	"grep -q 'GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu = HITAM' '$LIB' && grep -q 'GroupContrast = 40,' '$LIB'"
 chk "v4.6.6: wallpaper layer BACK + window/canvas full (kartu 100% solid)" \
 	"grep -q 'BackgroundImageLayer = \"back\"' '$LIB' && grep -q 'CanvasTransparency = 1,' '$LIB' && grep -q 'Layer = \"back\"' '$MOD' && grep -q 'Canvas = 1,' '$MOD'"
 chk "v4.6.7: NGGAK ada preset/combo yang pindah ke layer front (jebakan)" \
 	"! grep -q 'Layer = \"front\"' '$MOD' && ! grep -q 'Combo(\"Stretch\", \"front\")' '$MOD'"
 chk "v4.6.7: preset Load() nggak matiin GroupColor/CanvasColor custom user" \
 	"! sed -n '/local function Load/,/SafeNotify/p' '$MOD' | grep -qE 'S\.(Group|Canvas)Color'"
+chk "v4.6.8: navbar bawah corner BAWAH-aja (SpecificCorners, tinggi 20)" \
+	"grep -q 'BottomRightRadius = UDim.new(0, WindowInfo.CornerRadius)' '$LIB' && grep -q 'Size = UDim2.new(1, 0, 0, 20), -- v4.6.8' '$LIB'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
-	"grep -q 'Transparency = 0.80' '$MOD' && grep -q 'Contrast = 30' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.new(0.045' '$MOD'"
+	"grep -q 'Transparency = 0,' '$MOD' && grep -q 'Contrast = 40' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.fromRGB(156, 156, 156)' '$MOD'"
 chk "state S di-init SEBELUM BuildResep/BuildTema (bug 'index nil with Image')" \
 	"test \$(grep -n 'local S = {' '$MOD' | cut -d: -f1) -lt \$(grep -n 'local function BuildResep' '$MOD' | cut -d: -f1)"
 

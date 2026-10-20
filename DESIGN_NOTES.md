@@ -4,6 +4,33 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 
 ---
 
+## 🔒 RESEP v5 = DEFAULT TERKUNCI (print LENGKAP user, 2026-10-20, v4.6.8)
+
+```lua
+Library.Scheme.BackgroundColor = Color3.fromRGB(15, 15, 15)
+Library.Scheme.MainColor = Color3.fromRGB(36, 36, 36)
+Library.Scheme.OutlineColor = Color3.fromRGB(59, 59, 59)
+-- accent 218,68,255 / font 255 / radius 15 tetep
+Library:SetWallpaper({
+	Image = "111593326989465", Transparency = 0, ScaleType = "Stretch",
+	Color = Color3.fromRGB(195, 195, 195), Layer = "back",
+	Overlay = true, OverlayColor = Color3.fromRGB(0, 0, 0), OverlayTransparency = 0.55,
+})
+Library:SetSurface({
+	WindowTransparency = 0.90, CanvasTransparency = 1.00,
+	GroupTransparency = 0.35, GroupContrast = 40,
+	GroupColor = Color3.fromRGB(0, 0, 0), CanvasColor = Color3.fromRGB(156, 156, 156),
+})
+```
+Catatan: group 0.35 = PILIHAN user sendiri via slider di layer back (bukan veil
+front) — menimpa baseline lama "group solid 0". Resep v4 (bg18/main33/outline61,
+wallpaper 0.80) = sejarah, ada di bagian bawah.
+
+FIX v4.6.8: navbar bawah (BottomBackground) dulu UICorner FULL radius + tinggi
+20+radius -> corner atas ikutan bulat = notch/garis "bablas ke atas" waktu radius
+diputer dari tab Theme. Sekarang: tinggi 20 + UICorner bottom-only lewat
+Library.SpecificCorners (SetCornerRadius tetep update bottom, top persegi).
+
 ## 🎯 Preferensi user (yang udah diucapin eksplisit)
 
 | Preferensi | Detail | Status |

@@ -7,6 +7,15 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.6.8 — RESEP v5 LU DIBAKE + FIX CORNER NAVBAR BAWAH:
+	   • Print LENGKAP lu jadi default permanen: wallpaper FULL (transparency 0)
+	     + scrim overlay 0.55, tint 195, window 0.90, canvas 1, kartu group 0.35,
+	     contrast 40, kartu hitam, canvas 156, scheme bg 15 / main 36 / outline 59.
+	   • FIX bug corner: navbar bawah dulu pakai UICorner full radius -> waktu
+	     lu puter radius di tab Theme, corner ATAS navbar ikutan bulat = notch
+	     / garis nyembul ke atas. Sekarang corner-nya BAWAH aja (SpecificCorners),
+	     top persegi selamanya, radius bebas diutak-atik.
+
 	 CHANGELOG v4.6.7 — JEBAKAN FRONT DIHAPUS:
 	   • Preset "Wash (front)" & combo "Stretch + front" = penyebab kartu lu
 	     "transparan" waktu lu klik itu: layer front = gambar DI ATAS semua
@@ -98,7 +107,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6.7" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.6.8" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -115,7 +124,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6.7",
+	Footer = "N3V4 • UI Preview Kit v4.6.8",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

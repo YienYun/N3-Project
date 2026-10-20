@@ -13,6 +13,11 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.6.8: RESEP v5 USER DIBAKE (print LENGKAP 2026-10-20): wallpaper FULL
+--        (transparency 0) + scrim 0.55, tint 195, window 0.90, canvas 1,
+--        group 0.35 (pilihan user sendiri di layer back), contrast 40, kartu
+--        hitam, canvas 156, scheme bg15/main36/outline59. PLUS FIX: corner
+--        navbar bawah sekarang bottom-only (radius diutak-atik nggak bablas).
 -- v4.6.7: SEMUA preset & combo sekarang layer "back" (preset "Wash (front)" &
 --        combo "Stretch + front" = jebakan: front = veil nutup kartu -> kartu
 --        kebaca transparan walau Group 0). Preset juga nggak lagi matiin
@@ -44,20 +49,20 @@ local Settings = {}
 
 Settings.DEFAULTS = {
 	Image = "111593326989465",
-	Transparency = 0.80,
+	Transparency = 0,
 	ScaleType = "Stretch",
-	Color = Color3.new(0.59, 0.59, 0.59), -- tint abu netral (dump user 0.59)
+	Color = Color3.fromRGB(195, 195, 195), -- tint (dump user v5)
 	Layer = "back",
 	Overlay = true,
 	OverlayColor = Color3.fromRGB(0, 0, 0),
-	OverlayTransparency = 0.50,
+	OverlayTransparency = 0.55,
 
-	Window = 1, -- transparency dasar window (v4.6.6: 1 = wallpaper back keliatan)
+	Window = 0.90, -- transparency dasar window (dump user v5)
 	Canvas = 1,
-	Group = 0,
-	Contrast = 30,
+	Group = 0.35,
+	Contrast = 40,
 	GroupColor = Color3.fromRGB(0, 0, 0), -- HITAM (user v4.6.5: balik hitam)
-	CanvasColor = Color3.new(0.045, 0.045, 0.045), -- dump user 0.045
+	CanvasColor = Color3.fromRGB(156, 156, 156), -- dump user v5
 }
 
 function Settings:Attach(Library, Window, Options)
@@ -327,9 +332,9 @@ function Settings:Attach(Library, Window, Options)
 
 		Box:AddButton("Reset scheme", function()
 			Library.Scheme.AccentColor = Color3.fromRGB(218, 68, 255)
-			Library.Scheme.BackgroundColor = Color3.fromRGB(18, 18, 18)
-			Library.Scheme.MainColor = Color3.fromRGB(33, 33, 33)
-			Library.Scheme.OutlineColor = Color3.fromRGB(61, 61, 61)
+			Library.Scheme.BackgroundColor = Color3.fromRGB(15, 15, 15)
+			Library.Scheme.MainColor = Color3.fromRGB(36, 36, 36)
+			Library.Scheme.OutlineColor = Color3.fromRGB(59, 59, 59)
 			Library.Scheme.FontColor = Color3.fromRGB(255, 255, 255)
 			Library:UpdateColorsUsingRegistry()
 		end)
