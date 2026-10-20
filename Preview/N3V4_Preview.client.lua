@@ -7,6 +7,17 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.8.3 — RESEP v7 + RESEP TAB v2 DIBAKE (print user):
+	   • THEMA: MainColor 36, OutlineColor 65-62-62, radius 10 (Accent/
+	     Background/Font tetep), animasi + durasi 0.10s tetep.
+	   • WALLPAPER/SURFACE: tint 148 (0.58), overlay hitam 0.40, group
+	     transparency 0.5, canvas color 119 (0.465); image/layer/window/
+	     canvas/contrast/group hitam tetep.
+	   • TAB: stroke 1.5px transparency 0.53 warna HITAM, bg tab tetep 100%,
+	     bg aktif 0.60 HITAM, zoom hover 1.25 & aktif 1.25, durasi 0.20.
+	   • Semua masuk sebagai DEFAULT (library + Settings.DEFAULTS), jadi
+	     knob/print/restore tetap jalan — nol hardcode di call-site.
+
 	 CHANGELOG v4.8.2 — POPUP BUKA/TUTUP = RASA WINDOW (perfected):
 	   • Kata user: popup harus terasa kayak buka/tutup WINDOW, dan fade
 	     CanvasGroup v4.8.1 masih jelek pas hilang. CanvasGroup + UIScale
@@ -295,7 +306,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.8.2" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.8.3" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -327,7 +338,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.8.2",
+	Footer = "N3V4 • UI Preview Kit v4.8.3",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

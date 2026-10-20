@@ -66,10 +66,10 @@ chk "color picker: DragBegin(satvib/hue/alpha) + InputEnded watcher" \
 chk "slider: berhenti lewat InputEnded (SliderReleaseConn)" "grep -q SliderReleaseConn '$LIB'"
 chk "WindowTransparency ada" "grep -q WindowTransparency '$LIB'"
 chk "Tab:AddKeyBox ada" "grep -q 'function Tab:AddKeyBox' '$LIB'"
-chk "theme v4 user jadi default di LIBRARY (bg 18 / main 33 / outline 61 + radius 15)" \
-	"grep -q 'AccentColor = Color3.fromRGB(218, 68, 255)' '$LIB' && grep -q 'BackgroundColor = Color3.fromRGB(15, 15, 15),' '$LIB' && grep -q 'MainColor = Color3.fromRGB(45, 45, 45),' '$LIB' && grep -q 'OutlineColor = Color3.fromRGB(65, 65, 65),' '$LIB' && grep -q 'CornerRadius = 15,' '$LIB'"
-chk "resep v5 default di LIBRARY (wallpaper 0 + scrim 0.55 + group 0.35 + contrast 40)" \
-	"grep -q 'BackgroundImageTransparency = 0,' '$LIB' && grep -q 'GroupContrast = 40,' '$LIB' && grep -q 'CanvasColor = Color3.fromRGB(156, 156, 156)' '$LIB' && grep -q 111593326989465 '$LIB'"
+chk "theme v7 user jadi default di LIBRARY (main 36 / outline 65-62-62 + radius 10)" \
+	"grep -q 'AccentColor = Color3.fromRGB(218, 68, 255)' '$LIB' && grep -q 'BackgroundColor = Color3.fromRGB(15, 15, 15),' '$LIB' && grep -q 'MainColor = Color3.fromRGB(36, 36, 36),' '$LIB' && grep -q 'OutlineColor = Color3.fromRGB(65, 62, 62),' '$LIB' && grep -q 'CornerRadius = 10,' '$LIB'"
+chk "resep v7 default di LIBRARY (wallpaper 0 + scrim 0.40 + group 0.5 + canvas 119)" \
+	"grep -q 'BackgroundImageTransparency = 0,' '$LIB' && grep -q 'GroupContrast = 40,' '$LIB' && grep -q 'CanvasColor = Color3.fromRGB(119, 119, 119)' '$LIB' && grep -q 'BackgroundOverlayTransparency = 0.40,' '$LIB' && grep -q 111593326989465 '$LIB'"
 chk "group HITAM + contrast 30 baseline tetep (v4.6.5)" \
 	"grep -q 'GroupColor = Color3.fromRGB(0, 0, 0), -- card color override = BLACK' '$LIB' && grep -q 'GroupContrast = 40,' '$LIB'"
 chk "v4.6.6: wallpaper layer BACK + window/canvas full (kartu 100% solid)" \
@@ -95,7 +95,7 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.8.2 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.8.3 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + halo stroke + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconStrokeHalo' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
@@ -123,9 +123,9 @@ chk "v4.7.9: icon dialog opsional kanan-atas gaya notif (lib + demo preview)" \
 chk "v4.7.8: knob durasi + RESEP USER 10% dibake (lib 0.1 + mod AnimTime 0.10)" \
 	"grep -q 'ST_AnimTime' '$MOD' && grep -q 'AnimTime = 0.10' '$MOD' && grep -q 'WindowAnimationInfo = TweenInfo.new(0.1' '$LIB' && grep -q 'Library.WindowAnimationInfo = TweenInfo.new' '$MOD'"
 chk "v4.7.6: NOL duplikasi (halo dibuat 1x di helper) + RESEP TAB locked lib+mod" \
-	"[ \$(grep -c 'Name = \"TabIconStrokeHalo\"' '$LIB') -eq 1 ] && grep -q 'IconStrokeColor = Color3.fromRGB(107, 0, 181)' '$LIB' && grep -q 'IconStrokeColor = Color3.fromRGB(107, 0, 181)' '$MOD' && grep -q 'HoverZoom = 1.30' '$LIB'"
+	"[ \$(grep -c 'Name = \"TabIconStrokeHalo\"' '$LIB') -eq 1 ] && grep -q 'IconStrokeColor = Color3.fromRGB(0, 0, 0)' '$LIB' && grep -q 'IconStrokeTransparency = 0.53' '$LIB' && grep -q 'IconStrokeColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'HoverZoom = 1.25' '$LIB'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
-	"grep -q 'Transparency = 0,' '$MOD' && grep -q 'Contrast = 40' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.fromRGB(156, 156, 156)' '$MOD'"
+	"grep -q 'Transparency = 0,' '$MOD' && grep -q 'Contrast = 40' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.fromRGB(119, 119, 119)' '$MOD' && grep -q 'Group = 0.5' '$MOD' && grep -q 'OverlayTransparency = 0.40' '$MOD'"
 chk "state S di-init SEBELUM BuildResep/BuildTema (bug 'index nil with Image')" \
 	"test \$(grep -n 'local S = {' '$MOD' | cut -d: -f1) -lt \$(grep -n 'local function BuildResep' '$MOD' | cut -d: -f1)"
 
@@ -146,7 +146,7 @@ chk "simetris" "python3 '$ROOT/tools/symmetry.py' '$PRE'"
 chk "ggak manggil SetWallpaper/SetSurface (setingan cuma di file setingan)" \
 	"! grep -qE '^\s*[^-].*Library:Set(Wallpaper|Surface)' '$PRE'"
 chk "AddKeyBox di-guard typeof" "grep -q 'typeof(AdvancedTab.AddKeyBox)' '$PRE'"
-chk "footer v4.8.2" "grep -q 'Preview Kit v4.8.2' '$PRE'"
+chk "footer v4.8.3" "grep -q 'Preview Kit v4.8.3' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \

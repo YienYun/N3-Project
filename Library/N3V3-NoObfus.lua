@@ -262,15 +262,15 @@ local Library = {
 	OriginalMinSize = Vector2.new(480, 360),
 	MinSize = Vector2.new(480, 360),
 	DPIScale = 1,
-	CornerRadius = 15, -- N3V4: 4 -> 10 -> 15 (user seting ulang, dump resep thema v4.6.2)
+	CornerRadius = 10, -- v4.8.3: RESEP USER v7 (print 00:45) = 10
 
 	--// Scheme \\--
 	IsLightTheme = false,
 	Scheme = {
 		BackgroundColor = Color3.fromRGB(15, 15, 15),
-		MainColor = Color3.fromRGB(45, 45, 45),
+		MainColor = Color3.fromRGB(36, 36, 36), -- v4.8.3: RESEP USER v7 (print 00:45)
 		AccentColor = Color3.fromRGB(218, 68, 255),
-		OutlineColor = Color3.fromRGB(65, 65, 65),
+		OutlineColor = Color3.fromRGB(65, 62, 62), -- v4.8.3: RESEP USER v7 (print 00:45)
 		FontColor = Color3.fromRGB(255, 255, 255),
 		Font = Font.fromEnum(Enum.Font.Code),
 
@@ -374,7 +374,7 @@ local Templates = {
 		SearchbarSize = UDim2.fromScale(1, 1),
 		GlobalSearch = false,
 
-		CornerRadius = 15, -- N3V4: matched to Library.CornerRadius
+		CornerRadius = 10, -- N3V4: matched to Library.CornerRadius
 		NotifySide = "Right",
 		ShowCustomCursor = true,
 
@@ -414,7 +414,7 @@ local Templates = {
 		BackgroundImageTransparency = 0, -- v4.6.8: user dump v5 (wallpaper FULL, scrim does the work)
 		BackgroundImageScaleType = "Stretch", -- member asli: Stretch | Slice | Tile | Fit | Crop
 		--   aliases I added: Fill/Cover -> Crop, Contain -> Fit
-		BackgroundImageColor = Color3.fromRGB(195, 195, 195), -- tint (ImageColor3) dump user v5
+		BackgroundImageColor = Color3.fromRGB(148, 148, 148), -- v4.8.3: tint dump user v7 (0.58)
 		BackgroundImageLayer = "back", -- v4.6.6: "back" = wallpaper BEHIND content,
 		--   so group cards are 100% SOLID / no longer "transparent" (user request:
 		--   "make it 100% clearer/not transparent"). "front" = wash covering all
@@ -424,7 +424,7 @@ local Templates = {
 		-- Overlay = scrim between wallpaper and content
 		BackgroundOverlayEnabled = true, -- v4.6.6: scrim between wallpaper & content (back mode)
 		BackgroundOverlayColor = Color3.fromRGB(0, 0, 0),
-		BackgroundOverlayTransparency = 0.55, -- v4.6.8: dump user v5
+		BackgroundOverlayTransparency = 0.40, -- v4.8.3: dump user v7
 
 		--// Surface \\--
 		-- N3V4: for the wallpaper to actually read AS card background, the content
@@ -433,7 +433,7 @@ local Templates = {
 		WindowTransparency = 1, -- v4.6.10: user "window and canvas should be 100"
 		ContentTransparency = 1, -- v4.6.6: canvas fully transparent (wallpaper visible between cards)
 		-- Kartu groupbox/tabbox/depbox.
-		GroupTransparency = 0.35, -- v4.6.9: synced with Library.Surface (recipe v5)
+		GroupTransparency = 0.5, -- v4.8.3: synced with Library.Surface (recipe v7)
 		-- Percent (0-100): group cards differentiated from window background.
 		GroupContrast = 40, -- v4.6.9: synced with Library.Surface (recipe v5)
 
@@ -1613,7 +1613,7 @@ end
 -- Initial state = approved USER RECIPE (same as Templates.Window defaults)
 Library.Surface = {
 	CanvasTransparency = 1, -- Container + sidebar (v4.6.6: full; dump v5 stays 1)
-	GroupTransparency = 0.35, -- kartu groupbox / tabbox / depbox. v4.6.8: dump user v5
+	GroupTransparency = 0.5, -- kartu groupbox / tabbox / depbox. v4.8.3: dump user v7
 	--            (0.35 = user OWN pick now; on this back layer the slider is
 	--            aware — not the old front veil that made you mad)
 	GroupContrast = 40, -- percent 0-100 (user dump v5; old baseline 30 in v4.6.4)
@@ -1623,7 +1623,7 @@ Library.Surface = {
 	--            NOTE: while this override exists, GroupContrast is unused
 	--            (library semantics: override wins). Contrast 30 is used
 	--            when the override is off (toggle "Group custom" OFF).
-	CanvasColor = Color3.fromRGB(156, 156, 156), -- background color override, user dump v5
+	CanvasColor = Color3.fromRGB(119, 119, 119), -- background color override, user dump v7 (0.465)
 	WindowTransparency = 1, -- MainFrame (window base). v4.6.10: 100% per user
 }
 Library.SurfaceWindow = nil -- MainFrame
@@ -1636,21 +1636,21 @@ Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
 -- the icon ... the active tab zooms a bit". All numbers = baseline,
 -- user tunes manually in preview then sends the print -> baked later.
 Library.TabAppearance = {
-	-- v4.7.6 = LOCKED USER TAB RECIPE (print 18:21 after manual tuning)
-	IconStrokeThickness = 1, -- px, halo stroke glyph icon
-	IconStrokeTransparency = 0.20,
-	IconStrokeColor = Color3.fromRGB(107, 0, 181),
+	-- v4.8.3 = LOCKED USER TAB RECIPE v2 (print 00:46 after manual tuning)
+	IconStrokeThickness = 1.5, -- px, halo stroke glyph icon
+	IconStrokeTransparency = 0.53,
+	IconStrokeColor = Color3.fromRGB(0, 0, 0),
 	TabBackgroundTransparency = 1, -- plain tabs without bg (user choice)
-	ActiveBackgroundTransparency = 0.85,
-	ActiveBackgroundColor = Color3.fromRGB(128, 128, 128),
-	HoverZoom = 1.30, -- icon scale on hover
-	ActiveZoom = 1.40, -- icon scale on active tab (holds)
+	ActiveBackgroundTransparency = 0.60,
+	ActiveBackgroundColor = Color3.fromRGB(0, 0, 0),
+	HoverZoom = 1.25, -- icon scale on hover
+	ActiveZoom = 1.25, -- icon scale on active tab (holds)
 	ZoomTime = 0.20, -- seconds, Quad Out tween
 }
 Library.TabVisuals = {} -- rec { Button, Icon, Stroke, Scale, Tab } per sidebar tab
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.8.2 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.8.3 loaded — TabAppearance/TabVisuals OK + fade buka/tutup window baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3

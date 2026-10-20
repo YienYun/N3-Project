@@ -13,6 +13,10 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.8.3: RESEP v7 + RESEP TAB v2 user DIBAKE (print 00:41-00:46):
+--        main 36, outline 65-62-62, radius 10, tint 148, overlay 0.40,
+--        group 0.5, canvas 119; tab: stroke 1.5/0.53 hitam, aktif 0.60
+--        hitam, zoom 1.25/1.25. Semua lewat default = nol hardcode.
 -- v4.7.8: durasi buka/tutup = 10% (0.10s) DIBAKE — user: "10% bagus!".
 -- v4.7.7: animasi BUKA/TUTUP WINDOW dibenerin di library (fade barengan =
 --        total waktu persis durasi, nol "layar hitam", tween di-cache =
@@ -88,31 +92,31 @@ Settings.DEFAULTS = {
 	Image = "111593326989465",
 	Transparency = 0,
 	ScaleType = "Stretch",
-	Color = Color3.fromRGB(195, 195, 195), -- tint (dump user v5)
+	Color = Color3.fromRGB(148, 148, 148), -- tint (dump user v7, 0.58)
 	Layer = "back",
 	Overlay = true,
 	OverlayColor = Color3.fromRGB(0, 0, 0),
-	OverlayTransparency = 0.55,
+	OverlayTransparency = 0.40, -- v4.8.3: dump user v7
 
 	Window = 1, -- transparency dasar window (v4.6.10: 100% kata user)
 	Canvas = 1,
-	Group = 0.35,
+	Group = 0.5, -- v4.8.3: dump user v7
 	Contrast = 40,
-	Tab = { -- v4.7.6 = RESEP TAB USER TERKUNCI (print 18:21)
-		IconStrokeThickness = 1,
-		IconStrokeTransparency = 0.20,
-		IconStrokeColor = Color3.fromRGB(107, 0, 181),
+	Tab = { -- v4.8.3 = RESEP TAB USER v2 TERKUNCI (print 00:46)
+		IconStrokeThickness = 1.5,
+		IconStrokeTransparency = 0.53,
+		IconStrokeColor = Color3.fromRGB(0, 0, 0),
 		TabBackgroundTransparency = 1,
-		ActiveBackgroundTransparency = 0.85,
-		ActiveBackgroundColor = Color3.fromRGB(128, 128, 128),
-		HoverZoom = 1.30,
-		ActiveZoom = 1.40,
+		ActiveBackgroundTransparency = 0.60,
+		ActiveBackgroundColor = Color3.fromRGB(0, 0, 0),
+		HoverZoom = 1.25,
+		ActiveZoom = 1.25,
 		ZoomTime = 0.20,
 	},
 	TabHoverZoom = true,
 	AnimTime = 0.10, -- v4.7.8: RESEP USER TERKUNCI ("10% bagus!") = 0.10s buka/tutup window
 	GroupColor = Color3.fromRGB(0, 0, 0), -- HITAM (user v4.6.5: balik hitam)
-	CanvasColor = Color3.fromRGB(156, 156, 156), -- dump user v5
+	CanvasColor = Color3.fromRGB(119, 119, 119), -- dump user v7 (0.465)
 }
 
 function Settings:Attach(Library, Window, Options)
@@ -413,8 +417,8 @@ function Settings:Attach(Library, Window, Options)
 		Box:AddButton("Reset scheme", function()
 			Library.Scheme.AccentColor = Color3.fromRGB(218, 68, 255)
 			Library.Scheme.BackgroundColor = Color3.fromRGB(15, 15, 15)
-			Library.Scheme.MainColor = Color3.fromRGB(45, 45, 45)
-			Library.Scheme.OutlineColor = Color3.fromRGB(65, 65, 65)
+			Library.Scheme.MainColor = Color3.fromRGB(36, 36, 36)
+			Library.Scheme.OutlineColor = Color3.fromRGB(65, 62, 62)
 			Library.Scheme.FontColor = Color3.fromRGB(255, 255, 255)
 			Library:UpdateColorsUsingRegistry()
 		end)

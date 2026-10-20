@@ -117,6 +117,29 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🔒 v4.8.3 — RESEP v7 + RESEP TAB v2 = TERKUNCI (print user 00:41-00:46)
+
+THEMA v7:
+  Accent 218,68,255 · Background 15,15,15 · Main 36,36,36 · Outline 65,62,62 ·
+  Font 255,255,255 · radius 10 · DPI 100 · animasi ON · durasi 0.10s (tetep)
+WALLPAPER/SURFACE v7:
+  Image 111593326989465 · Transparency 0 · Stretch · tint 148,148,148 (0.58) ·
+  Layer back · Overlay ON hitam 0.40 · Window 1 · Canvas 1 · Group 0.5 ·
+  Contrast 40 · GroupColor hitam · CanvasColor 119,119,119 (0.465)
+TAB v2:
+  stroke 1.5px / 0.53 / hitam · bg tab 1 · bg aktif 0.60 hitam ·
+  HoverZoom 1.25 · ActiveZoom 1.25 · ZoomTime 0.20 · TabHoverZoom true
+
+Konversi float dump -> fromRGB: 0.58*255=147.9->148; 0.465*255=118.6->119
+(selisih <0.002 = tak terlihat; print balik bakal stabil di integer ini).
+Bake di: Library.Scheme/Templates/WindowInfo defaults, Library.Surface,
+Library.TabAppearance, Settings.DEFAULTS (+ tombol Reset scheme module).
+Checker mengunci nilai v7 (check theme/resep/tab di-update).
+
+CATATAN ANTRIAN (diskusi berikutnya, user): ganti stroke halo icon tab jadi
+CARD outline — "garis kotak simetris" di seputar SETIAP icon tab (bukan box
+full tab), transparansi card ±30%, hanya di icon. Belum dikoding.
+
 ## 🔒 v4.7.8 — RESEP DURASI BUKA/TUTUP = TERKUNCI (user: "10% bagus!")
 
 Library.WindowAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
