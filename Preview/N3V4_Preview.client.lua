@@ -125,7 +125,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.4",
+	Footer = "N3V4 • UI Preview Kit v4.4.2",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -2133,8 +2133,8 @@ Try("Wallpaper: R5 Master", function()
 	end)
 
 	Box:AddDivider({ Text = "Cek versi copy-an lu", Margin = 4 })
-	Box:AddLabel("Footer window HARUS tertulis v4.4.", true)
-	Box:AddLabel("Kalau masih v4 / v4.2 / v4.3 berarti", true)
+	Box:AddLabel("Footer window HARUS tertulis v4.4.2.", true)
+	Box:AddLabel("Kalau masih v4 / v4.2 / v4.3 / v4.4 berarti", true)
 	Box:AddLabel("LocalScript lu copy-an LAMA — copy ulang", true)
 	Box:AddLabel("file Preview/N3V4_Preview.client.lua.", true)
 end)

@@ -152,7 +152,7 @@ Toggle UI: `RightCtrl`
 
 **Simetri:** tiap tab groupbox kiri = kanan (2/2, 3/3, 3/3, 3/3, 3/3, 3/3, 5/5).
 
-> 🔎 **Cek versi copy-an lu:** footer window harus tertulis **v4.4**.
+> 🔎 **Cek versi copy-an lu:** footer window harus tertulis **v4.4.2**.
 > Kalau masih v4/v4.2/v4.3 berarti LocalScript lu copy-an lama — copy ulang.
 
 > ⚠️ Hub lu (`Games/N3-SAE.lua`) **belum** simetris: 12 `AddLeftGroupbox` vs
