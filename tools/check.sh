@@ -76,7 +76,7 @@ chk "v4.6.6: wallpaper layer BACK + window/canvas full (kartu 100% solid)" \
 chk "v4.6.7: NGGAK ada preset/combo yang pindah ke layer front (jebakan)" \
 	"! grep -q 'Layer = \"front\"' '$MOD' && ! grep -q 'Combo(\"Stretch\", \"front\")' '$MOD'"
 chk "v4.6.7: preset Load() nggak matiin GroupColor/CanvasColor custom user" \
-	"! sed -n '/local function Load/,/SafeNotify/p' '$MOD' | grep -q 'GroupColor'"
+	"! sed -n '/local function Load/,/SafeNotify/p' '$MOD' | grep -qE 'S\.(Group|Canvas)Color'"
 chk "resep v3 jadi default di MODULE (DEFAULTS)" \
 	"grep -q 'Transparency = 0.80' '$MOD' && grep -q 'Contrast = 30' '$MOD' && grep -q 'GroupColor = Color3.fromRGB(0, 0, 0)' '$MOD' && grep -q 'CanvasColor = Color3.new(0.045' '$MOD'"
 chk "state S di-init SEBELUM BuildResep/BuildTema (bug 'index nil with Image')" \
