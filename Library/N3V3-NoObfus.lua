@@ -431,7 +431,7 @@ local Templates = {
 		-- Kartu groupbox/tabbox/depbox.
 		GroupTransparency = 0,
 		-- Persen (0-100): kartu group dibedain dari background window.
-		GroupContrast = 10,
+		GroupContrast = 30,
 
 		--// Animations \\--
 		-- N3V4: default di-nyalain semua. Sebelumnya false semua, jadi hub yang
@@ -1591,8 +1591,10 @@ end
 Library.Surface = {
 	CanvasTransparency = 0.20, -- Container + sidebar
 	GroupTransparency = 0, -- kartu groupbox / tabbox / depbox
-	GroupContrast = 10, -- persen 0-100
-	GroupColor = Color3.fromRGB(0, 0, 0), -- override warna kartu
+	GroupContrast = 30, -- persen 0-100 (user v4.6.4: "30% lebih jelas", dulu 10%)
+	GroupColor = false, -- AUTO: warna kartu ikut GroupContrast. Override hitam
+	--            (0,0,0) MATIKAN contrast — itu kenapa group kelihatan
+	--            "terlalu transparan/nyatu" walau contrast dinaikin.
 	CanvasColor = Color3.new(0.045, 0.045, 0.045), -- override warna latar, dump user 0.045
 	WindowTransparency = 0, -- MainFrame (dasar window). 0 = solid
 }

@@ -10,6 +10,7 @@ Catatan keputusan desain + temuan teknis. **Baca ini dulu sebelum lanjut kerja.*
 |---|---|---|
 | **SIMETRIS** | "gue suka ui yang simteris banget ok? simteris." | 🔒 HARD RULE — lihat catatan penting di bawah |
 | **Corner radius** | 10 dulu ("ini bagus!"), terus user seting ulang ke **15** di resep v3 | ✅ **15 sekarang** (library + templates) |
+| **Group 30% lebih jelas** | "dulukan 10% sekarang coba bikin 30% lebih jelas biar ga terlalu aneh ... dan ingat itu ya" | 🔒 **GroupContrast 30 + GroupColor AUTO** |
 | **Motion level** | Balanced — spring + micro-interaction; efek mahal (blur/glow/ripple) opsional & auto-off di mobile | 🔒 Kekunci |
 | **Icon = lucide** | "pake icons yang ada di library gue jir. di situ ada link iconsnya kan?" | ✅ **Udah dibenerin** |
 | **Arah visual** | Belum diputusin ("abaikan dulu") | ⏳ Pending |
@@ -434,8 +435,8 @@ Library:SetSurface({
 	WindowTransparency = 0.00,
 	CanvasTransparency = 0.20,
 	GroupTransparency = 0.00,
-	GroupContrast = 10,
-	GroupColor = Color3.fromRGB(0, 0, 0),
+	GroupContrast = 30,        -- v4.6.4: dulu 10, user minta "30% lebih jelas"
+	GroupColor = false,        -- v4.6.4: AUTO (override hitam dulu MATIKIN contrast)
 	CanvasColor = Color3.new(0.045, 0.045, 0.045),
 })
 ```

@@ -13,6 +13,9 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.6.4: GROUP 30% LEBIH JELAS (user: "dulukan 10% sekarang coba bikin 30%").
+--        GroupColor override hitam dihapus biar GroupContrast BENERAN
+--        kepake; toggle "Group custom" mulai OFF (= auto).
 -- v4.6.3: Reset scheme = theme v4 user (bg 18, main 33, outline 61).
 --        NGGAK ada fitur baru — cuma ganti angka default, sesuai perintah.
 -- v4.6.2: DEFAULTS = RESEP v3 user (theme hitam-ungu + radius 15 + wallpaper v3).
@@ -40,8 +43,8 @@ Settings.DEFAULTS = {
 	Window = 0, -- transparency dasar window
 	Canvas = 0.20,
 	Group = 0,
-	Contrast = 10,
-	GroupColor = Color3.fromRGB(0, 0, 0),
+	Contrast = 30,
+	GroupColor = false, -- auto: ikut contrast 30% (v4.6.4)
 	CanvasColor = Color3.new(0.045, 0.045, 0.045), -- dump user 0.045
 }
 
@@ -118,7 +121,7 @@ function Settings:Attach(Library, Window, Options)
 
 	local LastTint = S.Color
 	local LastCanvas = S.CanvasColor
-	local LastGroup = S.GroupColor
+	local LastGroup = (typeof(S.GroupColor) == "Color3") and S.GroupColor or Color3.fromRGB(30, 30, 30)
 
 	--//========================================================================
 	-- RESEP / PRINT  (dipakai dua tab: tema + wallpaper)

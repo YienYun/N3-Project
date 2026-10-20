@@ -7,6 +7,12 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.6.4 — GROUP 30% LEBIH JELAS:
+	   • GroupContrast 10 -> 30 (kartu group dibedain 30% dari background).
+	   • Override GroupColor hitam DIPUTUS (jadi auto) — soalnya override itu
+	     yang bikin contrast nggak ngefek & group keliatan nyatu/transparan.
+	   • Slider "Group contrast" di tab setingan tetep bisa lu puter (0-40).
+
 	 CHANGELOG v4.6.3 — THEME v4 LU JADI DEFAULT (ganti angka doang, nol fitur):
 	   • bg (18,18,18) · main (33,33,33) · outline (61,61,61)
 	     (accent 218/68/255 + font putih + radius 15 tetep dari v3)
@@ -62,7 +68,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.6.3" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.6.4" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -79,7 +85,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.6.3",
+	Footer = "N3V4 • UI Preview Kit v4.6.4",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
