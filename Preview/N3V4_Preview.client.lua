@@ -7,6 +7,20 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.11.3 — SECTION IKUT COLOR THEME (text + garis):
+	   • Divider bertext ("----- Selamat Datang -----"): text sekarang
+	     TextColor3 "AccentColor" (theme-string = ikut sync otomatis
+	     tiap ganti theme), dan DUA GARIS sisinya sekarang solid
+	     "AccentColor" juga (sebelumnya fill MainColor + border
+	     OutlineColor = abu-abu). Garis jadi 2px accent bersih tanpa
+	     border.
+	   • Text divider tetep TextTransparency 0.5 (kelembutan lama gue
+	     pertahanin biar ga nyolok; garisnya yang solid). Kalau mau
+	     text-nya solid juga, bilang = satu baris flip.
+	   • Divider POLOS (tanpa text) sengaja TETAP netral MainColor /
+	     OutlineColor: itu separator biasa, bukan section header —
+	     biar accent ga spam di setiap pemisah.
+
 	 CHANGELOG v4.11.2 — BUG #30 (icon bolong) + panah kiri/kanan per sisi:
 	   • Penyebab icon ga muncul: GetIcon = atlas online (load async)
 	     fallback ke subset OFFLINE yang embed di library. "arrow-left"
@@ -504,7 +518,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.11.2" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.11.3" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -536,7 +550,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.11.2",
+	Footer = "N3V4 • UI Preview Kit v4.11.3",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

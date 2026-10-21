@@ -95,7 +95,7 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.11.2 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.11.3 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + card icon + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconCard' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
@@ -166,7 +166,9 @@ chk "v4.10.3: logo window hover zoom pakai helper zoom tab" \
 	"grep -q 'local WindowIconScale = New(\"UIScale\"' '$LIB' && grep -q 'Library:TweenTabZoom(WindowIconScale, Library.TabAppearance.HoverZoom or 1)' '$LIB'"
 chk "v4.11.0: status bar swap (wrapper shrink + cards + loop gated visible)" \
 	"grep -q 'Library.StatusBar = {' '$LIB' && grep -q 'function Library:StartStatusBarLoop' '$LIB' && grep -q 'function Library:GetExecutorName' '$LIB' && grep -q 'local StatusHolder = New' '$LIB' && grep -q 'Position = UDim2.new(1, -76, 0.5, 0)' '$LIB' && grep -q 'Name = \"chevron-left\"' '$LIB' && grep -q 'Name = \"chevron-right\"' '$LIB' && ! grep -q 'GetIcon(\"arrow-left\")' '$LIB' && grep -q 'Text = Key .. \":\"' '$LIB' && grep -q 'TextColor3 = \"AccentColor\"' '$LIB'"
-chk "footer v4.11.2" "grep -q 'Preview Kit v4.11.2' '$PRE'"
+chk "v4.11.3: section divider text + garis ikut AccentColor theme" \
+	"grep -q 'TextColor3 = \"AccentColor\", -- v4.11.3' '$LIB' && grep -q 'BackgroundColor3 = \"AccentColor\",' '$LIB'"
+chk "footer v4.11.3" "grep -q 'Preview Kit v4.11.3' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \

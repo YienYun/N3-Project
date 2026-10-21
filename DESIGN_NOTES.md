@@ -117,6 +117,23 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🌈 v4.11.3 — SECTION ikut color theme (text + garis)
+
+Request user: divider bertext ("----- Selamat Datang -----") harus
+ikut color theme yang di-sync; "jangan cuma text yang ikutin color
+tapi juga garis section itu juga".
+
+- TextLabel divider: TextColor3 = "AccentColor" (theme-string ->
+  registry recolor otomatis tiap UpdateColorsUsingRegistry).
+- Dua Frame garis sisi: BackgroundColor3 "AccentColor",
+  BorderSizePixel 0 (sebelumnya fill MainColor + border OutlineColor
+  1px yang bikin garis kelihatan abu-abu). Hasil: garis 2px accent
+  bersih, sinkron sama accent picker / print tema.
+- TextTransparency 0.5 dipertahankan (kelembutan existing; user ga
+  minta ubah alpha) — garis solid, text half-soft.
+- Divider polos (tanpa Text) TETAP netral: separator biasa bukan
+  section header; accent di tiap pemisah = spam visual.
+
 ## ➡️ v4.11.2 — BUG #30: icon bolong (salah sumber verifikasi) + panah per sisi
 
 User: "iconsnya mana? kok ga ada iconsnya? pake arrow kiri kanan bro!"
