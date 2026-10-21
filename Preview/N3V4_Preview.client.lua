@@ -7,6 +7,18 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.11.1 — STATUS BAR v2 (fix dari protes user):
+	   • Card sekarang DUA label: prefix ("Fps:", "Ping:", ...) warna
+	     AccentColor = ikut theme yang lu sync; NILAI-nya (50, 30, ...)
+	     tetep putih FontColor. Update live cuma nyentuh label nilai.
+	   • Icon button GA GANTI-GANTI lagi: arrow-left konstan (nama icon
+	     udah DIVERIFIKASI ada di atlas lucide mirror, bukan nebak).
+	     Animasi swap = icon spin 180 derajat tiap klik, ARAH spin
+	     sesuai sisi button yang diklik (kiri = counter-clockwise,
+	     kanan = clockwise); mode status = panah nunjuk kanan, balik
+	     search = panah kiri lagi.
+	   • Ukuran icon 24 -> 18px ("jangan terlalu besar iconsnya jir").
+
 	 CHANGELOG v4.11.0 — STATUS BAR SWAP (fitur baru, library langsung):
 	   • Search bar bar atas diciputin 32px per sisi (user: "kanan kiri
 	     nya sedikit lebih kecil sedikit saja").
@@ -479,7 +491,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.11.0" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.11.1" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -511,7 +523,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.11.0",
+	Footer = "N3V4 • UI Preview Kit v4.11.1",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

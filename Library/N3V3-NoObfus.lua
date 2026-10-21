@@ -1752,17 +1752,18 @@ end
 
 function Library:UpdateStatusBar(Fps: number, Ping: number)
 	local Labels = Library.StatusBarLabels
+	-- v4.11.1: values only; the themed prefix label is static per card
 	if Labels.Fps then
-		Labels.Fps.Text = "Fps: " .. Fps
+		Labels.Fps.Text = tostring(Fps)
 	end
 	if Labels.Ping then
-		Labels.Ping.Text = "Ping: " .. Ping
+		Labels.Ping.Text = tostring(Ping)
 	end
 	if Labels.Server then
-		Labels.Server.Text = "Server: " .. tostring(Library.StatusBar.Server)
+		Labels.Server.Text = tostring(Library.StatusBar.Server)
 	end
 	if Labels.Executor then
-		Labels.Executor.Text = "Executor: " .. Library.ExecutorName
+		Labels.Executor.Text = Library.ExecutorName
 	end
 end
 
@@ -1888,7 +1889,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.11.0 loaded — STATUS BAR SWAP: search bar diciputin kiri-kanan, button icon di sisi-sisinya, klik = swap jadi strip card Fps/Ping/Server/Executor live (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.11.1 loaded — STATUS BAR v2: prefix card warna accent theme + nilai putih, icon arrow-left konstan dengan spin swap sesuai sisi klik, icon 18px (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -11587,29 +11588,51 @@ function Library:CreateWindow(WindowInfo)
 				Color = "OutlineColor",
 				Parent = Card,
 			})
-			Library.StatusBarLabels[Key] = New("TextLabel", {
+			New("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				HorizontalAlignment = Enum.HorizontalAlignment.Center,
+				VerticalAlignment = Enum.VerticalAlignment.Center,
+				Padding = UDim.new(0, 4),
+				Parent = Card,
+			})
+			New("TextLabel", {
+				AutomaticSize = Enum.AutomaticSize.X,
 				BackgroundTransparency = 1,
-				Size = UDim2.fromScale(1, 1),
-				Text = Key .. ": -",
+				Size = UDim2.fromOffset(0, 16),
+				Text = Key .. ":",
+				TextColor3 = "AccentColor", -- v4.11.1: prefix rides the synced theme
+				TextSize = 13,
+				Parent = Card,
+			})
+			Library.StatusBarLabels[Key] = New("TextLabel", {
+				AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundTransparency = 1,
+				Size = UDim2.fromOffset(0, 16),
+				Text = "-",
+				TextColor3 = "FontColor", -- v4.11.1: value stays plain white
 				TextSize = 13,
 				Parent = Card,
 			})
 		end
 
-		local StatusIcon = Library:GetIcon("zap")
+		-- v4.11.1: arrow-left verified present in the lucide atlas mirror
+		local StatusIcon = Library:GetIcon("arrow-left")
 		local StatusButtons = {}
 		local StatusMode = false
-		local function SetStatusMode(On: boolean)
+		local function SetStatusMode(On: boolean, Dir: number)
 			StatusMode = On
 			SearchFrame.Visible = not On and not (WindowInfo.DisableSearch or false)
 			StatusHolder.Visible = On
-			local IconData = On and SearchIcon or StatusIcon
-			if IconData then
-				for _, Btn in ipairs(StatusButtons) do
-					Btn.Image = IconData.Url
-					Btn.ImageRectOffset = IconData.ImageRectOffset
-					Btn.ImageRectSize = IconData.ImageRectSize
-				end
+			-- v4.11.1: swap anim = the arrow spins half a turn, spin direction
+			-- follows which side button was clicked; the icon identity never
+			-- changes (user: "iconsnya kenap ganti ganti cok")
+			for _, Btn in ipairs(StatusButtons) do
+				local Spin = TweenService:Create(
+					Btn,
+					TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+					{ Rotation = Btn.Rotation + Dir * 180 }
+				)
+				Spin:Play()
 			end
 			if On then
 				Library.ExecutorName = Library:GetExecutorName()
@@ -11619,8 +11642,8 @@ function Library:CreateWindow(WindowInfo)
 			end
 		end
 		for _, Slot in ipairs({
-			{ Anchor = Vector2.new(1, 0.5), Position = UDim2.new(0, -6, 0.5, 0) },
-			{ Anchor = Vector2.new(0, 0.5), Position = UDim2.new(1, 6, 0.5, 0) },
+			{ Anchor = Vector2.new(1, 0.5), Position = UDim2.new(0, -6, 0.5, 0), Dir = -1 },
+			{ Anchor = Vector2.new(0, 0.5), Position = UDim2.new(1, 6, 0.5, 0), Dir = 1 },
 		}) do
 			local Btn = New("ImageButton", {
 				AnchorPoint = Slot.Anchor,
@@ -11630,12 +11653,12 @@ function Library:CreateWindow(WindowInfo)
 				ImageRectOffset = StatusIcon and StatusIcon.ImageRectOffset or Vector2.zero,
 				ImageRectSize = StatusIcon and StatusIcon.ImageRectSize or Vector2.zero,
 				Position = Slot.Position,
-				Size = UDim2.fromOffset(24, 24),
+				Size = UDim2.fromOffset(18, 18), -- v4.11.1: smaller (user: not too big)
 				Parent = RightWrapper,
 			})
 			table.insert(StatusButtons, Btn)
 			Btn.MouseButton1Click:Connect(function()
-				SetStatusMode(not StatusMode)
+				SetStatusMode(not StatusMode, Slot.Dir)
 			end)
 		end
 		if MoveIcon then

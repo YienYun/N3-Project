@@ -117,6 +117,25 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🎨 v4.11.1 — STATUS BAR v2: warna prefix theme + icon konstan spin
+
+Protes user: (1) prefix label card harus warna theme yang udah di-
+sync, nilainya tetep putih; (2) icon button jangan ganti identitas
+(zap<->search ditolak), harus panah kiri dengan animasi swap sesuai
+sisi yang diklik, dan jangan kegedean.
+
+- Card = 2 TextLabel via UIListLayout horizontal center: prefix
+  `Key .. ":"` TextColor3 "AccentColor" (theme-string, ikut sync),
+  nilai TextColor3 "FontColor" (putih). UpdateStatusBar sekarang cuma
+  nulis label nilai -> prefix ga kedip-kedip.
+- Icon button = "arrow-left" KONSTAN. Nama icon kali ini DIVERIFIKASI
+  langsung dari tarball mirror lucide (source.lua icon array +
+  codepoints) sebelum dipakai — pelajaran bug #29.
+- Animasi swap: tween Rotation Btn +Dir*180 per klik (Dir = -1 tombol
+  kiri / +1 tombol kanan) Quint-out 0.25s. Paritas rotasi = mode:
+  genap = panah kiri (search), ganjil = panah kanan (status).
+- Ukuran icon 24 -> 18px.
+
 ## 🔁 v4.11.0 — STATUS BAR SWAP (search bar <-> strip status card)
 
 Request user: search bar atas diciputin kiri-kanan sedikit; di dua
