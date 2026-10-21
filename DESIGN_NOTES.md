@@ -117,6 +117,13 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 📌 v4.10.2 — Bake print ICON ANIM (rilis ramping)
+
+Print user: Zoom 15, Tilt 10, Speed 0.30 -> kebake verbatim di
+Library.IconAnim defaults, DEFAULTS.IconAnim, fallback BuildIconAnim,
+default slider IA_*. Nol kode/fitur baru (pesan user: jangan nambah
+sampah, biar code ga bengkak). Checker nge-pin ketiga angka di LIB.
+
 ## 🐛 v4.10.1 — BUG #29: UIRotation itu kelas HALU (UI rusak total)
 
 Log user: `Unable to create an Instance of type "UIRotation"` dari

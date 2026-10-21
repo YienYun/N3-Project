@@ -7,6 +7,11 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.10.2 — BAKE print icon anim (rilis ramping, nol kode baru):
+	   Zoom 15, Tilt 10, Speed 0.30 kebake verbatim di default library,
+	   DEFAULTS module, fallback BuildIconAnim, sama default slider.
+	   Sesuai pesan user: jangan nambah sampah, biar code ga bengkak.
+
 	 CHANGELOG v4.10.1 — BUG #29 (rusak co): UIRotation GA ADA di Roblox.
 	   New("UIRotation") di AddGroupbox -> "Unable to create an Instance
 	   of type UIRotation" -> build groupbox PERTAMA mati -> UI rusak.
@@ -451,7 +456,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.10.1" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.10.2" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -483,7 +488,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.10.1",
+	Footer = "N3V4 • UI Preview Kit v4.10.2",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

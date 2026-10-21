@@ -176,11 +176,11 @@ Settings.DEFAULTS = {
 		Intensity = 10,
 		Smooth = 5,
 	},
-	IconAnim = { -- v4.10.0: group icon hover anim (zoom + tilt)
+	IconAnim = { -- v4.10.0: group icon hover anim (v4.10.2: print user kebake)
 		Enabled = true,
-		Zoom = 12,
-		Tilt = 6,
-		Speed = 0.18,
+		Zoom = 15,
+		Tilt = 10,
+		Speed = 0.30,
 	},
 }
 
@@ -387,9 +387,9 @@ function Settings:Attach(Library, Window, Options)
 			"--[[ N3V4 ICON ANIM ]]",
 			"Library:SetIconAnim({",
 			string.format("\tEnabled = %s,", tostring(A.Enabled ~= false)),
-			string.format("\tZoom = %d,", A.Zoom or 12),
-			string.format("\tTilt = %d,", A.Tilt or 6),
-			string.format("\tSpeed = %.2f,", A.Speed or 0.18),
+			string.format("\tZoom = %d,", A.Zoom or 15),
+			string.format("\tTilt = %d,", A.Tilt or 10),
+			string.format("\tSpeed = %.2f,", A.Speed or 0.30),
 			"})",
 		}, "\n")
 	end
@@ -689,19 +689,19 @@ function Settings:Attach(Library, Window, Options)
 			end,
 		})
 		Box:AddSlider("IA_Zoom", {
-			Text = "Zoom icon saat hover", Default = IA0.Zoom or 12, Min = 0, Max = 40, Rounding = 0, Suffix = "%",
+			Text = "Zoom icon saat hover", Default = IA0.Zoom or 15, Min = 0, Max = 40, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
 				Library:SetIconAnim({ Zoom = Value })
 			end,
 		})
 		Box:AddSlider("IA_Tilt", {
-			Text = "Kemiringan icon saat hover", Default = IA0.Tilt or 6, Min = 0, Max = 20, Rounding = 0, Suffix = "°",
+			Text = "Kemiringan icon saat hover", Default = IA0.Tilt or 10, Min = 0, Max = 20, Rounding = 0, Suffix = "°",
 			Callback = function(Value)
 				Library:SetIconAnim({ Tilt = Value })
 			end,
 		})
 		Box:AddSlider("IA_Speed", {
-			Text = "Durasi animasi icon", Default = IA0.Speed or 0.18, Min = 0.05, Max = 0.6, Rounding = 2, Suffix = "s",
+			Text = "Durasi animasi icon", Default = IA0.Speed or 0.30, Min = 0.05, Max = 0.6, Rounding = 2, Suffix = "s",
 			Callback = function(Value)
 				Library:SetIconAnim({ Speed = Value })
 			end,

@@ -1734,9 +1734,9 @@ end
 -- stays the library's only RenderStepped connection.
 Library.IconAnim = {
 	Enabled = true,
-	Zoom = 12, -- percent added to the icon scale while hovered
-	Tilt = 6, -- degrees of rotation while hovered
-	Speed = 0.18, -- tween duration in seconds
+	Zoom = 15, -- percent added while hovered (user-baked print, v4.10.2)
+	Tilt = 10, -- degrees of rotation while hovered (user-baked, v4.10.2)
+	Speed = 0.30, -- tween duration in seconds (user-baked, v4.10.2)
 }
 Library.IconAnimRegistry = {}
 
@@ -1816,7 +1816,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.10.1 loaded — ICON ANIM fix bug #29: tilt pakai GuiObject.Rotation native (UIRotation itu kelas halu, bikin AddGroupbox mati) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.10.2 loaded — ICON ANIM: resep user kebake (zoom 15%, tilt 10, 0.30s) — rilis ramping, nol kode baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
