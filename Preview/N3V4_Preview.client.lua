@@ -7,6 +7,24 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.9.2 — GLOW v3 + BUG #27 (knob mati):
+	   • BUG #27 (penyebab "ga ngerti, mana tombol setting"): knob glow
+	     v4.9.0/4.9.1 gue taroh di Try yang ngeref Box NIL -> pcall
+	     nelen error diam-diam, knob + box Resep Tema GA ADA di UI.
+	     Sekarang groupbox KIRI "Cursor Glow" sendiri: toggle, picker
+	     warna, slider lebar/kejelasan/kelembutan, + print & copy resep
+	     glow (aturan v4.8.5).
+	   • "kasih tombol seting gue biar gue yang atur": groupbox KANAN
+	     "Preset Glow" = 5 tombol: Samar 5%/180px (bawaan), Halus
+	     10%/220px, Jernih 20%/260px, Matikan, Warna ikut accent lagi.
+	     Abis klik, knob di sebelah kiri auto-sync.
+	   • "terlalu bulat / lebih samar / pudar ke jelas di tengah /
+	     jangan terlalu lebar": circle flat diganti haze radial =
+	     16 micro-layer falloff kuadrat (step alpha ~0.2%, mata ga
+	     bakal lihat ring), tengah sedikit lebih jelas daripada tepi,
+	     default diameter 180px (dari 280).
+	   • Simetri T1 tetep: 4/4 -> 5/5.
+
 	 CHANGELOG v4.9.1 — GLOW v2 (fix total dari screenshot user):
 	   • "kok keluar window sih?" — MainFrame emang nggak nge-clip;
 	     sekarang glow hidup di DALAM container clip seukuran window
@@ -397,7 +415,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.9.1" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.9.2" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -429,7 +447,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.9.1",
+	Footer = "N3V4 • UI Preview Kit v4.9.2",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

@@ -13,6 +13,16 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.9.2: BUG #27 — knob glow v4.9.0/4.9.1 MATI runtime: gue naroh knob
+--        di Try yang ngeref Box NIL (upvalue ga ada) -> pcall nelen
+--        error, warn doang di Output, dan box "Resep Tema" di bawahnya
+--        ikut ga ke-create. Itu sebabnya "ga ngerti, mana tombol
+--        setting". Sekarang: groupbox KIRI sendiri "Cursor Glow" (5
+--        knob + print + copy sesuai aturan v4.8.5) dan groupbox KANAN
+--        "Preset Glow" (tombol-tombol biar dia yang atur: samar/halus/
+--        jernih/mati/ikut-accent, sync balik ke knob). Visual library:
+--        haze radial samar 16 micro-layer, tengah sedikit lebih jelas,
+--        default 180px ("jangan terlalu lebar").
 -- v4.9.1: GLOW v2 sesuai teriakan user: SATU circle aja (stack 6 layer
 --        keliatan ring bertingkat = jelek), opacity 5% (Intensity = 5),
 --        dan di-clip di dalam rect window (v4.9.0 bocor keluar window).
@@ -146,7 +156,7 @@ Settings.DEFAULTS = {
 	Glow = { -- v4.9.0: cursor glow (warna ikut accent sampe lu set sendiri)
 		Enabled = true,
 		Color = false,
-		Size = 280,
+		Size = 180,
 		Intensity = 5,
 		Smooth = 12,
 	},
@@ -335,8 +345,21 @@ function Settings:Attach(Library, Window, Options)
 	end
 
 	-- Resep WALLPAPER + SURFACE (transparansi, warna kartu/latar).
-	local function BuildResep()
+	local function BuildGlow()
 		local G = Library.CursorGlow or {}
+		return table.concat({
+			"--[[ N3V4 CURSOR GLOW ]]",
+			"Library:SetCursorGlow({",
+			string.format("\tEnabled = %s,", tostring(G.Enabled ~= false)),
+			(typeof(G.Color) == "Color3") and ("\tColor = " .. RGB(G.Color) .. ",") or "\tColor = false, -- ikut accent theme",
+			string.format("\tSize = %d,", G.Size or 180),
+			string.format("\tIntensity = %d,", G.Intensity or 5),
+			string.format("\tSmooth = %d,", G.Smooth or 12),
+			"})",
+		}, "\n")
+	end
+
+	local function BuildResep()
 		local lines = {
 			"--[[ N3V4 RESEP WALLPAPER + SURFACE ]]",
 			"Library:SetWallpaper({",
@@ -362,14 +385,7 @@ function Settings:Attach(Library, Window, Options)
 				or "\tCanvasColor = false, -- ikut theme",
 			"})",
 			"",
-			"--[[ N3V4 CURSOR GLOW ]]",
-			"Library:SetCursorGlow({",
-			string.format("\tEnabled = %s,", tostring(G.Enabled ~= false)),
-			(typeof(G.Color) == "Color3") and ("\tColor = " .. RGB(G.Color) .. ",") or "\tColor = false, -- ikut accent theme",
-			string.format("\tSize = %d,", G.Size or 280),
-			string.format("\tIntensity = %d,", G.Intensity or 5),
-			string.format("\tSmooth = %d,", G.Smooth or 12),
-			"})",
+			BuildGlow(),
 		}
 		return table.concat(lines, "\n")
 	end
@@ -658,41 +674,85 @@ function Settings:Attach(Library, Window, Options)
 		end)
 	end)
 
-	Try("Settings: info", function()
-		-- v4.9.0: cursor glow (cahaya background ngikut cursor)
+	Try("Settings: cursor glow", function()
+		-- v4.9.2: groupbox sendiri (bug #27: dulu nempel di Box nil -> mati)
 		local CG0 = Library.CursorGlow or {}
+		local Box = T1:AddLeftGroupbox("Cursor Glow", "sparkles")
+
 		local GlowTog = Box:AddToggle("GW_On", {
-			Text = "Glow cursor", Default = CG0.Enabled ~= false,
+			Text = "Cursor glow aktif", Default = CG0.Enabled ~= false,
 			Callback = function(On)
 				Library:SetCursorGlow({ Enabled = On })
 			end,
 		})
 		GlowTog:AddColorPicker("GW_C", {
-			Title = "Warna glow (default ikut accent)",
+			Title = "Warna glow (preset 'ikut accent' buat balik)",
 			Default = (typeof(CG0.Color) == "Color3" and CG0.Color) or (Library.Scheme and Library.Scheme.AccentColor) or Color3.fromRGB(218, 68, 255),
 			Callback = function(Color)
 				Library:SetCursorGlow({ Color = Color })
 			end,
 		})
 		Box:AddSlider("GW_Size", {
-			Text = "Ukuran glow", Default = CG0.Size or 280, Min = 80, Max = 600, Rounding = 0, Suffix = "px",
+			Text = "Lebar glow (diameter)", Default = CG0.Size or 180, Min = 60, Max = 400, Rounding = 0, Suffix = "px",
 			Callback = function(Value)
 				Library:SetCursorGlow({ Size = Value })
 			end,
 		})
 		Box:AddSlider("GW_Int", {
-			Text = "Glow intensity / opacity (0% = invisible)", Default = CG0.Intensity or 5, Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Text = "Kejelasan tengah glow (0% = invisible)", Default = CG0.Intensity or 5, Min = 0, Max = 100, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
 				Library:SetCursorGlow({ Intensity = Value })
 			end,
 		})
 		Box:AddSlider("GW_Smooth", {
-			Text = "Kecepatan glow ngikut cursor", Default = CG0.Smooth or 12, Min = 1, Max = 30, Rounding = 0, Suffix = "/s",
+			Text = "Kelembutan trail (ngikut cursor)", Default = CG0.Smooth or 12, Min = 1, Max = 30, Rounding = 0, Suffix = "/s",
 			Callback = function(Value)
 				Library:SetCursorGlow({ Smooth = Value })
 			end,
 		})
 
+		-- v4.8.5 rule: every settings groupbox ends with print + copy
+		Box:AddButton("Print resep glow", function()
+			print("[N3V4 RESEP GLOW] paste ini balik:\n" .. BuildGlow())
+		end)
+		Box:AddButton("Copy resep glow", function()
+			local Text = BuildGlow()
+			if CopyClip(Text) then
+				SafeNotify({ Title = "Resep glow", Description = "Copied ke clipboard.", Icon = "clipboard-check", Time = 3 })
+			else
+				print("[N3V4 RESEP GLOW]\n" .. Text)
+				SafeNotify({ Title = "Resep glow", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+			end
+		end)
+	end)
+
+	Try("Settings: glow presets", function()
+		-- v4.9.2: "kasih tombol seting gue jir biar gue yang atur cok"
+		local Box = T1:AddRightGroupbox("Preset Glow", "wand-sparkles")
+
+		local function SyncKnobs()
+			local G = Library.CursorGlow or {}
+			pcall(function() Library.Options.GW_On:SetValue(G.Enabled ~= false) end)
+			pcall(function() Library.Options.GW_Size:SetValue(tostring(G.Size)) end)
+			pcall(function() Library.Options.GW_Int:SetValue(tostring(G.Intensity)) end)
+			pcall(function() Library.Options.GW_Smooth:SetValue(tostring(G.Smooth)) end)
+		end
+		local function Preset(Name, Info)
+			Box:AddButton(Name, function()
+				Library:SetCursorGlow(Info)
+				SyncKnobs()
+				SafeNotify({ Title = "Cursor Glow", Description = "Preset: " .. Name, Icon = "sparkles", Time = 3 })
+			end)
+		end
+
+		Preset("Samar (bawaan: 5%, 180px)", { Enabled = true, Intensity = 5, Size = 180 })
+		Preset("Halus (10%, 220px)", { Enabled = true, Intensity = 10, Size = 220 })
+		Preset("Jernih (20%, 260px)", { Enabled = true, Intensity = 20, Size = 260 })
+		Preset("Matikan glow", { Enabled = false })
+		Preset("Warna ikut accent lagi", { Color = false })
+	end)
+
+	Try("Settings: info", function()
 		local Box = T1:AddRightGroupbox("Resep Tema", "copy")
 
 		-- yang diminta user: print resep THEME (accent/outline/main/font/bg)

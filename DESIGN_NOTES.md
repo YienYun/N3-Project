@@ -117,6 +117,40 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🔧 v4.9.2 — GLOW v3 (haze radial samar) + BUG #27 (knob mati runtime)
+
+### Bug #27 (memalukan, murni salah gue)
+Knob glow v4.9.0/4.9.1 gue sisipkan di dalam `Try("Settings: info")`
+TAPI sebelum `local Box = ...` box itu sendiri -> callback ngeref
+upvalue `Box` yang NIL -> `nil:AddToggle` error -> `Try` = pcall nelan
+error (cuma warn di Output yang ga dibaca user) -> SELURUH isi Try mati:
+knob glow GA PERNAH render DAN box "Resep Tema" (print/copy tema) ikut
+hilang. Gejala dari user: "kasih tombol seting gue jir biar gue yang
+atur cok. buset dah ga ngerti tadi tadi anjir" — settingnya emang ga ada.
+Pelajaran: grep-check text doang ga nangkep nil-runtime; sekarang checker
+nge-pin `grep -A2 'Try("Settings: info"'` harus langsung ketemu
+`local Box =` nya sendiri, dan knob pindah ke Try mandiri.
+
+### Visual (teriakan user: terlalu bulat, lebih samar, pudar->jelas di
+tengah, jangan terlalu lebar)
+- Roblox GUI TIDAK punya radial gradient primitive; asset image external
+  ga bisa diverifikasi offline. Solusi: 16 micro-circle, falloff kuadrat
+  w(t)=(1-t)^2 ternormalisasi (sum weight = 1 => opacity tengah persis
+  Intensity%). Step alpha antar layer di default 5% = ~0.2% => haze
+  kontinu, bukan ring (v4.9.0 jelek karena 6 layer step 34%->3%).
+- Size default 280 -> 180 px; slider 60-400.
+- Clip container CursorGlowClip tetep (v4.9.1).
+
+### Setting yang beneran hidup (permintaan "tombol seting gue")
+- T1 kiri groupbox baru "Cursor Glow": toggle GW_On, picker GW_C,
+  slider GW_Size (60-400, default 180), GW_Int (kejelasan tengah,
+  default 5), GW_Smooth; ditutup print + copy resep glow (aturan v4.8.5,
+  builder BuildGlow() dipakai juga oleh BuildResep biar single source).
+- T1 kanan groupbox baru "Preset Glow": 5 tombol preset (Samar 5/180,
+  Halus 10/220, Jernih 20/260, Matikan, Warna ikut accent lagi) +
+  SyncKnobs via Library.Options.*:SetValue biar slider ga stale.
+- Simetri T1: 4/4 -> 5/5.
+
 ## 😤 v4.9.1 — GLOW v2: 1 circle, opacity 5%, di-clip dalam window
 
 Screenshot user v4.9.0: glow BOCOR keluar window (MainFrame nggak punya

@@ -1161,8 +1161,11 @@ function Library:UpdateColorsUsingRegistry()
 	end
 
 	-- v4.9.0: glow follows the accent until the user pins its own color
-	if Library.CursorGlowFrame and typeof(Library.CursorGlow.Color) ~= "Color3" then
-		Library.CursorGlowFrame.BackgroundColor3 = Library.Scheme.AccentColor
+	if Library.CursorGlowLayers and typeof(Library.CursorGlow.Color) ~= "Color3" then
+		local Color = Library.Scheme.AccentColor
+		for _, Layer in ipairs(Library.CursorGlowLayers) do
+			Layer.Frame.BackgroundColor3 = Color
+		end
 	end
 end
 
@@ -1666,16 +1669,22 @@ Library.TabVisuals = {} -- rec { Button, Icon, Card, Scale, Tab } per sidebar ta
 -- N3V4 v4.9.0: CURSOR GLOW — a soft light that trails the cursor on the
 -- background layer (ZIndex 0): above the wallpaper (-2/-1) and below every
 -- content element (>= 1), so it shines through the semi-transparent group
--- cards. v4.9.1 (user: "cukup 1 saja", "5% saja", "kok keluar window"):
--- ONE circle only, opacity = Intensity percent directly, and a clip
--- container keeps the pool inside the window rect (rounded corners too).
+-- cards. v4.9.1: a clip container keeps the pool inside the window rect.
+-- v4.9.2 (user: "more hazy", "faded outside, slightly clearer in the
+-- middle", "not too wide"): Roblox GUI has no radial gradient
+-- primitive and no verifiable image asset is allowed, so the fade is
+-- built from 16 micro circles with quadratic falloff. At the 5% default
+-- the biggest alpha step between neighbours is ~0.2% = one continuous
+-- haze, NOT the six fat rings v4.9.0 shipped (those stepped 34%->3% and
+-- read as circles). Intensity = center opacity %, Size = outer diameter.
 Library.CursorGlow = {
 	Enabled = true,
 	Color = false, -- false = follow AccentColor (same pattern as card line)
-	Size = 280, -- px, circle diameter
-	Intensity = 5, -- percent opacity of the single glow circle (user dial)
+	Size = 180, -- px, outer diameter (user: keep it narrow)
+	Intensity = 5, -- percent opacity at the center (user dial)
 	Smooth = 12, -- follow speed per second
 }
+Library.CursorGlowLayers = {}
 Library.CursorGlowFade = 0
 
 function Library:GetCursorGlowColor(): Color3
@@ -1686,26 +1695,21 @@ function Library:GetCursorGlowColor(): Color3
 end
 
 function Library:UpdateCursorGlowTransparency(Fade: number)
-	local Frame = Library.CursorGlowFrame
-	if not Frame then
-		return
+	local Target = math.clamp(Library.CursorGlow.Intensity, 0, 100) / 100 * Fade
+	for _, Layer in ipairs(Library.CursorGlowLayers) do
+		Layer.Frame.BackgroundTransparency = 1 - math.clamp(Target * Layer.Weight, 0, 0.9)
 	end
-	local Alpha = math.clamp(Library.CursorGlow.Intensity, 0, 100) / 100 * Fade
-	Frame.BackgroundTransparency = 1 - Alpha
-	local On = Library.CursorGlow.Enabled ~= false and Fade > 0.01
-	Frame.Visible = On
 	if Library.CursorGlowHolder then
-		Library.CursorGlowHolder.Visible = On
+		Library.CursorGlowHolder.Visible = Library.CursorGlow.Enabled ~= false and Fade > 0.01
 	end
 end
 
 function Library:ApplyCursorGlow()
-	local Frame = Library.CursorGlowFrame
-	if not Frame then
-		return
+	local Color = Library:GetCursorGlowColor()
+	for _, Layer in ipairs(Library.CursorGlowLayers) do
+		Layer.Frame.BackgroundColor3 = Color
+		Layer.Frame.Size = UDim2.fromOffset(Library.CursorGlow.Size * Layer.Frac, Library.CursorGlow.Size * Layer.Frac)
 	end
-	Frame.BackgroundColor3 = Library:GetCursorGlowColor()
-	Frame.Size = UDim2.fromOffset(Library.CursorGlow.Size, Library.CursorGlow.Size)
 	Library:UpdateCursorGlowTransparency(Library.CursorGlowFade)
 end
 
@@ -1748,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.9.1 loaded — CURSOR GLOW v2: 1 circle aja, opacity 5%, di-clip di dalam window (nol bocor keluar) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.9.2 loaded — CURSOR GLOW v3: haze radial samar (16 micro-layer), 180px, knob + preset beneran hidup (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -11241,19 +11245,35 @@ function Library:CreateWindow(WindowInfo)
 			ZIndex = 0,
 			Parent = GlowClip,
 		})
-		Library.CursorGlowFrame = New("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			BackgroundColor3 = Library:GetCursorGlowColor(),
-			BackgroundTransparency = 1,
-			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(0, 0),
-			ZIndex = 0,
-			Parent = Library.CursorGlowHolder,
-		})
-		New("UICorner", {
-			CornerRadius = UDim.new(0.5, 0),
-			Parent = Library.CursorGlowFrame,
-		})
+		-- v4.9.2: 16 micro circles, quadratic falloff = one smooth haze
+		-- (see the CursorGlow table note for why not one flat circle).
+		local GLOW_LAYERS = 16
+		local WeightSum = 0
+		for Index = 1, GLOW_LAYERS do
+			WeightSum += (1 - Index / GLOW_LAYERS) ^ 2
+		end
+		Library.CursorGlowLayers = {}
+		for Index = 1, GLOW_LAYERS do
+			local Frac = Index / GLOW_LAYERS
+			local Layer = {
+				Frac = Frac,
+				Weight = ((1 - Frac) ^ 2) / WeightSum,
+				Frame = New("Frame", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					BackgroundColor3 = Library:GetCursorGlowColor(),
+					BackgroundTransparency = 1,
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromOffset(0, 0),
+					ZIndex = 0,
+					Parent = Library.CursorGlowHolder,
+				}),
+			}
+			table.insert(Library.CursorGlowLayers, Layer)
+			New("UICorner", {
+				CornerRadius = UDim.new(0.5, 0),
+				Parent = Layer.Frame,
+			})
+		end
 		Library:ApplyCursorGlow()
 		Library:StartCursorGlowLoop()
 
