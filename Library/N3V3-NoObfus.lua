@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.12.9 loaded — DIVIDER ANTI-MATI: create frame garis di-pcall (SafeLine); kalau gagal, error ASLI di-print ke Output lewat warn dan box/konten SELANJUTNYA TETAP HIDUP (ga ada lagi box kepotong / seting kehilangan box kanan) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.12.10 loaded — ROOT CAKEET: property transparansi border lama GA ADA di Roblox modern (itu error console lu), outline garis sekarang UIStroke (Color accent + Thickness 1 + Transparency ASLI), pixel identik border 1px dulu; knob 0-100% akhirnya beneran jalan (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5807,7 +5807,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.12.9"
+	Library.N3V4Version = "4.12.10"
 
 	Library.DividerAppearance = {
 		LineTransparency = 0.3,
@@ -5819,9 +5819,9 @@ do
 	function Library:ApplyDividerAppearance()
 		for _, D in ipairs(Library.DividerInstances) do
 			if not D.Destroyed then
-				for _, Frame in ipairs(D.Lines or {}) do
-					if Frame then
-						Frame.BorderTransparency = Library.DividerAppearance.LineTransparency
+				for _, Stroke in ipairs(D.Lines or {}) do
+					if Stroke then
+						Stroke.Transparency = Library.DividerAppearance.LineTransparency
 					end
 				end
 				if D.Label then
@@ -5891,7 +5891,13 @@ do
 				warn("[N3V4] divider line gagal dibikin: " .. tostring(Frame))
 				return nil
 			end
-			return Frame
+			return New("UIStroke", {
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				Color = "AccentColor",
+				Thickness = 1,
+				Transparency = Library.DividerAppearance.LineTransparency,
+				Parent = Frame,
+			})
 		end
 
 		if Text then
@@ -5913,40 +5919,28 @@ do
 			LineFrames[1] = SafeLine({
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = "MainColor",
-				BorderColor3 = "AccentColor",
-				BorderSizePixel = 1,
+				BorderSizePixel = 0,
 				Position = UDim2.fromScale(0, 0.5),
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,
 			})
-			if LineFrames[1] then
-				LineFrames[1].BorderTransparency = Library.DividerAppearance.LineTransparency
-			end
 			LineFrames[2] = SafeLine({
 				AnchorPoint = Vector2.new(1, 0.5),
 				BackgroundColor3 = "MainColor",
-				BorderColor3 = "AccentColor",
-				BorderSizePixel = 1,
+				BorderSizePixel = 0,
 				Position = UDim2.fromScale(1, 0.5),
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,
 			})
-			if LineFrames[2] then
-				LineFrames[2].BorderTransparency = Library.DividerAppearance.LineTransparency
-			end
 		else
 			LineFrames[1] = SafeLine({
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = "MainColor",
-				BorderColor3 = "AccentColor",
-				BorderSizePixel = 1,
+				BorderSizePixel = 0,
 				Position = UDim2.fromScale(0, 0.5),
 				Size = UDim2.new(1, 0, 0, 2),
 				Parent = InnerHolder,
 			})
-			if LineFrames[1] then
-				LineFrames[1].BorderTransparency = Library.DividerAppearance.LineTransparency
-			end
 		end
 
 		Groupbox:Resize()

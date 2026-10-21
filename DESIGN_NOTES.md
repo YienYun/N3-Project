@@ -1657,3 +1657,27 @@ Keputusan desain: UI nggak boleh bisa MATI karena divider.
   matikan pembangunan box setting.
 - Efek samping sengaja: kalau flake-nya masih ada, Output user sekarang
   bawa pesan error PERSIS (warn) => round berikutnya sniper, bukan nebak.
+
+## v4.12.10 — ROOT CAUSE SEBENARNYA: BorderTransparency GA ADA di Roblox modern
+User kirim console lengkap v4.12.9: TIGA komponen GAGAL semua dengan
+pesan SAMA: "BorderTransparency is not a valid member of Frame".
+Property itu memang SUDAH DIHAPUS Roblox (border legacy diganti
+UIStroke); yang masih hidup cuma BorderColor3/BorderSizePixel
+(deprecated). Jadi semua round v4.12.6-4.12.9 mati di assign property
+hantu — titik matinya kelihatan "berpindah-pindah" karena assign-nya
+gue pindah-pindah (dalam table New -> pasca-create -> di-guard nil),
+padahal biangnya satu: property tidak eksis.
+
+Kenapa lolos gates gue: luau-analyze --mode=nonstrict nggak flag
+unknown member assignment, dan gue cuma grep SyntaxError. Pelajaran:
+property Roblox yang dipakai WAJIB diverifikasi eksis (docs/API), dan
+checker sekarang pin `! grep BorderTransparency` di LIB/MOD/PRE.
+
+Fix bener: outline garis = UIStroke child (ApplyStrokeMode Border,
+Color "AccentColor" theme string, Thickness 1, Transparency =
+DividerAppearance.LineTransparency) — pixel IDENTIK border 1px desain
+asli (frame 2px, stroke 1px atas+bawah), tapi Transparency-nya property
+ASLI jadi knob 0-100% akhirnya beneran berfungsi. Frame garis:
+BorderSizePixel 0, fill MainColor tetep. SafeLine return stroke-nya;
+Divider.Lines = daftar stroke; ApplyDividerAppearance fade via
+Stroke.Transparency. Assign transparansi pasca-create DIHAPUS semua.
