@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.12.7 loaded — DIVIDER FIX: transparency garis/text sekarang di-assign SETELAH instance jadi (angka langsung, ga lewat FillInstance/theme registry), table New() balik persis bentuk v4.12.5 yang terbukti aman; default garis 30% (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.12.8 loaded — VERSION HANDSHAKE: Library.N3V4Version ada biar module settings bisa detect kalau library yang ke-require masih versi lama; sample divider sekarang ada di DUA box seting (kiri+kanan) biar realtime keliatan saat slider digeser (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5806,6 +5806,8 @@ do
 
 		return FeedObj
 	end
+
+	Library.N3V4Version = "4.12.8"
 
 	Library.DividerAppearance = {
 		LineTransparency = 0.3,

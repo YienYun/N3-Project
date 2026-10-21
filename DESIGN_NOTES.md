@@ -1611,3 +1611,29 @@ TextLabel.TextTransparency) — nggak lewat FillInstance/registry sama sekali.
 Default garis 0.4 -> 0.3 (user: 40% kebaca putih/pudar, 0% terlalu mencolok).
 Pelajaran: JANGAN tambah key baru ke table New() komponen core yang lewat
 FillInstance theme-registry; assign property numerik setelah instance lahir.
+
+## v4.12.8 — HANDSHAKE VERSI + sample realtime di dua box
+Report user v4.12.7: slider digeser GA ada perubahan, box kanan
+("Section Text") hilang, dan "harusnya section lu taruh di tempat seting
+biar gue bisa lihat secara realtime gue geser-geser".
+
+Diagnosa pola gejala (slider mati + box kanan ga kebentuk + sample ga
+keliatan) = module settings jalan melawan LIBRARY versi lama di run dia
+(DividerAppearance/SetDividerTransparency nil => error saat box kiri
+kebentuk => semua setelahnya mati). Bukan kode v4.12.7 yang salah jalur
+(create frame udah bisect ke bentuk terbukti), tapi versi file di run
+dia yang campur.
+
+Fix:
+- LIB: field Library.N3V4Version = "4.12.8" (handshake).
+- MOD: dua box divider dibungkus guard
+  `if type(Library.DividerAppearance) == "table" and type(Library.SetDividerTransparency) == "function"`
+  — kalau library lama, box dilewati DAN print diagnostik jelas di Output
+  (sebut N3V4Version yang kebaca), bukan error bisu yang matikan sisa UI.
+- Sample divider REALTIME sekarang di DUA box: "Contoh garis" di box kiri
+  (sebelah slider garis) dan "Contoh text" di box kanan (sebelah slider
+  text) — persis request user: geser slider, contoh di sebelah tangan lu
+  berubah detik itu juga.
+- Pelajaran: fitur module-yang-butuh-API-library baru WAJIB pakai guard
+  versi + pesan diagnostik, biar mismatch versi file di run user nggak
+  pernah lagi tampil sebagai "UI rusak / gue ngetroll".

@@ -639,48 +639,53 @@ function Settings:Attach(Library, Window, Options)
 	end)
 
 	Try("Settings: glow presets", function()
-		local Box = T1:AddLeftGroupbox("Section Divider", "minus")
-		Box:AddSlider("SD_LT", {
-			Text = "Transparansi garis (outline)", Default = math.floor(Library.DividerAppearance.LineTransparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
-			Callback = function(Value)
-				Library:SetDividerTransparency(Value / 100, nil)
-			end,
-		})
-		Box:AddDivider("Contoh garis")
-		Box:AddButton("Print setingan divider", function()
-			print(("[N3V4 DIVIDER] LineTransparency = %s | TextTransparency = %s"):format(Library.DividerAppearance.LineTransparency, Library.DividerAppearance.TextTransparency))
-			SafeNotify({ Title = "Setingan divider", Description = "Cek Output.", Icon = "info", Time = 3 })
-		end)
-		Box:AddButton("Copy setingan divider", function()
-			local Text = ("Library:SetDividerTransparency(%s, %s)"):format(Library.DividerAppearance.LineTransparency, Library.DividerAppearance.TextTransparency)
-			if CopyClip(Text) then
-				SafeNotify({ Title = "Setingan divider", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
-			else
-				print("[N3V4 DIVIDER] paste ini balik:\n" .. Text)
-				SafeNotify({ Title = "Setingan divider", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
-			end
-		end)
+		if type(Library.DividerAppearance) == "table" and type(Library.SetDividerTransparency) == "function" then
+			local Box = T1:AddLeftGroupbox("Section Divider", "minus")
+			Box:AddSlider("SD_LT", {
+				Text = "Transparansi garis (outline)", Default = math.floor(Library.DividerAppearance.LineTransparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetDividerTransparency(Value / 100, nil)
+				end,
+			})
+			Box:AddDivider("Contoh garis")
+			Box:AddButton("Print setingan divider", function()
+				print(("[N3V4 DIVIDER] LineTransparency = %s | TextTransparency = %s"):format(Library.DividerAppearance.LineTransparency, Library.DividerAppearance.TextTransparency))
+				SafeNotify({ Title = "Setingan divider", Description = "Cek Output.", Icon = "info", Time = 3 })
+			end)
+			Box:AddButton("Copy setingan divider", function()
+				local Text = ("Library:SetDividerTransparency(%s, %s)"):format(Library.DividerAppearance.LineTransparency, Library.DividerAppearance.TextTransparency)
+				if CopyClip(Text) then
+					SafeNotify({ Title = "Setingan divider", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
+				else
+					print("[N3V4 DIVIDER] paste ini balik:\n" .. Text)
+					SafeNotify({ Title = "Setingan divider", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+				end
+			end)
 
-		local Box = T1:AddRightGroupbox("Section Text", "type")
-		Box:AddSlider("SD_TT", {
-			Text = "Transparansi text section", Default = math.floor(Library.DividerAppearance.TextTransparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
-			Callback = function(Value)
-				Library:SetDividerTransparency(nil, Value / 100)
-			end,
-		})
-		Box:AddButton("Print setingan divider", function()
-			print(("[N3V4 DIVIDER] LineTransparency = %s | TextTransparency = %s"):format(Library.DividerAppearance.LineTransparency, Library.DividerAppearance.TextTransparency))
-			SafeNotify({ Title = "Setingan divider", Description = "Cek Output.", Icon = "info", Time = 3 })
-		end)
-		Box:AddButton("Copy setingan divider", function()
-			local Text = ("Library:SetDividerTransparency(%s, %s)"):format(Library.DividerAppearance.LineTransparency, Library.DividerAppearance.TextTransparency)
-			if CopyClip(Text) then
-				SafeNotify({ Title = "Setingan divider", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
-			else
-				print("[N3V4 DIVIDER] paste ini balik:\n" .. Text)
-				SafeNotify({ Title = "Setingan divider", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
-			end
-		end)
+			local Box = T1:AddRightGroupbox("Section Text", "type")
+			Box:AddSlider("SD_TT", {
+				Text = "Transparansi text section", Default = math.floor(Library.DividerAppearance.TextTransparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetDividerTransparency(nil, Value / 100)
+				end,
+			})
+			Box:AddDivider("Contoh text")
+			Box:AddButton("Print setingan divider", function()
+				print(("[N3V4 DIVIDER] LineTransparency = %s | TextTransparency = %s"):format(Library.DividerAppearance.LineTransparency, Library.DividerAppearance.TextTransparency))
+				SafeNotify({ Title = "Setingan divider", Description = "Cek Output.", Icon = "info", Time = 3 })
+			end)
+			Box:AddButton("Copy setingan divider", function()
+				local Text = ("Library:SetDividerTransparency(%s, %s)"):format(Library.DividerAppearance.LineTransparency, Library.DividerAppearance.TextTransparency)
+				if CopyClip(Text) then
+					SafeNotify({ Title = "Setingan divider", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
+				else
+					print("[N3V4 DIVIDER] paste ini balik:\n" .. Text)
+					SafeNotify({ Title = "Setingan divider", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+				end
+			end)
+		else
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (DividerAppearance / SetDividerTransparency ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.12.8 biar box Section Divider + Section Text muncul")
+		end
 
 		local Box = T1:AddRightGroupbox("Preset Glow", "wand-sparkles")
 
