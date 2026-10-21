@@ -117,6 +117,33 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🐛 Bug #25 — collapse/expand groupbox desync (FIXED v4.8.8)
+
+Laporan user: "gue buka group text di dalamnya ga singkron, isinya dulu
+yang ke bawah sedangkan groupnya telat dikit" — ketemu pas buka-tutup
+panah collapse group (yang bentuknya mirip dropdown; bukan dropdown
+select element).
+
+Root cause: Groupbox:Resize tween Size GroupboxHolder 0.2s Quad Out,
+TAPI (a) holder nggak punya ClipsDescendants, dan (b) SetCollapsed flip
+GroupboxContainer.Visible INSTAN + Resize flip GroupboxLine.Visible
+INSTAN. Expand: isi langsung render di layout final bahkan numpah ke
+luar frame yang masih pendek -> frame nyusul 0.2s kemudian = desync.
+Collapse: isi ngilang instan, frame shrink sendirian.
+
+Fix (satu mekanisme): ClipsDescendants = true di holder groupbox DAN
+holder tabbox (keluarga bug yang sama: isi tab switch juga pernah
+numpah saat frame tween); hapus kedua flip Visible instan (container +
+garis title). Isi ke-clip persis di tepi bawah frame sepanjang tween ->
+reveal & hide gerak BARENG tepi frame (satu tween = sinkron). Garis
+title sembunyi sendiri saat holder 34px (ke-clip); title + panah tetep
+keliatan (di dalam 34px). Hit-test Roblox respect clip, jadi elemen di
+group collapsed nggak bisa kepencet invisibly. Outline aman: AddOutline
+= UIStroke (Border, tepi dalam) = render milik holder sendiri, bukan
+descendant yang ke-clip. Popup dropdown/colorpicker/tooltip aman:
+parent-nya window/ScreenGui, bukan holder. Checker pin: 2 clip ada +
+dua flip instan hilang.
+
 ## 🔒 v4.8.7 — RESEP TAB v4 = FINAL TERKUNCI (print user 16:55)
 
 IconCardEnabled true · Padding 2 · Thickness 1 · Transparency 0.00

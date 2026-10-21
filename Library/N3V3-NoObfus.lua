@@ -1659,7 +1659,7 @@ Library.TabAppearance = {
 Library.TabVisuals = {} -- rec { Button, Icon, Card, Scale, Tab } per sidebar tab
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.8.7 loaded — RESEP TAB v4 FINAL dibake (padding 2, garis solid 0%, bg tab 0.85, warna ikut outline) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.8.8 loaded — collapse/expand group SINKRON: isi ke-clip tepi frame, gerak bareng tween (bug #25) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -12132,6 +12132,7 @@ function Library:CreateWindow(WindowInfo)
 						return Library:GetGroupSurfaceColor()
 					end,
 					BackgroundTransparency = Nested and 1 or ClampTransparency(Library.Surface.GroupTransparency),
+					ClipsDescendants = true, -- v4.8.8: clip children to the frame border so content and border move as one during the resize tween
 					Size = UDim2.fromScale(1, 0),
 					Parent = BoxHolder,
 				})
@@ -12482,6 +12483,7 @@ function Library:CreateWindow(WindowInfo)
 						return Library:GetGroupSurfaceColor()
 					end,
 					BackgroundTransparency = Nested and 1 or ClampTransparency(Library.Surface.GroupTransparency),
+					ClipsDescendants = true, -- v4.8.8: clip children to the frame border so content and border move as one during the resize tween
 					Size = UDim2.fromScale(1, 0),
 					Parent = BoxHolder,
 				})
@@ -12598,7 +12600,7 @@ function Library:CreateWindow(WindowInfo)
 					if Groupbox.Collapsed then 34 else (GroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 49
 				)
 
-				GroupboxLine.Visible = not Groupbox.Collapsed
+				-- v4.8.8: the line stays visible; the holder clip hides it by itself at 34px
 				if Library.Animations and Library.Animations.Groupbox then
 					local TweenInfo = Library.GroupboxTweenInfo
 						or TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -12636,7 +12638,7 @@ function Library:CreateWindow(WindowInfo)
 
 				local TargetRotation = if Collapsed then 0 else 180
 
-				GroupboxContainer.Visible = not Collapsed
+				-- v4.8.8: container stays visible; the holder clip reveals and hides it in step with the resize tween
 				if Library.Animations and Library.Animations.Groupbox then
 					local TweenInfo = Library.GroupboxTweenInfo
 						or TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)

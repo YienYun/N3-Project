@@ -7,6 +7,22 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.8.8 — COLLAPSE GROUP SINKRON (bug #25):
+	   • User: "gue buka group, isinya dulu yang ke bawah sedangkan
+	     groupnya telat dikit" (ketemu pas buka-tutup panah collapse
+	     group yang mirip dropdown). Root cause BUKAN dropdown-nya:
+	     GroupboxHolder nggak punya ClipsDescendants + SetCollapsed
+	     flip Container.Visible INSTAN, sementara frame di-tween 0.2s
+	     -> isi render di posisi final (numpah ke bawah frame yang
+	     masih pendek) sebelum frame nyusul.
+	   • Fix: ClipsDescendants = true di holder groupbox (+ tabbox,
+	     keluarga bug sama) + hapus dua flip Visible instan (container
+	     + garis title). Isi sekarang ke-clip persis di tepi bawah
+	     frame: buka = ke-reveal bareng tepi frame turun, tutup =
+	     ke-clip bareng tepi frame naik. Satu tween = nol desync.
+	     Popup dropdown/colorpicker/tooltip aman (parent-nya window/
+	     ScreenGui, bukan group holder).
+
 	 CHANGELOG v4.8.7 — RESEP TAB v4 = FINAL (print user 16:55):
 	   • Padding 2px · tebal 1px · transparansi 0% (garis SOLID, warna
 	     ikut OutlineColor theme per v4.8.6) · radius 5px · bg semua
@@ -342,7 +358,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.8.7" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.8.8" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -374,7 +390,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.8.7",
+	Footer = "N3V4 • UI Preview Kit v4.8.8",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
