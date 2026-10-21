@@ -1733,13 +1733,13 @@ end
 -- N3V4 v4.12.0: SECTION APPEARANCE — divider lines keep the original
 -- library design (MainColor fill + 1px border); this config only tunes
 -- how loud the themed border/text read, plus the symmetric text gap
--- and the line thickness. NOTE: the line is 2px tall and the 1px
--- border eats top+bottom, so a border at 0 transparency reads as a
--- solid accent bar — that is why the default border sits at 45%.
+-- and the line thickness. v4.12.3: lines are OPAQUE lerp colors
+-- (Background -> theme color), never semi-transparent borders: opaque
+-- reads identical on every backdrop, killing left/right mismatch.
 -- One Gap value feeds both sides: symmetric by construction.
 Library.SectionAppearance = {
-	AccentBorder = true, -- false = border falls back to OutlineColor
-	BorderTransparency = 0.45, -- keeps the themed outline subtle
+	AccentBorder = true, -- false = lerp target falls back to OutlineColor
+	Strength = 0.6, -- 0 = neutral dark, 1 = full theme color (opaque lerp)
 	TextTransparency = 0.5,
 	Gap = 10, -- px between the text and each line (both sides)
 	Thickness = 2, -- px line height
@@ -1754,14 +1754,21 @@ function Library:ApplySectionAppearance(Section)
 	-- caller (bug #27 pattern: one bad assign killed a whole box)
 	pcall(function()
 		local A = Library.SectionAppearance
-		local Border = A.AccentBorder ~= false and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+		-- v4.12.3: opaque lerp color instead of a semi-transparent border.
+		-- A 1px border on a 2px frame rendered inconsistently per side
+		-- over the see-through cards (left purple, right black); an
+		-- opaque BackgroundColor3 lerped from Background toward the
+		-- theme color reads identical on ANY backdrop, and Strength
+		-- is the loudness knob the user asked for.
+		local Target = A.AccentBorder ~= false and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+		local Strength = math.clamp(A.Strength or 0.6, 0, 1)
+		local Color = Library.Scheme.BackgroundColor:Lerp(Target, Strength)
 		local Gap = math.clamp(A.Gap or 10, 0, 60)
 		local Thickness = math.clamp(A.Thickness or 2, 1, 6)
-		local BorderT = math.clamp(A.BorderTransparency or 0, 0, 1)
 		local TextT = math.clamp(A.TextTransparency or 0, 0, 1)
 		for _, Line in ipairs(Section.Lines) do
-			Line.BorderColor3 = Border
-			Line.BorderTransparency = BorderT
+			Line.BackgroundColor3 = Color
+			Line.BorderSizePixel = 0
 			Line.Size = UDim2.new(0.5, -(Section.HalfX + Gap), 0, Thickness)
 		end
 		if Section.Text then
@@ -1945,7 +1952,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.12.2 loaded — SECTION v4: garis kiri/kanan dari SATU loop (simetris by construction), apply pcall-guard, box setting naik ke atas biar keliatan (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.12.3 loaded — SECTION v5: garis = fill OPAQUE warna lerp Background->accent (kekuatan = knob Strength), border dihapus = mustahil pincang kiri/kanan (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -6126,7 +6133,7 @@ do
 				table.insert(Lines, New("Frame", {
 					AnchorPoint = Vector2.new(AnchorX, 0.5),
 					BackgroundColor3 = "MainColor",
-					BorderSizePixel = 1,
+					BorderSizePixel = 0, -- v4.12.3: fill-only line, no border
 					Position = UDim2.fromScale(AnchorX, 0.5),
 					Size = UDim2.new(0.5, -SizeX, 0, 2),
 					Parent = InnerHolder,

@@ -13,6 +13,12 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.12.3: skema garis diganti TOTAL: border semi-transparan di frame
+--         2px ternyata render beda kiri/kanan di atas card tembus
+--         pandang ("kiri unggu kanan hitam"). Sekarang garis = fill
+--         OPAQUE warna lerp Background->accent/outline; knob SD_BT
+--         jadi "Kekuatan warna" (0% netral gelap, 100% full accent).
+--         Opaque = baca identik di backdrop mana pun = pincang mati.
 -- v4.12.2: box "Section Divider" + "Divider Presets" DIPINDAH ke urutan
 --         atas (kiri #2 / kanan #2): sebelumnya box ke-6 = knob ketutup
 --         lipatan bawah window (kolom emang ScrollingFrame, tapi UX
@@ -204,9 +210,9 @@ Settings.DEFAULTS = {
 		Tilt = 10,
 		Speed = 0.30,
 	},
-	Section = { -- v4.12.0: section divider appearance (border subtle default)
+	Section = { -- v4.12.0: section divider (v4.12.3: Strength = kekuatan warna)
 		AccentBorder = true,
-		BorderTransparency = 0.45,
+		Strength = 0.6,
 		TextTransparency = 0.5,
 		Gap = 10,
 		Thickness = 2,
@@ -429,7 +435,7 @@ function Settings:Attach(Library, Window, Options)
 			"--[[ N3V4 SECTION ]]",
 			"Library:SetSectionAppearance({",
 			string.format("\tAccentBorder = %s,", tostring(A.AccentBorder ~= false)),
-			string.format("\tBorderTransparency = %.2f,", A.BorderTransparency or 0.45),
+			string.format("\tStrength = %.2f,", A.Strength or 0.6),
 			string.format("\tTextTransparency = %.2f,", A.TextTransparency or 0.5),
 			string.format("\tGap = %d,", A.Gap or 10),
 			string.format("\tThickness = %d,", A.Thickness or 2),
@@ -579,9 +585,9 @@ function Settings:Attach(Library, Window, Options)
 			end,
 		})
 		Box:AddSlider("SD_BT", {
-			Text = "Transparansi garis luar (0% = mencolok)", Default = math.floor((SA0.BorderTransparency or 0.45) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Text = "Kekuatan warna garis (0% = netral)", Default = math.floor((SA0.Strength or 0.6) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
-				Library:SetSectionAppearance({ BorderTransparency = Value / 100 })
+				Library:SetSectionAppearance({ Strength = Value / 100 })
 			end,
 		})
 		Box:AddSlider("SD_TT", {
@@ -823,7 +829,7 @@ function Settings:Attach(Library, Window, Options)
 		local function SyncKnobs()
 			local A = Library.SectionAppearance or {}
 			pcall(function() Library.Options.SD_Acc:SetValue(A.AccentBorder ~= false) end)
-			pcall(function() Library.Options.SD_BT:SetValue(tostring(math.floor((A.BorderTransparency or 0) * 100 + 0.5))) end)
+			pcall(function() Library.Options.SD_BT:SetValue(tostring(math.floor((A.Strength or 0) * 100 + 0.5))) end)
 			pcall(function() Library.Options.SD_TT:SetValue(tostring(math.floor((A.TextTransparency or 0) * 100 + 0.5))) end)
 			pcall(function() Library.Options.SD_Gap:SetValue(tostring(A.Gap)) end)
 			pcall(function() Library.Options.SD_Th:SetValue(tostring(A.Thickness)) end)
@@ -836,10 +842,10 @@ function Settings:Attach(Library, Window, Options)
 			end)
 		end
 
-		Preset("Soft (bawaan: luar 45%)", { AccentBorder = true, BorderTransparency = 0.45 })
-		Preset("Solid (luar 0%)", { AccentBorder = true, BorderTransparency = 0 })
-		Preset("Ghost (luar 70%)", { AccentBorder = true, BorderTransparency = 0.7 })
-		Preset("Netral (outline abu)", { AccentBorder = false })
+		Preset("Soft (bawaan: 60%)", { AccentBorder = true, Strength = 0.6 })
+		Preset("Solid (100%)", { AccentBorder = true, Strength = 1 })
+		Preset("Ghost (30%)", { AccentBorder = true, Strength = 0.3 })
+		Preset("Netral (outline)", { AccentBorder = false, Strength = 0.6 })
 	end)
 
 	Try("Settings: window", function()

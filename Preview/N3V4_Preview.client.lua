@@ -7,6 +7,23 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.12.3 — skema garis section diganti (matiin pincang):
+	   • Border 1px semi-transparan di frame 2px ternyata render
+	     BEDA kiri/kanan di atas card transparansi 0.5 + wallpaper
+	     (kiri kebaca unggu, kanan kebaca hitam). Skema baru: garis
+	     = fill OPAQUE, warna = lerp BackgroundColor -> AccentColor
+	     (atau OutlineColor kalo toggle off). Warna opaque baca
+	     IDENTIK di backdrop apa pun => pincang secara fisik mati.
+	   • Knob transparency diganti "Kekuatan warna garis" 0-100%
+	     (0% = netral gelap kayak bawaan, 100% = accent penuh).
+	     Default 60% = ungu kalem tapi jelas. Preset: Soft 60 /
+	     Solid 100 / Ghost 30 / Netral outline.
+	   • Label petunjuk di box Selamat Datang: lokasi semua setting
+	     (tab UI Settings, icon palette paling atas sidebar).
+	   • Yang lu lihat di screenshot tadi itu tab DEMO (Overview),
+	     bukan tab setting — makanya "setingnya ga ada": pindah ke
+	     tab UI Settings dulu, box Section Divider urutan #2 kiri.
+
 	 CHANGELOG v4.12.2 — setting section KETUTUP LIPATAN + simetri paksa:
 	   • "settinganya mana anjir": knob-nya ADA tapi box Section Divider
 	     dulu box ke-6 kolom kiri = di bawah lipatan window (kolom tab
@@ -582,7 +599,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.12.2" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.12.3" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -614,7 +631,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.12.2",
+	Footer = "N3V4 • UI Preview Kit v4.12.3",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -1006,6 +1023,8 @@ Try("Overview: L1 Welcome (Spotlight + Label + Divider)", function()
 	Box:AddDivider({ Text = "Selamat Datang", Margin = 6 })
 	Box:AddLabel('Library: <font color="#5adcff">ONLINE</font>', false)
 	Box:AddLabel("Klik tab di sidebar buat jelajah semua komponen.", true)
+	-- v4.12.3: penunjuk lokasi setting biar ga ada lagi "setingnya mana"
+	Box:AddLabel("Setting section/glow/icon: tab UI Settings (icon palette paling atas sidebar), kolom kiri box Section Divider.", true)
 end)
 
 Try("Overview: L2 Session Info", function()

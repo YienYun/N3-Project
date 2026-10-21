@@ -117,6 +117,28 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🎯 v4.12.3 — SECTION v5: garis opaque lerp, pincang mati secara fisik
+
+Screenshot user v4.12.2 bersih: divider tetep kiri-ungu/kanan-hitam.
+Root cause desain: border 1px dengan BorderTransparency di frame
+setinggi 2px = seluruh pixel garis adalah pixel border semi-transparan;
+di atas group card transparency 0.5 yang ditembus wallpaper, hasil
+visualnya tergantung backdrop setempat -> dua sisi kebaca beda walau
+property identik.
+
+Solusi v4.12.3: buang border sepenuhnya. Garis = BackgroundColor3
+OPAQUE hasil `Scheme.BackgroundColor:Lerp(Target, Strength)` dengan
+Target AccentColor (atau OutlineColor kalau AccentBorder false).
+Warna opaque tidak terpengaruh backdrop => kiri/kanan IDENTIK secara
+fisik, dan sinkron theme lewat hook recolor existing. Knob SD_BT
+ganti semantik: "Kekuatan warna garis" 0-100% (default 60% = kalem
+tapi jelas); preset Soft 60 / Solid 100 / Ghost 30 / Netral outline.
+BuildSection print Strength.
+
+Plus: label petunjuk di box demo Selamat Datang yang nunjuk lokasi
+setting (tab UI Settings, icon palette, box Section Divider #2 kiri)
+— user beberapa kali rage dari tab DEMO karena mengira itu tab setting.
+
 ## 📐 v4.12.2 — box section naik atas + garis simetris by construction
 
 Keluh user: "settinganya mana anjir? kok kanan hitam kiri unggu?
