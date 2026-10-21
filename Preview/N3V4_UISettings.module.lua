@@ -13,6 +13,9 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.8.6: warna garis card IKUT OutlineColor theme (theme string di library,
+--        knob warna dihapus) — user: "ikut outline saja, jangan bikin susah
+--        pas mau banyak theme ke depan". Print resep tab tanpa warna card.
 -- v4.8.5: RESEP TAB v3 DIBAKE (screenshot user: tebal 1, transparansi 36%,
 --        napas 3, radius 5, bg semua tab 90%; warna garis 135 dari chat).
 --        Print+copy resep tab pindah ke groupbox "Tab Card & Bg" (sebelah
@@ -111,13 +114,12 @@ Settings.DEFAULTS = {
 	Canvas = 1,
 	Group = 0.5, -- v4.8.3: dump user v7
 	Contrast = 40,
-	Tab = { -- v4.8.5 = RESEP TAB USER v3 TERKUNCI (screenshot + warna 135)
+	Tab = { -- v4.8.6 = RESEP TAB v3 TERKUNCI (warna card ikut Outline theme)
 		IconCardEnabled = true,
 		IconCardPadding = 3,
 		IconCardThickness = 1,
 		IconCardTransparency = 0.36,
 		IconCardRadius = 5,
-		IconCardColor = Color3.fromRGB(135, 135, 135),
 		TabBackgroundTransparency = 0.90,
 		ActiveBackgroundTransparency = 0.60,
 		ActiveBackgroundColor = Color3.fromRGB(0, 0, 0),
@@ -353,7 +355,6 @@ function Settings:Attach(Library, Window, Options)
 			string.format("\tIconCardThickness = %.2f,", T.IconCardThickness or 0),
 			string.format("\tIconCardTransparency = %.2f,", T.IconCardTransparency or 0),
 			string.format("\tIconCardRadius = %.2f,", T.IconCardRadius or 0),
-			string.format("\tIconCardColor = %s,", RGB(T.IconCardColor or Color3.fromRGB(0, 0, 0))),
 			string.format("\tTabBackgroundTransparency = %.2f,", T.TabBackgroundTransparency or 0),
 			string.format("\tActiveBackgroundTransparency = %.2f,", T.ActiveBackgroundTransparency or 0),
 			string.format("\tActiveBackgroundColor = %s,", RGB(T.ActiveBackgroundColor or Color3.fromRGB(218, 68, 255))),
@@ -516,13 +517,6 @@ function Settings:Attach(Library, Window, Options)
 			Text = "Card outline icon tab", Default = TA0.IconCardEnabled ~= false,
 			Callback = function(On)
 				Library:SetTabAppearance({ IconCardEnabled = On })
-			end,
-		})
-		CardTog:AddColorPicker("TB_CardC", {
-			Title = "Warna garis card",
-			Default = TA0.IconCardColor or Color3.fromRGB(0, 0, 0),
-			Callback = function(Color)
-				Library:SetTabAppearance({ IconCardColor = Color })
 			end,
 		})
 		local Sl_CardT = Box:AddSlider("TB_CardT", {

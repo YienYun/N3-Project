@@ -7,6 +7,13 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.8.6 — WARNA CARD IKUT OUTLINE THEME:
+	   • User: "collornya biar ikut outline saja bro! jangan bikin susah
+	     pas mau banyak theme ke depan" — knob IconCardColor DIHAPUS dari
+	     library + module + print. Garis card sekarang Color =
+	     "OutlineColor" (theme string via registry), jadi ganti theme
+	     apapun otomatis nge-recolor garis card. Nol color snapshot.
+
 	 CHANGELOG v4.8.5 — RESEP TAB v3 DIBAKE + COPY resep tab:
 	   • Screenshot user: tebal 1px, transparansi 36%, napas 3px, radius
 	     5px, bg semua tab 90%; warna garis 135,135,135 dari chat. Semua
@@ -328,7 +335,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.8.5" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.8.6" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -360,7 +367,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.8.5",
+	Footer = "N3V4 • UI Preview Kit v4.8.6",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

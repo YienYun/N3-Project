@@ -1639,14 +1639,15 @@ Library.TabAppearance = {
 	-- v4.8.4 = TAB ICON CARD (user request: the glyph halo stroke looked
 	-- ugly -> symmetric box outline around each icon only, NOT the full
 	-- tab). Halo removed entirely; single implementation, zero dead code.
-	-- v4.8.5 = LOCKED USER CARD RECIPE v2 (screenshot dials + gray line
-	-- 135 from chat; supersedes the v4.8.4 baseline numbers).
+	-- v4.8.5 = LOCKED USER CARD RECIPE v2 (screenshot dials).
+	-- v4.8.6 = card line FOLLOWS the theme OutlineColor (theme string in
+	-- CreateTabIconCard, own color knob removed) so every future theme
+	-- recolors the card for free (user: follow outline, no own color).
 	IconCardEnabled = true, -- outline on/off
 	IconCardPadding = 3, -- px breathing room, glyph -> card line (symmetric)
 	IconCardThickness = 1, -- px, card line thickness
 	IconCardTransparency = 0.36, -- 36% = the number from the user
 	IconCardRadius = 5, -- px, rounded corners (same on all 4 corners)
-	IconCardColor = Color3.fromRGB(135, 135, 135), -- gray line (user dial)
 	TabBackgroundTransparency = 0.90, -- faint tab bg (user dial)
 	ActiveBackgroundTransparency = 0.60,
 	ActiveBackgroundColor = Color3.fromRGB(0, 0, 0),
@@ -1657,7 +1658,7 @@ Library.TabAppearance = {
 Library.TabVisuals = {} -- rec { Button, Icon, Card, Scale, Tab } per sidebar tab
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.8.5 loaded — RESEP TAB v3 dibake (card 1px/36%/napas 3/radius 5, garis 135, bg tab 0.90) + tombol Copy resep tab (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.8.6 loaded — warna garis card IKUT OutlineColor theme (knob warna dihapus, ganti theme auto recolor) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -1754,7 +1755,7 @@ function Library:CreateTabIconCard(TabIcon: ImageLabel): (Frame, UIScale)
 	})
 	New("UIStroke", {
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = T.IconCardColor,
+		Color = "OutlineColor", -- theme string: recolors with every theme
 		Thickness = T.IconCardThickness,
 		Transparency = T.IconCardTransparency,
 		Parent = Card,
@@ -1812,7 +1813,6 @@ function Library:ApplyTabAppearance()
 			end
 			local Stroke = Rec.Card:FindFirstChildOfClass("UIStroke")
 			if Stroke then
-				Stroke.Color = T.IconCardColor
 				Stroke.Thickness = T.IconCardThickness
 				Stroke.Transparency = T.IconCardTransparency
 			end

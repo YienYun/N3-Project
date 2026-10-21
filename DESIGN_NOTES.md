@@ -117,6 +117,19 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🎨 v4.8.6 — WARNA GARIS CARD IKUT OUTLINE THEME (knob warna dihapus)
+
+User: "collornya biar ikut outline saja bro! jangan bikin susah pas mau
+banyak theme ke depan!" — IconCardColor (knob Color3) DIHAPUS total dari
+library + module + print RESEP TAB. UIStroke card sekarang
+Color = "OutlineColor" (theme string; FillInstance daftarin ke registry
+-> UpdateColorsUsingRegistry recolor otomatis tiap ganti theme).
+ApplyTabAppearance nggak nyetel Color lagi (registry yang urus).
+Catatan jujur: angka 135,135,135 resep v3 kemarin jadi tidak dipakai —
+mulai v4.8.6 garis ikut outline theme (65,62,62 di RESEP v7), persis
+permintaan user. Knob card sisa 5: on/off, tebal, transparansi, napas,
+radius.
+
 ## 🔒 v4.8.5 — RESEP TAB v3 = TERKUNCI (screenshot user + warna dari chat)
 
 Card recipe v2 (menggantikan baseline v4.8.4): tebal 1px · transparansi
