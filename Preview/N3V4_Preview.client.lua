@@ -7,6 +7,18 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.12.1 — BUG #31 + sample section di dalam setingan:
+	   • Error "Unable to assign property BorderColor3. Color3
+	     expected, got string": theme-string cuma bisa lewat New()
+	     waktu create; assign runtime harus Color3 asli. Sekarang
+	     ApplySectionAppearance pakai Scheme.AccentColor /
+	     OutlineColor langsung, DAN ada hook di theme-recolor biar
+	     tiap ganti accent/outline section ikut sync lagi.
+	   • "sectionya mana jir? taruh di group seting section dong":
+	     groupbox "Section Divider" sekarang punya sample divider
+	     LIVE ("Preview section") di paling atas box — tiap geser
+	     slider, contoh di dalem box itu yang berubah depan mata lu.
+
 	 CHANGELOG v4.12.0 — SECTION SETTINGS (preview setingan buat lu):
 	   • Diagnosa "terlalu mencolok": garis section cuma 2px tinggi,
 	     border 1px makan atas+bawah -> border accent 0% kebaca sebagai
@@ -551,7 +563,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.12.0" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.12.1" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -583,7 +595,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.12.0",
+	Footer = "N3V4 • UI Preview Kit v4.12.1",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

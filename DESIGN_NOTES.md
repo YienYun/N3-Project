@@ -117,6 +117,24 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🐛 v4.12.1 — BUG #31 (BorderColor3 string) + sample section dalam box
+
+Error user: `Unable to assign property BorderColor3. Color3 expected,
+got string` dari ApplySectionAppearance. Akar: theme-string ("AccentColor")
+hanya di-resolve oleh wrapper New() saat create (+ registry recolor);
+assign property langsung di runtime harus Color3 asli. Fix:
+ApplySectionAppearance pakai Library.Scheme.AccentColor /
+OutlineColor langsung, plus hook di akhir UpdateColorsUsingRegistry
+yang me-re-apply semua section tiap theme berubah (sync terjaga).
+Frame garis sekarang dibuat TANPA BorderColor3 string; apply perdana
+langsung setelah create.
+
+Request kedua user: "sectionya mana? taruh di group seting section
+dong" -> groupbox "Section Divider" kini memuat sample divider LIVE
+(AddDivider "Preview section") di atas knob-knobnya; karena divider
+ikut SectionRegistry, semua slider/preset mengubah sample itu right
+there, depan mata.
+
 ## 🎚️ v4.12.0 — SECTION SETTINGS: preview setingan manual + preset
 
 User: v4.11.4 masih "terlalu mencolok", mau atur sendiri simetris +

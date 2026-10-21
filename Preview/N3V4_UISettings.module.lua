@@ -13,6 +13,11 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.12.1: BUG #31 — BorderColor3 nolak theme-string di assign runtime
+--         (string magic cuma ada di New()); ApplySectionAppearance
+--         sekarang pakai Color3 asli + hook di UpdateColorsUsingRegistry
+--         re-sync tiap ganti theme. Plus: sample section LIVE di dalam
+--         groupbox "Section Divider" biar dial kelihatan di tempat.
 -- v4.12.0: SECTION SETTINGS — user: "terlalu mencolok", "gue mau atur
 --         sendiri simetrisnya dan transparansi warnanya", "kasih
 --         preview setingan". Diagnosa gue: garis section 2px dan
@@ -836,6 +841,10 @@ function Settings:Attach(Library, Window, Options)
 		-- v4.12.0: manual section tuning (user: gue mau atur sendiri)
 		local SA0 = Library.SectionAppearance or {}
 		local Box = T1:AddLeftGroupbox("Section Divider", "sliders-horizontal")
+
+		-- v4.12.1: live sample INSIDE the settings box, so every knob
+		-- move is visible right where the knobs are (user request)
+		Box:AddDivider({ Text = "Preview section", Margin = 4 })
 
 		Box:AddToggle("SD_Acc", {
 			Text = "Garis luar ikut accent", Default = SA0.AccentBorder ~= false,
