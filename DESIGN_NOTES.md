@@ -117,6 +117,22 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🐛 Bug #26 — sliver "bocor" pas collapse (regression v4.8.8, FIXED v4.8.9)
+
+Screenshot user: group collapsed (Status Session, Activity Feed)
+nampilin strip setengah glyph di bawah title selagi frame shrink.
+Root cause: v4.8.8 ikut nghapus flip `GroupboxContainer.Visible = not
+Collapsed` — padahal flip itu yang BENER buat arah collapse. Tanpanya,
+selama tween shrink 0.2s isi statis ke-clip makan dari bawah -> tepi
+clip nyisain band tipis puncak elemen pertama = sliver bocor. (Tinggi
+sliver beda-beda di screenshot = frame mid-tween, bukan stuck.)
+
+Kombinasi final (v4.8.9): ClipsDescendants TETEP di holder groupbox +
+tabbox (kunci sync expand: isi ke-reveal bareng tepi frame turun, nol
+numpah); flip Visible instan BALIK untuk collapse (container + garis
+title) -> nggak ada isi yang hidup selagi shrink = nol sliver. Dua arah,
+dua perlakuan, masing-masing yang paling bener.
+
 ## 🐛 Bug #25 — collapse/expand groupbox desync (FIXED v4.8.8)
 
 Laporan user: "gue buka group text di dalamnya ga singkron, isinya dulu

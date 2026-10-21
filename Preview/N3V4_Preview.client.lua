@@ -7,6 +7,19 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.8.9 — NOL BOCOR SLIVER PAS COLLAPSE (bug #26):
+	   • Regression v4.8.8: hide instan container pas collapse ikut
+	     kehapus -> selama frame shrink 0.2s, isi statis ke-clip makan
+	     dari bawah = strip setengah glyph "bocor" di bawah title
+	     (persis screenshot user: Status Session & Activity Feed).
+	   • Kombinasi bener: expand = container visible instan + holder
+	     clip -> isi ke-reveal bareng tepi frame TURUN (sinkron, nol
+	     numpah); collapse = container hide INSTAN -> nggak ada isi
+	     yang dimakan tween = nol sliver. Garis title balik ke flip
+	     instan juga (clip yang reveal dia pas expand).
+	   • ClipsDescendants di holder groupbox+tabbox TETEP (itu kunci
+	     sync expand-nya).
+
 	 CHANGELOG v4.8.8 — COLLAPSE GROUP SINKRON (bug #25):
 	   • User: "gue buka group, isinya dulu yang ke bawah sedangkan
 	     groupnya telat dikit" (ketemu pas buka-tutup panah collapse
@@ -358,7 +371,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.8.8" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.8.9" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -390,7 +403,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.8.8",
+	Footer = "N3V4 • UI Preview Kit v4.8.9",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

@@ -1659,7 +1659,7 @@ Library.TabAppearance = {
 Library.TabVisuals = {} -- rec { Button, Icon, Card, Scale, Tab } per sidebar tab
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.8.8 loaded — collapse/expand group SINKRON: isi ke-clip tepi frame, gerak bareng tween (bug #25) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.8.9 loaded — bug #26: nol bocor sliver pas collapse (hide instan + clip buat expand) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -12600,7 +12600,9 @@ function Library:CreateWindow(WindowInfo)
 					if Groupbox.Collapsed then 34 else (GroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 49
 				)
 
-				-- v4.8.8: the line stays visible; the holder clip hides it by itself at 34px
+				-- v4.8.9: instant hide on collapse; on expand the holder clip
+				-- reveals the line in step with the growing frame edge
+				GroupboxLine.Visible = not Groupbox.Collapsed
 				if Library.Animations and Library.Animations.Groupbox then
 					local TweenInfo = Library.GroupboxTweenInfo
 						or TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -12638,7 +12640,10 @@ function Library:CreateWindow(WindowInfo)
 
 				local TargetRotation = if Collapsed then 0 else 180
 
-				-- v4.8.8: container stays visible; the holder clip reveals and hides it in step with the resize tween
+				-- v4.8.9: hide INSTANTLY on collapse so no glyph sliver is eaten
+				-- alive while the frame shrinks; on expand the holder clip reveals
+				-- the content in step with the growing frame edge = synced.
+				GroupboxContainer.Visible = not Collapsed
 				if Library.Animations and Library.Animations.Groupbox then
 					local TweenInfo = Library.GroupboxTweenInfo
 						or TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
