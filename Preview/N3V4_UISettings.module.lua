@@ -13,6 +13,9 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.8.7: RESEP TAB v4 FINAL DIBAKE (print user 16:55): padding 2, garis
+--        solid 0% (warna ikut outline), radius 5, bg semua tab 85%.
+--        Zoom/aktif tetep. User: "oke terakhir bro ini resep yang pas".
 -- v4.8.6: warna garis card IKUT OutlineColor theme (theme string di library,
 --        knob warna dihapus) — user: "ikut outline saja, jangan bikin susah
 --        pas mau banyak theme ke depan". Print resep tab tanpa warna card.
@@ -114,13 +117,13 @@ Settings.DEFAULTS = {
 	Canvas = 1,
 	Group = 0.5, -- v4.8.3: dump user v7
 	Contrast = 40,
-	Tab = { -- v4.8.6 = RESEP TAB v3 TERKUNCI (warna card ikut Outline theme)
+	Tab = { -- v4.8.7 = RESEP TAB USER v4 TERKUNCI (print final 16:55)
 		IconCardEnabled = true,
-		IconCardPadding = 3,
+		IconCardPadding = 2,
 		IconCardThickness = 1,
-		IconCardTransparency = 0.36,
+		IconCardTransparency = 0.00,
 		IconCardRadius = 5,
-		TabBackgroundTransparency = 0.90,
+		TabBackgroundTransparency = 0.85,
 		ActiveBackgroundTransparency = 0.60,
 		ActiveBackgroundColor = Color3.fromRGB(0, 0, 0),
 		HoverZoom = 1.25,

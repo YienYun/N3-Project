@@ -95,7 +95,7 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.8.6 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.8.7 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + card icon + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconCard' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
@@ -122,8 +122,8 @@ chk "v4.7.9: icon dialog opsional kanan-atas gaya notif (lib + demo preview)" \
 	"grep -q 'DialogIconWidth' '$LIB' && grep -q 'Info.IconColor or \"AccentColor\"' '$LIB' && grep -q 'Icon = \"info\"' '$PRE' && grep -q 'Icon = \"zap\"' '$PRE'"
 chk "v4.7.8: knob durasi + RESEP USER 10% dibake (lib 0.1 + mod AnimTime 0.10)" \
 	"grep -q 'ST_AnimTime' '$MOD' && grep -q 'AnimTime = 0.10' '$MOD' && grep -q 'WindowAnimationInfo = TweenInfo.new(0.1' '$LIB' && grep -q 'Library.WindowAnimationInfo = TweenInfo.new' '$MOD'"
-chk "v4.8.6: NOL duplikasi (card 1x di helper) + garis card ikut OutlineColor" \
-	"[ \$(grep -c 'Name = \"TabIconCard\"' '$LIB') -eq 1 ] && grep -q 'Color = \"OutlineColor\"' '$LIB' && grep -q 'IconCardTransparency = 0.36' '$LIB' && grep -q 'TabBackgroundTransparency = 0.90' '$LIB' && grep -q 'HoverZoom = 1.25' '$LIB' && ! grep -q 'IconCardColor' '$LIB' && ! grep -q 'IconCardColor' '$MOD'"
+chk "v4.8.7: NOL duplikasi (card 1x di helper) + RESEP TAB v4 FINAL locked" \
+	"[ \$(grep -c 'Name = \"TabIconCard\"' '$LIB') -eq 1 ] && grep -q 'Color = \"OutlineColor\"' '$LIB' && grep -q 'IconCardTransparency = 0.00' '$LIB' && grep -q 'IconCardPadding = 2,' '$LIB' && grep -q 'TabBackgroundTransparency = 0.85' '$LIB' && grep -q 'IconCardTransparency = 0.00' '$MOD' && grep -q 'HoverZoom = 1.25' '$LIB' && ! grep -q 'IconCardColor' '$LIB' && ! grep -q 'IconCardColor' '$MOD'"
 chk "v4.8.5: print+copy resep tab nempel di groupbox card (nol duplikat tombol)" \
 	"grep -q 'Copy resep tab' '$MOD' && [ \$(grep -c 'AddButton(\"Print resep tab\"' '$MOD') -eq 1 ]"
 chk "v4.8.6: knob card LENGKAP di module (5 knob + print IconCard* + nol sisa)" \
@@ -150,7 +150,7 @@ chk "simetris" "python3 '$ROOT/tools/symmetry.py' '$PRE'"
 chk "ggak manggil SetWallpaper/SetSurface (setingan cuma di file setingan)" \
 	"! grep -qE '^\s*[^-].*Library:Set(Wallpaper|Surface)' '$PRE'"
 chk "AddKeyBox di-guard typeof" "grep -q 'typeof(AdvancedTab.AddKeyBox)' '$PRE'"
-chk "footer v4.8.6" "grep -q 'Preview Kit v4.8.6' '$PRE'"
+chk "footer v4.8.7" "grep -q 'Preview Kit v4.8.7' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \

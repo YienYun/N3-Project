@@ -117,6 +117,19 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🔒 v4.8.7 — RESEP TAB v4 = FINAL TERKUNCI (print user 16:55)
+
+IconCardEnabled true · Padding 2 · Thickness 1 · Transparency 0.00
+(garis SOLID; warna tetap ikut OutlineColor theme per v4.8.6) ·
+Radius 5 · TabBackgroundTransparency 0.85 · ActiveBackground 0.60
+hitam · HoverZoom 1.25 · ActiveZoom 1.25 · ZoomTime 0.20 ·
+TabHoverZoom true.
+
+User: "oke terakhir bro ini resep yang pas bro" -> dikunci sebagai
+default di Library.TabAppearance + Settings.DEFAULTS.Tab; checker pin
+nilai v4 (lib+mod). Resep v3 (v4.8.5: padding 3 / 0.36 / 0.90) resmi
+digantikan.
+
 ## 🎨 v4.8.6 — WARNA GARIS CARD IKUT OUTLINE THEME (knob warna dihapus)
 
 User: "collornya biar ikut outline saja bro! jangan bikin susah pas mau

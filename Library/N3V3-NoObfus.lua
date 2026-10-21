@@ -1639,16 +1639,17 @@ Library.TabAppearance = {
 	-- v4.8.4 = TAB ICON CARD (user request: the glyph halo stroke looked
 	-- ugly -> symmetric box outline around each icon only, NOT the full
 	-- tab). Halo removed entirely; single implementation, zero dead code.
-	-- v4.8.5 = LOCKED USER CARD RECIPE v2 (screenshot dials).
 	-- v4.8.6 = card line FOLLOWS the theme OutlineColor (theme string in
 	-- CreateTabIconCard, own color knob removed) so every future theme
 	-- recolors the card for free (user: follow outline, no own color).
+	-- v4.8.7 = LOCKED USER CARD RECIPE v4 (final print 16:55): padding 2,
+	-- solid line (0.00), faint tab bg 0.85. User: this is the last one.
 	IconCardEnabled = true, -- outline on/off
-	IconCardPadding = 3, -- px breathing room, glyph -> card line (symmetric)
+	IconCardPadding = 2, -- px breathing room, glyph -> card line (symmetric)
 	IconCardThickness = 1, -- px, card line thickness
-	IconCardTransparency = 0.36, -- 36% = the number from the user
+	IconCardTransparency = 0.00, -- 0% = solid line (final user print)
 	IconCardRadius = 5, -- px, rounded corners (same on all 4 corners)
-	TabBackgroundTransparency = 0.90, -- faint tab bg (user dial)
+	TabBackgroundTransparency = 0.85, -- faint tab bg (final user print)
 	ActiveBackgroundTransparency = 0.60,
 	ActiveBackgroundColor = Color3.fromRGB(0, 0, 0),
 	HoverZoom = 1.25, -- icon scale on hover
@@ -1658,7 +1659,7 @@ Library.TabAppearance = {
 Library.TabVisuals = {} -- rec { Button, Icon, Card, Scale, Tab } per sidebar tab
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.8.6 loaded — warna garis card IKUT OutlineColor theme (knob warna dihapus, ganti theme auto recolor) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.8.7 loaded — RESEP TAB v4 FINAL dibake (padding 2, garis solid 0%, bg tab 0.85, warna ikut outline) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
