@@ -7,6 +7,21 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.11.0 — STATUS BAR SWAP (fitur baru, library langsung):
+	   • Search bar bar atas diciputin 32px per sisi (user: "kanan kiri
+	     nya sedikit lebih kecil sedikit saja").
+	   • Di dua sisi itu sekarang ada button icon (zap). Klik kiri =
+	     search bar SWAP jadi strip status: 4 CARD (Fps / Ping /
+	     Server / Executor) gaya card yang sama kayak search frame
+	     (MainColor + stroke OutlineColor + radius window).
+	   • Nilai live: Fps dihitung dari frame per 0.5 detik, Ping dari
+	     GetNetworkPing (update 2x/detik). Loop-nya HIDUP CUMA saat
+	     strip kelihatan — swap balik ke search = loop mati, nol biaya.
+	   • Icon button nyebut mode: zap = "klik buat status", search =
+	     "klik buat balik". Server string & Executor bisa diset dari
+	     script: Library.StatusBar.Server / .Executor (default auto
+	     detect identifyexecutor, fallback "Studio" di Studio).
+
 	 CHANGELOG v4.10.3 — LOGO HOVER ZOOM (langsung library, tanpa preview):
 	   Logo window di pojok kiri atas sekarang zoom saat cursor hover,
 	   persis rasa tab: pakai helper TweenTabZoom + setting HoverZoom
@@ -464,7 +479,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.10.3" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.11.0" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -496,7 +511,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.10.3",
+	Footer = "N3V4 • UI Preview Kit v4.11.0",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

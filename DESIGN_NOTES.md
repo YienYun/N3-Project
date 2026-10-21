@@ -117,6 +117,32 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🔁 v4.11.0 — STATUS BAR SWAP (search bar <-> strip status card)
+
+Request user: search bar atas diciputin kiri-kanan sedikit; di dua
+sisinya button icon yang bisa diklik; klik kiri = search bar swap
+jadi status "Fps: 50 Ping: 30 Server: V3.2 Executor: Delta" dengan
+"card di setiap status itu".
+
+Keputusan desain (kontribusi gue, anti-bengkak):
+- Wrapper search bar dipangkas 32px per sisi (Position -44 -> -76,
+  width offset -55 -> -119) = ruang button tanpa ngubah layout lain.
+- Dua ImageButton (kiri+kanan wrapper) toggle state yang SAMA; icon
+  nyebut mode: zap (=klik buat status) <-> search (=klik buat balik).
+  Icon zap/search keduanya sudah terbukti ada di atlas lucide library.
+- StatusHolder seat di slot yang sama (anak RightWrapper, Size 1,1,
+  Visible flip). 4 card: UIListLayout horizontal padding 6, card
+  Size 0.25,-6; resep card = resep search frame (MainColor solid +
+  UIStroke OutlineColor theme-string + UICorner radius window via
+  Library.Corners biar ikut dial radius).
+- Loop status: task.spawn + RenderStepped frame counter, update teks
+  2x/detik; START cuma saat strip visible, STOP saat swap balik =
+  nol biaya saat sembunyi (aturan ramah fps).
+- Ping = Players.LocalPlayer:GetNetworkPing() * 1000 (pcall).
+  Executor = identifyexecutor() pcall, fallback "Studio"; keduanya
+  bisa di-override: Library.StatusBar.Server / .Executor.
+- Nol knob module baru (rilis library murni, module tidak berubah).
+
 ## 🔍 v4.10.3 — LOGO HOVER ZOOM (library langsung, tanpa preview dial)
 
 Request user: logo window pojok kiri atas zoom saat cursor hover,

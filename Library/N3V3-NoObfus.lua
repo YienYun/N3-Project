@@ -1725,6 +1725,78 @@ function Library:SetCursorGlow(Info: { [string]: any })
 	Library:ApplyCursorGlow()
 end
 
+-- N3V4 v4.11.0: STATUS BAR SWAP — the top search bar can swap into a
+-- live status strip (Fps / Ping / Server / Executor cards). The frame
+-- counter loop only runs while the strip is visible: hidden = zero
+-- cost, in line with the fps-friendly rule.
+Library.StatusBar = {
+	Server = "V3.2", -- shown verbatim; point this at your game version
+	Executor = false, -- false = auto-detect via identifyexecutor, else a string
+}
+Library.StatusBarLabels = {}
+Library.StatusBarLoop = false
+Library.ExecutorName = "Studio"
+
+function Library:GetExecutorName(): string
+	if typeof(Library.StatusBar.Executor) == "string" then
+		return Library.StatusBar.Executor
+	end
+	local OK, Name = pcall(function()
+		return (identifyexecutor :: () -> string)()
+	end)
+	if OK and typeof(Name) == "string" then
+		return Name
+	end
+	return "Studio"
+end
+
+function Library:UpdateStatusBar(Fps: number, Ping: number)
+	local Labels = Library.StatusBarLabels
+	if Labels.Fps then
+		Labels.Fps.Text = "Fps: " .. Fps
+	end
+	if Labels.Ping then
+		Labels.Ping.Text = "Ping: " .. Ping
+	end
+	if Labels.Server then
+		Labels.Server.Text = "Server: " .. tostring(Library.StatusBar.Server)
+	end
+	if Labels.Executor then
+		Labels.Executor.Text = "Executor: " .. Library.ExecutorName
+	end
+end
+
+function Library:StopStatusBarLoop()
+	Library.StatusBarLoop = false
+end
+
+function Library:StartStatusBarLoop()
+	if Library.StatusBarLoop then
+		return
+	end
+	Library.StatusBarLoop = true
+	task.spawn(function()
+		local Frames = 0
+		local Conn = RunService.RenderStepped:Connect(function()
+			Frames += 1
+		end)
+		while Library.StatusBarLoop do
+			task.wait(0.5)
+			local Fps = Frames * 2
+			Frames = 0
+			local Ping = 0
+			pcall(function()
+				local Player = Players.LocalPlayer
+				if Player then
+					Ping = math.floor(Player:GetNetworkPing() * 1000 + 0.5)
+				end
+			end)
+			Library:UpdateStatusBar(Fps, Ping)
+		end
+		Conn:Disconnect()
+	end)
+end
+
 -- N3V4 v4.10.0: GROUP ICON HOVER ANIM — every groupbox icon carries a
 -- UIScale plus the native GuiObject.Rotation tilt; entering the group
 -- card tweens the icon
@@ -1816,7 +1888,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.10.3 loaded — LOGO HOVER ZOOM: logo window pojok kiri atas zoom saat hover pakai helper + setting zoom tab yang sama (rasa identik, nol knob baru) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.11.0 loaded — STATUS BAR SWAP: search bar diciputin kiri-kanan, button icon di sisi-sisinya, klik = swap jadi strip card Fps/Ping/Server/Executor live (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -11422,8 +11494,10 @@ function Library:CreateWindow(WindowInfo)
 		RightWrapper = New("Frame", {
 			AnchorPoint = Vector2.new(1, 0.5),
 			BackgroundTransparency = 1,
-			Position = UDim2.new(1, -44, 0.5, 0),
-			Size = UDim2.new(1, -InitialLeftWidth - 55, 0, 34), -- thick & roomy top-bottom
+			-- v4.11.0: trimmed 32px per side to make room for the status
+			-- swap buttons (user: make the search bar a bit smaller both sides)
+			Position = UDim2.new(1, -76, 0.5, 0),
+			Size = UDim2.new(1, -InitialLeftWidth - 119, 0, 34), -- thick & roomy top-bottom
 			Parent = TopBar,
 		})
 
@@ -11478,6 +11552,92 @@ function Library:CreateWindow(WindowInfo)
 		Library:GiveSignal(SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
 			Library:UpdateSearch(SearchBox.Text)
 		end))
+
+		-- v4.11.0: status strip living in the same slot as the search bar;
+		-- four cards (Fps / Ping / Server / Executor), same card recipe as
+		-- the search frame (MainColor + OutlineColor stroke + window radius)
+		local StatusHolder = New("Frame", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromScale(0, 0),
+			Size = UDim2.fromScale(1, 1),
+			Visible = false,
+			Parent = RightWrapper,
+		})
+		New("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, 6),
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			Parent = StatusHolder,
+		})
+		Library.StatusBarLabels = {}
+		for _, Key in ipairs({ "Fps", "Ping", "Server", "Executor" }) do
+			local Card = New("Frame", {
+				BackgroundColor3 = "MainColor",
+				Size = UDim2.new(0.25, -6, 1, 0),
+				Parent = StatusHolder,
+			})
+			table.insert(
+				Library.Corners,
+				New("UICorner", {
+					CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+					Parent = Card,
+				})
+			)
+			New("UIStroke", {
+				Color = "OutlineColor",
+				Parent = Card,
+			})
+			Library.StatusBarLabels[Key] = New("TextLabel", {
+				BackgroundTransparency = 1,
+				Size = UDim2.fromScale(1, 1),
+				Text = Key .. ": -",
+				TextSize = 13,
+				Parent = Card,
+			})
+		end
+
+		local StatusIcon = Library:GetIcon("zap")
+		local StatusButtons = {}
+		local StatusMode = false
+		local function SetStatusMode(On: boolean)
+			StatusMode = On
+			SearchFrame.Visible = not On and not (WindowInfo.DisableSearch or false)
+			StatusHolder.Visible = On
+			local IconData = On and SearchIcon or StatusIcon
+			if IconData then
+				for _, Btn in ipairs(StatusButtons) do
+					Btn.Image = IconData.Url
+					Btn.ImageRectOffset = IconData.ImageRectOffset
+					Btn.ImageRectSize = IconData.ImageRectSize
+				end
+			end
+			if On then
+				Library.ExecutorName = Library:GetExecutorName()
+				Library:StartStatusBarLoop()
+			else
+				Library:StopStatusBarLoop()
+			end
+		end
+		for _, Slot in ipairs({
+			{ Anchor = Vector2.new(1, 0.5), Position = UDim2.new(0, -6, 0.5, 0) },
+			{ Anchor = Vector2.new(0, 0.5), Position = UDim2.new(1, 6, 0.5, 0) },
+		}) do
+			local Btn = New("ImageButton", {
+				AnchorPoint = Slot.Anchor,
+				BackgroundTransparency = 1,
+				Image = StatusIcon and StatusIcon.Url or "",
+				ImageColor3 = "FontColor",
+				ImageRectOffset = StatusIcon and StatusIcon.ImageRectOffset or Vector2.zero,
+				ImageRectSize = StatusIcon and StatusIcon.ImageRectSize or Vector2.zero,
+				Position = Slot.Position,
+				Size = UDim2.fromOffset(24, 24),
+				Parent = RightWrapper,
+			})
+			table.insert(StatusButtons, Btn)
+			Btn.MouseButton1Click:Connect(function()
+				SetStatusMode(not StatusMode)
+			end)
+		end
 		if MoveIcon then
 			New("ImageLabel", {
 				AnchorPoint = Vector2.new(1, 0.5),
