@@ -7,6 +7,16 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.9.1 — GLOW v2 (fix total dari screenshot user):
+	   • "kok keluar window sih?" — MainFrame emang nggak nge-clip;
+	     sekarang glow hidup di DALAM container clip seukuran window
+	     (UICorner sama = sudut bulet ikut ke-clip). Nol bocor luar.
+	   • "cukup 1 saja woi" — stack 6 lingkaran DIHAPUS (keliatan ring
+	     bertingkat, jelek). Sekarang SATU circle.
+	   • "transparansi dikit saja 5%" — Intensity sekarang = persen
+	     opasitas langsung: default 5% (alpha 0.05), subtle pool of
+	     light, bukan lampu sorot. Slider 0-100% tetep buat dial.
+
 	 CHANGELOG v4.9.0 — CURSOR GLOW (fitur baru):
 	   • Cahaya soft NGIKUT gerakan cursor lu, di layer BACKGROUND:
 	     ZIndex 0 = di atas wallpaper (-2/-1) tapi di bawah SEMUA
@@ -387,7 +397,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.9.0" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.9.1" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -419,7 +429,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.9.0",
+	Footer = "N3V4 • UI Preview Kit v4.9.1",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

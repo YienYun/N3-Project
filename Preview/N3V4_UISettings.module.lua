@@ -13,6 +13,9 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.9.1: GLOW v2 sesuai teriakan user: SATU circle aja (stack 6 layer
+--        keliatan ring bertingkat = jelek), opacity 5% (Intensity = 5),
+--        dan di-clip di dalam rect window (v4.9.0 bocor keluar window).
 -- v4.9.0: CURSOR GLOW — cahaya soft ngikut gerakan cursor di layer
 --        background (di belakang semua group/button/toggle, keliatan
 --        lewat card yang semi-transparan). Default warna IKUT accent
@@ -144,7 +147,7 @@ Settings.DEFAULTS = {
 		Enabled = true,
 		Color = false,
 		Size = 280,
-		Intensity = 50,
+		Intensity = 5,
 		Smooth = 12,
 	},
 }
@@ -364,7 +367,7 @@ function Settings:Attach(Library, Window, Options)
 			string.format("\tEnabled = %s,", tostring(G.Enabled ~= false)),
 			(typeof(G.Color) == "Color3") and ("\tColor = " .. RGB(G.Color) .. ",") or "\tColor = false, -- ikut accent theme",
 			string.format("\tSize = %d,", G.Size or 280),
-			string.format("\tIntensity = %d,", G.Intensity or 50),
+			string.format("\tIntensity = %d,", G.Intensity or 5),
 			string.format("\tSmooth = %d,", G.Smooth or 12),
 			"})",
 		}
@@ -678,7 +681,7 @@ function Settings:Attach(Library, Window, Options)
 			end,
 		})
 		Box:AddSlider("GW_Int", {
-			Text = "Glow intensity (0% = paling halus)", Default = CG0.Intensity or 50, Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Text = "Glow intensity / opacity (0% = invisible)", Default = CG0.Intensity or 5, Min = 0, Max = 100, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
 				Library:SetCursorGlow({ Intensity = Value })
 			end,

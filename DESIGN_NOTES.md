@@ -117,6 +117,26 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 😤 v4.9.1 — GLOW v2: 1 circle, opacity 5%, di-clip dalam window
+
+Screenshot user v4.9.0: glow BOCOR keluar window (MainFrame nggak punya
+ClipsDescendants -> circle 280px nongol di luar border) dan stack 6
+lingkaran keliatan sebagai RING bertingkat = "jelek banget cok".
+Perintah user: "cukup 1 saja woi", "transparansi dikit saja cok 5%
+saja", "kok keluar window sih?".
+
+Fix total:
+- Stack 6 layer DIHAPUS -> SATU Frame circle (CursorGlowFrame).
+- Semantik Intensity diubah: persen OPASITAS langsung (alpha =
+  Intensity/100 x Fade). Default 5 (alpha 0.05) = pool cahaya subtle.
+- Container clip "CursorGlowClip" seukuran MainFrame (ZIndex 0,
+  ClipsDescendants + UICorner radius window) -> glow ke-potong persis
+  di rect window termasuk sudut bulet; shadow/neon stroke MainFrame
+  tetep aman karena clip-nya di container sendiri, bukan MainFrame.
+- Holder (penumpang posisi cursor) sekarang anak clip container.
+- UpdateColorsUsingRegistry recolor single frame. Knob module tetep 5
+  (label intensity diperjelas "/ opacity", default slider 5).
+
 ## ✨ v4.9.0 — CURSOR GLOW (fitur baru, request user)
 
 Request: "kalo masuk ke window gue kayak ada visual effect... di
