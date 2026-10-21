@@ -7,6 +7,14 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.10.1 — BUG #29 (rusak co): UIRotation GA ADA di Roblox.
+	   New("UIRotation") di AddGroupbox -> "Unable to create an Instance
+	   of type UIRotation" -> build groupbox PERTAMA mati -> UI rusak.
+	   Gue yang halu kelas itu ada; padahal rotate GUI itu properti
+	   NATIVE GuiObject.Rotation (library sendiri pakai Rotation = 180
+	   buat panah collapse). Fix: tween Rotation langsung di ImageLabel
+	   icon, nol instance tambahan. Perilaku animasi identik.
+
 	 CHANGELOG v4.10.0 — ICON ANIM (fitur baru) + glow idle-skip:
 	   • Semua icon groupbox sekarang animasi: cursor masuk kartu
 	     group -> icon zoom sedikit (+12%) sambil miring sedikit
@@ -443,7 +451,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.10.0" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.10.1" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -475,7 +483,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.10.0",
+	Footer = "N3V4 • UI Preview Kit v4.10.1",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

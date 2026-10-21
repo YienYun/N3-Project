@@ -1726,7 +1726,8 @@ function Library:SetCursorGlow(Info: { [string]: any })
 end
 
 -- N3V4 v4.10.0: GROUP ICON HOVER ANIM — every groupbox icon carries a
--- UIScale + UIRotation pair; entering the group card tweens the icon
+-- UIScale plus the native GuiObject.Rotation tilt; entering the group
+-- card tweens the icon
 -- up by IconAnim.Zoom percent and tilts it IconAnim.Tilt degrees,
 -- leaving tweens it back to rest. Fire-and-forget tweens (Quint-out),
 -- so unlike the glow this costs nothing per frame: the glow loop
@@ -1753,7 +1754,7 @@ function Library:PlayIconAnim(Anim, Hover: boolean)
 			Scale = Hover and (1 + math.clamp(Config.Zoom, 0, 100) / 100) or 1,
 		}),
 		TweenService:Create(Anim.Rot, Info, {
-			Angle = Hover and math.clamp(Config.Tilt, -45, 45) or 0,
+			Rotation = Hover and math.clamp(Config.Tilt, -45, 45) or 0,
 		}),
 	}
 	for _, Tween in ipairs(Anim.Tweens) do
@@ -1815,7 +1816,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.10.0 loaded — ICON ANIM: icon group zoom+miring saat hover kartu, balik sendiri saat keluar + glow loop idle-skip biar ramah fps (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.10.1 loaded — ICON ANIM fix bug #29: tilt pakai GuiObject.Rotation native (UIRotation itu kelas halu, bikin AddGroupbox mati) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -12735,7 +12736,10 @@ function Library:CreateWindow(WindowInfo)
 					})
 					local Anim = {
 						Scale = New("UIScale", { Scale = 1, Parent = BoxIconLabel }),
-						Rot = New("UIRotation", { Angle = 0, Parent = BoxIconLabel }),
+						-- v4.10.1 bug #29: UIRotation is NOT a real Roblox class
+						-- (New() aborted AddGroupbox); GuiObject.Rotation is the
+						-- native property, so tween the icon label directly
+						Rot = BoxIconLabel,
 						Tweens = {},
 					}
 					table.insert(Library.IconAnimRegistry, Anim)

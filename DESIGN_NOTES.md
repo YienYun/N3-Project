@@ -117,6 +117,24 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🐛 v4.10.1 — BUG #29: UIRotation itu kelas HALU (UI rusak total)
+
+Log user: `Unable to create an Instance of type "UIRotation"` dari
+New() di AddGroupbox -> groupbox PERTAMA gagal ke-build -> seluruh
+UI preview rusak ("lah rusak co"). Gue yang salah: nulis v4.10.0
+pakai kelas "UIRotation" yang GA ADA di Roblox (gue kira pasangan
+UIScale). Buktinya ada di library sendiri: rotate GUI itu properti
+NATIVE `GuiObject.Rotation` (panah collapse pakai Rotation = 180).
+
+Fix: Anim.Rot = ImageLabel icon itu sendiri; tween property
+`Rotation` (derajat) langsung. Nol instance tambahan, perilaku
+animasi identik (zoom via UIScale, tilt via Rotation). Checker
+sekarang nge-pin `Rot = BoxIconLabel` DAN nge-ban `New("UIRotation"`
+di library biar halusinasi kelas gini ga lolos lagi.
+
+Lesson: nama kelas Roblox harus diverifikasi terhadap pemakaian di
+library / docs, jangan dari ingetan.
+
 ## ✨ v4.10.0 — ICON ANIM: icon group zoom + miring saat hover
 
 Request user: "ketika cursor gue mengarah ke group maka icons group
