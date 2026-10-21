@@ -1637,3 +1637,23 @@ Fix:
 - Pelajaran: fitur module-yang-butuh-API-library baru WAJIB pakai guard
   versi + pesan diagnostik, biar mismatch versi file di run user nggak
   pernah lagi tampil sebagai "UI rusak / gue ngetroll".
+
+## v4.12.9 — DIVIDER ANTI-MATI + instrumen error ASLI
+Screenshot Studio user (v4.12.8, Output bersih, library BARU ter-load):
+box setting kiri mati tepat setelah slider (sample "Contoh garis" ga
+sempat lahir), box kanan hilang, box PRE kepotong di divider pertama.
+Titik mati di MOD vs PRE BEDA (MOD: sebelum frame pertama, kemungkinan
+di callback default slider -> SetDividerTransparency -> Apply;
+PRE: setelah frame kiri). Error yang titik-nya beda-beda = nggak bisa
+gue tembak buta lagi tanpa log asli.
+
+Keputusan desain: UI nggak boleh bisa MATI karena divider.
+- AddDivider: create frame garis lewat SafeLine = pcall(New, "Frame",
+  props). Gagal => warn("[N3V4] divider line gagal dibikin: <error ASLI>")
+  dan return nil; box + konten setelahnya TETAP HIDUP. Assign
+  BorderTransparency di-guard nil. Apply loop skip nil.
+- SetDividerTransparency: ApplyDividerAppearance di-pcall; gagal =>
+  warn error asli. Jadi callback default slider nggak bisa lagi
+  matikan pembangunan box setting.
+- Efek samping sengaja: kalau flake-nya masih ada, Output user sekarang
+  bawa pesan error PERSIS (warn) => round berikutnya sniper, bukan nebak.

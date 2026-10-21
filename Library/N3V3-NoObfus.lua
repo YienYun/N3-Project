@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.12.8 loaded — VERSION HANDSHAKE: Library.N3V4Version ada biar module settings bisa detect kalau library yang ke-require masih versi lama; sample divider sekarang ada di DUA box seting (kiri+kanan) biar realtime keliatan saat slider digeser (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.12.9 loaded — DIVIDER ANTI-MATI: create frame garis di-pcall (SafeLine); kalau gagal, error ASLI di-print ke Output lewat warn dan box/konten SELANJUTNYA TETAP HIDUP (ga ada lagi box kepotong / seting kehilangan box kanan) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5807,7 +5807,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.12.8"
+	Library.N3V4Version = "4.12.9"
 
 	Library.DividerAppearance = {
 		LineTransparency = 0.3,
@@ -5820,7 +5820,9 @@ do
 		for _, D in ipairs(Library.DividerInstances) do
 			if not D.Destroyed then
 				for _, Frame in ipairs(D.Lines or {}) do
-					Frame.BorderTransparency = Library.DividerAppearance.LineTransparency
+					if Frame then
+						Frame.BorderTransparency = Library.DividerAppearance.LineTransparency
+					end
 				end
 				if D.Label then
 					D.Label.TextTransparency = Library.DividerAppearance.TextTransparency
@@ -5836,7 +5838,10 @@ do
 		if type(TextTransparency) == "number" then
 			Library.DividerAppearance.TextTransparency = math.clamp(TextTransparency, 0, 1)
 		end
-		Library:ApplyDividerAppearance()
+		local Ok, Err = pcall(Library.ApplyDividerAppearance, Library)
+		if not Ok then
+			warn("[N3V4] apply divider appearance gagal: " .. tostring(Err))
+		end
 	end
 
 	function Funcs:AddDivider(...)
@@ -5880,6 +5885,15 @@ do
 			Parent = Holder,
 		})
 
+		local function SafeLine(Properties)
+			local Ok, Frame = pcall(New, "Frame", Properties)
+			if not Ok then
+				warn("[N3V4] divider line gagal dibikin: " .. tostring(Frame))
+				return nil
+			end
+			return Frame
+		end
+
 		if Text then
 			TextLabel = New("TextLabel", {
 				AutomaticSize = Enum.AutomaticSize.X,
@@ -5896,7 +5910,7 @@ do
 			local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
 			local SizeX = X // 2 + 10
 
-			LineFrames[1] = New("Frame", {
+			LineFrames[1] = SafeLine({
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = "MainColor",
 				BorderColor3 = "AccentColor",
@@ -5905,8 +5919,10 @@ do
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,
 			})
-			LineFrames[1].BorderTransparency = Library.DividerAppearance.LineTransparency
-			LineFrames[2] = New("Frame", {
+			if LineFrames[1] then
+				LineFrames[1].BorderTransparency = Library.DividerAppearance.LineTransparency
+			end
+			LineFrames[2] = SafeLine({
 				AnchorPoint = Vector2.new(1, 0.5),
 				BackgroundColor3 = "MainColor",
 				BorderColor3 = "AccentColor",
@@ -5915,9 +5931,11 @@ do
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,
 			})
-			LineFrames[2].BorderTransparency = Library.DividerAppearance.LineTransparency
+			if LineFrames[2] then
+				LineFrames[2].BorderTransparency = Library.DividerAppearance.LineTransparency
+			end
 		else
-			LineFrames[1] = New("Frame", {
+			LineFrames[1] = SafeLine({
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = "MainColor",
 				BorderColor3 = "AccentColor",
@@ -5926,7 +5944,9 @@ do
 				Size = UDim2.new(1, 0, 0, 2),
 				Parent = InnerHolder,
 			})
-			LineFrames[1].BorderTransparency = Library.DividerAppearance.LineTransparency
+			if LineFrames[1] then
+				LineFrames[1].BorderTransparency = Library.DividerAppearance.LineTransparency
+			end
 		end
 
 		Groupbox:Resize()

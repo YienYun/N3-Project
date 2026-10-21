@@ -95,7 +95,7 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.12.8 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.12.9 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + card icon + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconCard' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
@@ -175,8 +175,8 @@ chk "v4.12.5: komentar sampah dibersihkan (LIB <=149 baris asli, MOD/PRE nol)" \
 chk "v4.12.4: module bersih dari sampah section settings" \
 	"! grep -q 'AddSlider(\"SD_BT\"' '$MOD' && ! grep -q 'AddRightGroupbox(\"Divider Presets\"' '$MOD' && ! grep -q 'local function BuildSection' '$MOD' && ! grep -q '^\\tSection = {' '$MOD'"
 chk "v4.12.6: transparansi divider bisa diatur user (API LIB + knob MOD + sample live)" \
-	"grep -q 'Library.DividerAppearance = {' '$LIB' && grep -q 'function Library:SetDividerTransparency' '$LIB' && grep -q 'function Library:ApplyDividerAppearance' '$LIB' && grep -qF 'LineFrames[1].BorderTransparency = Library.DividerAppearance.LineTransparency' '$LIB' && grep -q 'table.insert(Library.DividerInstances, Divider)' '$LIB' && grep -q 'AddSlider(\"SD_LT\"' '$MOD' && grep -q 'AddSlider(\"SD_TT\"' '$MOD' && grep -q 'AddDivider(\"Contoh garis\")' '$MOD' && grep -q 'AddDivider(\"Contoh text\")' '$MOD' && grep -q 'type(Library.SetDividerTransparency) == \"function\"' '$MOD' && grep -q 'Library.N3V4Version = \"4.12.8\"' '$LIB'"
-chk "footer v4.12.8" "grep -q 'Preview Kit v4.12.8' '$PRE'"
+	"grep -q 'Library.DividerAppearance = {' '$LIB' && grep -q 'function Library:SetDividerTransparency' '$LIB' && grep -q 'function Library:ApplyDividerAppearance' '$LIB' && grep -qF 'LineFrames[1].BorderTransparency = Library.DividerAppearance.LineTransparency' '$LIB' && grep -q 'table.insert(Library.DividerInstances, Divider)' '$LIB' && grep -q 'AddSlider(\"SD_LT\"' '$MOD' && grep -q 'AddSlider(\"SD_TT\"' '$MOD' && grep -q 'AddDivider(\"Contoh garis\")' '$MOD' && grep -q 'AddDivider(\"Contoh text\")' '$MOD' && grep -q 'type(Library.SetDividerTransparency) == \"function\"' '$MOD' && grep -q 'Library.N3V4Version = \"4.12.9\"' '$LIB' && grep -q 'local function SafeLine(Properties)' '$LIB' && grep -q 'pcall(New, \"Frame\", Properties)' '$LIB' && grep -q 'pcall(Library.ApplyDividerAppearance, Library)' '$LIB'"
+chk "footer v4.12.9" "grep -q 'Preview Kit v4.12.9' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \
