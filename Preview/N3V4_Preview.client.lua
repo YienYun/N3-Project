@@ -7,6 +7,20 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.12.4 — SECTION REVERT (eksperimen gue dihapus total):
+	   • User: "balikin ke semula saja, jangan ada coloran garis, hapus,
+	     nambah sampah, cuma color textnya pertahankan". Executed:
+	     - Library: SectionAppearance/Registry/Apply/Set + hook theme
+	       DIHAPUS; garis divider = kode ASLI library verbatim lagi
+	       (fill MainColor + border OutlineColor 1px, SizeX X//2+10).
+	     - Module: groupbox "Section Divider" + "Divider Presets",
+	       BuildSection, DEFAULTS.Section, reset line, semua knob SD_*
+	       DIHAPUS. T1 balik 5/5.
+	     - YANG TETEP: text divider warna AccentColor (v4.11.3) +
+	       transparansi text 0.5 bawaan.
+	   • Garis section lu sekarang identik 100% sama punya lu dulu
+	     sebelum rangkaian v4.11.x mulai ngutak-atik section.
+
 	 CHANGELOG v4.12.3 — skema garis section diganti (matiin pincang):
 	   • Border 1px semi-transparan di frame 2px ternyata render
 	     BEDA kiri/kanan di atas card transparansi 0.5 + wallpaper
@@ -599,7 +613,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.12.3" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.12.4" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -631,7 +645,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.12.3",
+	Footer = "N3V4 • UI Preview Kit v4.12.4",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
@@ -1023,8 +1037,8 @@ Try("Overview: L1 Welcome (Spotlight + Label + Divider)", function()
 	Box:AddDivider({ Text = "Selamat Datang", Margin = 6 })
 	Box:AddLabel('Library: <font color="#5adcff">ONLINE</font>', false)
 	Box:AddLabel("Klik tab di sidebar buat jelajah semua komponen.", true)
-	-- v4.12.3: penunjuk lokasi setting biar ga ada lagi "setingnya mana"
-	Box:AddLabel("Setting section/glow/icon: tab UI Settings (icon palette paling atas sidebar), kolom kiri box Section Divider.", true)
+	-- v4.12.4: penunjuk lokasi setting (section settings udah di-revert)
+	Box:AddLabel("Setting glow/icon anim: tab UI Settings (icon palette paling atas sidebar).", true)
 end)
 
 Try("Overview: L2 Session Info", function()

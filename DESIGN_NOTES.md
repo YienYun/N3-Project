@@ -117,6 +117,33 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## ↩️ v4.12.4 — SECTION REVERT: eksperimen dihapus, desain asli balik
+
+Putusan user setelah rangkaian v4.11.3->v4.12.3: "balikin ke semula
+saja bro jangan ada coloran anj malah jelek... hapus. nambah sampah
+anj. balikin cok ke semula cuma color textnya lu pertahanin."
+
+Eksekusi:
+- LIB: Library.SectionAppearance, SectionRegistry,
+  ApplySectionAppearance, SetSectionAppearance, hook theme section =
+  DIHAPUS. AddDivider text-branch = kode ASLI library verbatim lagi:
+  SizeX = X//2 + 10, dua Frame fill MainColor + BorderColor3
+  OutlineColor + BorderSizePixel 1, Size 0.5,-SizeX,0,2.
+- MOD: dua groupbox section, BuildSection, DEFAULTS.Section, baris
+  reset, semua knob SD_* = DIHAPUS. T1 5/5.
+- DIPERTAHANKAN sesuai permintaan: TextLabel divider TextColor3
+  "AccentColor" + TextTransparency 0.5 (perubahan v4.11.3 yang dia
+  minta keep).
+- Checker: pin garis desain asli + text accent + ABSENSI total
+  SectionAppearance/SectionRegistry/SD_BT/BuildSection biar gue atau
+  siapa pun ga bisa ngidupin lagi sampah ini tanpa sadar.
+
+Lesson buat gue: request "section ikut color theme" dia maksudkan
+untuk TEXT-nya (dia tulis dari awal: "----- Selamat datang ---- gue
+mau jadi ngikutin color theme"); gue over-engineer garisnya sampe 5
+iterasi. Baca request harfiah dulu, tawarkan minimal, biar dia yang
+minta lebih.
+
 ## 🎯 v4.12.3 — SECTION v5: garis opaque lerp, pincang mati secara fisik
 
 Screenshot user v4.12.2 bersih: divider tetep kiri-ungu/kanan-hitam.

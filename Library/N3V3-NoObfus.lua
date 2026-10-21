@@ -1168,11 +1168,6 @@ function Library:UpdateColorsUsingRegistry()
 			Layer.Frame.BackgroundColor3 = Color
 		end
 	end
-	-- v4.12.1: section borders are raw Color3 (bug #31), so re-apply
-	-- them after every theme change to keep the synced look
-	for _, Section in ipairs(Library.SectionRegistry or {}) do
-		Library:ApplySectionAppearance(Section)
-	end
 end
 
 function Library:SetDPIScale(DPIScale: number)
@@ -1730,64 +1725,6 @@ function Library:SetCursorGlow(Info: { [string]: any })
 	Library:ApplyCursorGlow()
 end
 
--- N3V4 v4.12.0: SECTION APPEARANCE — divider lines keep the original
--- library design (MainColor fill + 1px border); this config only tunes
--- how loud the themed border/text read, plus the symmetric text gap
--- and the line thickness. v4.12.3: lines are OPAQUE lerp colors
--- (Background -> theme color), never semi-transparent borders: opaque
--- reads identical on every backdrop, killing left/right mismatch.
--- One Gap value feeds both sides: symmetric by construction.
-Library.SectionAppearance = {
-	AccentBorder = true, -- false = lerp target falls back to OutlineColor
-	Strength = 0.6, -- 0 = neutral dark, 1 = full theme color (opaque lerp)
-	TextTransparency = 0.5,
-	Gap = 10, -- px between the text and each line (both sides)
-	Thickness = 2, -- px line height
-}
-Library.SectionRegistry = {}
-
-function Library:ApplySectionAppearance(Section)
-	-- v4.12.1 bug #31: BorderColor3 rejects theme strings on direct
-	-- runtime assignment (the string magic lives inside New() only),
-	-- so assign real Color3 and let the registry hook re-sync themes.
-	-- v4.12.2: pcall-guarded so a section glitch can never abort the
-	-- caller (bug #27 pattern: one bad assign killed a whole box)
-	pcall(function()
-		local A = Library.SectionAppearance
-		-- v4.12.3: opaque lerp color instead of a semi-transparent border.
-		-- A 1px border on a 2px frame rendered inconsistently per side
-		-- over the see-through cards (left purple, right black); an
-		-- opaque BackgroundColor3 lerped from Background toward the
-		-- theme color reads identical on ANY backdrop, and Strength
-		-- is the loudness knob the user asked for.
-		local Target = A.AccentBorder ~= false and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
-		local Strength = math.clamp(A.Strength or 0.6, 0, 1)
-		local Color = Library.Scheme.BackgroundColor:Lerp(Target, Strength)
-		local Gap = math.clamp(A.Gap or 10, 0, 60)
-		local Thickness = math.clamp(A.Thickness or 2, 1, 6)
-		local TextT = math.clamp(A.TextTransparency or 0, 0, 1)
-		for _, Line in ipairs(Section.Lines) do
-			Line.BackgroundColor3 = Color
-			Line.BorderSizePixel = 0
-			Line.Size = UDim2.new(0.5, -(Section.HalfX + Gap), 0, Thickness)
-		end
-		if Section.Text then
-			Section.Text.TextTransparency = TextT
-		end
-	end)
-end
-
-function Library:SetSectionAppearance(Info: { [string]: any })
-	for Key, Val in pairs(Info or {}) do
-		if Library.SectionAppearance[Key] ~= nil then
-			Library.SectionAppearance[Key] = Val
-		end
-	end
-	for _, Section in ipairs(Library.SectionRegistry) do
-		Library:ApplySectionAppearance(Section)
-	end
-end
-
 -- N3V4 v4.11.0: STATUS BAR SWAP — the top search bar can swap into a
 -- live status strip (Fps / Ping / Server / Executor cards). The frame
 -- counter loop only runs while the strip is visible: hidden = zero
@@ -1952,7 +1889,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.12.3 loaded — SECTION v5: garis = fill OPAQUE warna lerp Background->accent (kekuatan = knob Strength), border dihapus = mustahil pincang kiri/kanan (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.12.4 loaded — SECTION REVERT: garis balik DESAIN ASLI library verbatim (MainColor + border OutlineColor), sistem SectionAppearance DIHAPUS total, cuma text divider yang tetep accent (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -6116,32 +6053,35 @@ do
 				Text = Text,
 				TextColor3 = "AccentColor", -- v4.11.3: section text rides the synced theme
 				TextSize = 14,
-				TextTransparency = Library.SectionAppearance.TextTransparency,
+				TextTransparency = 0.5,
 				TextXAlignment = Enum.TextXAlignment.Center,
 				Parent = InnerHolder,
 			})
 
 			local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
-			local HalfX = X // 2
-			local SizeX = HalfX + Library.SectionAppearance.Gap
+			local SizeX = X // 2 + 10
 
-			-- v4.12.2: both lines come from ONE loop = identical by
-			-- construction; registered so SetSectionAppearance can retune
-			-- border color/transparency, gap and thickness live
-			local Lines = {}
-			for _, AnchorX in ipairs({ 0, 1 }) do
-				table.insert(Lines, New("Frame", {
-					AnchorPoint = Vector2.new(AnchorX, 0.5),
-					BackgroundColor3 = "MainColor",
-					BorderSizePixel = 0, -- v4.12.3: fill-only line, no border
-					Position = UDim2.fromScale(AnchorX, 0.5),
-					Size = UDim2.new(0.5, -SizeX, 0, 2),
-					Parent = InnerHolder,
-				}))
-			end
-			local Section = { Text = TextLabel, Lines = Lines, HalfX = HalfX }
-			table.insert(Library.SectionRegistry, Section)
-			Library:ApplySectionAppearance(Section)
+			-- v4.12.4: REVERT to the original library line design, verbatim
+			-- (user: revert it, my old lines were not like this).
+			-- Only the text color stays themed (v4.11.3, user kept it).
+			New("Frame", {
+				AnchorPoint = Vector2.new(0, 0.5),
+				BackgroundColor3 = "MainColor",
+				BorderColor3 = "OutlineColor",
+				BorderSizePixel = 1,
+				Position = UDim2.fromScale(0, 0.5),
+				Size = UDim2.new(0.5, -SizeX, 0, 2),
+				Parent = InnerHolder,
+			})
+			New("Frame", {
+				AnchorPoint = Vector2.new(1, 0.5),
+				BackgroundColor3 = "MainColor",
+				BorderColor3 = "OutlineColor",
+				BorderSizePixel = 1,
+				Position = UDim2.fromScale(1, 0.5),
+				Size = UDim2.new(0.5, -SizeX, 0, 2),
+				Parent = InnerHolder,
+			})
 		else
 			New("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),
