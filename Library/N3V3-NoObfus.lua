@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.12.6 loaded — DIVIDER TRANSPARENCY: garis outline accent sekarang ada knob transparansinya di UI Settings (box Section Divider + Section Text), default garis 40% biar ga mencolok, user bebas atur 0-100% (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.12.7 loaded — DIVIDER FIX: transparency garis/text sekarang di-assign SETELAH instance jadi (angka langsung, ga lewat FillInstance/theme registry), table New() balik persis bentuk v4.12.5 yang terbukti aman; default garis 30% (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5808,7 +5808,7 @@ do
 	end
 
 	Library.DividerAppearance = {
-		LineTransparency = 0.4,
+		LineTransparency = 0.3,
 		TextTransparency = 0,
 	}
 
@@ -5886,10 +5886,10 @@ do
 				Text = Text,
 				TextColor3 = "AccentColor",
 				TextSize = 14,
-				TextTransparency = Library.DividerAppearance.TextTransparency,
 				TextXAlignment = Enum.TextXAlignment.Center,
 				Parent = InnerHolder,
 			})
+			TextLabel.TextTransparency = Library.DividerAppearance.TextTransparency
 
 			local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
 			local SizeX = X // 2 + 10
@@ -5898,33 +5898,33 @@ do
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = "MainColor",
 				BorderColor3 = "AccentColor",
-				BorderTransparency = Library.DividerAppearance.LineTransparency,
 				BorderSizePixel = 1,
 				Position = UDim2.fromScale(0, 0.5),
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,
 			})
+			LineFrames[1].BorderTransparency = Library.DividerAppearance.LineTransparency
 			LineFrames[2] = New("Frame", {
 				AnchorPoint = Vector2.new(1, 0.5),
 				BackgroundColor3 = "MainColor",
 				BorderColor3 = "AccentColor",
-				BorderTransparency = Library.DividerAppearance.LineTransparency,
 				BorderSizePixel = 1,
 				Position = UDim2.fromScale(1, 0.5),
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,
 			})
+			LineFrames[2].BorderTransparency = Library.DividerAppearance.LineTransparency
 		else
 			LineFrames[1] = New("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = "MainColor",
 				BorderColor3 = "AccentColor",
-				BorderTransparency = Library.DividerAppearance.LineTransparency,
 				BorderSizePixel = 1,
 				Position = UDim2.fromScale(0, 0.5),
 				Size = UDim2.new(1, 0, 0, 2),
 				Parent = InnerHolder,
 			})
+			LineFrames[1].BorderTransparency = Library.DividerAppearance.LineTransparency
 		end
 
 		Groupbox:Resize()

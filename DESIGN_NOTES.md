@@ -1590,3 +1590,24 @@ yang lengkap." Jadi KALI INI settings ada karena DIA yang minta.
 - Pelajaran: user reject sistem section v4.12.0-4.12.3 karena gue yang
   inisiatif tanpa diminta; begitu DIA yang minta settings, ya dibuat.
   Bedanya request vs inisiatif.
+
+## v4.12.7 — FIX divider v4.12.6 yang pecah di run user
+Simptom di screenshot user v4.12.6: garis kiri pucat, garis kanan ILANG,
+konten box setelah AddDivider pertama mati (box "Asset Dipakai" kepotong),
+box settings divider cuma kebentuk satu => error runtime DI DALAM proses
+create frame divider, instance setengah jadi (FillInstance loop property
+ke-potong = property ketimpa acak => warna pucat).
+
+Root cause perlakuan: v4.12.6 naruh field BARU (BorderTransparency dari
+DividerAppearance) DI DALAM table New() yang diproses FillInstance +
+theme-registry (generalized iteration, urutan property nggak dijamin).
+Sekecil apa pun gangguan di jalur itu = instance setengah konfigurasi.
+
+Fix (bisect ke jalur terbukti): table New() divider BALIK PERSIS bentuk
+v4.12.5 (AnchorPoint/BackgroundColor3/BorderColor3/BorderSizePixel/
+Position/Size/Parent doang). Transparansi garis & text di-assign SETELAH
+instance jadi, angka langsung ke property (LineFrames[n].BorderTransparency,
+TextLabel.TextTransparency) — nggak lewat FillInstance/registry sama sekali.
+Default garis 0.4 -> 0.3 (user: 40% kebaca putih/pudar, 0% terlalu mencolok).
+Pelajaran: JANGAN tambah key baru ke table New() komponen core yang lewat
+FillInstance theme-registry; assign property numerik setelah instance lahir.
