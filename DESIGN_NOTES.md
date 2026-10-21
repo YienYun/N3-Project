@@ -117,6 +117,29 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## ➡️ v4.11.2 — BUG #30: icon bolong (salah sumber verifikasi) + panah per sisi
+
+User: "iconsnya mana? kok ga ada iconsnya? pake arrow kiri kanan bro!"
+
+Root cause: rantai Library:GetIcon = atlas ONLINE (mirror lucide,
+load async di runtime) -> fallback tabel subset OFFLINE yang embed
+di file library. "arrow-left" cuma ada di atlas online; di env user
+saat CreateWindow jalan, yang pasti tersedia subset offline ->
+GetIcon("arrow-left") nil -> ImageButton image kosong. Verifikasi gue
+kemarin lari ke tarball mirror repo (source.lua main branch), BUKAN
+ke tabel embed library = sumber salah (varian baru pelajaran bug #29:
+verifikasi terhadap SUMBER YANG DIPAKAI RUNTIME, bukan repo upstream).
+
+Fix v4.11.2:
+- Button kiri = "chevron-left", kanan = "chevron-right": dua nama ini
+  ADA di tabel subset offline library (baris embed chevron-left /
+  chevron-right) -> dijamin render online maupun offline.
+- Identitas icon per sisi KONSTAN selamanya (tidak ada swap image).
+- Animasi swap diganti slide: panel masuk (StatusHolder / SearchFrame)
+  di-set Position offset Dir*24 lalu tween ke 0 (Quint-out 0.2s) =
+  slide dari sisi button yang diklik. Spin Rotation dihapus.
+- Checker nge-pin kedua nama chevron + nge-ban GetIcon("arrow-left").
+
 ## 🎨 v4.11.1 — STATUS BAR v2: warna prefix theme + icon konstan spin
 
 Protes user: (1) prefix label card harus warna theme yang udah di-

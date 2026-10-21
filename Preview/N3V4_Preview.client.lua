@@ -7,6 +7,19 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.11.2 — BUG #30 (icon bolong) + panah kiri/kanan per sisi:
+	   • Penyebab icon ga muncul: GetIcon = atlas online (load async)
+	     fallback ke subset OFFLINE yang embed di library. "arrow-left"
+	     cuma ada di atlas online -> pas button dibuat, subset offline
+	     ga punya -> image kosong. Gue kemarin verifikasi ke mirror
+	     repo, bukan ke tabel embed library = salah sumber.
+	   • Sekarang: button KIRI = chevron-left, button KANAN =
+	     chevron-right (dua-duanya ADA di subset offline, dijamin
+	     render). Identitas icon per sisi konstan selamanya.
+	   • Anim swap diganti: panel yang masuk SLIDE dari sisi button
+	     yang diklik (kiri -> slide dari kiri, kanan -> dari kanan),
+	     Quint-out 0.2s. Icon ga ikut muter lagi.
+
 	 CHANGELOG v4.11.1 — STATUS BAR v2 (fix dari protes user):
 	   • Card sekarang DUA label: prefix ("Fps:", "Ping:", ...) warna
 	     AccentColor = ikut theme yang lu sync; NILAI-nya (50, 30, ...)
@@ -491,7 +504,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.11.1" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.11.2" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -523,7 +536,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.11.1",
+	Footer = "N3V4 • UI Preview Kit v4.11.2",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

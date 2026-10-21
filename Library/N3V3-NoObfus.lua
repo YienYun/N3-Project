@@ -1889,7 +1889,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.11.1 loaded — STATUS BAR v2: prefix card warna accent theme + nilai putih, icon arrow-left konstan dengan spin swap sesuai sisi klik, icon 18px (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.11.2 loaded — STATUS BAR v3: icon panah kiri/kanan per sisi (chevron offline-subset, bug #30 icon bolong fix), anim swap = panel slide dari sisi yang diklik (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -11615,25 +11615,26 @@ function Library:CreateWindow(WindowInfo)
 			})
 		end
 
-		-- v4.11.1: arrow-left verified present in the lucide atlas mirror
-		local StatusIcon = Library:GetIcon("arrow-left")
+		-- v4.11.2: chevron-left/right live in the OFFLINE icon subset, so
+		-- the buttons render even before the online atlas finishes
+		-- loading (arrow-left was online-only -> blank icons, bug #30).
+		-- Each side keeps its own direction icon forever.
 		local StatusButtons = {}
 		local StatusMode = false
 		local function SetStatusMode(On: boolean, Dir: number)
 			StatusMode = On
 			SearchFrame.Visible = not On and not (WindowInfo.DisableSearch or false)
 			StatusHolder.Visible = On
-			-- v4.11.1: swap anim = the arrow spins half a turn, spin direction
-			-- follows which side button was clicked; the icon identity never
-			-- changes (user: "iconsnya kenap ganti ganti cok")
-			for _, Btn in ipairs(StatusButtons) do
-				local Spin = TweenService:Create(
-					Btn,
-					TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-					{ Rotation = Btn.Rotation + Dir * 180 }
-				)
-				Spin:Play()
-			end
+			-- v4.11.2: swap anim = the incoming panel slides in from the
+			-- clicked side (Dir); the direction icons themselves stay put
+			local Incoming = On and StatusHolder or SearchFrame
+			Incoming.Position = UDim2.fromOffset(Dir * 24, 0)
+			local Slide = TweenService:Create(
+				Incoming,
+				TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+				{ Position = UDim2.fromOffset(0, 0) }
+			)
+			Slide:Play()
 			if On then
 				Library.ExecutorName = Library:GetExecutorName()
 				Library:StartStatusBarLoop()
@@ -11642,16 +11643,17 @@ function Library:CreateWindow(WindowInfo)
 			end
 		end
 		for _, Slot in ipairs({
-			{ Anchor = Vector2.new(1, 0.5), Position = UDim2.new(0, -6, 0.5, 0), Dir = -1 },
-			{ Anchor = Vector2.new(0, 0.5), Position = UDim2.new(1, 6, 0.5, 0), Dir = 1 },
+			{ Anchor = Vector2.new(1, 0.5), Position = UDim2.new(0, -6, 0.5, 0), Dir = -1, Name = "chevron-left" },
+			{ Anchor = Vector2.new(0, 0.5), Position = UDim2.new(1, 6, 0.5, 0), Dir = 1, Name = "chevron-right" },
 		}) do
+			local SlotIcon = Library:GetIcon(Slot.Name)
 			local Btn = New("ImageButton", {
 				AnchorPoint = Slot.Anchor,
 				BackgroundTransparency = 1,
-				Image = StatusIcon and StatusIcon.Url or "",
+				Image = SlotIcon and SlotIcon.Url or "",
 				ImageColor3 = "FontColor",
-				ImageRectOffset = StatusIcon and StatusIcon.ImageRectOffset or Vector2.zero,
-				ImageRectSize = StatusIcon and StatusIcon.ImageRectSize or Vector2.zero,
+				ImageRectOffset = SlotIcon and SlotIcon.ImageRectOffset or Vector2.zero,
+				ImageRectSize = SlotIcon and SlotIcon.ImageRectSize or Vector2.zero,
 				Position = Slot.Position,
 				Size = UDim2.fromOffset(18, 18), -- v4.11.1: smaller (user: not too big)
 				Parent = RightWrapper,
