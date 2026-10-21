@@ -1725,12 +1725,62 @@ function Library:SetCursorGlow(Info: { [string]: any })
 	Library:ApplyCursorGlow()
 end
 
+-- N3V4 v4.10.0: GROUP ICON HOVER ANIM — every groupbox icon carries a
+-- UIScale + UIRotation pair; entering the group card tweens the icon
+-- up by IconAnim.Zoom percent and tilts it IconAnim.Tilt degrees,
+-- leaving tweens it back to rest. Fire-and-forget tweens (Quint-out),
+-- so unlike the glow this costs nothing per frame: the glow loop
+-- stays the library's only RenderStepped connection.
+Library.IconAnim = {
+	Enabled = true,
+	Zoom = 12, -- percent added to the icon scale while hovered
+	Tilt = 6, -- degrees of rotation while hovered
+	Speed = 0.18, -- tween duration in seconds
+}
+Library.IconAnimRegistry = {}
+
+function Library:PlayIconAnim(Anim, Hover: boolean)
+	if not Anim or not Anim.Scale.Parent then
+		return
+	end
+	for _, Tween in ipairs(Anim.Tweens) do
+		Tween:Cancel()
+	end
+	local Config = Library.IconAnim
+	local Info = TweenInfo.new(math.clamp(Config.Speed, 0.02, 2), Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+	Anim.Tweens = {
+		TweenService:Create(Anim.Scale, Info, {
+			Scale = Hover and (1 + math.clamp(Config.Zoom, 0, 100) / 100) or 1,
+		}),
+		TweenService:Create(Anim.Rot, Info, {
+			Angle = Hover and math.clamp(Config.Tilt, -45, 45) or 0,
+		}),
+	}
+	for _, Tween in ipairs(Anim.Tweens) do
+		Tween:Play()
+	end
+end
+
+function Library:SetIconAnim(Options: { [string]: any })
+	for Key, Val in pairs(Options or {}) do
+		if Library.IconAnim[Key] ~= nil then
+			Library.IconAnim[Key] = Val
+		end
+	end
+	if Library.IconAnim.Enabled == false then
+		for _, Anim in ipairs(Library.IconAnimRegistry) do
+			Library:PlayIconAnim(Anim, false)
+		end
+	end
+end
+
 function Library:StartCursorGlowLoop()
 	if Library.CursorGlowLoop then
 		return
 	end
 	local Pos = Vector2.new(0, 0)
 	local Fade = 0
+	local LastFade = 0
 	Library.CursorGlowLoop = Library:GiveSignal(RunService.RenderStepped:Connect(function(Dt)
 		local Holder = Library.CursorGlowHolder
 		if not Holder or not Holder.Parent then
@@ -1754,12 +1804,18 @@ function Library:StartCursorGlowLoop()
 		end
 		Fade = Fade + ((Inside and 1 or 0) - Fade) * math.min(1, Dt * 10)
 		Library.CursorGlowFade = Fade
-		Library:UpdateCursorGlowTransparency(Fade)
+		-- v4.10.0: fps-friendly idle skip — while the fade value is not
+		-- moving (cursor outside, glow fully faded) zero property writes
+		local Changed = Fade ~= LastFade
+		LastFade = Fade
+		if Changed then
+			Library:UpdateCursorGlowTransparency(Fade)
+		end
 	end))
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.9.3 loaded — CURSOR GLOW v4: posisi pas di tengah cursor (topbar inset fix) + resep user kebake: putih 400px 10% smooth 5 (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.10.0 loaded — ICON ANIM: icon group zoom+miring saat hover kartu, balik sendiri saat keluar + glow loop idle-skip biar ramah fps (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -12666,7 +12722,9 @@ function Library:CreateWindow(WindowInfo)
 
 				local BoxIcon = Library:GetCustomIcon(Info.IconName)
 				if BoxIcon then
-					New("ImageLabel", {
+					-- v4.10.0: hover anim pair (zoom + tilt) rides the icon;
+					-- the group card itself is the hover area
+					local BoxIconLabel = New("ImageLabel", {
 						Image = BoxIcon.Url,
 						ImageColor3 = BoxIcon.Custom and "WhiteColor" or "AccentColor",
 						ImageRectOffset = BoxIcon.ImageRectOffset,
@@ -12675,6 +12733,20 @@ function Library:CreateWindow(WindowInfo)
 						Size = UDim2.fromOffset(22, 22),
 						Parent = GroupboxHolder,
 					})
+					local Anim = {
+						Scale = New("UIScale", { Scale = 1, Parent = BoxIconLabel }),
+						Rot = New("UIRotation", { Angle = 0, Parent = BoxIconLabel }),
+						Tweens = {},
+					}
+					table.insert(Library.IconAnimRegistry, Anim)
+					GroupboxHolder.MouseEnter:Connect(function()
+						if Library.IconAnim.Enabled ~= false then
+							Library:PlayIconAnim(Anim, true)
+						end
+					end)
+					GroupboxHolder.MouseLeave:Connect(function()
+						Library:PlayIconAnim(Anim, false)
+					end)
 				end
 
 				GroupboxLabel = New("TextLabel", {

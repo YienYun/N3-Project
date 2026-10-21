@@ -7,6 +7,22 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.10.0 — ICON ANIM (fitur baru) + glow idle-skip:
+	   • Semua icon groupbox sekarang animasi: cursor masuk kartu
+	     group -> icon zoom sedikit (+12%) sambil miring sedikit
+	     (6°), cursor keluar -> tween balik ke semula (Quint-out
+	     0.18s). Area hover = SELURUH kartu group, bukan cuma icon.
+	   • Setup manual: groupbox "Font & Animasi" (tab UI Settings,
+	     kolom kanan) — toggle on/off, slider zoom 0-40%, slider
+	     miring 0-20°, slider durasi 0.05-0.6s, ditutup print + copy
+	     resep icon anim (aturan v4.8.5). Reset scheme ikut balikin
+	     default animasi.
+	   • Ramah fps: glow loop sekarang idle-skip (fade diam = nol
+	     property write per frame; tetep 1 koneksi RenderStepped).
+	     Icon anim = tween fire-and-forget, biaya cuma pas hover,
+	     bukan per frame.
+	   • Simetri aman: knob nempel di groupbox existing, T1 tetep 5/5.
+
 	 CHANGELOG v4.9.2+ — posisi glow DI BAWAH cursor (bug #28) + bake print:
 	   • Penyebab: UserInputService:GetMouseLocation() ngasih koordinat
 	     WINDOW-space (masuk inset topbar ~36px), padahal
@@ -427,7 +443,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.9.3" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.10.0" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -459,7 +475,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.9.3",
+	Footer = "N3V4 • UI Preview Kit v4.10.0",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

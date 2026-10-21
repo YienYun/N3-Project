@@ -13,6 +13,14 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.10.0: ICON ANIM — semua icon groupbox zoom sedikit + miring sedikit
+--         saat cursor masuk kartu group, tween balik saat keluar
+--         (UIScale + UIRotation, Quint-out). Setup manual di groupbox
+--         "Font & Animasi": toggle IA_On, slider IA_Zoom 0-40%,
+--         IA_Tilt 0-20 derajat, IA_Speed 0.05-0.6s, + print & copy
+--         resep (aturan v4.8.5). Simetri aman: nempel di box existing,
+--         T1 tetep 5/5. FPS glow: idle-skip di loop (nol write saat
+--         fade diam); icon anim = tween fire-and-forget.
 -- v4.9.3: (a) posisi glow ngaco ~36px DI BAWAH cursor: GetMouseLocation
 --        itu window-space (masuk inset topbar 36px) sedangkan
 --        AbsolutePosition gui-space -> library sekarang kurangin
@@ -167,6 +175,12 @@ Settings.DEFAULTS = {
 		Size = 400,
 		Intensity = 10,
 		Smooth = 5,
+	},
+	IconAnim = { -- v4.10.0: group icon hover anim (zoom + tilt)
+		Enabled = true,
+		Zoom = 12,
+		Tilt = 6,
+		Speed = 0.18,
 	},
 }
 
@@ -363,6 +377,19 @@ function Settings:Attach(Library, Window, Options)
 			string.format("\tSize = %d,", G.Size or 400),
 			string.format("\tIntensity = %d,", G.Intensity or 10),
 			string.format("\tSmooth = %d,", G.Smooth or 5),
+			"})",
+		}, "\n")
+	end
+
+	local function BuildIconAnim()
+		local A = Library.IconAnim or {}
+		return table.concat({
+			"--[[ N3V4 ICON ANIM ]]",
+			"Library:SetIconAnim({",
+			string.format("\tEnabled = %s,", tostring(A.Enabled ~= false)),
+			string.format("\tZoom = %d,", A.Zoom or 12),
+			string.format("\tTilt = %d,", A.Tilt or 6),
+			string.format("\tSpeed = %.2f,", A.Speed or 0.18),
 			"})",
 		}, "\n")
 	end
@@ -652,6 +679,45 @@ function Settings:Attach(Library, Window, Options)
 				Library.WindowAnimationInfo = TweenInfo.new(Value / 100, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 			end,
 		})
+
+		-- v4.10.0: setup manual animasi icon group (zoom + tilt saat hover)
+		local IA0 = Library.IconAnim or {}
+		Box:AddToggle("IA_On", {
+			Text = "Animasi icon group", Default = IA0.Enabled ~= false,
+			Callback = function(On)
+				Library:SetIconAnim({ Enabled = On })
+			end,
+		})
+		Box:AddSlider("IA_Zoom", {
+			Text = "Zoom icon saat hover", Default = IA0.Zoom or 12, Min = 0, Max = 40, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				Library:SetIconAnim({ Zoom = Value })
+			end,
+		})
+		Box:AddSlider("IA_Tilt", {
+			Text = "Kemiringan icon saat hover", Default = IA0.Tilt or 6, Min = 0, Max = 20, Rounding = 0, Suffix = "°",
+			Callback = function(Value)
+				Library:SetIconAnim({ Tilt = Value })
+			end,
+		})
+		Box:AddSlider("IA_Speed", {
+			Text = "Durasi animasi icon", Default = IA0.Speed or 0.18, Min = 0.05, Max = 0.6, Rounding = 2, Suffix = "s",
+			Callback = function(Value)
+				Library:SetIconAnim({ Speed = Value })
+			end,
+		})
+		Box:AddButton("Print resep icon anim", function()
+			print("[N3V4 RESEP ICON ANIM] paste ini balik:\n" .. BuildIconAnim())
+		end)
+		Box:AddButton("Copy resep icon anim", function()
+			local Text = BuildIconAnim()
+			if CopyClip(Text) then
+				SafeNotify({ Title = "Resep icon anim", Description = "Copied ke clipboard.", Icon = "clipboard-check", Time = 3 })
+			else
+				print("[N3V4 RESEP ICON ANIM]\n" .. Text)
+				SafeNotify({ Title = "Resep icon anim", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+			end
+		end)
 	end)
 
 	Try("Settings: window", function()
@@ -1094,6 +1160,7 @@ function Settings:Attach(Library, Window, Options)
 			Apply()
 			pcall(function()
 				Library:SetCursorGlow(DEFAULTS.Glow)
+				Library:SetIconAnim(DEFAULTS.IconAnim)
 				Library:SetTabAppearance(DEFAULTS.Tab)
 				if Library.Animations then
 					Library.Animations.TabHoverZoom = DEFAULTS.TabHoverZoom ~= false

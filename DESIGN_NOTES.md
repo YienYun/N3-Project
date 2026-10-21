@@ -117,6 +117,41 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## ✨ v4.10.0 — ICON ANIM: icon group zoom + miring saat hover
+
+Request user: "ketika cursor gue mengarah ke group maka icons group
+itu kayak sedikit zoom cuma sedikit miring, kalo keluar cursor gue
+dari group itu maka jadi semula" + "gue mau setup visualnya seting
+manual".
+
+Implementasi library:
+- Tiap icon groupbox (AddGroupbox, covers kiri/kanan/nested) dapet
+  pasangan UIScale (Scale 1) + UIRotation (Angle 0) di ImageLabel icon.
+- Area hover = GroupboxHolder (kartu group seluruhnya), MouseEnter /
+  MouseLeave -> Library:PlayIconAnim(Anim, Hover).
+- PlayIconAnim: cancel tween lama, bikin 2 tween Quint-out durasi
+  IconAnim.Speed ke Scale = 1 + Zoom/100 dan Angle = Tilt (hover),
+  atau 1 / 0 (leave). Registry Library.IconAnimRegistry buat reset
+  massal saat SetIconAnim({Enabled=false}).
+- Guard Anim.Scale.Parent nil = icon udah di-destroy (registry stale
+  aman).
+- API: Library.IconAnim {Enabled, Zoom=12, Tilt=6, Speed=0.18} +
+  Library:SetIconAnim(tbl).
+
+Setup manual (module, groupbox "Font & Animasi" kanan T1 — nempel di
+box existing biar simetri tetep 5/5): toggle IA_On, slider IA_Zoom
+0-40%, IA_Tilt 0-20°, IA_Speed 0.05-0.6s (Rounding 2), + print & copy
+resep icon anim (BuildIconAnim, aturan v4.8.5). DEFAULTS.IconAnim +
+Reset scheme manggil SetIconAnim(DEFAULTS.IconAnim).
+
+FPS (user nanya "ramah fps kan?"):
+- Glow: tetep SATU koneksi RenderStepped; v4.10.0 nambah idle-skip —
+  kalau nilai fade nggak bergerak (cursor di luar window / glow udah
+  full fade) nol property write per frame. Write cuma terjadi saat
+  fade ramp atau cursor di dalam window.
+- Icon anim: tween fire-and-forget (TweenService), biaya hanya saat
+  hover enter/leave, bukan per frame. Nggak nambah koneksi stepped.
+
 ## 🎯 v4.9.3 — GLOW v4: posisi pas di cursor (bug #28) + bake print user
 
 ### Bug #28: glow ~36px di bawah cursor
