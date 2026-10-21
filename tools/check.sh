@@ -95,7 +95,7 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.9.2 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.9.3 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + card icon + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconCard' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
@@ -123,9 +123,9 @@ chk "v4.7.9: icon dialog opsional kanan-atas gaya notif (lib + demo preview)" \
 chk "v4.7.8: knob durasi + RESEP USER 10% dibake (lib 0.1 + mod AnimTime 0.10)" \
 	"grep -q 'ST_AnimTime' '$MOD' && grep -q 'AnimTime = 0.10' '$MOD' && grep -q 'WindowAnimationInfo = TweenInfo.new(0.1' '$LIB' && grep -q 'Library.WindowAnimationInfo = TweenInfo.new' '$MOD'"
 chk "v4.9.2: glow haze radial 16 micro-layer + clip + default 180px/5%" \
-	"grep -q 'Library.CursorGlow = {' '$LIB' && grep -q 'function Library:SetCursorGlow' '$LIB' && grep -q 'Name = \"CursorGlowClip\"' '$LIB' && grep -q 'function Library:StartCursorGlowLoop' '$LIB' && grep -q 'local GLOW_LAYERS = 16' '$LIB' && grep -q 'Library.CursorGlowLayers = {}' '$LIB' && grep -q 'Size = 180,' '$LIB' && grep -q 'Intensity = 5,' '$LIB'"
+	"grep -q 'Library.CursorGlow = {' '$LIB' && grep -q 'function Library:SetCursorGlow' '$LIB' && grep -q 'Name = \"CursorGlowClip\"' '$LIB' && grep -q 'function Library:StartCursorGlowLoop' '$LIB' && grep -q 'local GLOW_LAYERS = 16' '$LIB' && grep -q 'Library.CursorGlowLayers = {}' '$LIB' && grep -q 'Size = 400,' '$LIB' && grep -q 'Intensity = 10,' '$LIB' && grep -q 'Smooth = 5,' '$LIB' && grep -q 'GetMouseLocation() - GuiService:GetGuiInset()' '$LIB'"
 chk "v4.9.2 bug#27: knob glow hidup (groupbox sendiri + preset + BuildGlow)" \
-	"grep -q 'AddLeftGroupbox(\"Cursor Glow\"' '$MOD' && grep -q 'AddRightGroupbox(\"Preset Glow\"' '$MOD' && grep -q 'local function BuildGlow' '$MOD' && grep -A2 'Try(\"Settings: info\"' '$MOD' | grep -q 'local Box = T1:AddRightGroupbox(\"Resep Tema\"'"
+	"grep -q 'AddLeftGroupbox(\"Cursor Glow\"' '$MOD' && grep -q 'AddRightGroupbox(\"Preset Glow\"' '$MOD' && grep -q 'local function BuildGlow' '$MOD' && grep -A2 'Try(\"Settings: info\"' '$MOD' | grep -q 'local Box = T1:AddRightGroupbox(\"Resep Tema\"' && grep -q 'Size = 400,' '$MOD'"
 chk "v4.9.0: knob glow module lengkap + print resep + reset (5 kontrol)" \
 	"grep -q 'GW_On' '$MOD' && grep -q 'GW_C' '$MOD' && grep -q 'GW_Size' '$MOD' && grep -q 'GW_Int' '$MOD' && grep -q 'GW_Smooth' '$MOD' && grep -q 'N3V4 CURSOR GLOW' '$MOD' && grep -q 'SetCursorGlow(DEFAULTS.Glow)' '$MOD'"
 chk "v4.8.9: expand sinkron (clip) + collapse nol sliver (hide instan balik)" \
@@ -158,7 +158,7 @@ chk "simetris" "python3 '$ROOT/tools/symmetry.py' '$PRE'"
 chk "ggak manggil SetWallpaper/SetSurface (setingan cuma di file setingan)" \
 	"! grep -qE '^\s*[^-].*Library:Set(Wallpaper|Surface)' '$PRE'"
 chk "AddKeyBox di-guard typeof" "grep -q 'typeof(AdvancedTab.AddKeyBox)' '$PRE'"
-chk "footer v4.9.2" "grep -q 'Preview Kit v4.9.2' '$PRE'"
+chk "footer v4.9.3" "grep -q 'Preview Kit v4.9.3' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \

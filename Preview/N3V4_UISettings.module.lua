@@ -13,6 +13,14 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.9.3: (a) posisi glow ngaco ~36px DI BAWAH cursor: GetMouseLocation
+--        itu window-space (masuk inset topbar 36px) sedangkan
+--        AbsolutePosition gui-space -> library sekarang kurangin
+--        GuiService:GetGuiInset(), glow pas di tengah cursor.
+--        (b) Print user DIBAKE verbatim jadi default: Color putih
+--        (255,255,255), Size 400, Intensity 10, Smooth 5 (LIB +
+--        DEFAULTS.Glow + fallback BuildGlow + preset "bawaan").
+--        Slider lebar naik max 600 biar 400 bukan mentok tepi.
 -- v4.9.2: BUG #27 — knob glow v4.9.0/4.9.1 MATI runtime: gue naroh knob
 --        di Try yang ngeref Box NIL (upvalue ga ada) -> pcall nelen
 --        error, warn doang di Output, dan box "Resep Tema" di bawahnya
@@ -153,12 +161,12 @@ Settings.DEFAULTS = {
 	AnimTime = 0.10, -- v4.7.8: RESEP USER TERKUNCI ("10% bagus!") = 0.10s buka/tutup window
 	GroupColor = Color3.fromRGB(0, 0, 0), -- HITAM (user v4.6.5: balik hitam)
 	CanvasColor = Color3.fromRGB(119, 119, 119), -- dump user v7 (0.465)
-	Glow = { -- v4.9.0: cursor glow (warna ikut accent sampe lu set sendiri)
+	Glow = { -- v4.9.0: cursor glow (v4.9.3: resep print user kebake verbatim)
 		Enabled = true,
-		Color = false,
-		Size = 180,
-		Intensity = 5,
-		Smooth = 12,
+		Color = Color3.fromRGB(255, 255, 255),
+		Size = 400,
+		Intensity = 10,
+		Smooth = 5,
 	},
 }
 
@@ -352,9 +360,9 @@ function Settings:Attach(Library, Window, Options)
 			"Library:SetCursorGlow({",
 			string.format("\tEnabled = %s,", tostring(G.Enabled ~= false)),
 			(typeof(G.Color) == "Color3") and ("\tColor = " .. RGB(G.Color) .. ",") or "\tColor = false, -- ikut accent theme",
-			string.format("\tSize = %d,", G.Size or 180),
-			string.format("\tIntensity = %d,", G.Intensity or 5),
-			string.format("\tSmooth = %d,", G.Smooth or 12),
+			string.format("\tSize = %d,", G.Size or 400),
+			string.format("\tIntensity = %d,", G.Intensity or 10),
+			string.format("\tSmooth = %d,", G.Smooth or 5),
 			"})",
 		}, "\n")
 	end
@@ -693,19 +701,19 @@ function Settings:Attach(Library, Window, Options)
 			end,
 		})
 		Box:AddSlider("GW_Size", {
-			Text = "Lebar glow (diameter)", Default = CG0.Size or 180, Min = 60, Max = 400, Rounding = 0, Suffix = "px",
+			Text = "Lebar glow (diameter)", Default = CG0.Size or 400, Min = 60, Max = 600, Rounding = 0, Suffix = "px",
 			Callback = function(Value)
 				Library:SetCursorGlow({ Size = Value })
 			end,
 		})
 		Box:AddSlider("GW_Int", {
-			Text = "Kejelasan tengah glow (0% = invisible)", Default = CG0.Intensity or 5, Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Text = "Kejelasan tengah glow (0% = invisible)", Default = CG0.Intensity or 10, Min = 0, Max = 100, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
 				Library:SetCursorGlow({ Intensity = Value })
 			end,
 		})
 		Box:AddSlider("GW_Smooth", {
-			Text = "Kelembutan trail (ngikut cursor)", Default = CG0.Smooth or 12, Min = 1, Max = 30, Rounding = 0, Suffix = "/s",
+			Text = "Kelembutan trail (ngikut cursor)", Default = CG0.Smooth or 5, Min = 1, Max = 30, Rounding = 0, Suffix = "/s",
 			Callback = function(Value)
 				Library:SetCursorGlow({ Smooth = Value })
 			end,
@@ -745,9 +753,9 @@ function Settings:Attach(Library, Window, Options)
 			end)
 		end
 
-		Preset("Samar (bawaan: 5%, 180px)", { Enabled = true, Intensity = 5, Size = 180 })
-		Preset("Halus (10%, 220px)", { Enabled = true, Intensity = 10, Size = 220 })
-		Preset("Jernih (20%, 260px)", { Enabled = true, Intensity = 20, Size = 260 })
+		Preset("Samar (bawaan: 10%, 400px)", { Enabled = true, Intensity = 10, Size = 400, Smooth = 5 })
+		Preset("Halus (5%, 260px)", { Enabled = true, Intensity = 5, Size = 260 })
+		Preset("Jernih (25%, 320px)", { Enabled = true, Intensity = 25, Size = 320 })
 		Preset("Matikan glow", { Enabled = false })
 		Preset("Warna ikut accent lagi", { Color = false })
 	end)

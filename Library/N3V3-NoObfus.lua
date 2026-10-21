@@ -7,6 +7,7 @@ local Players: Players = cloneref(game:GetService("Players"))
 local RunService: RunService = cloneref(game:GetService("RunService"))
 local SoundService: SoundService = cloneref(game:GetService("SoundService"))
 local UserInputService: UserInputService = cloneref(game:GetService("UserInputService"))
+local GuiService: GuiService = cloneref(game:GetService("GuiService"))
 local TextService: TextService = cloneref(game:GetService("TextService"))
 local Teams: Teams = cloneref(game:GetService("Teams"))
 local TweenService: TweenService = cloneref(game:GetService("TweenService"))
@@ -1676,13 +1677,15 @@ Library.TabVisuals = {} -- rec { Button, Icon, Card, Scale, Tab } per sidebar ta
 -- built from 16 micro circles with quadratic falloff. At the 5% default
 -- the biggest alpha step between neighbours is ~0.2% = one continuous
 -- haze, NOT the six fat rings v4.9.0 shipped (those stepped 34%->3% and
--- read as circles). Intensity = center opacity %, Size = outer diameter.
+-- read as circles). At the baked 10% default the biggest alpha step
+-- between neighbours is ~0.4% = still one continuous haze. Intensity =
+-- center opacity %, Size = outer diameter.
 Library.CursorGlow = {
 	Enabled = true,
-	Color = false, -- false = follow AccentColor (same pattern as card line)
-	Size = 180, -- px, outer diameter (user: keep it narrow)
-	Intensity = 5, -- percent opacity at the center (user dial)
-	Smooth = 12, -- follow speed per second
+	Color = Color3.fromRGB(255, 255, 255), -- user-baked white; false = follow AccentColor
+	Size = 400, -- px, outer diameter (user-baked print, v4.9.3)
+	Intensity = 10, -- percent opacity at the center (user-baked print, v4.9.3)
+	Smooth = 5, -- follow speed per second (user-baked print, v4.9.3)
 }
 Library.CursorGlowLayers = {}
 Library.CursorGlowFade = 0
@@ -1736,7 +1739,11 @@ function Library:StartCursorGlowLoop()
 		local Main = Holder.Parent
 		local Inside = false
 		if Library.CursorGlow.Enabled ~= false and UserInputService.MouseEnabled then
-			local Mouse = UserInputService:GetMouseLocation()
+			-- v4.9.3: GetMouseLocation is window-space (topbar inset included)
+			-- while AbsolutePosition is gui-space; without subtracting the
+			-- inset the glow sat ~36px BELOW the cursor (user: "kurang ke
+			-- atas"). The Inside test was skewed by the same inset.
+			local Mouse = UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
 			local Rect = Main.AbsolutePosition
 			local Area = Main.AbsoluteSize
 			Inside = Mouse.X >= Rect.X and Mouse.X <= Rect.X + Area.X and Mouse.Y >= Rect.Y and Mouse.Y <= Rect.Y + Area.Y
@@ -1752,7 +1759,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.9.2 loaded — CURSOR GLOW v3: haze radial samar (16 micro-layer), 180px, knob + preset beneran hidup (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.9.3 loaded — CURSOR GLOW v4: posisi pas di tengah cursor (topbar inset fix) + resep user kebake: putih 400px 10% smooth 5 (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3

@@ -7,6 +7,18 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.9.2+ — posisi glow DI BAWAH cursor (bug #28) + bake print:
+	   • Penyebab: UserInputService:GetMouseLocation() ngasih koordinat
+	     WINDOW-space (masuk inset topbar ~36px), padahal
+	     AbsolutePosition itu gui-space (mulai dari bawah topbar).
+	     Selisihnya persis inset -> glow nongol ~36px di bawah cursor
+	     ("kurang ke atas"). Fix: kurangin GuiService:GetGuiInset(),
+	     buat posisi DAN test inside-window. Sekarang pas di tengah.
+	   • Print user DIBAKE verbatim jadi default terkunci: putih
+	     (255,255,255), Size 400, Intensity 10, Smooth 5 — di library,
+	     DEFAULTS module, fallback BuildGlow, sama preset "bawaan".
+	     Slider lebar sekarang 60-600 biar 400 ga mentok tepi.
+
 	 CHANGELOG v4.9.2 — GLOW v3 + BUG #27 (knob mati):
 	   • BUG #27 (penyebab "ga ngerti, mana tombol setting"): knob glow
 	     v4.9.0/4.9.1 gue taroh di Try yang ngeref Box NIL -> pcall
@@ -415,7 +427,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.9.2" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.9.3" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -447,7 +459,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.9.2",
+	Footer = "N3V4 • UI Preview Kit v4.9.3",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

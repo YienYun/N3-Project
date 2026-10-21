@@ -117,6 +117,26 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🎯 v4.9.3 — GLOW v4: posisi pas di cursor (bug #28) + bake print user
+
+### Bug #28: glow ~36px di bawah cursor
+`UserInputService:GetMouseLocation()` return koordinat WINDOW-space
+(termasuk inset topbar ~36px), sedangkan `GuiObject.AbsolutePosition`
+itu gui-space (origin di bawah topbar). Holder di-set pakai selisih
+dua space yang beda -> offset konstan +inset.Y = glow nongol di bawah
+cursor, dan test inside-window juga geser pakai inset yang sama.
+Fix satu baris: `GetMouseLocation() - GuiService:GetGuiInset()`
+(GuiService sekarang di-require di header library).
+
+### Bake print user (aturan print = bake verbatim)
+RESEP GLOW dia: Enabled true, Color putih (255,255,255), Size 400,
+Intensity 10, Smooth 5 -> kebake di: Library.CursorGlow defaults,
+DEFAULTS.Glow module, fallback BuildGlow, preset "Samar (bawaan)".
+Konsekuensi: default glow sekarang putih pinned (bukan ikut accent);
+preset "Warna ikut accent lagi" tetep ada buat balik ke Color=false.
+Slider GW_Size max dinaikin 400 -> 600 biar default ga mentok tepi.
+Preset lain disesuaikan: Halus 5%/260px, Jernih 25%/320px.
+
 ## 🔧 v4.9.2 — GLOW v3 (haze radial samar) + BUG #27 (knob mati runtime)
 
 ### Bug #27 (memalukan, murni salah gue)
