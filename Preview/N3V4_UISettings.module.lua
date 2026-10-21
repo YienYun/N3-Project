@@ -13,6 +13,12 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.12.2: box "Section Divider" + "Divider Presets" DIPINDAH ke urutan
+--         atas (kiri #2 / kanan #2): sebelumnya box ke-6 = knob ketutup
+--         lipatan bawah window (kolom emang ScrollingFrame, tapi UX
+--         buruk maksa scroll). Garis divider sekarang dibuat dari SATU
+--         loop (kiri=kanan identik by construction) dan apply di-pcall
+--         biar glitch section ga bisa matiin seluruh box lagi.
 -- v4.12.1: BUG #31 — BorderColor3 nolak theme-string di assign runtime
 --         (string magic cuma ada di New()); ApplySectionAppearance
 --         sekarang pakai Color3 asli + hook di UpdateColorsUsingRegistry
@@ -557,6 +563,59 @@ function Settings:Attach(Library, Window, Options)
 		end)
 	end)
 
+	Try("Settings: section divider", function()
+		-- v4.12.0: manual section tuning (user: gue mau atur sendiri)
+		local SA0 = Library.SectionAppearance or {}
+		local Box = T1:AddLeftGroupbox("Section Divider", "sliders-horizontal")
+
+		-- v4.12.1: live sample INSIDE the settings box, so every knob
+		-- move is visible right where the knobs are (user request)
+		Box:AddDivider({ Text = "Preview section", Margin = 4 })
+
+		Box:AddToggle("SD_Acc", {
+			Text = "Garis luar ikut accent", Default = SA0.AccentBorder ~= false,
+			Callback = function(On)
+				Library:SetSectionAppearance({ AccentBorder = On })
+			end,
+		})
+		Box:AddSlider("SD_BT", {
+			Text = "Transparansi garis luar (0% = mencolok)", Default = math.floor((SA0.BorderTransparency or 0.45) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				Library:SetSectionAppearance({ BorderTransparency = Value / 100 })
+			end,
+		})
+		Box:AddSlider("SD_TT", {
+			Text = "Transparansi text section", Default = math.floor((SA0.TextTransparency or 0.5) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				Library:SetSectionAppearance({ TextTransparency = Value / 100 })
+			end,
+		})
+		Box:AddSlider("SD_Gap", {
+			Text = "Jarak text-garis (simetris 2 sisi)", Default = SA0.Gap or 10, Min = 2, Max = 40, Rounding = 0, Suffix = "px",
+			Callback = function(Value)
+				Library:SetSectionAppearance({ Gap = Value })
+			end,
+		})
+		Box:AddSlider("SD_Th", {
+			Text = "Ketebalan garis section", Default = SA0.Thickness or 2, Min = 1, Max = 4, Rounding = 0, Suffix = "px",
+			Callback = function(Value)
+				Library:SetSectionAppearance({ Thickness = Value })
+			end,
+		})
+		Box:AddButton("Print resep section", function()
+			print("[N3V4 RESEP SECTION] paste ini balik:\n" .. BuildSection())
+		end)
+		Box:AddButton("Copy resep section", function()
+			local Text = BuildSection()
+			if CopyClip(Text) then
+				SafeNotify({ Title = "Resep section", Description = "Copied ke clipboard.", Icon = "clipboard-check", Time = 3 })
+			else
+				print("[N3V4 RESEP SECTION]\n" .. Text)
+				SafeNotify({ Title = "Resep section", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+			end
+		end)
+	end)
+
 	Try("Settings: presets theme", function()
 		local Box = T1:AddLeftGroupbox("Theme Presets", "wand-sparkles")
 
@@ -757,6 +816,32 @@ function Settings:Attach(Library, Window, Options)
 		end)
 	end)
 
+	Try("Settings: divider presets", function()
+		-- v4.12.0: quick moods biar ga usah dial satu-satu
+		local Box = T1:AddRightGroupbox("Divider Presets", "wand-sparkles")
+
+		local function SyncKnobs()
+			local A = Library.SectionAppearance or {}
+			pcall(function() Library.Options.SD_Acc:SetValue(A.AccentBorder ~= false) end)
+			pcall(function() Library.Options.SD_BT:SetValue(tostring(math.floor((A.BorderTransparency or 0) * 100 + 0.5))) end)
+			pcall(function() Library.Options.SD_TT:SetValue(tostring(math.floor((A.TextTransparency or 0) * 100 + 0.5))) end)
+			pcall(function() Library.Options.SD_Gap:SetValue(tostring(A.Gap)) end)
+			pcall(function() Library.Options.SD_Th:SetValue(tostring(A.Thickness)) end)
+		end
+		local function Preset(Name, Info)
+			Box:AddButton(Name, function()
+				Library:SetSectionAppearance(Info)
+				SyncKnobs()
+				SafeNotify({ Title = "Section", Description = "Preset: " .. Name, Icon = "wand-sparkles", Time = 3 })
+			end)
+		end
+
+		Preset("Soft (bawaan: luar 45%)", { AccentBorder = true, BorderTransparency = 0.45 })
+		Preset("Solid (luar 0%)", { AccentBorder = true, BorderTransparency = 0 })
+		Preset("Ghost (luar 70%)", { AccentBorder = true, BorderTransparency = 0.7 })
+		Preset("Netral (outline abu)", { AccentBorder = false })
+	end)
+
 	Try("Settings: window", function()
 		local Box = T1:AddRightGroupbox("Window", "settings-2")
 
@@ -835,85 +920,6 @@ function Settings:Attach(Library, Window, Options)
 				SafeNotify({ Title = "Resep glow", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
 			end
 		end)
-	end)
-
-	Try("Settings: section divider", function()
-		-- v4.12.0: manual section tuning (user: gue mau atur sendiri)
-		local SA0 = Library.SectionAppearance or {}
-		local Box = T1:AddLeftGroupbox("Section Divider", "sliders-horizontal")
-
-		-- v4.12.1: live sample INSIDE the settings box, so every knob
-		-- move is visible right where the knobs are (user request)
-		Box:AddDivider({ Text = "Preview section", Margin = 4 })
-
-		Box:AddToggle("SD_Acc", {
-			Text = "Garis luar ikut accent", Default = SA0.AccentBorder ~= false,
-			Callback = function(On)
-				Library:SetSectionAppearance({ AccentBorder = On })
-			end,
-		})
-		Box:AddSlider("SD_BT", {
-			Text = "Transparansi garis luar (0% = mencolok)", Default = math.floor((SA0.BorderTransparency or 0.45) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
-			Callback = function(Value)
-				Library:SetSectionAppearance({ BorderTransparency = Value / 100 })
-			end,
-		})
-		Box:AddSlider("SD_TT", {
-			Text = "Transparansi text section", Default = math.floor((SA0.TextTransparency or 0.5) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
-			Callback = function(Value)
-				Library:SetSectionAppearance({ TextTransparency = Value / 100 })
-			end,
-		})
-		Box:AddSlider("SD_Gap", {
-			Text = "Jarak text-garis (simetris 2 sisi)", Default = SA0.Gap or 10, Min = 2, Max = 40, Rounding = 0, Suffix = "px",
-			Callback = function(Value)
-				Library:SetSectionAppearance({ Gap = Value })
-			end,
-		})
-		Box:AddSlider("SD_Th", {
-			Text = "Ketebalan garis section", Default = SA0.Thickness or 2, Min = 1, Max = 4, Rounding = 0, Suffix = "px",
-			Callback = function(Value)
-				Library:SetSectionAppearance({ Thickness = Value })
-			end,
-		})
-		Box:AddButton("Print resep section", function()
-			print("[N3V4 RESEP SECTION] paste ini balik:\n" .. BuildSection())
-		end)
-		Box:AddButton("Copy resep section", function()
-			local Text = BuildSection()
-			if CopyClip(Text) then
-				SafeNotify({ Title = "Resep section", Description = "Copied ke clipboard.", Icon = "clipboard-check", Time = 3 })
-			else
-				print("[N3V4 RESEP SECTION]\n" .. Text)
-				SafeNotify({ Title = "Resep section", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
-			end
-		end)
-	end)
-
-	Try("Settings: divider presets", function()
-		-- v4.12.0: quick moods biar ga usah dial satu-satu
-		local Box = T1:AddRightGroupbox("Divider Presets", "wand-sparkles")
-
-		local function SyncKnobs()
-			local A = Library.SectionAppearance or {}
-			pcall(function() Library.Options.SD_Acc:SetValue(A.AccentBorder ~= false) end)
-			pcall(function() Library.Options.SD_BT:SetValue(tostring(math.floor((A.BorderTransparency or 0) * 100 + 0.5))) end)
-			pcall(function() Library.Options.SD_TT:SetValue(tostring(math.floor((A.TextTransparency or 0) * 100 + 0.5))) end)
-			pcall(function() Library.Options.SD_Gap:SetValue(tostring(A.Gap)) end)
-			pcall(function() Library.Options.SD_Th:SetValue(tostring(A.Thickness)) end)
-		end
-		local function Preset(Name, Info)
-			Box:AddButton(Name, function()
-				Library:SetSectionAppearance(Info)
-				SyncKnobs()
-				SafeNotify({ Title = "Section", Description = "Preset: " .. Name, Icon = "wand-sparkles", Time = 3 })
-			end)
-		end
-
-		Preset("Soft (bawaan: luar 45%)", { AccentBorder = true, BorderTransparency = 0.45 })
-		Preset("Solid (luar 0%)", { AccentBorder = true, BorderTransparency = 0 })
-		Preset("Ghost (luar 70%)", { AccentBorder = true, BorderTransparency = 0.7 })
-		Preset("Netral (outline abu)", { AccentBorder = false })
 	end)
 
 	Try("Settings: glow presets", function()

@@ -95,7 +95,7 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.12.1 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.12.2 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + card icon + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconCard' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
@@ -172,7 +172,9 @@ chk "v4.12.0: section appearance library (registry + set + border default 45%)" 
 	"grep -q 'Library.SectionAppearance = {' '$LIB' && grep -q 'function Library:SetSectionAppearance' '$LIB' && grep -q 'BorderTransparency = 0.45,' '$LIB' && grep -q 'Library.SectionRegistry' '$LIB'"
 chk "v4.12.0: knob section + presets + print/copy + DEFAULTS + reset" \
 	"grep -q 'AddSlider(\"SD_BT\"' '$MOD' && grep -q 'AddRightGroupbox(\"Divider Presets\"' '$MOD' && grep -q 'local function BuildSection' '$MOD' && grep -q 'Library:SetSectionAppearance(DEFAULTS.Section)' '$MOD' && grep -q 'AddDivider({ Text = \"Preview section\"' '$MOD'"
-chk "footer v4.12.1" "grep -q 'Preview Kit v4.12.1' '$PRE'"
+chk "v4.12.2: garis divider satu loop + apply pcall + box section urutan atas" \
+	"grep -q 'for _, AnchorX in ipairs({ 0, 1 }) do' '$LIB' && [ $(grep -n 'AddLeftGroupbox(\"Section Divider\"' '$MOD' | head -1 | cut -d: -f1) -lt $(grep -n 'AddLeftGroupbox(\"Theme Presets\"' '$MOD' | head -1 | cut -d: -f1) ]"
+chk "footer v4.12.2" "grep -q 'Preview Kit v4.12.2' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \

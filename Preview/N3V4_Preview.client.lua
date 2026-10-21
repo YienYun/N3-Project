@@ -7,6 +7,25 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.12.2 — setting section KETUTUP LIPATAN + simetri paksa:
+	   • "settinganya mana anjir": knob-nya ADA tapi box Section Divider
+	     dulu box ke-6 kolom kiri = di bawah lipatan window (kolom tab
+	     itu ScrollingFrame, jadi sebenernya bisa di-scroll, tapi gue
+	     akui UX-nya nyebelin). Sekarang box-nya NAIK ke urutan #2
+	     kolom kiri ( Divider Presets #2 kolom kanan ) — buka tab UI
+	     Settings, scroll dikit, langsung ketemu sample + knob.
+	   • "kanan hitam kiri unggu": kombinasi warna di screenshot lu
+	     itu GA cocok sama versi bersih mana pun -> kemungkinan besar
+	     paste library lu frankenstein (campuran lama+baru). Selain
+	     itu gue kerasin konstruksinya: dua garis divider sekarang
+	     dibuat dari SATU loop (parameter identik, mustahil pincang)
+	     dan ApplySectionAppearance di-pcall biar error section ga
+	     bisa bunuh seluruh groupbox (pola bug #27).
+	   • PENTING: paste library FULL (Ctrl+A -> delete -> paste isi
+	     file baru), lalu pastiin baris pertama Output = "v4.12.2
+	     loaded". Kalau masih ada sisi garis yang beda warna setelah
+	     itu, berarti ada ModuleScript N3V4 duplikat yang ke-require.
+
 	 CHANGELOG v4.12.1 — BUG #31 + sample section di dalam setingan:
 	   • Error "Unable to assign property BorderColor3. Color3
 	     expected, got string": theme-string cuma bisa lewat New()
@@ -563,7 +582,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.12.1" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.12.2" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -595,7 +614,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.12.1",
+	Footer = "N3V4 • UI Preview Kit v4.12.2",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

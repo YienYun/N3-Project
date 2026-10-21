@@ -117,6 +117,29 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 📐 v4.12.2 — box section naik atas + garis simetris by construction
+
+Keluh user: "settinganya mana anjir? kok kanan hitam kiri unggu?
+konsepnya jelek banget".
+
+Fakta: kolom tab = ScrollingFrame; box Section Divider sebelumnya
+box ke-6 kolom kiri => knob ADA tapi di bawah lipatan window. UX
+buruk = salah gue walau teknisnya "bisa di-scroll". Fix posisi:
+Try "section divider" dipindah sebelum "presets theme" (kiri #2),
+Try "divider presets" sebelum "window" (kanan #2).
+
+Soal asimetri kiri-ungu/kanan-hitam: kombinasi itu tidak cocok dengan
+versi bersih mana pun (v4.12.0 maupun v4.12.1) => indikasi paste
+library frankenstein di sisi user. Tetap gue kerasin library:
+- dua garis divider dibuat dari SATU loop (AnchorX 0 dan 1) =>
+  parameter identik, pincang hanya mungkin kalau ada code luar yang
+  nyentuh salah satu frame;
+- ApplySectionAppearance dibungkus pcall per section => glitch section
+  tidak bisa meng-abort pemanggil (pola bug #27: satu assign buruk
+  pernah membunuh seluruh groupbox).
+Instruksi ke user: paste library FULL + cek print v4.12.2; kalau masih
+asetri -> curigai ModuleScript N3V4 duplikat.
+
 ## 🐛 v4.12.1 — BUG #31 (BorderColor3 string) + sample section dalam box
 
 Error user: `Unable to assign property BorderColor3. Color3 expected,

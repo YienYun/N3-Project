@@ -1747,21 +1747,27 @@ Library.SectionAppearance = {
 Library.SectionRegistry = {}
 
 function Library:ApplySectionAppearance(Section)
-	local A = Library.SectionAppearance
 	-- v4.12.1 bug #31: BorderColor3 rejects theme strings on direct
 	-- runtime assignment (the string magic lives inside New() only),
-	-- so assign real Color3 and let the registry hook re-sync themes
-	local Border = A.AccentBorder ~= false and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
-	local Gap = math.clamp(A.Gap, 0, 60)
-	local Thickness = math.clamp(A.Thickness, 1, 6)
-	for _, Line in ipairs(Section.Lines) do
-		Line.BorderColor3 = Border
-		Line.BorderTransparency = math.clamp(A.BorderTransparency, 0, 1)
-		Line.Size = UDim2.new(0.5, -(Section.HalfX + Gap), 0, Thickness)
-	end
-	if Section.Text then
-		Section.Text.TextTransparency = math.clamp(A.TextTransparency, 0, 1)
-	end
+	-- so assign real Color3 and let the registry hook re-sync themes.
+	-- v4.12.2: pcall-guarded so a section glitch can never abort the
+	-- caller (bug #27 pattern: one bad assign killed a whole box)
+	pcall(function()
+		local A = Library.SectionAppearance
+		local Border = A.AccentBorder ~= false and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+		local Gap = math.clamp(A.Gap or 10, 0, 60)
+		local Thickness = math.clamp(A.Thickness or 2, 1, 6)
+		local BorderT = math.clamp(A.BorderTransparency or 0, 0, 1)
+		local TextT = math.clamp(A.TextTransparency or 0, 0, 1)
+		for _, Line in ipairs(Section.Lines) do
+			Line.BorderColor3 = Border
+			Line.BorderTransparency = BorderT
+			Line.Size = UDim2.new(0.5, -(Section.HalfX + Gap), 0, Thickness)
+		end
+		if Section.Text then
+			Section.Text.TextTransparency = TextT
+		end
+	end)
 end
 
 function Library:SetSectionAppearance(Info: { [string]: any })
@@ -1939,7 +1945,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.12.1 loaded — SECTION v3: bug #31 fix (BorderColor3 string ditolak runtime -> Color3 + hook theme), sample section live di dalam groupbox setting (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.12.2 loaded — SECTION v4: garis kiri/kanan dari SATU loop (simetris by construction), apply pcall-guard, box setting naik ke atas biar keliatan (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -6112,25 +6118,21 @@ do
 			local HalfX = X // 2
 			local SizeX = HalfX + Library.SectionAppearance.Gap
 
-			-- v4.12.0: lines are registered so SetSectionAppearance can
-			-- retune border color/transparency, gap and thickness live
-			local LineLeft = New("Frame", {
-				AnchorPoint = Vector2.new(0, 0.5),
-				BackgroundColor3 = "MainColor",
-				BorderSizePixel = 1,
-				Position = UDim2.fromScale(0, 0.5),
-				Size = UDim2.new(0.5, -SizeX, 0, 2),
-				Parent = InnerHolder,
-			})
-			local LineRight = New("Frame", {
-				AnchorPoint = Vector2.new(1, 0.5),
-				BackgroundColor3 = "MainColor",
-				BorderSizePixel = 1,
-				Position = UDim2.fromScale(1, 0.5),
-				Size = UDim2.new(0.5, -SizeX, 0, 2),
-				Parent = InnerHolder,
-			})
-			local Section = { Text = TextLabel, Lines = { LineLeft, LineRight }, HalfX = HalfX }
+			-- v4.12.2: both lines come from ONE loop = identical by
+			-- construction; registered so SetSectionAppearance can retune
+			-- border color/transparency, gap and thickness live
+			local Lines = {}
+			for _, AnchorX in ipairs({ 0, 1 }) do
+				table.insert(Lines, New("Frame", {
+					AnchorPoint = Vector2.new(AnchorX, 0.5),
+					BackgroundColor3 = "MainColor",
+					BorderSizePixel = 1,
+					Position = UDim2.fromScale(AnchorX, 0.5),
+					Size = UDim2.new(0.5, -SizeX, 0, 2),
+					Parent = InnerHolder,
+				}))
+			end
+			local Section = { Text = TextLabel, Lines = Lines, HalfX = HalfX }
 			table.insert(Library.SectionRegistry, Section)
 			Library:ApplySectionAppearance(Section)
 		else
