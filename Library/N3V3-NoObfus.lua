@@ -1889,7 +1889,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.11.3 loaded — SECTION THEME COLOR: text divider + dua garisnya ikut AccentColor theme yang di-sync (plain divider tanpa text sengaja tetep netral) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.11.4 loaded — SECTION v2: desain garis BALIK ke asli (fill MainColor + border 1px), yang ikut theme cuma GARIS LUAR nya (BorderColor accent) + text (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -6061,20 +6061,23 @@ do
 			local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
 			local SizeX = X // 2 + 10
 
-			-- v4.11.3: section lines follow the synced theme too (user:
-			-- not only the text, the lines as well). Solid accent, no border.
+			-- v4.11.4: original line design restored (MainColor fill + 1px
+			-- border); ONLY the outer border rides the synced theme now
+			-- (user: do not change the design, just the outer line color).
 			New("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				BackgroundColor3 = "AccentColor",
-				BorderSizePixel = 0,
+				BackgroundColor3 = "MainColor",
+				BorderColor3 = "AccentColor",
+				BorderSizePixel = 1,
 				Position = UDim2.fromScale(0, 0.5),
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,
 			})
 			New("Frame", {
 				AnchorPoint = Vector2.new(1, 0.5),
-				BackgroundColor3 = "AccentColor",
-				BorderSizePixel = 0,
+				BackgroundColor3 = "MainColor",
+				BorderColor3 = "AccentColor",
+				BorderSizePixel = 1,
 				Position = UDim2.fromScale(1, 0.5),
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,

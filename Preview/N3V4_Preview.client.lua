@@ -7,6 +7,18 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.11.4 — desain garis section DIBALIKIN KE ASLI:
+	   • v4.11.3 gue salah: gue ganti DESAIN garis jadi bar solid
+	     accent (fill accent, border dibuang) -> kelihatan tebal
+	     neon, user protes "jangan ngubah desainya astaga".
+	   • v4.11.4: struktur garis BALIK persis bawaan library = fill
+	     MainColor + border 1px. Yang ikut theme sekarang CUMA
+	     GARIS LUAR nya: BorderColor3 = "AccentColor" (sebelumnya
+	     OutlineColor abu-abu). Jadi bentuk/ketebalan/divider-nya
+	     identik bawaan, cuma outline-nya yang ungu sync.
+	   • Text divider tetap AccentColor half-soft (v4.11.3, tidak
+	     diubah). Plain divider tanpa text tetep netral.
+
 	 CHANGELOG v4.11.3 — SECTION IKUT COLOR THEME (text + garis):
 	   • Divider bertext ("----- Selamat Datang -----"): text sekarang
 	     TextColor3 "AccentColor" (theme-string = ikut sync otomatis
@@ -518,7 +530,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.11.3" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.11.4" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -550,7 +562,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.11.3",
+	Footer = "N3V4 • UI Preview Kit v4.11.4",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

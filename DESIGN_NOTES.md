@@ -117,6 +117,23 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## ↩️ v4.11.4 — SECTION v2: desain garis balik ke asli, cuma border yang sync
+
+Salah gue di v4.11.3: request "garisnya juga ikut color" gue eksekusi
+dengan MENGGANTI DESAIN garis (fill jadi AccentColor solid, border
+dihapus) -> kelihatan bar neon tebal, user protes keras: "jangan
+ngubah desainya astaga ini jelek co! cukup garis luar saja".
+
+v4.11.4: struktur garis divider bertext DIPULIHKAN persis bawaan
+library: BackgroundColor3 "MainColor" + BorderSizePixel 1. Satu-satunya
+perubahan warna = BorderColor3 "OutlineColor" -> "AccentColor"
+(theme-string, sync otomatis). Fill, ketebalan 2px, border 1px,
+layout = identik bawaan. Text divider tetap AccentColor half-soft
+sejak v4.11.3. Plain divider tetap netral.
+
+Lesson (nambah aturan lama "jangan silent change semantics"): kalau
+user minta ganti WARNA, jangan sentuh STRUKTUR/DESAIN instance-nya.
+
 ## 🌈 v4.11.3 — SECTION ikut color theme (text + garis)
 
 Request user: divider bertext ("----- Selamat Datang -----") harus
