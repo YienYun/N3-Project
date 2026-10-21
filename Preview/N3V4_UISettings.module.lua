@@ -13,6 +13,12 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.9.0: CURSOR GLOW — cahaya soft ngikut gerakan cursor di layer
+--        background (di belakang semua group/button/toggle, keliatan
+--        lewat card yang semi-transparan). Default warna IKUT accent
+--        theme; bisa lu set sendiri lewat color picker di groupbox
+--        Window. Knob: on/off, warna, ukuran, intensity, kecepatan.
+--        Ikut ke-print di RESEP WALLPAPER+SURFACE (BuildResep).
 -- v4.8.7: RESEP TAB v4 FINAL DIBAKE (print user 16:55): padding 2, garis
 --        solid 0% (warna ikut outline), radius 5, bg semua tab 85%.
 --        Zoom/aktif tetep. User: "oke terakhir bro ini resep yang pas".
@@ -134,6 +140,13 @@ Settings.DEFAULTS = {
 	AnimTime = 0.10, -- v4.7.8: RESEP USER TERKUNCI ("10% bagus!") = 0.10s buka/tutup window
 	GroupColor = Color3.fromRGB(0, 0, 0), -- HITAM (user v4.6.5: balik hitam)
 	CanvasColor = Color3.fromRGB(119, 119, 119), -- dump user v7 (0.465)
+	Glow = { -- v4.9.0: cursor glow (warna ikut accent sampe lu set sendiri)
+		Enabled = true,
+		Color = false,
+		Size = 280,
+		Intensity = 50,
+		Smooth = 12,
+	},
 }
 
 function Settings:Attach(Library, Window, Options)
@@ -320,6 +333,7 @@ function Settings:Attach(Library, Window, Options)
 
 	-- Resep WALLPAPER + SURFACE (transparansi, warna kartu/latar).
 	local function BuildResep()
+		local G = Library.CursorGlow or {}
 		local lines = {
 			"--[[ N3V4 RESEP WALLPAPER + SURFACE ]]",
 			"Library:SetWallpaper({",
@@ -343,6 +357,15 @@ function Settings:Attach(Library, Window, Options)
 			(typeof(S.CanvasColor) == "Color3")
 				and ("\tCanvasColor = " .. RGB(S.CanvasColor) .. ",")
 				or "\tCanvasColor = false, -- ikut theme",
+			"})",
+			"",
+			"--[[ N3V4 CURSOR GLOW ]]",
+			"Library:SetCursorGlow({",
+			string.format("\tEnabled = %s,", tostring(G.Enabled ~= false)),
+			(typeof(G.Color) == "Color3") and ("\tColor = " .. RGB(G.Color) .. ",") or "\tColor = false, -- ikut accent theme",
+			string.format("\tSize = %d,", G.Size or 280),
+			string.format("\tIntensity = %d,", G.Intensity or 50),
+			string.format("\tSmooth = %d,", G.Smooth or 12),
 			"})",
 		}
 		return table.concat(lines, "\n")
@@ -633,6 +656,40 @@ function Settings:Attach(Library, Window, Options)
 	end)
 
 	Try("Settings: info", function()
+		-- v4.9.0: cursor glow (cahaya background ngikut cursor)
+		local CG0 = Library.CursorGlow or {}
+		local GlowTog = Box:AddToggle("GW_On", {
+			Text = "Glow cursor", Default = CG0.Enabled ~= false,
+			Callback = function(On)
+				Library:SetCursorGlow({ Enabled = On })
+			end,
+		})
+		GlowTog:AddColorPicker("GW_C", {
+			Title = "Warna glow (default ikut accent)",
+			Default = (typeof(CG0.Color) == "Color3" and CG0.Color) or (Library.Scheme and Library.Scheme.AccentColor) or Color3.fromRGB(218, 68, 255),
+			Callback = function(Color)
+				Library:SetCursorGlow({ Color = Color })
+			end,
+		})
+		Box:AddSlider("GW_Size", {
+			Text = "Ukuran glow", Default = CG0.Size or 280, Min = 80, Max = 600, Rounding = 0, Suffix = "px",
+			Callback = function(Value)
+				Library:SetCursorGlow({ Size = Value })
+			end,
+		})
+		Box:AddSlider("GW_Int", {
+			Text = "Glow intensity (0% = paling halus)", Default = CG0.Intensity or 50, Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				Library:SetCursorGlow({ Intensity = Value })
+			end,
+		})
+		Box:AddSlider("GW_Smooth", {
+			Text = "Kecepatan glow ngikut cursor", Default = CG0.Smooth or 12, Min = 1, Max = 30, Rounding = 0, Suffix = "/s",
+			Callback = function(Value)
+				Library:SetCursorGlow({ Smooth = Value })
+			end,
+		})
+
 		local Box = T1:AddRightGroupbox("Resep Tema", "copy")
 
 		-- yang diminta user: print resep THEME (accent/outline/main/font/bg)
@@ -965,6 +1022,7 @@ function Settings:Attach(Library, Window, Options)
 			S.CanvasColor = DEFAULTS.CanvasColor
 			Apply()
 			pcall(function()
+				Library:SetCursorGlow(DEFAULTS.Glow)
 				Library:SetTabAppearance(DEFAULTS.Tab)
 				if Library.Animations then
 					Library.Animations.TabHoverZoom = DEFAULTS.TabHoverZoom ~= false

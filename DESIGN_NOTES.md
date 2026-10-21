@@ -117,6 +117,32 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## ✨ v4.9.0 — CURSOR GLOW (fitur baru, request user)
+
+Request: "kalo masuk ke window gue kayak ada visual effect... di
+background di belakang semua group button toggle dll ada cahaya visual
+effect yang sesuai gerakan cursor gue". Warna "bisa gue seting nanti".
+
+Implementasi:
+- Holder Frame "CursorGlow" parent MainFrame, ZIndex 0 = slot antara
+  wallpaper back (Image -2 / Overlay -1) dan semua konten (>= 1) ->
+  glow di BELAKANG group card/button/toggle/sidebar, keliatan lewat
+  card semi-transparan (GroupTransparency 0.5) & canvas transparan.
+- Nol asset eksternal: 6 lingkaran bertumpuk (UICorner scale 0.5),
+  diameter frac {0.33..1} x Size, alpha table {0.34..0.03} x Intensity
+  -> falloff halus tanpa banding kasar di bg gelap.
+- Satu koneksi RenderStepped se-session (GiveSignal): posisi glow
+  lerp eksponensial ke cursor (knob Smooth /s) = trail lembut; fade
+  in/out 10/s pas cursor masuk/keluar rect window; MouseEnabled false
+  (mobile) = glow off otomatis.
+- Warna default IKUT AccentColor (pola v4.8.6: Color = false berarti
+  follow theme; UpdateColorsUsingRegistry recolor tiap ganti theme).
+  Color picker di module = override Color3.
+- Knob (Library.CursorGlow + SetCursorGlow): Enabled / Color / Size
+  (80-600) / Intensity (0-100%) / Smooth (1-30). Module: groupbox
+  Window (simetri groupbox tetap 4/4), DEFAULTS.Glow, Reset scheme,
+  print masuk BuildResep (RESEP WALLPAPER+SURFACE + blok CURSOR GLOW).
+
 ## 🐛 Bug #26 — sliver "bocor" pas collapse (regression v4.8.8, FIXED v4.8.9)
 
 Screenshot user: group collapsed (Status Session, Activity Feed)

@@ -1159,6 +1159,14 @@ function Library:UpdateColorsUsingRegistry()
 			end
 		end
 	end
+
+	-- v4.9.0: glow follows the accent until the user pins its own color
+	if Library.CursorGlowLayers and #Library.CursorGlowLayers > 0 and typeof(Library.CursorGlow.Color) ~= "Color3" then
+		local Color = Library.Scheme.AccentColor
+		for _, Layer in ipairs(Library.CursorGlowLayers) do
+			Layer.Frame.BackgroundColor3 = Color
+		end
+	end
 end
 
 function Library:SetDPIScale(DPIScale: number)
@@ -1657,9 +1665,89 @@ Library.TabAppearance = {
 	ZoomTime = 0.20, -- seconds, Quad Out tween
 }
 Library.TabVisuals = {} -- rec { Button, Icon, Card, Scale, Tab } per sidebar tab
+
+-- N3V4 v4.9.0: CURSOR GLOW — a soft light that trails the cursor on the
+-- background layer (ZIndex 0): above the wallpaper (-2/-1) and below every
+-- content element (>= 1), so it shines through the semi-transparent group
+-- cards. Stacked circles = zero external asset. One RenderStepped loop for
+-- the whole session, exponential smoothing + edge fade in/out.
+Library.CursorGlow = {
+	Enabled = true,
+	Color = false, -- false = follow AccentColor (same pattern as card line)
+	Size = 280, -- px, outer circle diameter
+	Intensity = 50, -- percent, 50 = baseline alpha table
+	Smooth = 12, -- follow speed per second
+}
+Library.CursorGlowLayers = {}
+Library.CursorGlowFade = 0
+
+function Library:GetCursorGlowColor(): Color3
+	if typeof(Library.CursorGlow.Color) == "Color3" then
+		return Library.CursorGlow.Color
+	end
+	return Library.Scheme.AccentColor
+end
+
+function Library:UpdateCursorGlowTransparency(Fade: number)
+	local Intensity = math.clamp(Library.CursorGlow.Intensity, 0, 100) / 50
+	for _, Layer in ipairs(Library.CursorGlowLayers) do
+		local Alpha = math.clamp(Layer.Mult * Intensity, 0, 0.9) * Fade
+		Layer.Frame.BackgroundTransparency = 1 - Alpha
+	end
+	if Library.CursorGlowHolder then
+		Library.CursorGlowHolder.Visible = Library.CursorGlow.Enabled ~= false and Fade > 0.01
+	end
+end
+
+function Library:ApplyCursorGlow()
+	local Color = Library:GetCursorGlowColor()
+	for _, Layer in ipairs(Library.CursorGlowLayers) do
+		Layer.Frame.BackgroundColor3 = Color
+		Layer.Frame.Size = UDim2.fromOffset(Library.CursorGlow.Size * Layer.Frac, Library.CursorGlow.Size * Layer.Frac)
+	end
+	Library:UpdateCursorGlowTransparency(Library.CursorGlowFade)
+end
+
+function Library:SetCursorGlow(Info: { [string]: any })
+	for Key, Val in pairs(Info or {}) do
+		if Library.CursorGlow[Key] ~= nil then
+			Library.CursorGlow[Key] = Val
+		end
+	end
+	Library:ApplyCursorGlow()
+end
+
+function Library:StartCursorGlowLoop()
+	if Library.CursorGlowLoop then
+		return
+	end
+	local Pos = Vector2.new(0, 0)
+	local Fade = 0
+	Library.CursorGlowLoop = Library:GiveSignal(RunService.RenderStepped:Connect(function(Dt)
+		local Holder = Library.CursorGlowHolder
+		if not Holder or not Holder.Parent then
+			return
+		end
+		local Main = Holder.Parent
+		local Inside = false
+		if Library.CursorGlow.Enabled ~= false and UserInputService.MouseEnabled then
+			local Mouse = UserInputService:GetMouseLocation()
+			local Rect = Main.AbsolutePosition
+			local Area = Main.AbsoluteSize
+			Inside = Mouse.X >= Rect.X and Mouse.X <= Rect.X + Area.X and Mouse.Y >= Rect.Y and Mouse.Y <= Rect.Y + Area.Y
+			if Inside then
+				Pos = Pos:Lerp(Vector2.new(Mouse.X - Rect.X, Mouse.Y - Rect.Y), math.min(1, Dt * Library.CursorGlow.Smooth))
+				Holder.Position = UDim2.fromOffset(Pos.X, Pos.Y)
+			end
+		end
+		Fade = Fade + ((Inside and 1 or 0) - Fade) * math.min(1, Dt * 10)
+		Library.CursorGlowFade = Fade
+		Library:UpdateCursorGlowTransparency(Fade)
+	end))
+end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.8.9 loaded — bug #26: nol bocor sliver pas collapse (hide instan + clip buat expand) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.9.0 loaded — CURSOR GLOW: cahaya ngikut cursor di layer background, warna default ikut accent (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -11123,6 +11211,43 @@ function Library:CreateWindow(WindowInfo)
 				Parent = BackgroundOverlay,
 			})
 		)
+
+		-- v4.9.0: cursor glow holder on the background layer (see the
+		-- CursorGlow table above for the layering rationale).
+		Library.CursorGlowHolder = New("Frame", {
+			Name = "CursorGlow",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundTransparency = 1,
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(0, 0),
+			Visible = false,
+			ZIndex = 0,
+			Parent = MainFrame,
+		})
+		Library.CursorGlowLayers = {}
+		for Index, Mult in ipairs({ 0.34, 0.22, 0.14, 0.09, 0.05, 0.03 }) do
+			local Frac = ({ 0.33, 0.5, 0.66, 0.8, 0.92, 1 })[Index]
+			local Layer = {
+				Mult = Mult,
+				Frac = Frac,
+				Frame = New("Frame", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					BackgroundColor3 = Library:GetCursorGlowColor(),
+					BackgroundTransparency = 1,
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromOffset(0, 0),
+					ZIndex = 0,
+					Parent = Library.CursorGlowHolder,
+				}),
+			}
+			table.insert(Library.CursorGlowLayers, Layer)
+			New("UICorner", {
+				CornerRadius = UDim.new(0.5, 0),
+				Parent = Layer.Frame,
+			})
+		end
+		Library:ApplyCursorGlow()
+		Library:StartCursorGlowLoop()
 
 		if WindowInfo.Center then
 			MainFrame.Position = UDim2.new(0.5, -MainFrame.Size.X.Offset / 2, 0.5, -MainFrame.Size.Y.Offset / 2)

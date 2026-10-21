@@ -7,6 +7,22 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.9.0 — CURSOR GLOW (fitur baru):
+	   • Cahaya soft NGIKUT gerakan cursor lu, di layer BACKGROUND:
+	     ZIndex 0 = di atas wallpaper (-2/-1) tapi di bawah SEMUA
+	     konten (group card, button, toggle, sidebar) -> nyelusup
+	     lewat card-card yang semi-transparan, persis request lu.
+	   • Nol asset eksternal: 6 lingkaran bertumpuk (alpha menurun ke
+	     luar) = glow halus. Satu koneksi RenderStepped se-session,
+	     smoothing eksponensial (glow nge-trail, bukan nempel kaku),
+	     fade in/out pas cursor masuk/keluar window. Mobile aman:
+	     nggak ada mouse = glow off otomatis.
+	   • Warna default IKUT AccentColor theme (pola sama kayak garis
+	     card ikut outline); color picker di groupbox Window kalau lu
+	     mau pin warna sendiri. Knob: on/off, warna, ukuran 80-600px,
+	     intensity 0-100%, kecepatan ikut 1-30/s. Ikut ke-print di
+	     RESEP WALLPAPER+SURFACE + tombol Reset scheme masang ulang.
+
 	 CHANGELOG v4.8.9 — NOL BOCOR SLIVER PAS COLLAPSE (bug #26):
 	   • Regression v4.8.8: hide instan container pas collapse ikut
 	     kehapus -> selama frame shrink 0.2s, isi statis ke-clip makan
@@ -371,7 +387,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.8.9" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.9.0" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -403,7 +419,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.8.9",
+	Footer = "N3V4 • UI Preview Kit v4.9.0",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
