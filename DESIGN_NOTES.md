@@ -1568,3 +1568,25 @@ code, sampah banget kalo banyak komentar ga penting".
   Cukup kode yang jelas + DESIGN_NOTES + commit message sebagai memori.
   Checker sekarang pin: MOD/PRE nol baris komentar, LIB <=163 (komentar
   asli), dan nol tag "-- v4.x" di ketiga file.
+
+## v4.12.6 — KNOB TRANSPARANSI DIVIDER (request user, bukan inisiatif gue)
+User setelah v4.12.5: "jangan terlalu terang jir... terlalu mencolok.
+kasih gue ui seting gue mau atur transparansinya sesuai keinginan gue
+yang lengkap." Jadi KALI INI settings ada karena DIA yang minta.
+
+- LIB: Library.DividerAppearance = { LineTransparency = 0.4 (default
+  kalem, user bilang 0% terlalu mencolok), TextTransparency = 0 } +
+  Library.DividerInstances (registry divider hidup, skip yang Destroyed)
+  + Library:ApplyDividerAppearance() + Library:SetDividerTransparency
+  (Line, Text) — nil = jangan ubah sisi itu. Clamp 0-1.
+- Garis divider: BorderTransparency ikut DividerAppearance (border =
+  outline accent yang kebaca; fill MainColor tetep). Text divider:
+  TextTransparency ikut DividerAppearance.
+- MOD tab UI Settings: box KIRI "Section Divider" (slider SD_LT 0-100%
+  + sample AddDivider live di dalam box + print/copy) dan box KANAN
+  "Section Text" (slider SD_TT 0-100% + print/copy). Simetri T1 6/6.
+- Icons dicek ke subset offline: minus & type ada; printer/clipboard-check
+  NGGAK ada jadi notify pakai info/copy.
+- Pelajaran: user reject sistem section v4.12.0-4.12.3 karena gue yang
+  inisiatif tanpa diminta; begitu DIA yang minta settings, ya dibuat.
+  Bedanya request vs inisiatif.

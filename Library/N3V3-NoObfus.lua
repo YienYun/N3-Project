@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.12.5 loaded — OUTLINE ACCENT: border garis divider = AccentColor (fill tetep MainColor desain asli), text divider full opaque biar kebaca, dan semua komentar sampah LIB/MOD/PRE dibersihkan (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.12.6 loaded — DIVIDER TRANSPARENCY: garis outline accent sekarang ada knob transparansinya di UI Settings (box Section Divider + Section Text), default garis 40% biar ga mencolok, user bebas atur 0-100% (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5807,6 +5807,36 @@ do
 		return FeedObj
 	end
 
+	Library.DividerAppearance = {
+		LineTransparency = 0.4,
+		TextTransparency = 0,
+	}
+
+	Library.DividerInstances = {}
+
+	function Library:ApplyDividerAppearance()
+		for _, D in ipairs(Library.DividerInstances) do
+			if not D.Destroyed then
+				for _, Frame in ipairs(D.Lines or {}) do
+					Frame.BorderTransparency = Library.DividerAppearance.LineTransparency
+				end
+				if D.Label then
+					D.Label.TextTransparency = Library.DividerAppearance.TextTransparency
+				end
+			end
+		end
+	end
+
+	function Library:SetDividerTransparency(LineTransparency, TextTransparency)
+		if type(LineTransparency) == "number" then
+			Library.DividerAppearance.LineTransparency = math.clamp(LineTransparency, 0, 1)
+		end
+		if type(TextTransparency) == "number" then
+			Library.DividerAppearance.TextTransparency = math.clamp(TextTransparency, 0, 1)
+		end
+		Library:ApplyDividerAppearance()
+	end
+
 	function Funcs:AddDivider(...)
 		if self.Destroyed then
 			return nil
@@ -5827,6 +5857,8 @@ do
 
 		local Groupbox = self
 		local Container = Groupbox.Container
+		local LineFrames = {}
+		local TextLabel = nil
 
 		local Holder = New("Frame", {
 			BackgroundTransparency = 1,
@@ -5847,14 +5879,14 @@ do
 		})
 
 		if Text then
-			local TextLabel = New("TextLabel", {
+			TextLabel = New("TextLabel", {
 				AutomaticSize = Enum.AutomaticSize.X,
 				BackgroundTransparency = 1,
 				Size = UDim2.fromScale(1, 0),
 				Text = Text,
 				TextColor3 = "AccentColor",
 				TextSize = 14,
-				TextTransparency = 0,
+				TextTransparency = Library.DividerAppearance.TextTransparency,
 				TextXAlignment = Enum.TextXAlignment.Center,
 				Parent = InnerHolder,
 			})
@@ -5862,29 +5894,32 @@ do
 			local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
 			local SizeX = X // 2 + 10
 
-			New("Frame", {
+			LineFrames[1] = New("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = "MainColor",
 				BorderColor3 = "AccentColor",
+				BorderTransparency = Library.DividerAppearance.LineTransparency,
 				BorderSizePixel = 1,
 				Position = UDim2.fromScale(0, 0.5),
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,
 			})
-			New("Frame", {
+			LineFrames[2] = New("Frame", {
 				AnchorPoint = Vector2.new(1, 0.5),
 				BackgroundColor3 = "MainColor",
 				BorderColor3 = "AccentColor",
+				BorderTransparency = Library.DividerAppearance.LineTransparency,
 				BorderSizePixel = 1,
 				Position = UDim2.fromScale(1, 0.5),
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,
 			})
 		else
-			New("Frame", {
+			LineFrames[1] = New("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = "MainColor",
 				BorderColor3 = "AccentColor",
+				BorderTransparency = Library.DividerAppearance.LineTransparency,
 				BorderSizePixel = 1,
 				Position = UDim2.fromScale(0, 0.5),
 				Size = UDim2.new(1, 0, 0, 2),
@@ -5904,6 +5939,10 @@ do
 			MarginBottom = MarginBottom,
 			Type = "Divider",
 		}
+
+		Divider.Lines = LineFrames
+		Divider.Label = TextLabel
+		table.insert(Library.DividerInstances, Divider)
 
 		function Divider:SetVisible(Value)
 			Holder.Visible = Value == true
