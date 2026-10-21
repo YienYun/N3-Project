@@ -1816,7 +1816,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.10.2 loaded — ICON ANIM: resep user kebake (zoom 15%, tilt 10, 0.30s) — rilis ramping, nol kode baru (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.10.3 loaded — LOGO HOVER ZOOM: logo window pojok kiri atas zoom saat hover pakai helper + setting zoom tab yang sama (rasa identik, nol knob baru) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -11390,6 +11390,18 @@ function Library:CreateWindow(WindowInfo)
 				Parent = TitleHolder,
 			})
 		end
+
+		-- v4.10.3: window logo hover zoom. Reuses the tab zoom helper and
+		-- the tab HoverZoom setting on purpose: identical feel to the
+		-- tabs, zero new knobs, zero new tween code (user: "just like
+		-- the tabs", and keep the code lean).
+		local WindowIconScale = New("UIScale", { Scale = 1, Parent = WindowIcon })
+		WindowIcon.MouseEnter:Connect(function()
+			Library:TweenTabZoom(WindowIconScale, Library.TabAppearance.HoverZoom or 1)
+		end)
+		WindowIcon.MouseLeave:Connect(function()
+			Library:TweenTabZoom(WindowIconScale, 1)
+		end)
 
 		local X = Library:GetTextBounds(
 			WindowInfo.Title,

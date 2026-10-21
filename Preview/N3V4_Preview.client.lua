@@ -7,6 +7,14 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.10.3 — LOGO HOVER ZOOM (langsung library, tanpa preview):
+	   Logo window di pojok kiri atas sekarang zoom saat cursor hover,
+	   persis rasa tab: pakai helper TweenTabZoom + setting HoverZoom
+	   milik tab yang SAMA (jadi kalo lu dial zoom tab di groupbox
+	   "Tab Aktif & Zoom", logo ikut rasa yang sama). Cursor keluar =
+	   balik ke skala 1. Nol knob baru, nol kode tween baru — cuma
+	   UIScale + 2 koneksi mouse di WindowIcon.
+
 	 CHANGELOG v4.10.2 — BAKE print icon anim (rilis ramping, nol kode baru):
 	   Zoom 15, Tilt 10, Speed 0.30 kebake verbatim di default library,
 	   DEFAULTS module, fallback BuildIconAnim, sama default slider.
@@ -456,7 +464,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.10.2" = baru. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.10.3" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -488,7 +496,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.10.2",
+	Footer = "N3V4 • UI Preview Kit v4.10.3",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages

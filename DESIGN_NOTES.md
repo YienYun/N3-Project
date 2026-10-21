@@ -117,6 +117,22 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🔍 v4.10.3 — LOGO HOVER ZOOM (library langsung, tanpa preview dial)
+
+Request user: logo window pojok kiri atas zoom saat cursor hover,
+"mirip tab gitu lah pokoknya", dan "gausah preview langsung di
+library saja" + jaga biar code ga bengkak.
+
+Implementasi paling ramping: WindowIcon (ImageLabel/TextLabel di
+TitleHolder TopBar) dapet satu UIScale + 2 koneksi mouse yang manggil
+helper TAB yang udah ada: Library:TweenTabZoom(WindowIconScale,
+TabAppearance.HoverZoom) saat enter, 1 saat leave. Konsekuensi desain
+(disengaja): rasa zoom logo = rasa zoom tab SELALU (satu sumber
+setting), dan dial manualnya numpang knob zoom tab yang udah ada di
+groupbox "Tab Aktif & Zoom" — nol knob baru, nol kode tween baru.
+TweenTabZoom sendiri udah gate: kalo zoom tab dimatiin, scale di-set
+instant (konsisten sama perilaku tab).
+
 ## 📌 v4.10.2 — Bake print ICON ANIM (rilis ramping)
 
 Print user: Zoom 15, Tilt 10, Speed 0.30 -> kebake verbatim di

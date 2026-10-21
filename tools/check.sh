@@ -95,7 +95,7 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.10.2 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.10.3 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + card icon + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconCard' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
@@ -162,7 +162,9 @@ chk "v4.10.0: icon anim di library (registry + play + set + UIRotation + idle-sk
 	"grep -q 'Library.IconAnim = {' '$LIB' && grep -q 'function Library:PlayIconAnim' '$LIB' && grep -q 'function Library:SetIconAnim' '$LIB' && grep -q 'Rot = BoxIconLabel' '$LIB' && ! grep -q 'New(\"UIRotation\"' '$LIB' && grep -q 'Zoom = 15,' '$LIB' && grep -q 'Tilt = 10,' '$LIB' && grep -q 'Speed = 0.30,' '$LIB' && grep -q 'if Changed then' '$LIB'"
 chk "v4.10.0: knob icon anim + print/copy + DEFAULTS + reset" \
 	"grep -q 'AddSlider(\"IA_Zoom\"' '$MOD' && grep -q 'AddSlider(\"IA_Tilt\"' '$MOD' && grep -q 'local function BuildIconAnim' '$MOD' && grep -q 'IconAnim = {' '$MOD' && grep -q 'Library:SetIconAnim(DEFAULTS.IconAnim)' '$MOD'"
-chk "footer v4.10.2" "grep -q 'Preview Kit v4.10.2' '$PRE'"
+chk "v4.10.3: logo window hover zoom pakai helper zoom tab" \
+	"grep -q 'local WindowIconScale = New(\"UIScale\"' '$LIB' && grep -q 'Library:TweenTabZoom(WindowIconScale, Library.TabAppearance.HoverZoom or 1)' '$LIB'"
+chk "footer v4.10.3" "grep -q 'Preview Kit v4.10.3' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \
