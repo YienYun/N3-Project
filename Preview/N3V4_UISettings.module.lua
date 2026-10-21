@@ -1,173 +1,3 @@
---================================================================================
--- N3V4 — UI SETTINGS   (file setingan desain UI)
---================================================================================
--- SEMUA setingan desain ada DI SINI. Preview utama nggak punya setingan.
---
--- DUAL MODE — dua-duanya jalan:
---   A) Paste sebagai LOCALSCRIPT  (misal StarterPlayerScripts > "N3V4_UISettings")
---      -> dia nempel SENDIRI: nunggu library & window siap, terus nambah tab.
---   B) Paste sebagai MODULESCRIPT (ReplicatedStorage > "N3V4_UISettings")
---      -> preview auto-require, atau manual: Settings:Attach(Library, Window)
---
--- Default = RESEP USER v2 yang disetujui 2026-10-20 (yang lu seting sendiri
--- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
--- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
---
--- v4.12.4: REVERT total eksperimen section (user: "nambah sampah anj,
---         balikin ke semula"): dua groupbox section, builder print,
---         default table section, dan semua knob SD_* dihapus module;
---         library balik ke desain garis asli. SATU-SATUNYA yang
---         dipertahankan: text divider warna accent (v4.11.3).
--- v4.12.3: skema garis diganti TOTAL: border semi-transparan di frame
---         2px ternyata render beda kiri/kanan di atas card tembus
---         pandang ("kiri unggu kanan hitam"). Sekarang garis = fill
---         OPAQUE warna lerp Background->accent/outline; knob SD_BT
---         jadi "Kekuatan warna" (0% netral gelap, 100% full accent).
---         Opaque = baca identik di backdrop mana pun = pincang mati.
--- v4.12.2: box "Section Divider" + "Divider Presets" DIPINDAH ke urutan
---         atas (kiri #2 / kanan #2): sebelumnya box ke-6 = knob ketutup
---         lipatan bawah window (kolom emang ScrollingFrame, tapi UX
---         buruk maksa scroll). Garis divider sekarang dibuat dari SATU
---         loop (kiri=kanan identik by construction) dan apply di-pcall
---         biar glitch section ga bisa matiin seluruh box lagi.
--- v4.12.1: BUG #31 — BorderColor3 nolak theme-string di assign runtime
---         (string magic cuma ada di New()); ApplySectionAppearance
---         sekarang pakai Color3 asli + hook di UpdateColorsUsingRegistry
---         re-sync tiap ganti theme. Plus: sample section LIVE di dalam
---         groupbox "Section Divider" biar dial kelihatan di tempat.
--- v4.12.0: SECTION SETTINGS — user: "terlalu mencolok", "gue mau atur
---         sendiri simetrisnya dan transparansi warnanya", "kasih
---         preview setingan". Diagnosa gue: garis section 2px dan
---         border 1px makan atas+bawah -> border 0% kebaca solid
---         accent. Default border transparency sekarang 45% (subtle).
---         Groupbox KIRI baru "Section Divider": toggle garis luar
---         ikut accent, slider transparansi luar, transparansi text,
---         jarak text-garis (SATU nilai buat dua sisi = simetris
---         dijamin), ketebalan garis; + print & copy resep (aturan
---         v4.8.5). Groupbox KANAN baru "Divider Presets": Soft 45%
---         (bawaan), Solid 0%, Ghost 70%, Netral outline. T1 5/5 -> 6/6.
--- v4.10.0: ICON ANIM — semua icon groupbox zoom sedikit + miring sedikit
---         saat cursor masuk kartu group, tween balik saat keluar
---         (UIScale + UIRotation, Quint-out). Setup manual di groupbox
---         "Font & Animasi": toggle IA_On, slider IA_Zoom 0-40%,
---         IA_Tilt 0-20 derajat, IA_Speed 0.05-0.6s, + print & copy
---         resep (aturan v4.8.5). Simetri aman: nempel di box existing,
---         T1 tetep 5/5. FPS glow: idle-skip di loop (nol write saat
---         fade diam); icon anim = tween fire-and-forget.
--- v4.9.3: (a) posisi glow ngaco ~36px DI BAWAH cursor: GetMouseLocation
---        itu window-space (masuk inset topbar 36px) sedangkan
---        AbsolutePosition gui-space -> library sekarang kurangin
---        GuiService:GetGuiInset(), glow pas di tengah cursor.
---        (b) Print user DIBAKE verbatim jadi default: Color putih
---        (255,255,255), Size 400, Intensity 10, Smooth 5 (LIB +
---        DEFAULTS.Glow + fallback BuildGlow + preset "bawaan").
---        Slider lebar naik max 600 biar 400 bukan mentok tepi.
--- v4.9.2: BUG #27 — knob glow v4.9.0/4.9.1 MATI runtime: gue naroh knob
---        di Try yang ngeref Box NIL (upvalue ga ada) -> pcall nelen
---        error, warn doang di Output, dan box "Resep Tema" di bawahnya
---        ikut ga ke-create. Itu sebabnya "ga ngerti, mana tombol
---        setting". Sekarang: groupbox KIRI sendiri "Cursor Glow" (5
---        knob + print + copy sesuai aturan v4.8.5) dan groupbox KANAN
---        "Preset Glow" (tombol-tombol biar dia yang atur: samar/halus/
---        jernih/mati/ikut-accent, sync balik ke knob). Visual library:
---        haze radial samar 16 micro-layer, tengah sedikit lebih jelas,
---        default 180px ("jangan terlalu lebar").
--- v4.9.1: GLOW v2 sesuai teriakan user: SATU circle aja (stack 6 layer
---        keliatan ring bertingkat = jelek), opacity 5% (Intensity = 5),
---        dan di-clip di dalam rect window (v4.9.0 bocor keluar window).
--- v4.9.0: CURSOR GLOW — cahaya soft ngikut gerakan cursor di layer
---        background (di belakang semua group/button/toggle, keliatan
---        lewat card yang semi-transparan). Default warna IKUT accent
---        theme; bisa lu set sendiri lewat color picker di groupbox
---        Window. Knob: on/off, warna, ukuran, intensity, kecepatan.
---        Ikut ke-print di RESEP WALLPAPER+SURFACE (BuildResep).
--- v4.8.7: RESEP TAB v4 FINAL DIBAKE (print user 16:55): padding 2, garis
---        solid 0% (warna ikut outline), radius 5, bg semua tab 85%.
---        Zoom/aktif tetep. User: "oke terakhir bro ini resep yang pas".
--- v4.8.6: warna garis card IKUT OutlineColor theme (theme string di library,
---        knob warna dihapus) — user: "ikut outline saja, jangan bikin susah
---        pas mau banyak theme ke depan". Print resep tab tanpa warna card.
--- v4.8.5: RESEP TAB v3 DIBAKE (screenshot user: tebal 1, transparansi 36%,
---        napas 3, radius 5, bg semua tab 90%; warna garis 135 dari chat).
---        Print+copy resep tab pindah ke groupbox "Tab Card & Bg" (sebelah
---        knob card) — sebelumnya nyelip bawah TEST/DEBUG & tanpa copy.
--- v4.8.4: TAB ICON CARD — halo stroke glyph DIGANTI garis kotak simetris
---        (card) di seputar ICON doang, bukan full tab (user: "bukan stroke
---        jelek jir"). Card = anak icon -> ikut zoom, padding tetep simetris.
---        Default: padding 4, tebal 1.5, transparency 30%, radius 6, hitam.
---        Knob stroke lama dihapus, diganti 6 knob IconCard* (box Card & Bg).
--- v4.8.3: RESEP v7 + RESEP TAB v2 user DIBAKE (print 00:41-00:46):
---        main 36, outline 65-62-62, radius 10, tint 148, overlay 0.40,
---        group 0.5, canvas 119; tab: stroke 1.5/0.53 hitam, aktif 0.60
---        hitam, zoom 1.25/1.25. Semua lewat default = nol hardcode.
--- v4.7.8: durasi buka/tutup = 10% (0.10s) DIBAKE — user: "10% bagus!".
--- v4.7.7: animasi BUKA/TUTUP WINDOW dibenerin di library (fade barengan =
---        total waktu persis durasi, nol "layar hitam", tween di-cache =
---        nol hitch, reversal mulus). Knob baru ST_AnimTime (Font & Animasi)
---        + durasi ikut ke-print di RESEP THEMA.
--- v4.7.6: RESEP TAB user DIBAKE (print 18:21) + refactor nol-duplikasi:
---        halo+UIScale satu helper (v4.8.4: helper-nya CreateTabIconCard),
---        zoom satu helper Library:TweenTabZoom (UIScale = mulus), blok
---        duplikat di AddTab/AddKeyTab dihapus -> file library mengecil.
--- v4.7.5: PATCH TAB MASUK KE FUNGSI YANG BENER (Window:AddTab). v4.7.0-7.4
---        salah masuk AddKeyTab -> rec=0 & zoom/stroke mati di tab sidebar.
---        DEBUG activeTab sekarang print boolean bener.
--- v4.7.4: TEST ikut nyalain toggle stroke/bg-aktif + TabHoverZoom; gate zoom
---        nil-safe di library; CreateWindow auto-apply + print tabVisuals.
--- v4.7.3: FIX BUG BESAR: local TabRec kedelep di dalam do-block library ->
---        AddTab error tiap tab = semua efek tab (stroke/bg/zoom) MATI diam-diam
---        walau library baru. Sekarang scope bener + stroke pakai halo ImageLabel
---        (bukan UIStroke) + zoom pakai tween Size (bukan UIScale) = nol quirk.
---        + tombol DEBUG dump tab visuals buat ground truth.
--- v4.7.2: label slider transparency dijelasin ("100% = ILANG") + tombol TEST
---        efek keliatan. Library print versi sendiri di Output tiap require.
--- v4.7.1: stale-paste detector LIBRARY di Attach (warn kalau N3V4 lama).
--- v4.7.0: UPGRADE TAB sidebar (borongan): stroke glyph icon (UIStroke), bg
---        dikit di semua tab, bg accent tipis tab aktif, zoom hover + zoom
---        aktif (UIScale + tween). Knob lengkap di tab UI Settings (box baru
---        4/4 simetris). Print LENGKAP sekarang include RESEP TAB.
--- v4.6.11: nested box (tabbox/groupbox/depbox di dalam kartu) ikut transparan:
---         lapis double dihapus lewat Library:IsInsideSurfaceCard().
--- v4.6.10: PREVIEW OFF TOTAL (state wallpaper/surface GLOBAL -> preview
---         theme-only v4.6.9 nyetomp window user jadi 0/0 = jelek). Window
---         default 0.90 -> 1 ("window dan canvas harusnya 100").
--- v4.6.9: FIX bug STOMP: CreateWindow dulu seed Surface unconditional dari
---        Templates.Window -> resep group 0.35/contrast 40 ke-reset jadi 0/30
---        tiap paste baru ("group kok ga transparan padahal udah gue setting").
---        Sekarang seed cuma kalau caller eksplisit ngirim field-nya.
---        THEME v6: main 45 / outline 65 (print user). PREVIEW: wallpaper
---        DIMATIIN (showcase theme doang, perintah user).
--- v4.6.8: RESEP v5 USER DIBAKE (print LENGKAP 2026-10-20): wallpaper FULL
---        (transparency 0) + scrim 0.55, tint 195, window 0.90, canvas 1,
---        group 0.35 (pilihan user sendiri di layer back), contrast 40, kartu
---        hitam, canvas 156, scheme bg15/main36/outline59. PLUS FIX: corner
---        navbar bawah sekarang bottom-only (radius diutak-atik nggak bablas).
--- v4.6.7: SEMUA preset & combo sekarang layer "back" (preset "Wash (front)" &
---        combo "Stretch + front" = jebakan: front = veil nutup kartu -> kartu
---        kebaca transparan walau Group 0). Preset juga nggak lagi matiin
---        GroupColor/CanvasColor custom user. Front masih bisa via dropdown
---        Layer kalau emang mau (dengan konsekuensi kartu ke-veil).
--- v4.6.6: WALLPAPER LAYER "back" + window/canvas full transparan -> kartu group
---        100% SOLID ("ga transparan" kata user). Overlay scrim ON 0.50 biar teks
---        kebaca di atas wallpaper. User bakal seting persen-nya sendiri terus
---        kirim print balik -> bake lagi nanti.
--- v4.6.5: GROUP BALIK HITAM (revert AUTO abu-abu v4.6.4 — user: "gue group
---        warna hitam anj!"). Contrast 30 tetep disimpen sebagai baseline lu,
---        kepake kalau "Group custom" OFF.
--- v4.6.4: GROUP 30% LEBIH JELAS (user: "dulukan 10% sekarang coba bikin 30%").
---        GroupColor override hitam dihapus biar GroupContrast BENERAN
---        kepake; toggle "Group custom" mulai OFF (= auto).
--- v4.6.3: Reset scheme = theme v4 user (bg 18, main 33, outline 61).
---        NGGAK ada fitur baru — cuma ganti angka default, sesuai perintah.
--- v4.6.2: DEFAULTS = RESEP v3 user (theme hitam-ungu + radius 15 + wallpaper v3).
---        FIX BUG: state S dulu dibaca SETELAH BuildResep didefinisiin ->
---        S ke-resolve global nil -> "attempt to index nil with 'Image'".
---        State sekarang di-inisialisasi SEBELUM semua helper.
--- v4.6.1: DEFAULTS = RESEP v2 user (sama persis kayak default library).
--- v4.6: tombol PRINT/COPY RESEP THEMA (scheme colors + font + radius + DPI +
---       animasi) di tab "UI Settings", dan "Print resep LENGKAP" (thema +
---       wallpaper + surface) di kedua tab. Copy pakai setclipboard kalau ada.
---================================================================================
 
 local Settings = {}
 
@@ -175,17 +5,17 @@ Settings.DEFAULTS = {
 	Image = "111593326989465",
 	Transparency = 0,
 	ScaleType = "Stretch",
-	Color = Color3.fromRGB(148, 148, 148), -- tint (dump user v7, 0.58)
+	Color = Color3.fromRGB(148, 148, 148),
 	Layer = "back",
 	Overlay = true,
 	OverlayColor = Color3.fromRGB(0, 0, 0),
-	OverlayTransparency = 0.40, -- v4.8.3: dump user v7
+	OverlayTransparency = 0.40,
 
-	Window = 1, -- transparency dasar window (v4.6.10: 100% kata user)
+	Window = 1,
 	Canvas = 1,
-	Group = 0.5, -- v4.8.3: dump user v7
+	Group = 0.5,
 	Contrast = 40,
-	Tab = { -- v4.8.7 = RESEP TAB USER v4 TERKUNCI (print final 16:55)
+	Tab = {
 		IconCardEnabled = true,
 		IconCardPadding = 2,
 		IconCardThickness = 1,
@@ -199,17 +29,17 @@ Settings.DEFAULTS = {
 		ZoomTime = 0.20,
 	},
 	TabHoverZoom = true,
-	AnimTime = 0.10, -- v4.7.8: RESEP USER TERKUNCI ("10% bagus!") = 0.10s buka/tutup window
-	GroupColor = Color3.fromRGB(0, 0, 0), -- HITAM (user v4.6.5: balik hitam)
-	CanvasColor = Color3.fromRGB(119, 119, 119), -- dump user v7 (0.465)
-	Glow = { -- v4.9.0: cursor glow (v4.9.3: resep print user kebake verbatim)
+	AnimTime = 0.10,
+	GroupColor = Color3.fromRGB(0, 0, 0),
+	CanvasColor = Color3.fromRGB(119, 119, 119),
+	Glow = {
 		Enabled = true,
 		Color = Color3.fromRGB(255, 255, 255),
 		Size = 400,
 		Intensity = 10,
 		Smooth = 5,
 	},
-	IconAnim = { -- v4.10.0: group icon hover anim (v4.10.2: print user kebake)
+	IconAnim = {
 		Enabled = true,
 		Zoom = 15,
 		Tilt = 10,
@@ -223,9 +53,6 @@ function Settings:Attach(Library, Window, Options)
 	end
 	shared.N3V4_UISettings_Attached = true
 
-	-- v4.7.1: STALE-PASTE DETECTOR buat LIBRARY. Kalau ModuleScript N3V4 di
-	-- ReplicatedStorage belum v4.8.4+, knob Tab (card/bg/zoom) nyetel nilai
-	-- yang nggak dikenal -> slider gerak tapi NIR efek. v4.8.4: cek IconCard.
 	if type(Library.SetTabAppearance) ~= "function" or type(Library.TabAppearance) ~= "table" or Library.TabAppearance.IconCardEnabled == nil then
 		warn("[N3V4 Settings] LIBRARY LAMA terdeteksi (SetTabAppearance/TabAppearance/knob IconCard nil)! Paste ulang Library/N3V3-NoObfus.lua ke ModuleScript N3V4 di ReplicatedStorage, kalau nggak knob Tab Card/Bg/Zoom nggak akan ngaruh.")
 	end
@@ -269,7 +96,6 @@ function Settings:Attach(Library, Window, Options)
 		return OK and Font or nil
 	end
 
-	--// state awal: baca yang lagi aktif, fallback ke DEFAULTS \\--
 	local Info0 = nil
 	pcall(function()
 		if typeof(Window.GetWallpaperInfo) == "function" then
@@ -299,9 +125,6 @@ function Settings:Attach(Library, Window, Options)
 	local LastCanvas = S.CanvasColor
 	local LastGroup = (typeof(S.GroupColor) == "Color3") and S.GroupColor or Color3.fromRGB(0, 0, 0)
 
-	--//========================================================================
-	-- RESEP / PRINT  (dipakai dua tab: tema + wallpaper)
-	--//========================================================================
 	local function RGB(C)
 		if typeof(C) ~= "Color3" then
 			return "Color3.fromRGB(0, 0, 0)"
@@ -324,7 +147,6 @@ function Settings:Attach(Library, Window, Options)
 		return false
 	end
 
-	-- Baca satu nilai dari library tanpa pernah error (API lama/baru aman).
 	local function Pick(Obj, Keys, Fallback)
 		if type(Obj) ~= "table" then
 			return Fallback
@@ -350,8 +172,6 @@ function Settings:Attach(Library, Window, Options)
 
 	local ANIM_KEYS = { "ToggleWindow", "TabSwitch", "Groupbox", "Dropdown", "KeyPicker" }
 
-	-- Resep THEMA: scheme colors + font + radius + DPI + animasi.
-	-- Ini yang diminta user: "kasih print juga di theme".
 	local function BuildTema()
 		local lines = { "--[[ N3V4 RESEP THEMA — paste balik ke script lu ]]" }
 
@@ -399,7 +219,6 @@ function Settings:Attach(Library, Window, Options)
 		return table.concat(lines, "\n")
 	end
 
-	-- Resep WALLPAPER + SURFACE (transparansi, warna kartu/latar).
 	local function BuildGlow()
 		local G = Library.CursorGlow or {}
 		return table.concat({
@@ -505,9 +324,6 @@ function Settings:Attach(Library, Window, Options)
 		end)
 	end
 
-	--============================================================================
-	-- TAB: UI SETTINGS   (4 kiri / 4 kanan — v4.7.0: box Tab Stroke & Bg + Tab Aktif & Zoom)
-	--============================================================================
 	local T1 = Window:AddTab("UI Settings", "palette", "Warna scheme, font, radius, animasi")
 
 	Try("Settings: scheme", function()
@@ -622,9 +438,6 @@ function Settings:Attach(Library, Window, Options)
 	Try("Settings: font & animasi", function()
 		local Box = T1:AddLeftGroupbox("Tab Card & Bg", "sparkles")
 
-		-- v4.8.4: card outline icon (ganti stroke halo) + background semua tab
-		-- (sidebar). Baseline dari Library.TabAppearance; user seting manual
-		-- dulu di preview, print, baru dibake.
 		local TA0 = Library.TabAppearance or {}
 		local CardTog = Box:AddToggle("TB_CardOn", {
 			Text = "Card outline icon tab", Default = TA0.IconCardEnabled ~= false,
@@ -662,8 +475,6 @@ function Settings:Attach(Library, Window, Options)
 				Library:SetTabAppearance({ TabBackgroundTransparency = Value / 100 })
 			end,
 		})
-		-- v4.8.5: print+copy resep TAB nempel DI groupbox card (user: "gimana
-		-- gue mau copy anj?" — sebelumnya nyelip bawah TEST/DEBUG & tanpa copy)
 		Box:AddButton("Print resep tab", function()
 			print("[N3V4 RESEP TAB] paste ini balik:\n" .. BuildTab())
 			SafeNotify({ Title = "Resep tab", Description = "Cek Output.", Icon = "copy", Time = 3 })
@@ -701,9 +512,6 @@ function Settings:Attach(Library, Window, Options)
 			})
 		end
 
-		-- v4.7.7: durasi animasi buka/tutup WINDOW (library default 0.20s).
-		-- Nilai = persen dari 1 detik (20% = 0.20s). Dial di sini, terus
-		-- print RESEP THEMA — durasi pilihan lu ikut ke-print buat dibake.
 		Box:AddSlider("ST_AnimTime", {
 			Text = "Durasi buka/tutup window (% dari 1 detik)",
 			Default = math.floor(((Library.WindowAnimationInfo and Library.WindowAnimationInfo.Time) or DEFAULTS.AnimTime) * 100 + 0.5),
@@ -713,7 +521,6 @@ function Settings:Attach(Library, Window, Options)
 			end,
 		})
 
-		-- v4.10.0: setup manual animasi icon group (zoom + tilt saat hover)
 		local IA0 = Library.IconAnim or {}
 		Box:AddToggle("IA_On", {
 			Text = "Animasi icon group", Default = IA0.Enabled ~= false,
@@ -782,7 +589,6 @@ function Settings:Attach(Library, Window, Options)
 	end)
 
 	Try("Settings: cursor glow", function()
-		-- v4.9.2: groupbox sendiri (bug #27: dulu nempel di Box nil -> mati)
 		local CG0 = Library.CursorGlow or {}
 		local Box = T1:AddLeftGroupbox("Cursor Glow", "sparkles")
 
@@ -818,7 +624,6 @@ function Settings:Attach(Library, Window, Options)
 			end,
 		})
 
-		-- v4.8.5 rule: every settings groupbox ends with print + copy
 		Box:AddButton("Print resep glow", function()
 			print("[N3V4 RESEP GLOW] paste ini balik:\n" .. BuildGlow())
 		end)
@@ -834,7 +639,6 @@ function Settings:Attach(Library, Window, Options)
 	end)
 
 	Try("Settings: glow presets", function()
-		-- v4.9.2: "kasih tombol seting gue jir biar gue yang atur cok"
 		local Box = T1:AddRightGroupbox("Preset Glow", "wand-sparkles")
 
 		local function SyncKnobs()
@@ -862,7 +666,6 @@ function Settings:Attach(Library, Window, Options)
 	Try("Settings: info", function()
 		local Box = T1:AddRightGroupbox("Resep Tema", "copy")
 
-		-- yang diminta user: print resep THEME (accent/outline/main/font/bg)
 		Box:AddButton("Print resep tema", function()
 			print("[N3V4 RESEP THEMA] paste ini balik:\n" .. BuildTema())
 			SafeNotify({ Title = "Resep tema", Description = "Cek Output.", Icon = "copy", Time = 3 })
@@ -885,9 +688,6 @@ function Settings:Attach(Library, Window, Options)
 		Box:AddLabel("Preview = showcase komponen aja.", true)
 	end)
 
-	--============================================================================
-	-- TAB: WALLPAPER & SURFACE   (4 kiri / 4 kanan)
-	--============================================================================
 		local Box = T1:AddRightGroupbox("Tab Aktif & Zoom", "zap")
 
 		local TA1 = Library.TabAppearance or {}
@@ -943,8 +743,6 @@ function Settings:Attach(Library, Window, Options)
 			end,
 		})
 		Box:AddButton("TEST: bikin efek KELIATAN", function()
-			-- v4.7.2: tombol panik buat buktiin sistemnya jalan: set nilai yang
-			-- PASTI keliatan (card pekat, bg jelas, zoom gede) + sync slider.
 			pcall(function()
 				Library:SetTabAppearance({
 					IconCardEnabled = true,
@@ -974,8 +772,6 @@ function Settings:Attach(Library, Window, Options)
 			end)
 		end)
 		Box:AddButton("DEBUG: dump tab visuals", function()
-			-- v4.8.4: ground-truth dump kalau efek tab dikira mati lagi:
-			-- jumlah rec, size icon (zoom), card outline (size/vis + stroke).
 			local TV = Library.TabVisuals or {}
 			print(string.format("[N3V4 DEBUG TAB] rec=%d activeTab=%s", #TV, tostring(Library.ActiveTab ~= nil)))
 			for I, Rec in ipairs(TV) do
@@ -1120,9 +916,6 @@ function Settings:Attach(Library, Window, Options)
 		})
 
 		Box:AddButton("Semua warna: bawaan", function()
-			-- v4.6.7: "bawaan" = DEFAULTS user (tint abu 0.59, canvas 0.045,
-			-- kartu HITAM) — BUKAN warna pabrikan library. Kartu hitam lu
-			-- harus bertahan dimanapun lu klik reset.
 			LastTint = DEFAULTS.Color
 			LastCanvas = (typeof(DEFAULTS.CanvasColor) == "Color3") and DEFAULTS.CanvasColor or Color3.fromRGB(32, 32, 32)
 			LastGroup = (typeof(DEFAULTS.GroupColor) == "Color3") and DEFAULTS.GroupColor or Color3.fromRGB(0, 0, 0)
@@ -1247,8 +1040,6 @@ function Settings:Attach(Library, Window, Options)
 			S.Canvas = P.Canvas
 			S.Group = P.Group
 			S.Contrast = P.Contrast
-			-- v4.6.7: preset NGGAK boleh matiin warna custom user (kartu hitam
-			-- "group warna hitam anj!") — GroupColor/CanvasColor dibiarin apa adanya.
 			Apply()
 			SafeNotify({ Title = "Preset", Description = Name, Icon = "sparkles", Time = 2 })
 		end
@@ -1260,8 +1051,6 @@ function Settings:Attach(Library, Window, Options)
 			Load("Bold", { Image = DEFAULTS.Image, Transparency = 0.12, ScaleType = "Crop", Layer = "back", Overlay = true, OverlayTransparency = 0.60, Canvas = 1, Group = 0, Contrast = 0 })
 		end)
 		Box:AddButton("Wash (back terang)", function()
-			-- dulu "Wash (front)": layer front = veil nutup SEMUA termasuk kartu ->
-			-- kartu kebaca transparan walau Group 0. User marah (v4.6.7) -> back.
 			Load("Wash", { Image = DEFAULTS.Image, Transparency = 0.82, ScaleType = "Stretch", Layer = "back", Overlay = true, OverlayTransparency = 0.50, Canvas = 1, Window = 1, Group = 0, Contrast = 0 })
 		end)
 		Box:AddButton("Accent tint ungu", function()
@@ -1359,15 +1148,8 @@ function Settings:Attach(Library, Window, Options)
 	return true
 end
 
---================================================================================
--- DUAL MODE
---================================================================================
--- Biar preview (LocalScript pertama) bisa nemuin file ini lewat shared.
 shared.N3V4_UISettings = Settings
 
--- Kalau file ini jalan sebagai LOCALSCRIPT: nempel sendiri begitu
--- library & window siap. Kalau di-require sebagai ModuleScript, preview
--- yang manggil Attach — flag attached mencegah double.
 task.spawn(function()
 	local Library, Window
 	for _ = 1, 60 do

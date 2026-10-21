@@ -1547,3 +1547,24 @@ N3-Project/
 - [ ] **Phase 7** — Theme presets bawaan library
 
 **Belum diputusin:** arah visual (glass / brutalist / cyber / minimal), accent & font final.
+
+## v4.12.5 — OUTLINE ACCENT + PURGE KOMENTAR SAMPAH
+Keputusan user (setelah reject v4.12.4 revert polos): "gue mau di section
+garisnya itu di OUTLINE-nya yang berwarna, bukan semuanya berwarna" +
+"text di section terlalu ga kelihatan" + "bersihin semua komentar di semua
+code, sampah banget kalo banyak komentar ga penting".
+
+- Garis divider: fill TETAP MainColor (desain asli library), yang berwarna
+  cuma OUTLINE: BorderColor3 = "AccentColor" (frame 2px tinggi + border 1px
+  = yang kebaca mata emang border-nya, fill nggak kelihatan). Struktur &
+  geometri tidak disentuh sama sekali — cuma ganti string warna.
+- Text divider: TextTransparency 0.5 -> 0 (full opaque, biar kebaca).
+- Purge komentar: LIB 503 -> 149 baris komentar (149 itu komentar ASLI
+  library dari baseline ec0f3a1, semua komentar gue hapus), MOD 218 -> 0,
+  PRE 114 -> 0 (blok header 618 baris ikut lenyap). Total -1303 baris:
+  LIB 16099->15745, MOD 1392->1174, PRE 1855->1124. Trailing comment
+  tag versi (-- v4.x.x) di strip dari baris kode, baris kode utuh.
+- Pelajaran: komentar penjelasan panjang itu SAMPAH buat user ini.
+  Cukup kode yang jelas + DESIGN_NOTES + commit message sebagai memori.
+  Checker sekarang pin: MOD/PRE nol baris komentar, LIB <=163 (komentar
+  asli), dan nol tag "-- v4.x" di ketiga file.

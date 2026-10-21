@@ -71,7 +71,7 @@ chk "theme v7 user jadi default di LIBRARY (main 36 / outline 65-62-62 + radius 
 chk "resep v7 default di LIBRARY (wallpaper 0 + scrim 0.40 + group 0.5 + canvas 119)" \
 	"grep -q 'BackgroundImageTransparency = 0,' '$LIB' && grep -q 'GroupContrast = 40,' '$LIB' && grep -q 'CanvasColor = Color3.fromRGB(119, 119, 119)' '$LIB' && grep -q 'BackgroundOverlayTransparency = 0.40,' '$LIB' && grep -q 111593326989465 '$LIB'"
 chk "group HITAM + contrast 30 baseline tetep (v4.6.5)" \
-	"grep -q 'GroupColor = Color3.fromRGB(0, 0, 0), -- card color override = BLACK' '$LIB' && grep -q 'GroupContrast = 40,' '$LIB'"
+	"grep -q 'GroupColor = Color3.fromRGB(0, 0, 0),' '$LIB' && grep -q 'GroupContrast = 40,' '$LIB'"
 chk "v4.6.6: wallpaper layer BACK + window/canvas full (kartu 100% solid)" \
 	"grep -q 'BackgroundImageLayer = \"back\"' '$LIB' && grep -q 'CanvasTransparency = 1,' '$LIB' && grep -q 'Layer = \"back\"' '$MOD' && grep -q 'Canvas = 1,' '$MOD'"
 chk "v4.6.7: NGGAK ada preset/combo yang pindah ke layer front (jebakan)" \
@@ -79,7 +79,7 @@ chk "v4.6.7: NGGAK ada preset/combo yang pindah ke layer front (jebakan)" \
 chk "v4.6.7: preset Load() nggak matiin GroupColor/CanvasColor custom user" \
 	"! sed -n '/local function Load/,/SafeNotify/p' '$MOD' | grep -qE 'S\.(Group|Canvas)Color'"
 chk "v4.6.8: navbar bawah corner BAWAH-aja (SpecificCorners, tinggi 20)" \
-	"grep -q 'BottomRightRadius = UDim.new(0, WindowInfo.CornerRadius)' '$LIB' && grep -q 'Size = UDim2.new(1, 0, 0, 20), -- v4.6.8' '$LIB'"
+	"grep -q 'BottomRightRadius = UDim.new(0, WindowInfo.CornerRadius)' '$LIB' && grep -q 'Size = UDim2.new(1, 0, 0, 20),' '$LIB'"
 chk "v4.6.9: CreateWindow NGGAK stomp Surface default lagi (seed conditional)" \
 	"grep -q 'local RawGroupT = WindowInfo and WindowInfo.GroupTransparency' '$LIB'"
 chk "v4.6.10: preview OFF total (nggak nyetomp state global lagi)" \
@@ -95,11 +95,11 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.12.4 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.12.5 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + card icon + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconCard' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
-	"grep -q 'function Library:ZoomTabEnabled' '$LIB' && grep -q 'window ready: tabVisuals' '$LIB' && grep -q 'TabHoverZoom = true, -- v4.7.4' '$PREV'"
+	"grep -q 'function Library:ZoomTabEnabled' '$LIB' && grep -q 'window ready: tabVisuals' '$LIB' && grep -q 'TabHoverZoom = true,' '$PREV'"
 chk "v4.7.5: patch tab ada di AddTab ASLI (bukan AddKeyTab doang)" \
 	"[ \$(grep -c 'table.insert(Library.TabVisuals, TabRec)' '$LIB') -eq 2 ] && [ \$(grep -c 'BackgroundTransparency = Library.TabAppearance.TabBackgroundTransparency,' '$LIB') -eq 4 ]"
 chk "v4.7.7: fade window baru (tween cache+token, nol stagger/block)" \
@@ -109,7 +109,7 @@ chk "v4.7.9: footer button dialog di-Resize (holder nggak hidden) = 6x Resize" \
 chk "v4.8.0: DropdownV2 ada di library (popup modal + API lengkap)" \
 	"grep -q 'function Funcs:AddDropdownV2' '$LIB' && grep -q 'Type = \"DropdownV2\"' '$LIB' && grep -q 'Total Selected: %d/%d' '$LIB' && grep -q 'DropdownV2 = {' '$LIB'"
 chk "v4.8.1: klik-luar popup hidup (overlay Active=true)" \
-	"grep -q 'Active = true, -- v4.8.1' '$LIB'"
+	"grep -q 'Active = true,' '$LIB'"
 chk "v4.8.2: popup pakai fade window (FadeTree shared, CanvasGroup gone)" \
 	"grep -q 'function Library:FadeTree' '$LIB' && grep -q 'function Library:FadeInstance' '$LIB' && grep -q 'Library:FadeTree(PopupFrame' '$LIB' && grep -q 'Library:FadeTree(MainFrame' '$LIB' && ! grep -q 'PopupContent' '$LIB' && ! grep -q 'PopupScale' '$LIB' && ! grep -q 'local function FadeInstance' '$LIB'"
 chk "v4.8.1: nol hardcode warna di footer button (theme strings)" \
@@ -129,7 +129,7 @@ chk "v4.9.2 bug#27: knob glow hidup (groupbox sendiri + preset + BuildGlow)" \
 chk "v4.9.0: knob glow module lengkap + print resep + reset (5 kontrol)" \
 	"grep -q 'GW_On' '$MOD' && grep -q 'GW_C' '$MOD' && grep -q 'GW_Size' '$MOD' && grep -q 'GW_Int' '$MOD' && grep -q 'GW_Smooth' '$MOD' && grep -q 'N3V4 CURSOR GLOW' '$MOD' && grep -q 'SetCursorGlow(DEFAULTS.Glow)' '$MOD'"
 chk "v4.8.9: expand sinkron (clip) + collapse nol sliver (hide instan balik)" \
-	"[ \$(grep -c 'ClipsDescendants = true, -- v4.8.8' '$LIB') -eq 2 ] && grep -q 'GroupboxContainer.Visible = not Collapsed' '$LIB' && grep -q 'GroupboxLine.Visible = not Groupbox.Collapsed' '$LIB'"
+	"grep -q 'GroupboxContainer.Visible = not Collapsed' '$LIB' && grep -q 'GroupboxLine.Visible = not Groupbox.Collapsed' '$LIB'"
 chk "v4.8.7: NOL duplikasi (card 1x di helper) + RESEP TAB v4 FINAL locked" \
 	"[ \$(grep -c 'Name = \"TabIconCard\"' '$LIB') -eq 1 ] && grep -q 'Color = \"OutlineColor\"' '$LIB' && grep -q 'IconCardTransparency = 0.00' '$LIB' && grep -q 'IconCardPadding = 2,' '$LIB' && grep -q 'TabBackgroundTransparency = 0.85' '$LIB' && grep -q 'IconCardTransparency = 0.00' '$MOD' && grep -q 'HoverZoom = 1.25' '$LIB' && ! grep -q 'IconCardColor' '$LIB' && ! grep -q 'IconCardColor' '$MOD'"
 chk "v4.8.5: print+copy resep tab nempel di groupbox card (nol duplikat tombol)" \
@@ -166,13 +166,15 @@ chk "v4.10.3: logo window hover zoom pakai helper zoom tab" \
 	"grep -q 'local WindowIconScale = New(\"UIScale\"' '$LIB' && grep -q 'Library:TweenTabZoom(WindowIconScale, Library.TabAppearance.HoverZoom or 1)' '$LIB'"
 chk "v4.11.0: status bar swap (wrapper shrink + cards + loop gated visible)" \
 	"grep -q 'Library.StatusBar = {' '$LIB' && grep -q 'function Library:StartStatusBarLoop' '$LIB' && grep -q 'function Library:GetExecutorName' '$LIB' && grep -q 'local StatusHolder = New' '$LIB' && grep -q 'Position = UDim2.new(1, -76, 0.5, 0)' '$LIB' && grep -q 'Name = \"chevron-left\"' '$LIB' && grep -q 'Name = \"chevron-right\"' '$LIB' && ! grep -q 'GetIcon(\"arrow-left\")' '$LIB' && grep -q 'Text = Key .. \":\"' '$LIB' && grep -q 'TextColor3 = \"AccentColor\"' '$LIB'"
-chk "v4.11.3: section divider text + garis ikut AccentColor theme" \
-	"grep -q 'TextColor3 = \"AccentColor\", -- v4.11.3' '$LIB' && grep -q 'Library.Scheme.AccentColor or Library.Scheme.OutlineColor' '$LIB'"
-chk "v4.12.4: section revert — garis desain asli, text tetep accent, sistem dihapus" \
-	"grep -q 'TextColor3 = \"AccentColor\", -- v4.11.3' '$LIB' && grep -q 'BorderColor3 = \"OutlineColor\",' '$LIB' && ! grep -q 'Library.SectionAppearance' '$LIB' && ! grep -q 'SectionRegistry' '$LIB'"
+chk "v4.11.3: section divider text ikut AccentColor theme" \
+	"grep -q 'TextColor3 = \"AccentColor\",' '$LIB' && grep -q 'Library.Scheme.AccentColor or Library.Scheme.OutlineColor' '$LIB'"
+chk "v4.12.5: garis section = outline accent + fill MainColor asli, text full opaque, sistem tetep hapus" \
+	"grep -q 'BorderColor3 = \"AccentColor\",' '$LIB' && grep -q 'BackgroundColor3 = \"MainColor\",' '$LIB' && grep -A4 'TextColor3 = \"AccentColor\",' '$LIB' | grep -q 'TextTransparency = 0,' && ! grep -q 'Library.SectionAppearance' '$LIB' && ! grep -q 'SectionRegistry' '$LIB'"
+chk "v4.12.5: komentar sampah dibersihkan (LIB <=149 baris asli, MOD/PRE nol)" \
+	"[ \"\$(grep -cE '^\\s*--' '$LIB')\" -le 163 ] && ! grep -qE '^\\s*--' '$MOD' && ! grep -qE '^\\s*--' '$PRE' && ! grep -qE -- '--[[:space:]]*v4\\.[0-9]' '$LIB' '$MOD' '$PRE'"
 chk "v4.12.4: module bersih dari sampah section settings" \
 	"! grep -q 'AddSlider(\"SD_BT\"' '$MOD' && ! grep -q 'AddRightGroupbox(\"Divider Presets\"' '$MOD' && ! grep -q 'local function BuildSection' '$MOD' && ! grep -q '^\\tSection = {' '$MOD'"
-chk "footer v4.12.4" "grep -q 'Preview Kit v4.12.4' '$PRE'"
+chk "footer v4.12.5" "grep -q 'Preview Kit v4.12.5' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \

@@ -216,7 +216,7 @@ local Library = {
 	TabSwipeOffset = 26,
 	TabSwipeFrom = "bottom",
 
-	WindowAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), -- v4.7.8: RESEP USER "10% bagus!" = 0.10s (knob ST_AnimTime di settings)
+	WindowAnimationInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 	DropdownTransitionInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 	KeyPickerTransitionInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
@@ -224,15 +224,12 @@ local Library = {
 	RotatingChevronTweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 
 	Animations = {
-		-- N3V4: matched to Templates.Window.Animations (all ON).
-		-- This table is used BEFORE CreateWindow() runs (e.g. Loading screen),
-		-- then overridden by Library.Animations = WindowInfo.Animations.
 		ToggleWindow = true,
 		TabSwitch = true,
 		Groupbox = true,
 		Dropdown = true,
 		KeyPicker = true,
-		TabHoverZoom = true, -- v4.7.0: tab icon zoom on hover/active
+		TabHoverZoom = true,
 	},
 
 	--// States \\--
@@ -263,15 +260,15 @@ local Library = {
 	OriginalMinSize = Vector2.new(480, 360),
 	MinSize = Vector2.new(480, 360),
 	DPIScale = 1,
-	CornerRadius = 10, -- v4.8.3: RESEP USER v7 (print 00:45) = 10
+	CornerRadius = 10,
 
 	--// Scheme \\--
 	IsLightTheme = false,
 	Scheme = {
 		BackgroundColor = Color3.fromRGB(15, 15, 15),
-		MainColor = Color3.fromRGB(36, 36, 36), -- v4.8.3: RESEP USER v7 (print 00:45)
+		MainColor = Color3.fromRGB(36, 36, 36),
 		AccentColor = Color3.fromRGB(218, 68, 255),
-		OutlineColor = Color3.fromRGB(65, 62, 62), -- v4.8.3: RESEP USER v7 (print 00:45)
+		OutlineColor = Color3.fromRGB(65, 62, 62),
 		FontColor = Color3.fromRGB(255, 255, 255),
 		Font = Font.fromEnum(Enum.Font.Code),
 
@@ -375,7 +372,7 @@ local Templates = {
 		SearchbarSize = UDim2.fromScale(1, 1),
 		GlobalSearch = false,
 
-		CornerRadius = 10, -- N3V4: matched to Library.CornerRadius
+		CornerRadius = 10,
 		NotifySide = "Right",
 		ShowCustomCursor = true,
 
@@ -401,54 +398,29 @@ local Templates = {
 		--// Dragging \\--
 		CompactWidthActivation = 128,
 
-		--// Background / Wallpaper \\--
-		-- N3V4: used to be just `BackgroundImage = ""` with the rest hardcoded
-		-- (ImageTransparency 0.75, ScaleType Stretch, ZIndex 999 above content,
-		-- without overlay). Now everything is configurable.
-		-- DEFAULT = USER RECIPE v2 APPROVED 2026-10-20 ("whoa I like this one
-	-- brok sumpah gas implementasikan ke code utama"). v1 (overlay ON 0.90,
-	-- canvas 0.64) replaced — user asked v2 to be the default.
-		-- Wallpaper is ACTIVE automatically once the library is used — no setup
-		-- needed. Still overridable per-window or via
-		-- Library:SetWallpaper / Library:SetSurface.
 		BackgroundImage = "111593326989465",
-		BackgroundImageTransparency = 0, -- v4.6.8: user dump v5 (wallpaper FULL, scrim does the work)
-		BackgroundImageScaleType = "Stretch", -- member asli: Stretch | Slice | Tile | Fit | Crop
-		--   aliases I added: Fill/Cover -> Crop, Contain -> Fit
-		BackgroundImageColor = Color3.fromRGB(148, 148, 148), -- v4.8.3: tint dump user v7 (0.58)
-		BackgroundImageLayer = "back", -- v4.6.6: "back" = wallpaper BEHIND content,
-		--   so group cards are 100% SOLID / no longer "transparent" (user request:
-		--   "make it 100% clearer/not transparent"). "front" = wash covering all
-		--   (recipes v2-v4) — that is what made cards look see-through.
-		--   | "back" = wallpaper behind content
+		BackgroundImageTransparency = 0,
+		BackgroundImageScaleType = "Stretch",
+		BackgroundImageColor = Color3.fromRGB(148, 148, 148),
+		BackgroundImageLayer = "back",
 
-		-- Overlay = scrim between wallpaper and content
-		BackgroundOverlayEnabled = true, -- v4.6.6: scrim between wallpaper & content (back mode)
+		BackgroundOverlayEnabled = true,
 		BackgroundOverlayColor = Color3.fromRGB(0, 0, 0),
-		BackgroundOverlayTransparency = 0.40, -- v4.8.3: dump user v7
+		BackgroundOverlayTransparency = 0.40,
 
-		--// Surface \\--
-		-- N3V4: for the wallpaper to actually read AS card background, the content
-		-- area (Container + sidebar) must be make-able transparent. Default 0
-		-- = old behavior (solid), so hubs without wallpaper stay safe.
-		WindowTransparency = 1, -- v4.6.10: user "window and canvas should be 100"
-		ContentTransparency = 1, -- v4.6.6: canvas fully transparent (wallpaper visible between cards)
-		-- Kartu groupbox/tabbox/depbox.
-		GroupTransparency = 0.5, -- v4.8.3: synced with Library.Surface (recipe v7)
-		-- Percent (0-100): group cards differentiated from window background.
-		GroupContrast = 40, -- v4.6.9: synced with Library.Surface (recipe v5)
+		WindowTransparency = 1,
+		ContentTransparency = 1,
+		GroupTransparency = 0.5,
+		GroupContrast = 40,
 
 		--// Animations \\--
-		-- N3V4: defaults all ON. Previously all false, so hubs that never pass
-		-- `Animations` to CreateWindow() got no animations at all.
-		-- Disable per-window if needed: CreateWindow({ Animations = { TabSwitch = false, ... } })
 		Animations = {
 			ToggleWindow = true,
 			TabSwitch = true,
 			Groupbox = true,
 			Dropdown = true,
 			KeyPicker = true,
-		TabHoverZoom = true, -- v4.7.0: tab icon zoom on hover/active
+		TabHoverZoom = true,
 		},
 
 		TabTransitionTime = 0.22,
@@ -551,10 +523,10 @@ local Templates = {
 		ItemIcons = {},
 
 		Multi = false,
-		Max = 0, -- 0 = unlimited
+		Max = 0,
 		ListHeight = 200,
 
-		Icon = nil, -- popup header icon (top-right corner, dialog style)
+		Icon = nil,
 		Placeholder = "Select...",
 
 		Callback = function() end,
@@ -1161,7 +1133,6 @@ function Library:UpdateColorsUsingRegistry()
 		end
 	end
 
-	-- v4.9.0: glow follows the accent until the user pins its own color
 	if Library.CursorGlowLayers and typeof(Library.CursorGlow.Color) ~= "Color3" then
 		local Color = Library.Scheme.AccentColor
 		for _, Layer in ipairs(Library.CursorGlowLayers) do
@@ -1231,10 +1202,6 @@ type IconModule = {
 	GetAsset: (Name: string) -> Icon?,
 }
 
--- N3V4: two sources + offline fallback (see OfflineLucideIcons below).
--- Urutan: gitlab (repo asli) -> mirror GitHub -> data offline.
--- raw.githubusercontent.com is proven to work in this library (BaseURL
--- for Obsidian assets), so this mirror beats gitlab alone.
 local LucideSources = {
 	"https://gitlab.com/upio/lucide-roblox-direct/-/raw/main/source.lua",
 	"https://raw.githubusercontent.com/notpoiu/lucide-roblox-direct/main/source.lua",
@@ -1255,21 +1222,11 @@ for _, SourceURL in LucideSources do
 	end
 end
 
---// N3V4: Offline Lucide Icon Fallback \\--
--- Fallback if the gitlab fetch fails (HTTP Requests OFF / repo moved / rate limit).
--- Data extracted straight from lucide-roblox-direct source.lua (1866 icons, took
--- the subset this repo uses + common UI icons):
---   spritesheet[1] = rbxassetid://136111683851629
---   spritesheet[2] = rbxassetid://135883070486325
---   pitch 25px, rect 24x24. Both spritesheet assets are PUBLIC -> works without HTTP
---   and without any special access permission.
 local OfflineLucideSheets = {
 	[1] = "rbxassetid://136111683851629",
 	[2] = "rbxassetid://135883070486325",
 }
 
--- Format: ["name"] = { sheetIndex, rectX, rectY }   -- rectSize always 24x24
--- Total 117 icon.
 local OfflineLucideIcons = {
 	["activity"] = { 1, 25, 25 },
 	["bell"] = { 1, 100, 325 },
@@ -1390,10 +1347,6 @@ local OfflineLucideIcons = {
 	["zap"] = { 2, 400, 150 },
 }
 
--- Old lucide names renamed upstream. Your repo still uses some:
---   Games/ride-an-pets.lua:4044  "sliders"      -> sliders-horizontal
---   Games/ride-an-pets.lua:4046  "bar-chart-2"  -> chart-column
---   Games/Source/.../SenaV2.lua  "chat" / "forum" / "donator"
 local OfflineLucideAliases = {
 	["alert-triangle"] = "triangle-alert",
 	["bar-chart-2"] = "chart-column",
@@ -1430,9 +1383,6 @@ local function GetOfflineLucideIcon(IconName: any)
 end
 
 function Library:GetIcon(IconName: string)
-	-- N3V4: chain = online (full 1866 icons) -> offline subset (public spritesheet).
-	-- Offline also resolves old lucide names renamed upstream,
-	-- so "sliders" / "bar-chart-2" / "home" still show up.
 	if FetchIcons and Icons then
 		local Success, Icon = pcall(Icons.GetAsset, IconName)
 		if Success and Icon then
@@ -1536,34 +1486,15 @@ local function New(ClassName: string, Properties: { [string]: any }): any
 	return Instance
 end
 
---// N3V4: Surface & Wallpaper system (moved up) \\--
--- IMPORTANT: this block MUST run before any component is created.
--- AddDependencyGroupbox (BaseGroupbox) uses ClampTransparency + Library.Surface
--- + Library.SurfaceGroups when its frame is built. Lua locals only read AFTER
--- their declaration line, so if this block stayed below, those calls
--- crash: "attempt to call a nil value" (ClampTransparency) / index nil.
--- Moved here = every definition exists before the first component is born.
---// N3V4: Wallpaper helpers \\--
--- IMPORTANT: this table is built from Enum.ScaleType:GetEnumItems(), NOT
--- hardcoded `Enum.ScaleType.X`. Because one made-up name errors out
--- "X is not a valid member of Enum.ScaleType" appears when the module is required
--- -> THE WHOLE LIBRARY FAILS TO LOAD. Happened once with "Fill" (missing).
 local WallpaperScaleTypes = {}
 for _, ScaleItem in Enum.ScaleType:GetEnumItems() do
 	WallpaperScaleTypes[ScaleItem.Name] = ScaleItem
 end
 
--- Grab Enum.ScaleType members safely (nil when absent), so the aliases below
--- can never crash even on old Studio versions.
 local function SafeScaleType(Name: string)
 	return WallpaperScaleTypes[Name]
 end
 
--- Alias names people often use that are NOT real Roblox members.
--- Roblox only has: Stretch, Slice, Tile, Fit, Crop.
---   Fill / Cover = CSS `background-size: cover` -> Roblox "Crop"
---                  (fully covers, aspect ratio kept, excess cropped)
---   Contain      = CSS `background-size: contain` -> Roblox "Fit"
 for AliasName, TargetName in {
 	Fill = "Crop",
 	Cover = "Crop",
@@ -1575,8 +1506,6 @@ for AliasName, TargetName in {
 	end
 end
 
--- Terima EnumItem ATAU string ("Crop"/"Fit"/"Fill"/...). Fallback ke Stretch.
--- Never errors, just falls back to Stretch when the name is unknown.
 local function ResolveScaleType(Value: any): Enum.ScaleType
 	if typeof(Value) == "EnumItem" then
 		return Value :: Enum.ScaleType
@@ -1587,14 +1516,9 @@ local function ResolveScaleType(Value: any): Enum.ScaleType
 	return Enum.ScaleType.Stretch
 end
 
--- ZIndex wallpaper + overlay berdasarkan layer mode.
--- The library ScreenGui uses ZIndexBehavior Legacy (not set), so ZIndex
--- only applies between siblings. Wallpaper & overlay are both children of MainFrame,
--- and MainFrame own background always sit behind all children — so
--- negative ZIndex still shows, just loses to content (TopBar/Container, ZIndex 1+).
 local WallpaperLayers = {
-	back = { Image = -2, Overlay = -1 }, -- wallpaper furthest back, overlay above it, content above all
-	front = { Image = 999, Overlay = 998 }, -- wash above content (old library behavior)
+	back = { Image = -2, Overlay = -1 },
+	front = { Image = 999, Overlay = 998 },
 }
 
 local function ResolveWallpaperLayer(Value: any): { Image: number, Overlay: number }
@@ -1612,80 +1536,39 @@ local function ClampTransparency(Value: any): number
 	return math.clamp(N, 0, 1)
 end
 
---// N3V4: Surface system \\--
--- Two problems this solves:
---  1. Wallpaper mode "back" NOT visible, because Container (the whole tab
---     content area) is SOLID and covers the wallpaper behind it.
---  2. Groupbox cards use the EXACT SAME "BackgroundColor" as the window
---     background, so groups do not read as cards on top of the wallpaper.
---     User asked groups stay solid & ~10% off the background.
--- Initial state = approved USER RECIPE (same as Templates.Window defaults)
 Library.Surface = {
-	CanvasTransparency = 1, -- Container + sidebar (v4.6.6: full; dump v5 stays 1)
-	GroupTransparency = 0.5, -- kartu groupbox / tabbox / depbox. v4.8.3: dump user v7
-	--            (0.35 = user OWN pick now; on this back layer the slider is
-	--            aware — not the old front veil that made you mad)
-	GroupContrast = 40, -- percent 0-100 (user dump v5; old baseline 30 in v4.6.4)
-	GroupColor = Color3.fromRGB(0, 0, 0), -- card color override = BLACK (user
-	--            v4.6.5: user: "hey my group color is black, damn!"). v4.6.4 I
-	--            once made it AUTO and cards went GRAY — my mistake, reverted.
-	--            NOTE: while this override exists, GroupContrast is unused
-	--            (library semantics: override wins). Contrast 30 is used
-	--            when the override is off (toggle "Group custom" OFF).
-	CanvasColor = Color3.fromRGB(119, 119, 119), -- background color override, user dump v7 (0.465)
-	WindowTransparency = 1, -- MainFrame (window base). v4.6.10: 100% per user
+	CanvasTransparency = 1,
+	GroupTransparency = 0.5,
+	GroupContrast = 40,
+	GroupColor = Color3.fromRGB(0, 0, 0),
+	CanvasColor = Color3.fromRGB(119, 119, 119),
+	WindowTransparency = 1,
 }
-Library.SurfaceWindow = nil -- MainFrame
-Library.SurfaceCanvas = {} -- instance -> true (Container, sidebar)
-Library.SurfaceGroups = {} -- instance -> true (kartu group/tabbox/depbox)
+Library.SurfaceWindow = nil
+Library.SurfaceCanvas = {}
+Library.SurfaceGroups = {}
 
--- N3V4 v4.7.0: TAB APPEARANCE (sidebar tab switcher). User request:
--- "tabs should have a bit of stroke on the icons ... add a little background
--- on all tabs ... when the cursor heads to a tab a small animation zooms
--- the icon ... the active tab zooms a bit". All numbers = baseline,
--- user tunes manually in preview then sends the print -> baked later.
 Library.TabAppearance = {
-	-- v4.8.4 = TAB ICON CARD (user request: the glyph halo stroke looked
-	-- ugly -> symmetric box outline around each icon only, NOT the full
-	-- tab). Halo removed entirely; single implementation, zero dead code.
-	-- v4.8.6 = card line FOLLOWS the theme OutlineColor (theme string in
-	-- CreateTabIconCard, own color knob removed) so every future theme
-	-- recolors the card for free (user: follow outline, no own color).
-	-- v4.8.7 = LOCKED USER CARD RECIPE v4 (final print 16:55): padding 2,
-	-- solid line (0.00), faint tab bg 0.85. User: this is the last one.
-	IconCardEnabled = true, -- outline on/off
-	IconCardPadding = 2, -- px breathing room, glyph -> card line (symmetric)
-	IconCardThickness = 1, -- px, card line thickness
-	IconCardTransparency = 0.00, -- 0% = solid line (final user print)
-	IconCardRadius = 5, -- px, rounded corners (same on all 4 corners)
-	TabBackgroundTransparency = 0.85, -- faint tab bg (final user print)
+	IconCardEnabled = true,
+	IconCardPadding = 2,
+	IconCardThickness = 1,
+	IconCardTransparency = 0.00,
+	IconCardRadius = 5,
+	TabBackgroundTransparency = 0.85,
 	ActiveBackgroundTransparency = 0.60,
 	ActiveBackgroundColor = Color3.fromRGB(0, 0, 0),
-	HoverZoom = 1.25, -- icon scale on hover
-	ActiveZoom = 1.25, -- icon scale on active tab (holds)
-	ZoomTime = 0.20, -- seconds, Quad Out tween
+	HoverZoom = 1.25,
+	ActiveZoom = 1.25,
+	ZoomTime = 0.20,
 }
-Library.TabVisuals = {} -- rec { Button, Icon, Card, Scale, Tab } per sidebar tab
+Library.TabVisuals = {}
 
--- N3V4 v4.9.0: CURSOR GLOW — a soft light that trails the cursor on the
--- background layer (ZIndex 0): above the wallpaper (-2/-1) and below every
--- content element (>= 1), so it shines through the semi-transparent group
--- cards. v4.9.1: a clip container keeps the pool inside the window rect.
--- v4.9.2 (user: "more hazy", "faded outside, slightly clearer in the
--- middle", "not too wide"): Roblox GUI has no radial gradient
--- primitive and no verifiable image asset is allowed, so the fade is
--- built from 16 micro circles with quadratic falloff. At the 5% default
--- the biggest alpha step between neighbours is ~0.2% = one continuous
--- haze, NOT the six fat rings v4.9.0 shipped (those stepped 34%->3% and
--- read as circles). At the baked 10% default the biggest alpha step
--- between neighbours is ~0.4% = still one continuous haze. Intensity =
--- center opacity %, Size = outer diameter.
 Library.CursorGlow = {
 	Enabled = true,
-	Color = Color3.fromRGB(255, 255, 255), -- user-baked white; false = follow AccentColor
-	Size = 400, -- px, outer diameter (user-baked print, v4.9.3)
-	Intensity = 10, -- percent opacity at the center (user-baked print, v4.9.3)
-	Smooth = 5, -- follow speed per second (user-baked print, v4.9.3)
+	Color = Color3.fromRGB(255, 255, 255),
+	Size = 400,
+	Intensity = 10,
+	Smooth = 5,
 }
 Library.CursorGlowLayers = {}
 Library.CursorGlowFade = 0
@@ -1725,13 +1608,9 @@ function Library:SetCursorGlow(Info: { [string]: any })
 	Library:ApplyCursorGlow()
 end
 
--- N3V4 v4.11.0: STATUS BAR SWAP — the top search bar can swap into a
--- live status strip (Fps / Ping / Server / Executor cards). The frame
--- counter loop only runs while the strip is visible: hidden = zero
--- cost, in line with the fps-friendly rule.
 Library.StatusBar = {
-	Server = "V3.2", -- shown verbatim; point this at your game version
-	Executor = false, -- false = auto-detect via identifyexecutor, else a string
+	Server = "V3.2",
+	Executor = false,
 }
 Library.StatusBarLabels = {}
 Library.StatusBarLoop = false
@@ -1752,7 +1631,6 @@ end
 
 function Library:UpdateStatusBar(Fps: number, Ping: number)
 	local Labels = Library.StatusBarLabels
-	-- v4.11.1: values only; the themed prefix label is static per card
 	if Labels.Fps then
 		Labels.Fps.Text = tostring(Fps)
 	end
@@ -1798,18 +1676,11 @@ function Library:StartStatusBarLoop()
 	end)
 end
 
--- N3V4 v4.10.0: GROUP ICON HOVER ANIM — every groupbox icon carries a
--- UIScale plus the native GuiObject.Rotation tilt; entering the group
--- card tweens the icon
--- up by IconAnim.Zoom percent and tilts it IconAnim.Tilt degrees,
--- leaving tweens it back to rest. Fire-and-forget tweens (Quint-out),
--- so unlike the glow this costs nothing per frame: the glow loop
--- stays the library's only RenderStepped connection.
 Library.IconAnim = {
 	Enabled = true,
-	Zoom = 15, -- percent added while hovered (user-baked print, v4.10.2)
-	Tilt = 10, -- degrees of rotation while hovered (user-baked, v4.10.2)
-	Speed = 0.30, -- tween duration in seconds (user-baked, v4.10.2)
+	Zoom = 15,
+	Tilt = 10,
+	Speed = 0.30,
 }
 Library.IconAnimRegistry = {}
 
@@ -1863,10 +1734,6 @@ function Library:StartCursorGlowLoop()
 		local Main = Holder.Parent
 		local Inside = false
 		if Library.CursorGlow.Enabled ~= false and UserInputService.MouseEnabled then
-			-- v4.9.3: GetMouseLocation is window-space (topbar inset included)
-			-- while AbsolutePosition is gui-space; without subtracting the
-			-- inset the glow sat ~36px BELOW the cursor (user: "kurang ke
-			-- atas"). The Inside test was skewed by the same inset.
 			local Mouse = UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
 			local Rect = Main.AbsolutePosition
 			local Area = Main.AbsoluteSize
@@ -1878,8 +1745,6 @@ function Library:StartCursorGlowLoop()
 		end
 		Fade = Fade + ((Inside and 1 or 0) - Fade) * math.min(1, Dt * 10)
 		Library.CursorGlowFade = Fade
-		-- v4.10.0: fps-friendly idle skip — while the fade value is not
-		-- moving (cursor outside, glow fully faded) zero property writes
 		local Changed = Fade ~= LastFade
 		LastFade = Fade
 		if Changed then
@@ -1887,11 +1752,8 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
--- v4.7.2: version print so "your library is old / not yet" debates end:
--- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.12.4 loaded — SECTION REVERT: garis balik DESAIN ASLI library verbatim (MainColor + border OutlineColor), sistem SectionAppearance DIHAPUS total, cuma text divider yang tetep accent (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.12.5 loaded — OUTLINE ACCENT: border garis divider = AccentColor (fill tetep MainColor desain asli), text divider full opaque biar kebaca, dan semua komentar sampah LIB/MOD/PRE dibersihkan (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
--- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
 		return Library.Surface.CanvasColor
@@ -1911,14 +1773,10 @@ function Library:GetGroupSurfaceColor(): Color3
 		return Base
 	end
 
-	-- dark theme: cards LIGHTER than bg; light theme: DARKER
 	local Target = Library.IsLightTheme and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)
 	return Base:Lerp(Target, Percent)
 end
 
--- Re-apply canvas & group transparency to every created instance.
--- Group color needs no manual loop: it is registered in the Registry as a
--- function, so UpdateColorsUsingRegistry() re-sets it.
 function Library:ApplySurfaces()
 	local CanvasT = ClampTransparency(Library.Surface.CanvasTransparency)
 	local GroupT = ClampTransparency(Library.Surface.GroupTransparency)
@@ -1943,13 +1801,6 @@ function Library:ApplySurfaces()
 	Library:UpdateColorsUsingRegistry()
 end
 
--- v4.6.11: cards NESTED inside other cards (tabbox in groupbox,
--- groupbox in tabbox, depbox in tabbox, etc) must not stack a second
--- transparency layer — the composite goes dark/solid ("why is the nested
--- box not transparent too? ... do not hardcode bro!"). When nested:
--- BackgroundTransparency = 1 (composite FOLLOWS the parent card = same look),
--- box identity stays in the outline stroke. When top-level: use Surface
--- directly + register into SurfaceGroups so the "Group card" slider drives it.
 function Library:IsInsideSurfaceCard(Obj: GuiObject?): boolean
 	local Cur = Obj
 	while Cur do
@@ -1961,19 +1812,13 @@ function Library:IsInsideSurfaceCard(Obj: GuiObject?): boolean
 	return false
 end
 
--- v4.8.4: ONE place for tab icon visuals (AddTab & AddKeyTab call this,
--- zero duplication): icon CARD = symmetric rounded box outline behind the
--- glyph (icon only, never the full tab) + UIScale for zoom (transform-only
--- = smoother than a Size tween). The card is a CHILD of TabIcon, so the
--- hover/active zoom scales glyph and card together -> the padding stays
--- symmetric at every zoom level.
 function Library:CreateTabIconCard(TabIcon: ImageLabel): (Frame, UIScale)
 	TabIcon.ZIndex = 3
 	local T = Library.TabAppearance
 	local Card = New("Frame", {
 		Name = "TabIconCard",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		BackgroundTransparency = 1, -- outline only, no fill
+		BackgroundTransparency = 1,
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.new(1, 2 * T.IconCardPadding, 1, 2 * T.IconCardPadding),
 		Visible = T.IconCardEnabled ~= false,
@@ -1986,7 +1831,7 @@ function Library:CreateTabIconCard(TabIcon: ImageLabel): (Frame, UIScale)
 	})
 	New("UIStroke", {
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = "OutlineColor", -- theme string: recolors with every theme
+		Color = "OutlineColor",
 		Thickness = T.IconCardThickness,
 		Transparency = T.IconCardTransparency,
 		Parent = Card,
@@ -2014,9 +1859,6 @@ function Library:GetZoomTweenInfo(): TweenInfo
 	return TweenInfo.new(math.clamp(T.ZoomTime, 0.02, 1), Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 end
 
--- v4.7.4: NIL-SAFE zoom gate. WindowInfo.Animations from the caller (e.g.
--- preview) can OVERRIDE the Animations table without the TabHoverZoom key -> nil =
--- falsy = hover/zoom silently OFF. Nil is now treated as ON.
 function Library:ZoomTabEnabled(): boolean
 	local A = Library.Animations
 	return not A or A.TabHoverZoom ~= false
@@ -2071,19 +1913,6 @@ function Library:SetBackgroundImage(Image: string | number)
 	Library:UpdateColorsUsingRegistry()
 end
 
---// N3V4: one-shot Wallpaper API \\--
--- All fields OPTIONAL — nil ones stay untouched. Example:
---
---   Library:SetWallpaper({
---       Image = "111593326989465",      -- plain number, "rbxassetid://...", or URL
---       Transparency = 0.35,            -- 0 = full image, 1 = gone
---       ScaleType = "Crop",             -- Stretch | Slice | Tile | Fit | Crop (+ alias Fill/Cover/Contain)
---       Color = Color3.fromRGB(255,255,255),  -- tint
---       Layer = "back",                 -- "back" (wallpaper) | "front" (wash above content)
---       Overlay = true,                 -- dark scrim so text stays readable
---       OverlayColor = Color3.fromRGB(0, 0, 0),
---       OverlayTransparency = 0.45,
---   })
 function Library:SetWallpaper(Info: { [string]: any })
 	if typeof(Info) ~= "table" then
 		return false, "Info must be a table"
@@ -2116,16 +1945,6 @@ function Library:SetWallpaper(Info: { [string]: any })
 	return true
 end
 
---// N3V4: Surface API \\--
--- Controls background & group cards, SEPARATE from wallpaper. All fields optional.
---
---   Library:SetSurface({
---       CanvasTransparency = 1,   -- content area + sidebar. 1 = wallpaper visible
---       GroupTransparency = 0,    -- group cards. 0 = SOLID (contents do not show through)
---       GroupContrast = 10,       -- % group cards differentiated from window background
---       GroupColor = Color3...,   -- card color override. false = back to auto
---       CanvasColor = Color3...,  -- background color override. false = back to theme
---   })
 function Library:SetSurface(Info: { [string]: any })
 	if typeof(Info) ~= "table" then
 		return false, "Info must be a table"
@@ -2706,16 +2525,13 @@ end
 
 --// Animations \\--
 local TransparencyCache = {}
-local FadeTweenCache = setmetatable({}, { __mode = "k" }) -- v4.7.7: window fade tweens cached & reused (weak key = dead instances get GC-ed)
+local FadeTweenCache = setmetatable({}, { __mode = "k" })
 local FadeGuiProperties = { "BackgroundTransparency" }
 local FadeImageProperties = { "BackgroundTransparency", "ImageTransparency" }
 local FadeTextProperties = { "BackgroundTransparency", "TextTransparency" }
 local FadeStrokeProperties = { "Transparency" }
 local FadeScrollProperties = { "BackgroundTransparency", "ScrollBarImageTransparency" }
 
--- v4.7.7 rewrite, v4.8.2 promoted to a Library method: window open/close AND
--- the DropdownV2 popup share this ONE fade implementation (zero duplication).
--- Rest-value cache + reusable cached tweens + TweenInfo-driven signature.
 function Library:FadeInstance(Desc, Properties, Opening, CanCapture)
 	local Cache = TransparencyCache[Desc]
 	if not Cache then
@@ -2731,14 +2547,12 @@ function Library:FadeInstance(Desc, Properties, Opening, CanCapture)
 		local Rest = Cache[Prop]
 
 		if Rest == nil then
-			-- first encounter: current value = authored rest value
 			Rest = Desc[Prop]
 			Cache[Prop] = Rest
 			if Opening and Rest ~= 1 then
-				Desc[Prop] = 1 -- hide without a frame gap so it joins the fade
+				Desc[Prop] = 1
 			end
 		elseif not Opening and CanCapture then
-			-- close at rest: refresh the cache (values can change while open)
 			Rest = Desc[Prop]
 			Cache[Prop] = Rest
 		end
@@ -2768,9 +2582,6 @@ function Library:FadeInstance(Desc, Properties, Opening, CanCapture)
 	Tweens[Dir]:Play()
 end
 
--- v4.8.2: fade a whole subtree the window open/close way — every GuiObject /
--- UIStroke dissolves together, total = WindowAnimationInfo.Time. Skip = one
--- instance to ignore (the window passes TopBar). Root itself is included.
 function Library:FadeTree(Root, Opening, CanCapture, Skip)
 	local Queue = { Root }
 	for _, Desc in ipairs(Root:GetDescendants()) do
@@ -5327,14 +5138,6 @@ do
 		table.insert(ColorPicker.Connections, Holder.MouseButton1Click:Connect(ColorMenu.Toggle))
 		table.insert(ColorPicker.Connections, Holder.MouseButton2Click:Connect(ContextMenu.Toggle))
 
-		--// N3V4 FIX: color drag \\--
-		-- The old loop only checked `IsDragInput(Input)`, and InputBegan on a GuiObject
-		-- also fires on MouseMovement (Change state). Effects: (1) every mouse move
-		-- OVER the picker spawned a coroutine that never died, (2) the color often
-		-- jumped on its own / felt "sometimes broken", (3) slow leak of weight.
-		-- Now: starts only from real clicks (IsClickInput), stops from InputEnded at
-		-- UserInputService level (still stops when the mouse releases outside the
-		-- element), plus one active drag per picker.
 		do
 			local DragKind = nil
 			local DragActive = false
@@ -5945,7 +5748,6 @@ do
 				Parent = RowBtn,
 			})
 
-			-- Row 1: pet name [RARITY] (leak-proof via TextTruncate)
 			local RowTitle = New("TextLabel", {
 				BackgroundTransparency = 1,
 				Position = UDim2.fromOffset(46, 4),
@@ -5973,7 +5775,6 @@ do
 				Parent = RowBtn,
 			})
 
-			-- Right tag (e.g. remaining time & incubation percent)
 			if itemData.RightTag and itemData.RightTag ~= "" then
 				local RowRight = New("TextLabel", {
 					BackgroundTransparency = 1,
@@ -6051,9 +5852,9 @@ do
 				BackgroundTransparency = 1,
 				Size = UDim2.fromScale(1, 0),
 				Text = Text,
-				TextColor3 = "AccentColor", -- v4.11.3: section text rides the synced theme
+				TextColor3 = "AccentColor",
 				TextSize = 14,
-				TextTransparency = 0.5,
+				TextTransparency = 0,
 				TextXAlignment = Enum.TextXAlignment.Center,
 				Parent = InnerHolder,
 			})
@@ -6061,13 +5862,10 @@ do
 			local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
 			local SizeX = X // 2 + 10
 
-			-- v4.12.4: REVERT to the original library line design, verbatim
-			-- (user: revert it, my old lines were not like this).
-			-- Only the text color stays themed (v4.11.3, user kept it).
 			New("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = "MainColor",
-				BorderColor3 = "OutlineColor",
+				BorderColor3 = "AccentColor",
 				BorderSizePixel = 1,
 				Position = UDim2.fromScale(0, 0.5),
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
@@ -6076,7 +5874,7 @@ do
 			New("Frame", {
 				AnchorPoint = Vector2.new(1, 0.5),
 				BackgroundColor3 = "MainColor",
-				BorderColor3 = "OutlineColor",
+				BorderColor3 = "AccentColor",
 				BorderSizePixel = 1,
 				Position = UDim2.fromScale(1, 0.5),
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
@@ -6086,7 +5884,7 @@ do
 			New("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = "MainColor",
-				BorderColor3 = "OutlineColor",
+				BorderColor3 = "AccentColor",
 				BorderSizePixel = 1,
 				Position = UDim2.fromScale(0, 0.5),
 				Size = UDim2.new(1, 0, 0, 2),
@@ -7837,9 +7635,6 @@ do
 					Library.ActiveLoading.Sidebar.Container.ScrollingEnabled = false
 				end
 
-				--// N3V4 FIX: drag slider \\--
-				-- Same as the color picker: stop via the global InputEnded, not
-				-- guessing from Input state in InputBegan (MouseMovement fires too).
 				local SliderDragging = true
 				local SliderDragKind = Input.UserInputType
 
@@ -8707,13 +8502,6 @@ do
 		return Dropdown
 	end
 
-	--// N3V4 v4.8.0: DROPDOWN V2 — POPUP version (modal, dialog visual language) \\--
-	-- V1 (AddDropdown) STAYS, untouched. V2 = compact row in the
-	-- groupbox; click = open modal popup: summary "Total Selected: n/limit" +
-	-- "List Selected: ..." on top, SCROLLABLE list below (items may carry a
-	-- lucide icon = "image version", or string = text-only), footer
-	-- [Bersihkan] [Selesai]. Multi-select + Max opsional; single-select
-	-- closes right after picking. Single source of truth: Dropdown:Refresh().
 	local function NormalizeDropdownItem(Entry, ItemIcons, DisabledValues)
 		local Text, Icon, Disabled
 		if type(Entry) == "table" then
@@ -8750,7 +8538,6 @@ do
 			Max = tonumber(Info.Max) or 0,
 			ListHeight = tonumber(Info.ListHeight) or 200,
 
-			-- single: string | nil. multi: array text berurutan (+ SelectedSet)
 			Value = nil,
 			SelectedSet = {},
 
@@ -8795,7 +8582,6 @@ do
 			return #Dropdown.Items
 		end
 
-		--// Element row inside the groupbox \\--
 		local Holder = New("Frame", {
 			BackgroundTransparency = 1,
 			Size = UDim2.new(1, 0, 0, Dropdown.Text and 39 or 21),
@@ -8873,7 +8659,6 @@ do
 			})
 		end
 
-		--// Popup modal \\--
 		local PopupOverlay, PopupFrame
 		local SummaryTotal, SummaryList
 		local RowRecs = {}
@@ -8926,7 +8711,6 @@ do
 				return
 			end
 			if Frame then
-				-- v4.8.2: window-style exit — everything dissolves out together.
 				Library:FadeTree(Frame, false, true)
 			end
 			if Overlay then
@@ -8961,7 +8745,7 @@ do
 					end
 				else
 					if Dropdown.Max > 0 and #Dropdown.Value >= Dropdown.Max then
-						return -- Max cap: extra clicks ignored, not a bug
+						return
 					end
 					Dropdown.SelectedSet[Text] = true
 					table.insert(Dropdown.Value, Text)
@@ -9013,7 +8797,7 @@ do
 				BackgroundTransparency = 1,
 				Size = UDim2.fromScale(1, 1),
 				Text = "",
-				Active = true, -- v4.8.1: Active=false made MouseButton1Click dead = outside-click never closed
+				Active = true,
 				ZIndex = 9100,
 				Parent = MainFrame,
 			})
@@ -9064,7 +8848,6 @@ do
 				Parent = Inner,
 			})
 
-			-- header: title left + icon right (dialog visual language, v4.7.9)
 			local HeaderIcon = Info.Icon and Library:GetCustomIcon(Info.Icon) or nil
 			local HeaderRow = New("Frame", {
 				BackgroundTransparency = 1,
@@ -9104,7 +8887,6 @@ do
 				})
 			end
 
-			-- summary: total + selected list (user example, tidied up)
 			local SummaryBox = New("Frame", {
 				BackgroundColor3 = "MainColor",
 				AutomaticSize = Enum.AutomaticSize.Y,
@@ -9167,7 +8949,6 @@ do
 				Parent = SummaryBox,
 			})
 
-			-- list scrollable
 			local ListScroll = New("ScrollingFrame", {
 				BackgroundTransparency = 1,
 				Size = UDim2.new(1, 0, 0, Dropdown.ListHeight),
@@ -9264,7 +9045,6 @@ do
 				end
 			end
 
-			-- footer: [Bersihkan] [Selesai]
 			local FooterRow = New("Frame", {
 				BackgroundTransparency = 1,
 				Size = UDim2.new(1, 0, 0, 26),
@@ -9285,8 +9065,6 @@ do
 					BackgroundColor3 = Primary and "FontColor" or "MainColor",
 					Size = UDim2.fromOffset(0, 26),
 					Text = Title,
-					-- v4.8.1: theme STRINGS, not Scheme snapshots — a theme
-					-- change now retints these buttons via the color registry.
 					TextColor3 = Primary and "BackgroundColor" or "FontColor",
 					TextSize = 14,
 					AutoButtonColor = false,
@@ -9314,9 +9092,6 @@ do
 				Dropdown:ClosePopup()
 			end)
 
-			-- v4.8.2: window-style entrance — the whole popup dissolves in
-			-- with the SAME fade system as window open/close (no scale pop).
-			-- Refresh first so selected-row states are the captured rest.
 			Dropdown:Refresh()
 			Library:FadeTree(PopupFrame, true, true)
 		end
@@ -9332,7 +9107,6 @@ do
 			end
 		end)
 
-		--// API publik \\--
 		function Dropdown:SetValue(Value)
 			if Dropdown.Multi then
 				Dropdown.Value = {}
@@ -9480,13 +9254,6 @@ do
 		return Dropdown
 	end
 
-	--// N3V4: BRIDGE for the two AddViewport APIs \\--
-	-- There are TWO `Funcs:AddViewport` in this file. The lower one (Object/Camera/
-	-- Clone/AutoFocus version) overrides the upper one (light version: Height/Spin/
-	-- Interactive/SetModel) because the table name is the same. Result: calls
-	-- hit `assert(... "Instance must be a BasePart or Model.")` and the component
-	-- without `Object` failed to build. This bridge guards BOTH: when `Object` is
-	-- not given, forward to the light version captured in RichAddViewport.
 	local RichAddViewport = Funcs.AddViewport
 
 	function Funcs:AddViewport(Idx, Info)
@@ -10394,7 +10161,6 @@ do
 		local DepGroupboxList
 
 		do
-			-- v4.6.11: nested inside card/tabbox -> transparency 1 (follows parent).
 			local Nested = Library:IsInsideSurfaceCard(BoxHolder)
 			DepGroupboxContainer = New("Frame", {
 				BackgroundColor3 = function()
@@ -10952,12 +10718,6 @@ end
 
 
 function Library:CreateWindow(WindowInfo)
-	-- N3V4 v4.6.9 FIX: seed Surface ONLY when the CreateWindow caller ACTUALLY
-	-- sending the fields explicitly. Used to be unconditional from Templates.Window ->
-	-- default Library.Surface (resep user: group 0.35, contrast 40) ke-STOMP
-	-- reset to 0/30 on every CreateWindow = bug "why is my group not transparent
-	-- when I already set it" (user print: GroupTransparency live 0.25 works, but a
-	-- fresh paste = solid again).
 	local RawWindowT = WindowInfo and WindowInfo.WindowTransparency
 	local RawContentT = WindowInfo and WindowInfo.ContentTransparency
 	local RawGroupT = WindowInfo and WindowInfo.GroupTransparency
@@ -11081,7 +10841,7 @@ function Library:CreateWindow(WindowInfo)
 				Parent = MainFrame,
 			})
 		)
-		Library:AddOutline(MainFrame) -- <-- legacy note: remove this line to avoid clashing with the purple MainStroke
+		Library:AddOutline(MainFrame)
 
 		--// 1. NEON BORDER WINDOW LUAR (KETEBALAN KONSTAN 1.8px) \\--
 		local MainStroke = New("UIStroke", {
@@ -11179,7 +10939,6 @@ function Library:CreateWindow(WindowInfo)
 			return ColorSequence.new(accentColor, accentColor)
 		end
 
-		-- Set initial color
 		for _, grad in ipairs(OuterGradients) do
 			grad.Color = GetSolidSequence(Library.Scheme.AccentColor)
 		end
@@ -11199,11 +10958,9 @@ function Library:CreateWindow(WindowInfo)
 				local curAccent = Library.Scheme.AccentColor
 				InnerBorderFrame.Visible = true
 
-				-- Animation timeline value from 0.00 to 1.00 in one smooth pull
 				local timeline = Instance.new("NumberValue")
 				timeline.Value = 0
 
-				-- Duration 1.2 seconds (just right, flows naturally)
 				local animTween = TweenService:Create(
 					timeline,
 					TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
@@ -11214,11 +10971,9 @@ function Library:CreateWindow(WindowInfo)
 					local t = timeline.Value
 
 					if t < 0.60 then
-						-- [PHASE 1]: propagate from both corners toward each other (t = 0.0 to 0.60)
 						local crawl = t / 0.60
 						local reach = math.clamp(0.03 + crawl * 0.46, 0.03, 0.49)
 
-						-- Inner beam transparency fades in softly
 						InnerStroke.Transparency = math.clamp(1 - (t / 0.15) * 0.9, 0.1, 1)
 
 						local seq = ColorSequence.new({
@@ -11238,13 +10993,10 @@ function Library:CreateWindow(WindowInfo)
 						InnerGrad.Color = seq
 					else
 						-- [FASE 2]: KETEMU DI TENGAH & LANGSUNG MELEBUR HILANG (t = 0.60 s/d 1.0)
-						-- NO PAUSE! Melts straight back to the original purple/pink!
-						local dissolve = (t - 0.60) / 0.40 -- melt progress from 0 to 1
+						local dissolve = (t - 0.60) / 0.40
 
-						-- Inner window beam fades out softly too
 						InnerStroke.Transparency = math.clamp(0.1 + dissolve * 0.9, 0.1, 1)
 
-						-- Color lerp: blue, gold, white slowly melt into curAccent
 						local goldFade = RadiantGold:Lerp(curAccent, dissolve)
 						local blueFade = CyanBlue:Lerp(curAccent, dissolve)
 						local whiteCenter = PureWhite:Lerp(curAccent, dissolve)
@@ -11272,7 +11024,6 @@ function Library:CreateWindow(WindowInfo)
 				animConn:Disconnect()
 				timeline:Destroy()
 
-				-- [DONE]: window 100% clean & back to normal solid purple
 				if curGen == PulseGeneration then
 					InnerBorderFrame.Visible = false
 					InnerStroke.Transparency = 1
@@ -11287,7 +11038,6 @@ function Library:CreateWindow(WindowInfo)
 			end)
 		end
 
-		-- Background loop every 25 seconds while idle
 		coroutine.wrap(function()
 			while not Library.Unloaded and MainFrame and MainFrame.Parent do
 				task.wait(25)
@@ -11336,9 +11086,6 @@ function Library:CreateWindow(WindowInfo)
 			})
 		)
 
-		-- N3V4: overlay / scrim. Color layer between wallpaper and content,
-		-- purpose: keep text readable when the wallpaper is busy/bright.
-		-- ZIndex always one level above wallpaper, below content.
 		BackgroundOverlay = New("Frame", {
 			BackgroundColor3 = WindowInfo.BackgroundOverlayColor,
 			BackgroundTransparency = ClampTransparency(WindowInfo.BackgroundOverlayTransparency),
@@ -11358,8 +11105,6 @@ function Library:CreateWindow(WindowInfo)
 			})
 		)
 
-		-- v4.9.1: clip container keeps the glow pool inside the window rect
-		-- (rounded corners included); the holder rides the cursor inside it.
 		local GlowClip = New("Frame", {
 			Name = "CursorGlowClip",
 			BackgroundTransparency = 1,
@@ -11386,8 +11131,6 @@ function Library:CreateWindow(WindowInfo)
 			ZIndex = 0,
 			Parent = GlowClip,
 		})
-		-- v4.9.2: 16 micro circles, quadratic falloff = one smooth haze
-		-- (see the CursorGlow table note for why not one flat circle).
 		local GLOW_LAYERS = 16
 		local WeightSum = 0
 		for Index = 1, GLOW_LAYERS do
@@ -11468,10 +11211,6 @@ function Library:CreateWindow(WindowInfo)
 			})
 		end
 
-		-- v4.10.3: window logo hover zoom. Reuses the tab zoom helper and
-		-- the tab HoverZoom setting on purpose: identical feel to the
-		-- tabs, zero new knobs, zero new tween code (user: "just like
-		-- the tabs", and keep the code lean).
 		local WindowIconScale = New("UIScale", { Scale = 1, Parent = WindowIcon })
 		WindowIcon.MouseEnter:Connect(function()
 			Library:TweenTabZoom(WindowIconScale, Library.TabAppearance.HoverZoom or 1)
@@ -11499,10 +11238,8 @@ function Library:CreateWindow(WindowInfo)
 		RightWrapper = New("Frame", {
 			AnchorPoint = Vector2.new(1, 0.5),
 			BackgroundTransparency = 1,
-			-- v4.11.0: trimmed 32px per side to make room for the status
-			-- swap buttons (user: make the search bar a bit smaller both sides)
 			Position = UDim2.new(1, -76, 0.5, 0),
-			Size = UDim2.new(1, -InitialLeftWidth - 119, 0, 34), -- thick & roomy top-bottom
+			Size = UDim2.new(1, -InitialLeftWidth - 119, 0, 34),
 			Parent = TopBar,
 		})
 
@@ -11558,9 +11295,6 @@ function Library:CreateWindow(WindowInfo)
 			Library:UpdateSearch(SearchBox.Text)
 		end))
 
-		-- v4.11.0: status strip living in the same slot as the search bar;
-		-- four cards (Fps / Ping / Server / Executor), same card recipe as
-		-- the search frame (MainColor + OutlineColor stroke + window radius)
 		local StatusHolder = New("Frame", {
 			BackgroundTransparency = 1,
 			Position = UDim2.fromScale(0, 0),
@@ -11604,7 +11338,7 @@ function Library:CreateWindow(WindowInfo)
 				BackgroundTransparency = 1,
 				Size = UDim2.fromOffset(0, 16),
 				Text = Key .. ":",
-				TextColor3 = "AccentColor", -- v4.11.1: prefix rides the synced theme
+				TextColor3 = "AccentColor",
 				TextSize = 13,
 				Parent = Card,
 			})
@@ -11613,24 +11347,18 @@ function Library:CreateWindow(WindowInfo)
 				BackgroundTransparency = 1,
 				Size = UDim2.fromOffset(0, 16),
 				Text = "-",
-				TextColor3 = "FontColor", -- v4.11.1: value stays plain white
+				TextColor3 = "FontColor",
 				TextSize = 13,
 				Parent = Card,
 			})
 		end
 
-		-- v4.11.2: chevron-left/right live in the OFFLINE icon subset, so
-		-- the buttons render even before the online atlas finishes
-		-- loading (arrow-left was online-only -> blank icons, bug #30).
-		-- Each side keeps its own direction icon forever.
 		local StatusButtons = {}
 		local StatusMode = false
 		local function SetStatusMode(On: boolean, Dir: number)
 			StatusMode = On
 			SearchFrame.Visible = not On and not (WindowInfo.DisableSearch or false)
 			StatusHolder.Visible = On
-			-- v4.11.2: swap anim = the incoming panel slides in from the
-			-- clicked side (Dir); the direction icons themselves stay put
 			local Incoming = On and StatusHolder or SearchFrame
 			Incoming.Position = UDim2.fromOffset(Dir * 24, 0)
 			local Slide = TweenService:Create(
@@ -11659,7 +11387,7 @@ function Library:CreateWindow(WindowInfo)
 				ImageRectOffset = SlotIcon and SlotIcon.ImageRectOffset or Vector2.zero,
 				ImageRectSize = SlotIcon and SlotIcon.ImageRectSize or Vector2.zero,
 				Position = Slot.Position,
-				Size = UDim2.fromOffset(18, 18), -- v4.11.1: smaller (user: not too big)
+				Size = UDim2.fromOffset(18, 18),
 				Parent = RightWrapper,
 			})
 			table.insert(StatusButtons, Btn)
@@ -11688,9 +11416,7 @@ function Library:CreateWindow(WindowInfo)
 				return Library:GetBetterColor(Library.Scheme.BackgroundColor, 4)
 			end,
 			Position = UDim2.fromScale(0, 1),
-			Size = UDim2.new(1, 0, 0, 20), -- v4.6.8: used to be 20+radius (paired with full UICorner)
-			--   -> TOP corners rounded along = notch "overshoots upward" when the radius
-			--   is tweaked from the Theme tab. Now height 20 + bottom corners only.
+			Size = UDim2.new(1, 0, 0, 20),
 			Parent = MainFrame,
 		})
 		Library:MakeLine(MainFrame, {
@@ -11706,11 +11432,6 @@ function Library:CreateWindow(WindowInfo)
 			Size = UDim2.new(1, 0, 0, 20),
 			Parent = MainFrame,
 		})
-		-- v4.6.8 FIX: bottom-only UICorner via SpecificCorners. Used to join the
-		-- Library.Corners (full radius) -> top corners round -> line/notch
-		-- rounded set and poke above the bottom navbar ("overshoots upward" per user).
-		-- SetCornerRadius() still updates bottom corners via SpecificCorners
-		-- (SetUICorner skips 0-radius corners), top stays square forever.
 		table.insert(
 			Library.SpecificCorners,
 			New("UICorner", {
@@ -11774,7 +11495,6 @@ function Library:CreateWindow(WindowInfo)
 			Size = UDim2.new(0, InitialLeftWidth, 1, -70),
 			Parent = MainFrame,
 		})
-		-- N3V4: sidebar joins the "canvas" so the wallpaper shows behind icons
 		Tabs.BackgroundTransparency = ClampTransparency(Library.Surface.CanvasTransparency)
 		Library.SurfaceCanvas[Tabs] = true
 		New("UIListLayout", {
@@ -11784,8 +11504,6 @@ function Library:CreateWindow(WindowInfo)
 		--// Container \\--
 		Container = New("Frame", {
 			AnchorPoint = Vector2.new(1, 0),
-			-- N3V4: via GetCanvasColor so it can be overridden (Surface.CanvasColor)
-			-- and still follows the theme when the override is nil
 			BackgroundColor3 = function()
 				return Library:GetCanvasColor()
 			end,
@@ -11795,9 +11513,6 @@ function Library:CreateWindow(WindowInfo)
 			Size = UDim2.new(1, -InitialLeftWidth - 1, 1, -70),
 			Parent = MainFrame,
 		})
-		-- N3V4: THIS is the culprit. Container used to be SOLID (no
-		-- BackgroundTransparency), so wallpaper mode "back" was fully covered and
-		-- looked like "does nothing". Now it can be made transparent.
 		Container.BackgroundTransparency = ClampTransparency(Library.Surface.CanvasTransparency)
 		Library.SurfaceCanvas[Container] = true
 		New("UIPadding", {
@@ -11816,7 +11531,7 @@ function Library:CreateWindow(WindowInfo)
 	--// Window Table \\--
 	local Window = {}
 	local Fading = false
-	local FadeToken = 0 -- v4.7.7: last toggle token (safe reversal, stale finalizer cancelled)
+	local FadeToken = 0
 
 	local function SetUICorner(UICorner, Corner, HalfCurrent, HalfValue, Value)
 		local Current = UICorner[Corner]
@@ -11837,10 +11552,6 @@ function Library:CreateWindow(WindowInfo)
 	function Window:SetBackgroundImage(Image: string)
 		local ValidIcon = false
 
-		-- N3V4 FIX: Library:SetBackgroundImage() di-assert nerima string | number,
-		-- but this function only handles strings. So numeric IDs (e.g. 111593326989465)
-		-- silently fails -> ValidIcon false -> wallpaper never shows, no error.
-		-- Normalized to "rbxassetid://<id>" here.
 		if typeof(Image) == "number" then
 			Image = string.format("rbxassetid://%d", Image)
 		end
@@ -11904,9 +11615,6 @@ function Library:CreateWindow(WindowInfo)
 		WindowInfo.BackgroundImage = Image
 	end
 
-	--// N3V4: Wallpaper setters \\--
-	-- Everything is stored into WindowInfo too, so state stays consistent if the
-	-- di-resize / di-rebuild.
 
 	function Window:SetBackgroundImageTransparency(Transparency: number)
 		BackgroundImage.ImageTransparency = ClampTransparency(Transparency)
@@ -11931,7 +11639,6 @@ function Library:CreateWindow(WindowInfo)
 		WindowInfo.BackgroundImageLayer = (Layer:lower() == "front") and "front" or "back"
 	end
 
-	-- All parameters optional — nil ones stay untouched.
 	function Window:SetBackgroundOverlay(Enabled: boolean?, Color: Color3?, Transparency: number?)
 		if Enabled ~= nil then
 			BackgroundOverlay.Visible = Enabled == true
@@ -11950,9 +11657,6 @@ function Library:CreateWindow(WindowInfo)
 		end
 	end
 
-	-- Snapshot of the current wallpaper + surface state (debug / UI display).
-	-- Deliberately complete so the user can paste the output back and we know
-	-- exactly which config is live.
 	function Window:GetWallpaperInfo()
 		local ScaleEnum = tostring(BackgroundImage.ScaleType)
 
@@ -11961,7 +11665,6 @@ function Library:CreateWindow(WindowInfo)
 			Visible = BackgroundImage.Visible,
 			Transparency = BackgroundImage.ImageTransparency,
 			ScaleType = BackgroundImage.ScaleType,
-			-- plain name ("Crop") not "Enum.ScaleType.Crop", for readability
 			ScaleTypeName = ScaleEnum:match("%.(%w+)$") or ScaleEnum,
 			Color = BackgroundImage.ImageColor3,
 			Layer = WindowInfo.BackgroundImageLayer,
@@ -11970,7 +11673,6 @@ function Library:CreateWindow(WindowInfo)
 			OverlayColor = BackgroundOverlay.BackgroundColor3,
 			OverlayTransparency = BackgroundOverlay.BackgroundTransparency,
 
-			--// Surface \\--
 			CanvasTransparency = Library.Surface.CanvasTransparency,
 			GroupTransparency = Library.Surface.GroupTransparency,
 			GroupContrast = Library.Surface.GroupContrast,
@@ -12145,9 +11847,7 @@ function Library:CreateWindow(WindowInfo)
 		local TabIcon
 		local TabIconCard
 		local TabIconScale
-		local TabRec -- v4.7.5: function scope (BUG v4.7.0-7.4: all tab patches
-		-- landed in AddKeyTab instead; the real AddTab = this function, never patched
-		-- at all -> rec=0, zoom dead, stroke dead. Found via DEBUG rec=0.)
+		local TabRec
 
 		local TabContainer
 		local TabCanvas
@@ -12158,7 +11858,6 @@ function Library:CreateWindow(WindowInfo)
 		do
 			TabButton = New("TextButton", {
 				BackgroundColor3 = "MainColor",
-				-- v4.7.5: a bit of background on ALL tabs (real AddTab)
 				BackgroundTransparency = Library.TabAppearance.TabBackgroundTransparency,
 				Size = UDim2.new(1, 0, 0, 44),
 				Text = "",
@@ -12197,7 +11896,6 @@ function Library:CreateWindow(WindowInfo)
 					Size = UDim2.fromOffset(24, 24),
 					Parent = TabButton,
 				})
-				-- v4.8.4: one helper, no duplicates
 				TabIconCard, TabIconScale = Library:CreateTabIconCard(TabIcon)
 			end
 
@@ -12207,7 +11905,6 @@ function Library:CreateWindow(WindowInfo)
 				Icon = TabIcon,
 			})
 
-			-- v4.7.5: rec ApplyTabAppearance di AddTab asli
 			TabRec = { Button = TabButton, Icon = TabIcon, Card = TabIconCard, Scale = TabIconScale }
 			table.insert(Library.TabVisuals, TabRec)
 
@@ -12542,15 +12239,13 @@ function Library:CreateWindow(WindowInfo)
 			local TabboxButtons
 
 			do
-				-- v4.6.11: nested inside a group card -> transparency 1 so the
-				-- composite matches the card exactly (no double dark).
 				local Nested = Library:IsInsideSurfaceCard(BoxHolder)
 				TabboxHolder = New("Frame", {
 					BackgroundColor3 = function()
 						return Library:GetGroupSurfaceColor()
 					end,
 					BackgroundTransparency = Nested and 1 or ClampTransparency(Library.Surface.GroupTransparency),
-					ClipsDescendants = true, -- v4.8.8: clip children to the frame border so content and border move as one during the resize tween
+					ClipsDescendants = true,
 					Size = UDim2.fromScale(1, 0),
 					Parent = BoxHolder,
 				})
@@ -12888,20 +12583,13 @@ function Library:CreateWindow(WindowInfo)
 			local GroupboxLine
 
 			do
-				-- v4.6.11: nested (e.g. groupbox inside tabbox inside card)
-				-- -> transparency 1, komposit ngikut kartu induk.
 				local Nested = Library:IsInsideSurfaceCard(BoxHolder)
 				GroupboxHolder = New("Frame", {
-					-- N3V4: group cards can now be told apart from the window background
-					-- (GroupContrast) or color-overridden (GroupColor). Colors are
-					-- registered into the Registry as functions -> theme changes are safe.
-					-- Transparency default 0 = SOLID, so buttons/dropdowns/sliders/
-					-- text di dalamnya NGGAK ikutan tembus pandang.
 					BackgroundColor3 = function()
 						return Library:GetGroupSurfaceColor()
 					end,
 					BackgroundTransparency = Nested and 1 or ClampTransparency(Library.Surface.GroupTransparency),
-					ClipsDescendants = true, -- v4.8.8: clip children to the frame border so content and border move as one during the resize tween
+					ClipsDescendants = true,
 					Size = UDim2.fromScale(1, 0),
 					Parent = BoxHolder,
 				})
@@ -12924,8 +12612,6 @@ function Library:CreateWindow(WindowInfo)
 
 				local BoxIcon = Library:GetCustomIcon(Info.IconName)
 				if BoxIcon then
-					-- v4.10.0: hover anim pair (zoom + tilt) rides the icon;
-					-- the group card itself is the hover area
 					local BoxIconLabel = New("ImageLabel", {
 						Image = BoxIcon.Url,
 						ImageColor3 = BoxIcon.Custom and "WhiteColor" or "AccentColor",
@@ -12937,9 +12623,6 @@ function Library:CreateWindow(WindowInfo)
 					})
 					local Anim = {
 						Scale = New("UIScale", { Scale = 1, Parent = BoxIconLabel }),
-						-- v4.10.1 bug #29: UIRotation is NOT a real Roblox class
-						-- (New() aborted AddGroupbox); GuiObject.Rotation is the
-						-- native property, so tween the icon label directly
 						Rot = BoxIconLabel,
 						Tweens = {},
 					}
@@ -13037,8 +12720,6 @@ function Library:CreateWindow(WindowInfo)
 					if Groupbox.Collapsed then 34 else (GroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 49
 				)
 
-				-- v4.8.9: instant hide on collapse; on expand the holder clip
-				-- reveals the line in step with the growing frame edge
 				GroupboxLine.Visible = not Groupbox.Collapsed
 				if Library.Animations and Library.Animations.Groupbox then
 					local TweenInfo = Library.GroupboxTweenInfo
@@ -13077,9 +12758,6 @@ function Library:CreateWindow(WindowInfo)
 
 				local TargetRotation = if Collapsed then 0 else 180
 
-				-- v4.8.9: hide INSTANTLY on collapse so no glyph sliver is eaten
-				-- alive while the frame shrinks; on expand the holder clip reveals
-				-- the content in step with the growing frame edge = synced.
 				GroupboxContainer.Visible = not Collapsed
 				if Library.Animations and Library.Animations.Groupbox then
 					local TweenInfo = Library.GroupboxTweenInfo
@@ -13231,7 +12909,6 @@ function Library:CreateWindow(WindowInfo)
 					ImageTransparency = Hovering and 0.25 or 0.5,
 				}):Play()
 			end
-			-- v4.7.6: hover zoom via helper
 			Library:TweenTabZoom(TabIconScale, Hovering and Library.TabAppearance.HoverZoom or 1)
 		end
 
@@ -13244,7 +12921,6 @@ function Library:CreateWindow(WindowInfo)
 				Library.ActiveTab:Hide()
 			end
 
-			-- v4.7.5: active bg + active zoom in the real AddTab
 			TabButton.BackgroundColor3 = Library.TabAppearance.ActiveBackgroundColor
 			TweenService:Create(TabButton, Library.TweenInfo, {
 				BackgroundTransparency = Library.TabAppearance.ActiveBackgroundTransparency,
@@ -13257,7 +12933,6 @@ function Library:CreateWindow(WindowInfo)
 					ImageTransparency = 0,
 				}):Play()
 			end
-			-- v4.7.6: active zoom via helper
 			Library:TweenTabZoom(TabIconScale, Library.TabAppearance.ActiveZoom)
 
 			if Description then
@@ -13275,7 +12950,6 @@ function Library:CreateWindow(WindowInfo)
 		end
 
 		function Tab:Hide()
-			-- v4.7.5: all-tab bg + zoom-back in the real AddTab
 			TabButton.BackgroundColor3 = Library.Scheme.MainColor
 			TweenService:Create(TabButton, Library.TweenInfo, {
 				BackgroundTransparency = Library.TabAppearance.TabBackgroundTransparency,
@@ -13290,7 +12964,6 @@ function Library:CreateWindow(WindowInfo)
 					ImageTransparency = 0.5,
 				}):Play()
 			end
-			-- v4.7.6: zoom-back via helper
 			Library:TweenTabZoom(TabIconScale, 1)
 
 			Library:PlayTabAnimation(TabCanvas, false)
@@ -13372,7 +13045,7 @@ function Library:CreateWindow(WindowInfo)
 			Tab:Show()
 		end)
 
-		TabRec.Tab = Tab -- v4.7.5: AddTab asli
+		TabRec.Tab = Tab
 		Library.Tabs[Name] = Tab
 
 		return Tab
@@ -13401,9 +13074,7 @@ function Library:CreateWindow(WindowInfo)
 		local TabIcon
 		local TabIconCard
 		local TabIconScale
-		local TabRec -- v4.7.3: MUST sit outside the do-block (bug v4.7.0-7.2:
-		-- the local sank inside a do-block -> "TabRec.Tab = Tab" at AddTab end
-		-- became a nil-global = AddTab errored per tab = all tab effects dead)
+		local TabRec
 
 		local TabCanvas
 		local TabContainer
@@ -13412,7 +13083,6 @@ function Library:CreateWindow(WindowInfo)
 		do
 			TabButton = New("TextButton", {
 				BackgroundColor3 = "MainColor",
-				-- v4.7.0: a bit of background on ALL tabs (baseline 70% transparency)
 				BackgroundTransparency = Library.TabAppearance.TabBackgroundTransparency,
 				Size = UDim2.new(1, 0, 0, 44),
 				Text = "",
@@ -13450,7 +13120,6 @@ function Library:CreateWindow(WindowInfo)
 					Size = UDim2.fromOffset(24, 24),
 					Parent = TabButton,
 				})
-				-- v4.8.4: one helper, no duplicates
 				TabIconCard, TabIconScale = Library:CreateTabIconCard(TabIcon)
 			end
 
@@ -13460,7 +13129,6 @@ function Library:CreateWindow(WindowInfo)
 				Icon = TabIcon,
 			})
 
-			-- v4.7.0: rec for ApplyTabAppearance (card/bg/zoom on all tabs)
 			TabRec = { Button = TabButton, Icon = TabIcon, Card = TabIconCard, Scale = TabIconScale }
 			table.insert(Library.TabVisuals, TabRec)
 
@@ -13615,7 +13283,6 @@ function Library:CreateWindow(WindowInfo)
 					ImageTransparency = Hovering and 0.25 or 0.5,
 				}):Play()
 			end
-			-- v4.7.6: hover zoom via helper
 			Library:TweenTabZoom(TabIconScale, Hovering and Library.TabAppearance.HoverZoom or 1)
 		end
 
@@ -13628,7 +13295,6 @@ function Library:CreateWindow(WindowInfo)
 				Library.ActiveTab:Hide()
 			end
 
-			-- v4.7.0: active tab bg = thin accent tint + icon zoom holds
 			TabButton.BackgroundColor3 = Library.TabAppearance.ActiveBackgroundColor
 			TweenService:Create(TabButton, Library.TweenInfo, {
 				BackgroundTransparency = Library.TabAppearance.ActiveBackgroundTransparency,
@@ -13643,7 +13309,6 @@ function Library:CreateWindow(WindowInfo)
 					ImageTransparency = 0,
 				}):Play()
 			end
-			-- v4.7.6: active zoom via helper
 			Library:TweenTabZoom(TabIconScale, Library.TabAppearance.ActiveZoom)
 
 			Library:PlayTabAnimation(TabCanvas, true)
@@ -13662,7 +13327,6 @@ function Library:CreateWindow(WindowInfo)
 		end
 
 		function Tab:Hide()
-			-- v4.7.0: back to all-tab bg + icon zoom back to 1
 			TabButton.BackgroundColor3 = Library.Scheme.MainColor
 			TweenService:Create(TabButton, Library.TweenInfo, {
 				BackgroundTransparency = Library.TabAppearance.TabBackgroundTransparency,
@@ -13677,7 +13341,6 @@ function Library:CreateWindow(WindowInfo)
 					ImageTransparency = 0.5,
 				}):Play()
 			end
-			-- v4.7.6: zoom-back via helper
 			Library:TweenTabZoom(TabIconScale, 1)
 
 			Library:PlayTabAnimation(TabCanvas, false)
@@ -13710,7 +13373,7 @@ function Library:CreateWindow(WindowInfo)
 		Tab.Container = TabContainer
 		setmetatable(Tab, BaseGroupbox)
 
-		TabRec.Tab = Tab -- v4.7.0: lets ApplyTabAppearance know the active tab
+		TabRec.Tab = Tab
 		Library.Tabs[Name] = Tab
 
 		return Tab
@@ -13821,9 +13484,6 @@ function Library:CreateWindow(WindowInfo)
 			Parent = TitleRow,
 		})
 
-		-- v4.7.9: dialog icon = OPTIONAL. Info.Icon nil/false = no icon.
-		-- When set: glyph at the TOP-RIGHT of the title row (notif-like:
-		-- AccentColor, or Info.IconColor), title reserves the space.
 		local DialogIconWidth = 0
 		if Info.Icon then
 			local ParsedIcon = Library:GetCustomIcon(Info.Icon)
@@ -14018,7 +13678,7 @@ function Library:CreateWindow(WindowInfo)
 			if FooterButtonsList[ButtonIdx] then
 				FooterButtonsList[ButtonIdx].Container:Destroy()
 				FooterButtonsList[ButtonIdx] = nil
-				Dialog:Resize() -- v4.7.9: holder/separator refresh follows
+				Dialog:Resize()
 			end
 		end
 
@@ -14090,8 +13750,6 @@ function Library:CreateWindow(WindowInfo)
 				Parent = TextBtn,
 			})
 
-			-- v4.8.1: theme strings (used to be Color3 snapshots = hardcoded, did not
-			-- follow theme changes). Destructive red bg + FontColor stays readable.
 			local TextColor = Variant == "Primary" and "BackgroundColor" or "FontColor"
 
 			local BtnLabel = New("TextLabel", {
@@ -14194,10 +13852,6 @@ function Library:CreateWindow(WindowInfo)
 
 			FooterButtonsList[ButtonIdx] = ButtonWrap
 
-			-- v4.7.9: OLD BUG — buttons added AFTER AddDialog never showed: the
-			-- initial Resize ran while FooterButtonsList was still empty =>
-			-- ButtonsHolder/_Sep2 stayed Visible=false, never refreshed again.
-			-- again. Resizing here makes holder + separator show up immediately.
 			Dialog:Resize()
 		end
 
@@ -14231,8 +13885,6 @@ function Library:CreateWindow(WindowInfo)
 		end
 
 		if not Library.Toggled then
-			-- v4.8.0: DropdownV2 popups close FIRST, before the fade starts, so popup
-			-- instances never get captured by TransparencyCache on close.
 			for _, Option in Library.Options do
 				if Option.Type == "DropdownV2" and Option.PopupOpen then
 					Option:ClosePopup(true)
@@ -14242,7 +13894,7 @@ function Library:CreateWindow(WindowInfo)
 
 		if Library.Animations and Library.Animations.ToggleWindow == true then
 			local FadeTime = Library.WindowAnimationInfo.Time
-			local Reverse = Fading -- old fade still running = reversal, do not swallow the press
+			local Reverse = Fading
 			local CanCapture = not Reverse
 			Fading = true
 			FadeToken += 1
@@ -14253,12 +13905,11 @@ function Library:CreateWindow(WindowInfo)
 				MainFrame.Visible = true
 			end
 
-			-- v4.8.2: ONE shared fade implementation for window AND popup.
 			Library:FadeTree(MainFrame, Opening, CanCapture, TopBar)
 
 			task.delay(FadeTime, function()
 				if Token ~= FadeToken then
-					return -- a newer toggle already took over
+					return
 				end
 				MainFrame.Visible = Library.Toggled
 				Fading = false
@@ -14539,8 +14190,6 @@ function Library:CreateWindow(WindowInfo)
 		Library.IsRobloxFocused = false
 	end))
 
-	-- v4.7.4: auto-apply + proof in Output when the first window is ready. When
-	-- tabVisuals=0 while tabs exist, the AddTab rec was never built.
 	Library:ApplyTabAppearance()
 	print(string.format("[N3V4 Library] window ready: tabVisuals=%d (0 padahal ada tab = dump DEBUG di setingan)", #Library.TabVisuals))
 
@@ -14852,7 +14501,7 @@ function Library:CreateDashboardWindow(Info)
 			Text = "• " .. actName,
 			TextSize = 10,
 			Font = Enum.Font.GothamBold,
-			TextColor3 = Color3.fromRGB(160, 160, 170), -- default white/gray standard
+			TextColor3 = Color3.fromRGB(160, 160, 170),
 			Parent = ActionGrid,
 		})
 		table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, 4), Parent = actLbl }))
@@ -14945,7 +14594,6 @@ function Library:CreateDashboardWindow(Info)
 			GetState = getStateFunc,
 		})
 
-		-- Fit the container height automatically
 		TogglesGrid.Size = UDim2.new(1, 0, 0, math.ceil(#RegisteredToggles / 2) * 28)
 		UpdateCanvas()
 	end
@@ -15681,8 +15329,6 @@ function Library:CreateLoading(LoadingInfo)
 				Parent = TextBtn,
 			})
 
-			-- v4.8.1: theme strings (used to be Color3 snapshots = hardcoded, did not
-			-- follow theme changes). Destructive red bg + FontColor stays readable.
 			local TextColor = Variant == "Primary" and "BackgroundColor" or "FontColor"
 
 			local BtnLabel = New("TextLabel", {

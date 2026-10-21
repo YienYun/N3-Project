@@ -1,633 +1,5 @@
---[[
-	================================================================================
-	 N3V4 — PREVIEW KIT v4.6   (LocalScript)
-	================================================================================
 
-	 ISI FILE INI: MURNI showcase komponen (5 tab, kiri/kanan simetris).
-	 ZERO setingan desain — semua setingan ada di file terpisah:
-	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
-
-	 CHANGELOG v4.12.4 — SECTION REVERT (eksperimen gue dihapus total):
-	   • User: "balikin ke semula saja, jangan ada coloran garis, hapus,
-	     nambah sampah, cuma color textnya pertahankan". Executed:
-	     - Library: SectionAppearance/Registry/Apply/Set + hook theme
-	       DIHAPUS; garis divider = kode ASLI library verbatim lagi
-	       (fill MainColor + border OutlineColor 1px, SizeX X//2+10).
-	     - Module: groupbox "Section Divider" + "Divider Presets",
-	       BuildSection, DEFAULTS.Section, reset line, semua knob SD_*
-	       DIHAPUS. T1 balik 5/5.
-	     - YANG TETEP: text divider warna AccentColor (v4.11.3) +
-	       transparansi text 0.5 bawaan.
-	   • Garis section lu sekarang identik 100% sama punya lu dulu
-	     sebelum rangkaian v4.11.x mulai ngutak-atik section.
-
-	 CHANGELOG v4.12.3 — skema garis section diganti (matiin pincang):
-	   • Border 1px semi-transparan di frame 2px ternyata render
-	     BEDA kiri/kanan di atas card transparansi 0.5 + wallpaper
-	     (kiri kebaca unggu, kanan kebaca hitam). Skema baru: garis
-	     = fill OPAQUE, warna = lerp BackgroundColor -> AccentColor
-	     (atau OutlineColor kalo toggle off). Warna opaque baca
-	     IDENTIK di backdrop apa pun => pincang secara fisik mati.
-	   • Knob transparency diganti "Kekuatan warna garis" 0-100%
-	     (0% = netral gelap kayak bawaan, 100% = accent penuh).
-	     Default 60% = ungu kalem tapi jelas. Preset: Soft 60 /
-	     Solid 100 / Ghost 30 / Netral outline.
-	   • Label petunjuk di box Selamat Datang: lokasi semua setting
-	     (tab UI Settings, icon palette paling atas sidebar).
-	   • Yang lu lihat di screenshot tadi itu tab DEMO (Overview),
-	     bukan tab setting — makanya "setingnya ga ada": pindah ke
-	     tab UI Settings dulu, box Section Divider urutan #2 kiri.
-
-	 CHANGELOG v4.12.2 — setting section KETUTUP LIPATAN + simetri paksa:
-	   • "settinganya mana anjir": knob-nya ADA tapi box Section Divider
-	     dulu box ke-6 kolom kiri = di bawah lipatan window (kolom tab
-	     itu ScrollingFrame, jadi sebenernya bisa di-scroll, tapi gue
-	     akui UX-nya nyebelin). Sekarang box-nya NAIK ke urutan #2
-	     kolom kiri ( Divider Presets #2 kolom kanan ) — buka tab UI
-	     Settings, scroll dikit, langsung ketemu sample + knob.
-	   • "kanan hitam kiri unggu": kombinasi warna di screenshot lu
-	     itu GA cocok sama versi bersih mana pun -> kemungkinan besar
-	     paste library lu frankenstein (campuran lama+baru). Selain
-	     itu gue kerasin konstruksinya: dua garis divider sekarang
-	     dibuat dari SATU loop (parameter identik, mustahil pincang)
-	     dan ApplySectionAppearance di-pcall biar error section ga
-	     bisa bunuh seluruh groupbox (pola bug #27).
-	   • PENTING: paste library FULL (Ctrl+A -> delete -> paste isi
-	     file baru), lalu pastiin baris pertama Output = "v4.12.2
-	     loaded". Kalau masih ada sisi garis yang beda warna setelah
-	     itu, berarti ada ModuleScript N3V4 duplikat yang ke-require.
-
-	 CHANGELOG v4.12.1 — BUG #31 + sample section di dalam setingan:
-	   • Error "Unable to assign property BorderColor3. Color3
-	     expected, got string": theme-string cuma bisa lewat New()
-	     waktu create; assign runtime harus Color3 asli. Sekarang
-	     ApplySectionAppearance pakai Scheme.AccentColor /
-	     OutlineColor langsung, DAN ada hook di theme-recolor biar
-	     tiap ganti accent/outline section ikut sync lagi.
-	   • "sectionya mana jir? taruh di group seting section dong":
-	     groupbox "Section Divider" sekarang punya sample divider
-	     LIVE ("Preview section") di paling atas box — tiap geser
-	     slider, contoh di dalem box itu yang berubah depan mata lu.
-
-	 CHANGELOG v4.12.0 — SECTION SETTINGS (preview setingan buat lu):
-	   • Diagnosa "terlalu mencolok": garis section cuma 2px tinggi,
-	     border 1px makan atas+bawah -> border accent 0% kebaca sebagai
-	     bar accent SOLID (sama kayak v4.11.3 yang lu protes). Jadi
-	     kunci kelembutan = TRANSPARANSI border: default baru 45%.
-	   • Groupbox KIRI baru "Section Divider" (tab UI Settings):
-	     - toggle "Garis luar ikut accent" (off = balik outline abu)
-	     - slider transparansi garis luar 0-100% (default 45)
-	     - slider transparansi text section 0-100% (default 50)
-	     - slider jarak text-garis 2-40px: SATU nilai ngatur dua sisi
-	       kiri-kanan bareng = simetri dijamin konstruksi, ga bisa
-	       pincang
-	     - slider ketebalan garis 1-4px (default 2 = desain asli)
-	     - print + copy resep section (aturan v4.8.5)
-	   • Groupbox KANAN baru "Divider Presets": Soft 45% (bawaan),
-	     Solid 0%, Ghost 70%, Netral outline — klik langsung jadi,
-	     knob auto-sync.
-	   • Semua perubahan LIVE ke semua section yang udah ada (registry
-	     di library), jadi lu bisa dial sambil liat hasilnya.
-	   • Simetri T1: 5/5 -> 6/6.
-
-	 CHANGELOG v4.11.4 — desain garis section DIBALIKIN KE ASLI:
-	   • v4.11.3 gue salah: gue ganti DESAIN garis jadi bar solid
-	     accent (fill accent, border dibuang) -> kelihatan tebal
-	     neon, user protes "jangan ngubah desainya astaga".
-	   • v4.11.4: struktur garis BALIK persis bawaan library = fill
-	     MainColor + border 1px. Yang ikut theme sekarang CUMA
-	     GARIS LUAR nya: BorderColor3 = "AccentColor" (sebelumnya
-	     OutlineColor abu-abu). Jadi bentuk/ketebalan/divider-nya
-	     identik bawaan, cuma outline-nya yang ungu sync.
-	   • Text divider tetap AccentColor half-soft (v4.11.3, tidak
-	     diubah). Plain divider tanpa text tetep netral.
-
-	 CHANGELOG v4.11.3 — SECTION IKUT COLOR THEME (text + garis):
-	   • Divider bertext ("----- Selamat Datang -----"): text sekarang
-	     TextColor3 "AccentColor" (theme-string = ikut sync otomatis
-	     tiap ganti theme), dan DUA GARIS sisinya sekarang solid
-	     "AccentColor" juga (sebelumnya fill MainColor + border
-	     OutlineColor = abu-abu). Garis jadi 2px accent bersih tanpa
-	     border.
-	   • Text divider tetep TextTransparency 0.5 (kelembutan lama gue
-	     pertahanin biar ga nyolok; garisnya yang solid). Kalau mau
-	     text-nya solid juga, bilang = satu baris flip.
-	   • Divider POLOS (tanpa text) sengaja TETAP netral MainColor /
-	     OutlineColor: itu separator biasa, bukan section header —
-	     biar accent ga spam di setiap pemisah.
-
-	 CHANGELOG v4.11.2 — BUG #30 (icon bolong) + panah kiri/kanan per sisi:
-	   • Penyebab icon ga muncul: GetIcon = atlas online (load async)
-	     fallback ke subset OFFLINE yang embed di library. "arrow-left"
-	     cuma ada di atlas online -> pas button dibuat, subset offline
-	     ga punya -> image kosong. Gue kemarin verifikasi ke mirror
-	     repo, bukan ke tabel embed library = salah sumber.
-	   • Sekarang: button KIRI = chevron-left, button KANAN =
-	     chevron-right (dua-duanya ADA di subset offline, dijamin
-	     render). Identitas icon per sisi konstan selamanya.
-	   • Anim swap diganti: panel yang masuk SLIDE dari sisi button
-	     yang diklik (kiri -> slide dari kiri, kanan -> dari kanan),
-	     Quint-out 0.2s. Icon ga ikut muter lagi.
-
-	 CHANGELOG v4.11.1 — STATUS BAR v2 (fix dari protes user):
-	   • Card sekarang DUA label: prefix ("Fps:", "Ping:", ...) warna
-	     AccentColor = ikut theme yang lu sync; NILAI-nya (50, 30, ...)
-	     tetep putih FontColor. Update live cuma nyentuh label nilai.
-	   • Icon button GA GANTI-GANTI lagi: arrow-left konstan (nama icon
-	     udah DIVERIFIKASI ada di atlas lucide mirror, bukan nebak).
-	     Animasi swap = icon spin 180 derajat tiap klik, ARAH spin
-	     sesuai sisi button yang diklik (kiri = counter-clockwise,
-	     kanan = clockwise); mode status = panah nunjuk kanan, balik
-	     search = panah kiri lagi.
-	   • Ukuran icon 24 -> 18px ("jangan terlalu besar iconsnya jir").
-
-	 CHANGELOG v4.11.0 — STATUS BAR SWAP (fitur baru, library langsung):
-	   • Search bar bar atas diciputin 32px per sisi (user: "kanan kiri
-	     nya sedikit lebih kecil sedikit saja").
-	   • Di dua sisi itu sekarang ada button icon (zap). Klik kiri =
-	     search bar SWAP jadi strip status: 4 CARD (Fps / Ping /
-	     Server / Executor) gaya card yang sama kayak search frame
-	     (MainColor + stroke OutlineColor + radius window).
-	   • Nilai live: Fps dihitung dari frame per 0.5 detik, Ping dari
-	     GetNetworkPing (update 2x/detik). Loop-nya HIDUP CUMA saat
-	     strip kelihatan — swap balik ke search = loop mati, nol biaya.
-	   • Icon button nyebut mode: zap = "klik buat status", search =
-	     "klik buat balik". Server string & Executor bisa diset dari
-	     script: Library.StatusBar.Server / .Executor (default auto
-	     detect identifyexecutor, fallback "Studio" di Studio).
-
-	 CHANGELOG v4.10.3 — LOGO HOVER ZOOM (langsung library, tanpa preview):
-	   Logo window di pojok kiri atas sekarang zoom saat cursor hover,
-	   persis rasa tab: pakai helper TweenTabZoom + setting HoverZoom
-	   milik tab yang SAMA (jadi kalo lu dial zoom tab di groupbox
-	   "Tab Aktif & Zoom", logo ikut rasa yang sama). Cursor keluar =
-	   balik ke skala 1. Nol knob baru, nol kode tween baru — cuma
-	   UIScale + 2 koneksi mouse di WindowIcon.
-
-	 CHANGELOG v4.10.2 — BAKE print icon anim (rilis ramping, nol kode baru):
-	   Zoom 15, Tilt 10, Speed 0.30 kebake verbatim di default library,
-	   DEFAULTS module, fallback BuildIconAnim, sama default slider.
-	   Sesuai pesan user: jangan nambah sampah, biar code ga bengkak.
-
-	 CHANGELOG v4.10.1 — BUG #29 (rusak co): UIRotation GA ADA di Roblox.
-	   New("UIRotation") di AddGroupbox -> "Unable to create an Instance
-	   of type UIRotation" -> build groupbox PERTAMA mati -> UI rusak.
-	   Gue yang halu kelas itu ada; padahal rotate GUI itu properti
-	   NATIVE GuiObject.Rotation (library sendiri pakai Rotation = 180
-	   buat panah collapse). Fix: tween Rotation langsung di ImageLabel
-	   icon, nol instance tambahan. Perilaku animasi identik.
-
-	 CHANGELOG v4.10.0 — ICON ANIM (fitur baru) + glow idle-skip:
-	   • Semua icon groupbox sekarang animasi: cursor masuk kartu
-	     group -> icon zoom sedikit (+12%) sambil miring sedikit
-	     (6°), cursor keluar -> tween balik ke semula (Quint-out
-	     0.18s). Area hover = SELURUH kartu group, bukan cuma icon.
-	   • Setup manual: groupbox "Font & Animasi" (tab UI Settings,
-	     kolom kanan) — toggle on/off, slider zoom 0-40%, slider
-	     miring 0-20°, slider durasi 0.05-0.6s, ditutup print + copy
-	     resep icon anim (aturan v4.8.5). Reset scheme ikut balikin
-	     default animasi.
-	   • Ramah fps: glow loop sekarang idle-skip (fade diam = nol
-	     property write per frame; tetep 1 koneksi RenderStepped).
-	     Icon anim = tween fire-and-forget, biaya cuma pas hover,
-	     bukan per frame.
-	   • Simetri aman: knob nempel di groupbox existing, T1 tetep 5/5.
-
-	 CHANGELOG v4.9.2+ — posisi glow DI BAWAH cursor (bug #28) + bake print:
-	   • Penyebab: UserInputService:GetMouseLocation() ngasih koordinat
-	     WINDOW-space (masuk inset topbar ~36px), padahal
-	     AbsolutePosition itu gui-space (mulai dari bawah topbar).
-	     Selisihnya persis inset -> glow nongol ~36px di bawah cursor
-	     ("kurang ke atas"). Fix: kurangin GuiService:GetGuiInset(),
-	     buat posisi DAN test inside-window. Sekarang pas di tengah.
-	   • Print user DIBAKE verbatim jadi default terkunci: putih
-	     (255,255,255), Size 400, Intensity 10, Smooth 5 — di library,
-	     DEFAULTS module, fallback BuildGlow, sama preset "bawaan".
-	     Slider lebar sekarang 60-600 biar 400 ga mentok tepi.
-
-	 CHANGELOG v4.9.2 — GLOW v3 + BUG #27 (knob mati):
-	   • BUG #27 (penyebab "ga ngerti, mana tombol setting"): knob glow
-	     v4.9.0/4.9.1 gue taroh di Try yang ngeref Box NIL -> pcall
-	     nelen error diam-diam, knob + box Resep Tema GA ADA di UI.
-	     Sekarang groupbox KIRI "Cursor Glow" sendiri: toggle, picker
-	     warna, slider lebar/kejelasan/kelembutan, + print & copy resep
-	     glow (aturan v4.8.5).
-	   • "kasih tombol seting gue biar gue yang atur": groupbox KANAN
-	     "Preset Glow" = 5 tombol: Samar 5%/180px (bawaan), Halus
-	     10%/220px, Jernih 20%/260px, Matikan, Warna ikut accent lagi.
-	     Abis klik, knob di sebelah kiri auto-sync.
-	   • "terlalu bulat / lebih samar / pudar ke jelas di tengah /
-	     jangan terlalu lebar": circle flat diganti haze radial =
-	     16 micro-layer falloff kuadrat (step alpha ~0.2%, mata ga
-	     bakal lihat ring), tengah sedikit lebih jelas daripada tepi,
-	     default diameter 180px (dari 280).
-	   • Simetri T1 tetep: 4/4 -> 5/5.
-
-	 CHANGELOG v4.9.1 — GLOW v2 (fix total dari screenshot user):
-	   • "kok keluar window sih?" — MainFrame emang nggak nge-clip;
-	     sekarang glow hidup di DALAM container clip seukuran window
-	     (UICorner sama = sudut bulet ikut ke-clip). Nol bocor luar.
-	   • "cukup 1 saja woi" — stack 6 lingkaran DIHAPUS (keliatan ring
-	     bertingkat, jelek). Sekarang SATU circle.
-	   • "transparansi dikit saja 5%" — Intensity sekarang = persen
-	     opasitas langsung: default 5% (alpha 0.05), subtle pool of
-	     light, bukan lampu sorot. Slider 0-100% tetep buat dial.
-
-	 CHANGELOG v4.9.0 — CURSOR GLOW (fitur baru):
-	   • Cahaya soft NGIKUT gerakan cursor lu, di layer BACKGROUND:
-	     ZIndex 0 = di atas wallpaper (-2/-1) tapi di bawah SEMUA
-	     konten (group card, button, toggle, sidebar) -> nyelusup
-	     lewat card-card yang semi-transparan, persis request lu.
-	   • Nol asset eksternal: 6 lingkaran bertumpuk (alpha menurun ke
-	     luar) = glow halus. Satu koneksi RenderStepped se-session,
-	     smoothing eksponensial (glow nge-trail, bukan nempel kaku),
-	     fade in/out pas cursor masuk/keluar window. Mobile aman:
-	     nggak ada mouse = glow off otomatis.
-	   • Warna default IKUT AccentColor theme (pola sama kayak garis
-	     card ikut outline); color picker di groupbox Window kalau lu
-	     mau pin warna sendiri. Knob: on/off, warna, ukuran 80-600px,
-	     intensity 0-100%, kecepatan ikut 1-30/s. Ikut ke-print di
-	     RESEP WALLPAPER+SURFACE + tombol Reset scheme masang ulang.
-
-	 CHANGELOG v4.8.9 — NOL BOCOR SLIVER PAS COLLAPSE (bug #26):
-	   • Regression v4.8.8: hide instan container pas collapse ikut
-	     kehapus -> selama frame shrink 0.2s, isi statis ke-clip makan
-	     dari bawah = strip setengah glyph "bocor" di bawah title
-	     (persis screenshot user: Status Session & Activity Feed).
-	   • Kombinasi bener: expand = container visible instan + holder
-	     clip -> isi ke-reveal bareng tepi frame TURUN (sinkron, nol
-	     numpah); collapse = container hide INSTAN -> nggak ada isi
-	     yang dimakan tween = nol sliver. Garis title balik ke flip
-	     instan juga (clip yang reveal dia pas expand).
-	   • ClipsDescendants di holder groupbox+tabbox TETEP (itu kunci
-	     sync expand-nya).
-
-	 CHANGELOG v4.8.8 — COLLAPSE GROUP SINKRON (bug #25):
-	   • User: "gue buka group, isinya dulu yang ke bawah sedangkan
-	     groupnya telat dikit" (ketemu pas buka-tutup panah collapse
-	     group yang mirip dropdown). Root cause BUKAN dropdown-nya:
-	     GroupboxHolder nggak punya ClipsDescendants + SetCollapsed
-	     flip Container.Visible INSTAN, sementara frame di-tween 0.2s
-	     -> isi render di posisi final (numpah ke bawah frame yang
-	     masih pendek) sebelum frame nyusul.
-	   • Fix: ClipsDescendants = true di holder groupbox (+ tabbox,
-	     keluarga bug sama) + hapus dua flip Visible instan (container
-	     + garis title). Isi sekarang ke-clip persis di tepi bawah
-	     frame: buka = ke-reveal bareng tepi frame turun, tutup =
-	     ke-clip bareng tepi frame naik. Satu tween = nol desync.
-	     Popup dropdown/colorpicker/tooltip aman (parent-nya window/
-	     ScreenGui, bukan group holder).
-
-	 CHANGELOG v4.8.7 — RESEP TAB v4 = FINAL (print user 16:55):
-	   • Padding 2px · tebal 1px · transparansi 0% (garis SOLID, warna
-	     ikut OutlineColor theme per v4.8.6) · radius 5px · bg semua
-	     tab 85%. Zoom/aktif tetep: 0.60 hitam, 1.25/1.25, 0.20s, ON.
-	   • Dibake jadi DEFAULT di library + Settings.DEFAULTS — buka Studio
-	     langsung resep final; knob/print/copy/Reset tetep jalan normal.
-
-	 CHANGELOG v4.8.6 — WARNA CARD IKUT OUTLINE THEME:
-	   • User: "collornya biar ikut outline saja bro! jangan bikin susah
-	     pas mau banyak theme ke depan" — knob IconCardColor DIHAPUS dari
-	     library + module + print. Garis card sekarang Color =
-	     "OutlineColor" (theme string via registry), jadi ganti theme
-	     apapun otomatis nge-recolor garis card. Nol color snapshot.
-
-	 CHANGELOG v4.8.5 — RESEP TAB v3 DIBAKE + COPY resep tab:
-	   • Screenshot user: tebal 1px, transparansi 36%, napas 3px, radius
-	     5px, bg semua tab 90%; warna garis 135,135,135 dari chat. Semua
-	     jadi DEFAULT baru (library + Settings.DEFAULTS) — nol hardcode.
-	   • User: "gimana gue mau copy anj?" — tombol print resep tab
-	     sebelumnya nyelip di bawah TEST/DEBUG (groupbox kanan) dan TAB
-	     nggak punya tombol COPY (tema & wallpaper punya). Sekarang
-	     print+copy resep tab nempel di groupbox "Tab Card & Bg", sebelah
-	     knob card; copy = CopyClip (setclipboard, fallback Output).
-
-	 CHANGELOG v4.8.4 — TAB ICON CARD (halo stroke DIGANTI garis kotak):
-	   • User: "bukan stroke jelek jir" — halo glyph (salinan sprite yang
-	     digedein, biang stroke blur) DIHAPUS TOTAL dari library.
-	   • Gantinya CARD: garis kotak simetris (rounded box outline) yang
-	     nempel di seputar ICON doang — bukan box full tab.
-	   • Card = anak TabIcon -> ikut zoom hover/aktif bareng glyph; padding
-	     tetap simetris di semua level zoom.
-	   • Default: napas 4px, tebal 1.5px, transparency 30% (angka user),
-	     radius 6px, warna hitam. Semua bisa didial di tab UI Settings
-	     (groupbox "Tab Card & Bg": on/off + warna + tebal + transparansi
-	     + napas + radius). Print RESEP TAB sekarang ngeluarin IconCard*.
-
-	 CHANGELOG v4.8.3 — RESEP v7 + RESEP TAB v2 DIBAKE (print user):
-	   • THEMA: MainColor 36, OutlineColor 65-62-62, radius 10 (Accent/
-	     Background/Font tetep), animasi + durasi 0.10s tetep.
-	   • WALLPAPER/SURFACE: tint 148 (0.58), overlay hitam 0.40, group
-	     transparency 0.5, canvas color 119 (0.465); image/layer/window/
-	     canvas/contrast/group hitam tetep.
-	   • TAB: stroke 1.5px transparency 0.53 warna HITAM, bg tab tetep 100%,
-	     bg aktif 0.60 HITAM, zoom hover 1.25 & aktif 1.25, durasi 0.20.
-	   • Semua masuk sebagai DEFAULT (library + Settings.DEFAULTS), jadi
-	     knob/print/restore tetap jalan — nol hardcode di call-site.
-
-	 CHANGELOG v4.8.2 — POPUP BUKA/TUTUP = RASA WINDOW (perfected):
-	   • Kata user: popup harus terasa kayak buka/tutup WINDOW, dan fade
-	     CanvasGroup v4.8.1 masih jelek pas hilang. CanvasGroup + UIScale
-	     DIHAPUS total. Sekarang popup pakai SISTEM FADE YANG SAMA PERSIS
-	     sama window: Library:FadeTree (per-element dissolve barengan,
-	     durasi = WindowAnimationInfo = durasi window lu 0.10s).
-	   • Refactor nol-duplikasi: FadeInstance dipromosiin jadi method
-	     Library + helper Library:FadeTree; window DAN popup manggil
-	     implementasi yang SAMA (loop fade lama di Toggle dihapus).
-	   • Buka: semua elemen popup dissolve in bareng overlay. Tutup:
-	     dissolve out bareng, destroy setelah tween kelar. Nggak ada
-	     scale-pop, nggak ada pop instan dua arah.
-	   • Sweep lanjutan: komentar INLINE Indonesia di library (36 baris)
-	     ikut diterjemahin; guard bahasa di check.sh sekarang scan komentar
-	     inline juga.
-
-	 CHANGELOG v4.8.1 — POPUP V2 MULUS + WARNA IKUT THEME + CODE ENGLISH:
-	   • Animasi popup dulu "kaku": frame+isi nongol/hilang INSTAN (cuma
-	     scale+overlay yang fade) = pop. Sekarang isi popup dibungkus
-	     CanvasGroup: GroupTransparency + BackgroundTransparency frame +
-	     scale + overlay fade BARENGAN pas buka DAN tutup, destroy setelah
-	     tween kelar = masuk/keluar mulus.
-	   • BUG: klik luar nggak nutup popup — overlay ke-set Active=false
-	     (copas dari dialog) = MouseButton1Click mati. Sekarang Active=true.
-	   • NOL HARDCODE WARNA: footer button popup & dialog dulu baca
-	     Library.Scheme.* pas dibuat (snapshot Color3) = ganti theme nggak
-	     ikut. Sekarang pakai STRING theme ("FontColor"/"BackgroundColor"/
-	     "MainColor") = registry update ikut ganti theme. Jawab: YA, sekarang
-	     semua warna selected/button/icon ikut theme lu.
-	   • CODE = ENGLISH: seluruh komentar + string UI di LIBRARY diterjemahin
-	     (Bersihkan/Selesai -> Clear/Done, placeholder "Select..."). Aturan
-	     baru: kode & komentar library Inggris; obrolan gue-lu tetap Indo.
-	     (Preview/module = testbed kita, label masih Indo biar enak lu pakai.)
-
-	 CHANGELOG v4.8.0 — DROPDOWN V2 (versi POPUP, V1 TETAP ADA):
-	   • AddDropdownV2: baris kompak di groupbox; klik = popup modal gaya
-	     dialog: header judul+icon kanan-atas, summary "Total Selected:
-	     n/limit" + "List Selected: a - b - c", list SCROLLABLE di bawah,
-	     footer [Bersihkan] [Selesai]. Klik luar = tutup.
-	   • Item: string (text-only) ATAU { Text, Icon, Disabled } (versi
-	     image/icon lucide per item). Multi + Max opsional; single langsung
-	     tutup setelah milih. Indikator selected = dot accent + row highlight.
-	   • API: SetValue/SetSelected/SetItems/GetActiveValues/Clear/SetDisabled/
-	     SetVisible/SetText/OnChanged/Destroy. Window ditutup = popup V2
-	     ikut tutup duluan (nggak nyangkut di fade cache).
-	   • Demo: tab Components, box "Dropdown V2 — Popup" (multi max 4 +
-	     icon) & "Dropdown V2 — Single & API" (single + tombol API).
-	     Simetri tab tetep 4/4.
-
-	 CHANGELOG v4.7.9 — DIALOG: BUTTON CONFIRM KELIATAN + ICON OPSIONAL:
-	   • BUG: footer button dialog (Batal/Coba lagi/Eksekusi dll) nggak pernah
-	     nongol kalau ditambah setelah AddDialog — AddFooterButton nggak
-	     manggil Resize, jadi holder button tetep Visible=false dari Resize
-	     awal. Sekarang AddFooterButton/RemoveFooterButton manggil Resize =>
-	     button confirm SELALU keliatan.
-	   • Icon dialog sekarang OPSI gaya notif: Info.Icon = nama icon =>
-	     glyph accent (atau Info.IconColor) di POJOK KANAN ATAS baris judul;
-	     Info.Icon nil = dialog bersih tanpa icon. Demo: "Konfirmasi Aksi"
-	     (icon info), "Reset Semua Config?" (icon zap merah), "Form dalam
-	     Dialog" (no-icon).
-
-	 CHANGELOG v4.7.8 — RESEP DURASI BUKA/TUTUP DIBAKE:
-	   • User dial 10% dan bilang "10% bagus!" => 0.10 detik jadi DEFAULT
-	     TERKUNCI (library WindowAnimationInfo + DEFAULTS.AnimTime).
-
-	 CHANGELOG v4.7.7 — ANIMASI BUKA/TUTUP WINDOW DIBENERIN:
-	   • Buka nggak lagi 1.5x durasi: stagger task.wait dihapus, shell +
-	     konten fade BARENGAN => total waktu = durasi persis (default baru
-	     0.20s, dulu 0.35s + stagger = ~0.53s).
-	   • "Layar hitam pas buka" hilang: dulu permukaan gelap (wallpaper/
-	     overlay/kartu) nongol duluan baru konten nyusul; sekarang semua
-	     naik proporsional sekaligus.
-	   • Glitch/hitch pas baru kebuka hilang: tween fade sekarang 1 per
-	     instance (properti digabung) + DI-CACHE dipakai ulang — steady
-	     state cuma Play(), nol TweenService:Create ratusan per toggle.
-	   • Pencetan cepet nggak ketelen: toggle di tengah animasi = reversal
-	     mulus (token), cache transparency cuma di-capture pas rest
-	     (bug mid-tween capture = nilai basi, dibenerin).
-	   • Open pertama juga fade beneran (dulu pop instan tanpa animasi).
-	   • Knob baru: "Durasi buka/tutup window" (tab UI Settings > Font &
-	     Animasi) + durasi ikut ke-print di RESEP THEMA.
-
-	 CHANGELOG v4.7.6 — RESEP TAB LU DIBAKE + NOL CODE SAMPAH:
-	   • Print RESEP TAB lu (stroke 1px/20%/ungu 107-0-181, bg tab 100%,
-	     bg aktif 85% abu 128, zoom hover 130%, zoom aktif 140%, durasi 0.20)
-	     jadi DEFAULT TERKUNCI di library + DEFAULTS.
-	   • Refactor sesuai perintah lu ("jangan ada code sampah / duplikasi"):
-	     halo stroke + UIScale sekarang SATU helper (CreateTabIconStroke),
-	     zoom SATU helper (TweenTabZoom), blok duplikat AddTab/AddKeyTab
-	     DIHAPUS -> library minus ~40 baris.
-	   • Zoom pakai UIScale lagi (transform-only) = lebih MULUS daripada
-	     tween Size; kekasaran yang lu rasain juga emang khas preview Studio.
-
-	 CHANGELOG v4.7.5 — AKHIRNYA KE FUNGSI YANG BENER (Window:AddTab):
-	   • v4.7.0-7.4 semua patch tab (stroke halo, bg, zoom, TabRec) MASUK KE
-	     Window:AddKeyTab, bukan Window:AddTab. Tab sidebar kiri lu dibuat
-	     lewat AddTab -> nggak kepatch sama sekali. DEBUG rec=0 dari user
-	     yang ngebongkar ini. Sekarang AddTab (fungsi asli tab sidebar)
-	     punya semua: halo stroke, bg semua tab, bg aktif, zoom hover/aktif.
-	   • Bukti: Output "[N3V4 Library] window ready: tabVisuals=N" sekarang
-	     N = jumlah tab sidebar lu (bukan 0).
-
-	 CHANGELOG v4.7.4 — ZOOM MATI KARENA ANIMATIONS KE-NIMPA + bukti otomatis:
-	   • WindowInfo.Animations caller (preview) cuma bawa 5 bool -> tabel
-	     Animations ke-replace tanpa TabHoverZoom -> nil = gate zoom MATI.
-	     Sekarang gate NIL-SAFE (Library:ZoomTabEnabled: nil dianggap ON) dan
-	     preview eksplisit kirim TabHoverZoom = true.
-	   • CreateWindow sekarang manggil ApplyTabAppearance() sendiri + print
-	     "[N3V4 Library] window ready: tabVisuals=N" = bukti otomatis di
-	     Output tanpa lu klik apa-apa.
-	   • Tombol TEST sekarang ikut nyalain toggle stroke, toggle bg aktif,
-	     dan Animations.TabHoverZoom — sekali klik semua efek hidup.
-
-	 CHANGELOG v4.7.3 — BUG BESAR KE-TEMU & DIFIX (stroke/bg/zoom mati diam-diam):
-	   • AKAR SEMUA DRAMA INI: di library v4.7.0-7.2, `local TabRec` kedelep
-	     DI DALAM do-block AddTab, padahal `TabRec.Tab = Tab` dipanggil di
-	     LUAR do -> nil-global error SETIAP AddTab -> tab kebentuk setengah
-	     (button ada, icon ada) tapi rec/animasi/stroke nggak ke-link =
-	     semua efek tab MATI walau library baru & slider bener. Mata lu
-	     bener brok, kode gue yang salah. Luau-analyze akhirnya nyentuh
-	     warn LocalShadow-nya pas gue bikin v4.7.3.
-	   • Stroke sekarang HALO ImageLabel (glyph sama, warna stroke, lebih
-	     gede dikit, ZIndex di belakang icon) — bukan UIStroke (quirky di
-	     sprite atlas). Zoom sekarang tween Size icon — bukan UIScale.
-	     Dua-duanya property polos = pasti render.
-	   • Tombol "DEBUG: dump tab visuals" buat ground truth kalau dicurigai
-	     mati lagi: print rec/size/halo per tab.
-
-	 CHANGELOG v4.7.2 — ANTI-DEBAT "library lama?" + anti-salah-arti slider:
-	   • Library sekarang PRINT versi sendiri waktu di-require:
-	     "[N3V4 Library] v4.7.2 loaded ..." — kalau baris itu nggak ada di
-	     Output, berarti ModuleScript N3V4 yang ke-require masih file lama.
-	   • Label slider transparency dijelasin: "(100% = ILANG)". Dua kali user
-	     mentokin 100% (stroke transparency & bg tab aktif) = efeknya ILANG,
-	     dikira bug. 100% transparency = fully invisible, brok.
-	   • Tombol "TEST: bikin efek KELIATAN" di box Tab Aktif & Zoom: set nilai
-	     pasti-keliatan + sync slider, buat buktiin hover/zoom/stroke jalan.
-
-	 CHANGELOG v4.7.1 — STALE-PASTE DETECTOR LIBRARY:
-	   • Kalau ModuleScript N3V4 di ReplicatedStorage masih lama, settings
-	     warn keras + report preview masuk GAGAL: "LIBRARY LAMA ... paste
-	     ulang". Soalnya gejala library lama = slider tab gerak tapi nol
-	     efek (fungsi SetTabAppearance belum ada) — bikin dikira bug kode.
-
-	 CHANGELOG v4.7.0 — UPGRADE TAB SIDEBAR (borongan, sesuai diskusi):
-	   • Stroke tipis di GLYPH icon tab (UIStroke ngikut bentuk icon, bukan
-	     kotak) biar keliatan di atas wallpaper. Baseline 1px / 40% / hitam.
-	   • Background dikit di SEMUA tab (baseline 70% transparency, MainColor).
-	   • Tab aktif: bg tint accent tipis (55%) + icon zoom nantahan (108%).
-	   • Hover: icon zoom sedikit (112%), tween Quad Out 0.15s; mati lewat
-	     Library.Animations.TabHoverZoom = false.
-	   • Knob lengkap di file setingan (tab UI Settings, box "Tab Stroke & Bg"
-	     + "Tab Aktif & Zoom", simetris 4/4). Print LENGKAP include RESEP TAB.
-	   • Preview = testbed lu: puter knob, liat sidebar window ini, print.
-
-	 CHANGELOG v4.6.12 — PREVIEW NYALA LAGI (aman):
-	   • User mau seting manual upgrade TAB (stroke icon, background tab, zoom
-	     hover/aktif) -> PREVIEW_ENABLED = true lagi. Beda sama era v4.6.9:
-	     preview sekarang NOL SetWallpaper/SetSurface, jadi nggak nyetomp
-	     state global window lu. Showcase tab = testbed visual lu.
-
-	 CHANGELOG v4.6.11 — NESTED BOX IKUT TRANSPARAN (nggak dobel lapis):
-	   • Bug: tabbox/groupbox/depbox yang NESTED di dalam kartu group numpuk
-	     lapis transparency KEDUA (0.35 di atas 0.35) -> komposit gelap/solid,
-	     kebaca "ga ikut transparan". Depbox kelihatan aman dulu karena dia
-	     sibling kartu, bukan anak.
-	   • Fix: Library:IsInsideSurfaceCard() — kalau box dibuat di dalam kartu
-	     surface lain, BackgroundTransparency = 1 (komposit ngikut induk,
-	     identitas box dari outline); kalau top-level tetep pakai Surface +
-	     register ke SurfaceGroups. Slider "Kartu group" tetep ngatur semua.
-
-	 CHANGELOG v4.6.10 — PREVIEW OFF TOTAL + WINDOW DEFAULT 100:
-	   • Kesalahan gue v4.6.9: preview "theme-only" lewat SetWallpaper/SetSurface
-	     = state GLOBAL -> window setingan lu ke-stomp window 0/canvas 0 = jelek.
-	     Sekarang preview DIMATIIN (PREVIEW_ENABLED = false, early return) —
-	     nggak bikin window, nggak nyentuh state. Seting = N3V4_UISettings aja.
-	   • WindowTransparency default 0.90 -> 1 (user: "window dan canvas
-	     harusnya 100 anjing malah 0").
-
-	 CHANGELOG v4.6.9 — GROUP TRANSPARENCY KEPAKE DI PASTE BARU + PREVIEW THEME-ONLY:
-	   • BUG: CreateWindow nge-STOMP Library.Surface dari Templates.Window tiap
-	     start -> group 0.35 lu jadi 0 (solid) & contrast 40 jadi 30 di paste
-	     baru, walau di session seting lu jalan. Sekarang seed-nya cuma kalau
-	     CreateWindow dikirim field-nya eksplisit. Resep lu kepake langsung.
-	   • THEME v6: main 45 / outline 65 (print lu) dibake.
-	   • PREVIEW: wallpaper DIMATIIN + surface solid = showcase theme doang
-	     ("hapus kecuali theme"). Seting wallpaper tetep di file UISettings.
-
-	 CHANGELOG v4.6.8 — RESEP v5 LU DIBAKE + FIX CORNER NAVBAR BAWAH:
-	   • Print LENGKAP lu jadi default permanen: wallpaper FULL (transparency 0)
-	     + scrim overlay 0.55, tint 195, window 0.90, canvas 1, kartu group 0.35,
-	     contrast 40, kartu hitam, canvas 156, scheme bg 15 / main 36 / outline 59.
-	   • FIX bug corner: navbar bawah dulu pakai UICorner full radius -> waktu
-	     lu puter radius di tab Theme, corner ATAS navbar ikutan bulat = notch
-	     / garis nyembul ke atas. Sekarang corner-nya BAWAH aja (SpecificCorners),
-	     top persegi selamanya, radius bebas diutak-atik.
-
-	 CHANGELOG v4.6.7 — JEBAKAN FRONT DIHAPUS:
-	   • Preset "Wash (front)" & combo "Stretch + front" = penyebab kartu lu
-	     "transparan" waktu lu klik itu: layer front = gambar DI ATAS semua
-	     (veil), jadi slider Window/Canvas/Group di-0-in pun veil tetep ada
-	     (kekuatan veil = slider Image transparency + layer, bukan slider lain).
-	   • Sekarang semua preset/combo = "back" (kartu selalu SOLID terpisah).
-	   • Preset nggak lagi matiin GroupColor/CanvasColor custom (kartu hitam
-	     lu bertahan walau lu gonta-ganti preset).
-	   • Balik ke baseline: klik "RESEP USER (disetujui)" di box Cepat.
-
-	 CHANGELOG v4.6.6 — KARTU GROUP 100% SOLID (layer "back"):
-	   • Wallpaper pindah ke layer "back" (DI BELAKANG konten). Dulu "front" =
-	     gambar nutup SEMUA (veil 20%) -> kartu kebaca "transparan" walau
-	     GroupTransparency 0. Sekarang kartu hitam lu BENERAN solid nge-blok
-	     wallpaper; wallpaper cuma keliatan di sela-sela kartu.
-	   • WindowTransparency 0 -> 1 & Canvas 0.20 -> 1 biar wallpaper back-nya
-	     keliatan (kalau 0, MainFrame solid nutup wallpaper).
-	   • Overlay scrim ON 0.50 (baseline) biar teks kebaca di atas wallpaper.
-	   • Slider yang HIDUP buat lu seting: Canvas/latar, Overlay, Window,
-	     Kartu group, Group contrast (kalau custom OFF). Puter -> Print ->
-	     kirim ke gue, gue bake angka lu.
-
-	 CHANGELOG v4.6.5 — GROUP BALIK HITAM (revert kesalahan v4.6.4):
-	   • v4.6.4 gue bikin GroupColor AUTO -> kartu jadi ABU-ABU. User:
-	     "kok abu abu cok? woi gue group warna hitam anj!" -> REVERT ke hitam.
-	   • Contrast 30 baseline lu TETEP disimpen; kepake kalau "Group custom" OFF.
-	   • Penjelasan kenapa slider berasa "ga ngaruh" ada di DESIGN_NOTES
-	     (override warna menang atas contrast; overlay slider cuma aktif
-	     kalau toggle Overlay ON; wash wallpaper front nutup semua kartu).
-
-	 CHANGELOG v4.6.4 — GROUP 30% LEBIH JELAS:
-	   • GroupContrast 10 -> 30 (kartu group dibedain 30% dari background).
-	   • Override GroupColor hitam DIPUTUS (jadi auto) — soalnya override itu
-	     yang bikin contrast nggak ngefek & group keliatan nyatu/transparan.
-	   • Slider "Group contrast" di tab setingan tetep bisa lu puter (0-40).
-
-	 CHANGELOG v4.6.3 — THEME v4 LU JADI DEFAULT (ganti angka doang, nol fitur):
-	   • bg (18,18,18) · main (33,33,33) · outline (61,61,61)
-	     (accent 218/68/255 + font putih + radius 15 tetep dari v3)
-	   • Wallpaper & surface NGGAK disentuh — masih resep v3.
-
-	 CHANGELOG v4.6.2 — RESEP v3 LU JADI DEFAULT + FIX BUG PRINT:
-	   • Default BARU (library + setingan): scheme hitam-ungu lu
-	     (accent 218/68/255, bg 0, main 31, outline 45, font putih),
-	     corner radius 15, wallpaper v3 (transparency 0.80, tint 0.59 abu,
-	     overlay 0.40 OFF, canvas 0.20, contrast 10, canvas color 0.045).
-	   • FIX BUG "attempt to index nil with 'Image'" pas Print resep:
-	     state `S` dulu ke-init SETELAH BuildResep didefinisiin (forward-ref
-	     nil lagi). Sekarang state di-init paling awal di Attach.
-
-	 CHANGELOG v4.6.1 — DEFAULT = RESEP v2 LU:
-	   • Library + file setingan sekarang BAWAAN-nya resep yang lu seting sendiri
-	     (transparency 0.85, tint 252/241/255, overlay OFF, canvas 0.20, group 0,
-	     contrast 6, canvas color 20/20/20). Buka Studio TANPA seting apa pun =
-	     langsung tampilan lu. Print resep juga langsung = resep lu.
-	   • Sebelumnya default masih resep v1 — itu kenapa lu lihat "ga ada
-	     perubahan" dan harus seting ulang. Salah gue, sorry.
-
-	 CHANGELOG v4.6 — 3 BUG LIBRARY DIBENERIN + PRINT RESEP THEMA:
-	   • BUG 1 (Dependency groupbox error "attempt to call a nil value"):
-	     ClampTransparency / Library.Surface / Library.SurfaceGroups dipakai
-	     AddDependencyGroupbox, tapi didefinisiin DI BAWAH-nya. Local Lua cuma
-	     kebaca SETELAH baris deklarasinya -> nil pas dipakai. Seluruh blok
-	     Surface & Wallpaper sekarang DIPINDAH ke atas (tepat setelah New()).
-	   • BUG 2 (Viewport 3D error "Instance must be a BasePart or Model"):
-	     library punya DUA `Funcs:AddViewport` dan yang bawah (wajib Info.Object)
-	     menimpa yang atas (Height/Spin/Interactive/SetModel). Sekarang ada
-	     bridge: kalau Object nggak dikasih -> pakai versi ringan. Dua API hidup.
-	   • BUG 3 (color picker "kadang ga work" + UI berat):
-	     drag loop lama muter selamanya karena InputBegan GuiObject juga kepicu
-	     MouseMovement (state Change) -> coroutine numpuk tiap mouse gerak, warna
-	     suka lompat sendiri. Sekarang: drag mulai cuma dari klik beneran, berhenti
-	     dari InputEnded global (aman walau mouse lepas di luar elemen). Slider
-	     kena fix yang sama.
-	   • AddKeyBox: preview sekarang cek dulu method-nya ada (library lama = skip,
-	     bukan error).
-	   • Setingan: tombol PRINT/COPY RESEP THEMA (accent, background, main,
-	     outline, font color + font, radius, DPI, animasi) di tab "UI Settings",
-	     plus "Print resep LENGKAP" (thema + wallpaper + surface) di dua tab.
-
-	 CARA PAKAI (3 paste):
-	   1. ReplicatedStorage > ModuleScript "N3V4"          = Library/N3V3-NoObfus.lua
-	      ^ WAJIB copy ulang tiap gue update — bug fix di atas adanya DI SINI.
-	   2. StarterPlayerScripts > LocalScript "N3V4_Preview" = file ini
-	   3. Setingan UI (pilih SATU, dua-duanya jalan):
-	      a. StarterPlayerScripts > LocalScript "N3V4_UISettings"   <- cara lu
-	      b. ReplicatedStorage    > ModuleScript "N3V4_UISettings"  <- auto-require
-	   Allow HTTP Requests = OPSIONAL (icon udah ada fallback offline).
-	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
-
-	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.12.4" = baru. Selain itu = copy-an lama, paste ulang.
-	================================================================================
-]]
-
---// SERVICES \\--
--- v4.6.10: PREVIEW DIMATIIN TOTAL per perintah user: "ini preview mattin saja
--- woi! udah ga kepakai wallpaper itu! hapus kecuali theme!" Percobaan v4.6.9
--- bikin preview "theme-only" lewat SetWallpaper/SetSurface itu SALAH GUE:
--- state wallpaper/surface itu GLOBAL per-Library, jadi window setingan lu
--- ikut ke-stomp window 0 / canvas 0 = "jadinya jelek cok". Sekarang preview
--- nggak jalan sama sekali (nol window, nol stomp); theme + semua seting ada
--- di N3V4_UISettings. Mau showcase lagi? Set true.
-local PREVIEW_ENABLED = true -- v4.6.12: user minta preview NYALA lagi buat
--- seting manual upgrade tab (stroke icon + background tab + zoom animasi).
--- Preview sekarang AMAN: nggak nyentuh SetWallpaper/SetSurface (state global).
+local PREVIEW_ENABLED = true
 if not PREVIEW_ENABLED then
 	print("[N3V4 Preview] v4.6.10: preview OFF per perintah user. Seting lengkap: N3V4_UISettings. (Set PREVIEW_ENABLED = true buat nyalain showcase lagi.)")
 	return
@@ -638,20 +10,15 @@ local Players = game:GetService("Players")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
---================================================================================
--- CONFIG
---================================================================================
 local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.12.4",
-	Icon = "rbxassetid://117688744510818", -- N3 logo
+	Footer = "N3V4 • UI Preview Kit v4.12.5",
+	Icon = "rbxassetid://117688744510818",
 
-	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
 	ImageAsset = "rbxassetid://117688744510818",
 
-	-- VideoFrame butuh asset ID punya lu. Kosong = section-nya nunjukin notice.
 	VideoAsset = "",
 
 	ShowLoadingIntro = true,
@@ -662,49 +29,19 @@ local CONFIG = {
 	VerboseErrors = true,
 }
 
---================================================================================
--- ICON
---================================================================================
--- Preview ini pakai NAMA LUCIDE langsung, sama persis kayak hub lu
--- (N3-SAE.lua pakai "house", "paw-print", "egg", "settings", ...).
---
--- Icon-nya DIJAMIN muncul tanpa HTTP, karena library sekarang punya
--- OfflineLucideIcons fallback (117 icon, spritesheet publik rbxassetid://
--- 136111683851629 & 135883070486325) yang di-extract dari lucide-roblox-direct.
---
--- Chain di Library:GetIcon -> gitlab -> mirror GitHub -> data offline.
---
--- PENTING: ScrollFeed.itemData.Icon TIDAK apply ImageRectOffset/Size
--- (Library line 5134: `Image = itemData.Icon or ""`). Jadi di situ harus pakai
--- gambar polos (CONFIG.ImageAsset), BUKAN nama lucide — kalau nggak yang
--- ke-render seluruh spritesheet.
 
---================================================================================
--- REPORT HELPER
---================================================================================
 local Report = { OK = {}, Failed = {} }
 
--- FORWARD DECLARATION — wajib.
--- PrintReport() didefinisiin SEBELUM library di-require. Tanpa ini, `Library`
--- di dalam PrintReport nangkep GLOBAL (nil), karena library set getgenv().Library
--- yang di Studio fallback ke `shared`, bukan `_G`.
--- Error yang muncul: "attempt to index nil with 'GetIcon'"
 local Library
 
--- Enum.ScaleType member ASLI Roblox cuma: Stretch, Slice, Tile, Fit, Crop.
--- "Fill" NGGAK ADA — dan nyentuh Enum.ScaleType.Fill langsung bikin error
--- "<name> is not a valid member of Enum.ScaleType". Kalau itu kejadian di top
--- level module, seluruh script gagal load. Makanya tabel ini dibangun dari
--- GetEnumItems() (dijamin cuma berisi member yang beneran ada), plus alias.
 local SCALE_TYPES = {}
 for _, ScaleItem in Enum.ScaleType:GetEnumItems() do
 	SCALE_TYPES[ScaleItem.Name] = ScaleItem
 end
-SCALE_TYPES.Fill = SCALE_TYPES.Fill or SCALE_TYPES.Crop -- CSS cover
+SCALE_TYPES.Fill = SCALE_TYPES.Fill or SCALE_TYPES.Crop
 SCALE_TYPES.Cover = SCALE_TYPES.Cover or SCALE_TYPES.Crop
-SCALE_TYPES.Contain = SCALE_TYPES.Contain or SCALE_TYPES.Fit -- CSS contain
+SCALE_TYPES.Contain = SCALE_TYPES.Contain or SCALE_TYPES.Fit
 
--- Urutan buat dropdown: Crop paling enak buat wallpaper (kayak CSS cover)
 local SCALE_TYPE_NAMES = { "Crop", "Fit", "Stretch", "Slice", "Tile" }
 
 local function ResolveScale(Value)
@@ -736,7 +73,6 @@ local function PrintReport()
 	print("  N3V4 PREVIEW KIT v3 — LAPORAN KOMPONEN")
 	print("===================================================")
 
-	-- Defensive: kalau Library belum ke-assign (require gagal), jangan meledak
 	local IconStatus = "library belum ke-load"
 	if typeof(Library) == "table" and typeof(Library.GetIcon) == "function" then
 		local Resolved = Library:GetIcon("house")
@@ -760,9 +96,6 @@ local function PrintReport()
 	print("===================================================")
 end
 
---================================================================================
--- RESOLVE LIBRARY
---================================================================================
 local function FindModule(Name)
 	local Direct = ReplicatedStorage:FindFirstChild(Name)
 	if Direct and Direct:IsA("ModuleScript") then
@@ -788,7 +121,7 @@ if not ModuleObject then
 	error(string.format("[N3V4 Preview] ModuleScript %q nggak ketemu (nunggu 15 detik).", CONFIG.ModuleName), 0)
 end
 
-Library = require(ModuleObject) -- assign ke forward-declared local di atas (BUKAN `local`)
+Library = require(ModuleObject)
 
 if typeof(Library) ~= "table" or typeof(Library.CreateWindow) ~= "function" then
 	error("[N3V4 Preview] Module N3V4 nggak nge-return Library yang valid.", 0)
@@ -801,7 +134,6 @@ print(string.format(
 	Library.Animations and "ON" or "OFF"
 ))
 
--- v4.7.1: stale-paste detector LIBRARY masuk report preview juga
 if type(Library.SetTabAppearance) == "function" and type(Library.TabAppearance) == "table" and Library.TabAppearance.IconCardEnabled ~= nil then
 	table.insert(Report.OK, "Library v4.8.4+ (SetTabAppearance + TabAppearance + knob IconCard ada)")
 else
@@ -819,9 +151,6 @@ local function SafeNotify(Info)
 end
 
 
---================================================================================
--- DEMO ASSETS
---================================================================================
 local function BuildDemoEgg()
 	local Model = Instance.new("Model")
 	Model.Name = "N3V4_DemoEgg"
@@ -900,8 +229,6 @@ local function BuildPassthroughFrame()
 	return Holder
 end
 
--- Builder item menu manual (dipakai DraggableMenu & ContextMenu, dua-duanya
--- nge-return raw Instance / table tanpa method AddButton)
 local function BuildMenuItem(Parent, Text, Scheme, OnClick)
 	local Btn = Instance.new("TextButton")
 	Btn.Size = UDim2.new(1, 0, 0, 26)
@@ -942,9 +269,6 @@ end
 local DemoEgg = BuildDemoEgg()
 local PassthroughFrame = BuildPassthroughFrame()
 
---================================================================================
--- LOADING SCREEN
---================================================================================
 local LoadingMessages = {
 	{ "Load Engine", "Preparing services, remotes & runtime core..." },
 	{ "Load Data Replica", "Loading game data replicas: EggState, EggRecords, Save..." },
@@ -988,9 +312,6 @@ if CONFIG.ShowLoadingIntro then
 	end)
 end
 
---================================================================================
--- MAIN WINDOW
---================================================================================
 local WindowInfo = {
 	Title = CONFIG.Title,
 	Footer = CONFIG.Footer,
@@ -999,26 +320,19 @@ local WindowInfo = {
 	Center = true,
 	Resizable = true,
 	ToggleKeybind = CONFIG.ToggleKey,
-	-- Explicit, biar tetap ON walaupun default library berubah
 	Animations = {
 		ToggleWindow = true,
 		TabSwitch = true,
 		Groupbox = true,
 		Dropdown = true,
 		KeyPicker = true,
-		TabHoverZoom = true, -- v4.7.4: jangan sampe ke-drop waktu Validate
+		TabHoverZoom = true,
 	},
 }
 
--- Wallpaper & surface NGGAK di-set di sini: default-nya udah ada di LIBRARY
--- (Templates.Window + Library.Surface = resep user). Setingan desain semuanya
--- ada di file terpisah: Preview/N3V4_UISettings.module.lua
 local Window = Library:CreateWindow(WindowInfo)
 
 
---================================================================================
--- TAB 1 — OVERVIEW   (2 kiri / 2 kanan — simetris)
---================================================================================
 local OverviewTab = Window:AddTab("Overview", "layout-dashboard", "Ringkasan elemen visual utama")
 
 Try("Overview: L1 Welcome (Spotlight + Label + Divider)", function()
@@ -1037,7 +351,6 @@ Try("Overview: L1 Welcome (Spotlight + Label + Divider)", function()
 	Box:AddDivider({ Text = "Selamat Datang", Margin = 6 })
 	Box:AddLabel('Library: <font color="#5adcff">ONLINE</font>', false)
 	Box:AddLabel("Klik tab di sidebar buat jelajah semua komponen.", true)
-	-- v4.12.4: penunjuk lokasi setting (section settings udah di-revert)
 	Box:AddLabel("Setting glow/icon anim: tab UI Settings (icon palette paling atas sidebar).", true)
 end)
 
@@ -1080,9 +393,6 @@ Try("Overview: R2 ScrollFeed", function()
 	end
 end)
 
---================================================================================
--- TAB 2 — COMPONENTS   (3 kiri / 3 kanan — simetris)
---================================================================================
 local ComponentsTab = Window:AddTab("Components", "shapes", "Button, toggle, slider, input, dropdown")
 
 Try("Components: L1 Buttons", function()
@@ -1208,11 +518,6 @@ Try("Components: R3 Dropdowns special", function()
 	})
 end)
 
---================================================================================
--- TAB 3 — ADVANCED   (3 kiri / 3 kanan — simetris)
---================================================================================
--- v4.8.0: DEMO DropdownV2 (popup modal). Dua box sekaligus biar tab
--- Components tetep simetris 4/4 (kiri 1, kanan 1).
 local DD2StatusText = "Selected: -"
 do
 	local Box = ComponentsTab:AddLeftGroupbox("Dropdown V2 — Popup", "list")
@@ -1230,8 +535,8 @@ do
 			{ Text = "Epic", Icon = "sparkles" },
 			{ Text = "Legendary", Icon = "star" },
 			{ Text = "Mythic", Icon = "paw-print" },
-			"Tradeable", -- versi text-only
-			{ Text = "Locked", Disabled = true }, -- versi disabled
+			"Tradeable",
+			{ Text = "Locked", Disabled = true },
 		},
 		Callback = function(Value)
 			DD2StatusText = "Selected: " .. (#Value == 0 and "-" or table.concat(Value, ", "))
@@ -1309,7 +614,6 @@ Try("Advanced: L3 Collapse control", function()
 	local Box = AdvancedTab:AddLeftGroupbox("Collapse Control", "chevrons-up-down")
 	Box:AddLabel("Target-nya = groupbox 'Dependency System' di kiri atas.", true)
 
-	-- Ambil reference lewat Tab.Groupboxes (diisi otomatis sama library tiap AddGroupbox)
 	local function GetTarget()
 		return AdvancedTab.Groupboxes and AdvancedTab.Groupboxes["Dependency System"]
 	end
@@ -1360,7 +664,7 @@ Try("Advanced: R3 Dialog", function()
 		local Dialog = Window:AddDialog("Dialog_Demo", {
 			Title = "Konfirmasi Aksi",
 			Description = "Dialog modal: overlay gelap, scale-in animation, footer button 4 variant.",
-			Icon = "info", -- v4.7.9: icon pojok kanan atas (opsi WITH icon)
+			Icon = "info",
 			AutoDismiss = true,
 			OutsideClickDismiss = true,
 		})
@@ -1382,7 +686,7 @@ Try("Advanced: R3 Dialog", function()
 		local Dialog = Window:AddDialog("Dialog_Destructive", {
 			Title = "Reset Semua Config?",
 			Description = "Semua setting balik ke default. Nggak bisa di-undo.",
-			Icon = "zap", IconColor = Color3.fromRGB(255, 90, 90), -- v4.7.9: icon custom color
+			Icon = "zap", IconColor = Color3.fromRGB(255, 90, 90),
 		})
 		Dialog:AddFooterButton("No", { Title = "Jangan", Variant = "Secondary", Order = 1 })
 		Dialog:AddFooterButton("Yes", { Title = "Ya, reset", Variant = "Destructive", Order = 2, WaitTime = 3 })
@@ -1399,10 +703,7 @@ Try("Advanced: R3 Dialog", function()
 	end)
 end)
 
--- KeyBox = elemen level Tab (muncul di area atas tab), nggak ngaruh simetri kiri/kanan
 Try("Advanced: KeyBox (execute key)", function()
-	-- AddKeyBox itu method level Tab (ada di library utama). Kalau library yang
-	-- di-paste versi lama, method-nya belum ada -> kita skip, jangan error.
 	if typeof(AdvancedTab.AddKeyBox) ~= "function" then
 		warn("[N3V4 Preview] AddKeyBox nggak ada di library ini — paste ulang Library/N3V3-NoObfus.lua terbaru.")
 		return
@@ -1412,9 +713,6 @@ Try("Advanced: KeyBox (execute key)", function()
 	end)
 end)
 
---================================================================================
--- TAB 4 — MEDIA   (3 kiri / 3 kanan — simetris)
---================================================================================
 local MediaTab = Window:AddTab("Media", "image", "Viewport 3D, image, video, spotlight, feed")
 
 Try("Media: L1 Viewport interaktif", function()
@@ -1450,8 +748,6 @@ Try("Media: L2 Image + kontrol", function()
 		Text = "ScaleType", Values = SCALE_TYPE_NAMES, Default = 2,
 		Tooltip = "Fit / Crop / Stretch / Slice / Tile — member asli Enum.ScaleType",
 		Callback = function(Value)
-			-- Dulu di sini ada `Fill = Enum.ScaleType.Fill` yang bikin crash
-			-- tiap kali dropdown dipilih. Sekarang lewat ResolveScale (aman).
 			if Img and Img.SetScaleType then
 				Img:SetScaleType(ResolveScale(Value))
 			end
@@ -1542,9 +838,6 @@ Try("Media: R3 Asset info", function()
 	Box:AddLabel("jadi harus gambar polos — bukan nama lucide.", true)
 end)
 
---================================================================================
--- TAB 5 — OVERLAYS   (3 kiri / 3 kanan — simetris)
---================================================================================
 local OverlaysTab = Window:AddTab("Overlays", "bell", "Notification, draggable, overlay, dashboard")
 
 Try("Overlays: L1 Notifications", function()
@@ -1601,8 +894,6 @@ Try("Overlays: L2 Draggable label & button", function()
 	local Box = OverlaysTab:AddLeftGroupbox("Draggable Elements", "move")
 	Box:AddLabel("Semua elemen di bawah bisa lu drag keluar window.", true)
 
-	-- FIX v2: icon HARUS rbxassetid / URL valid. Nama lucide ("zap") bikin
-	-- assert error di Library:2023 kalau HTTP fetch lucide gagal.
 	Box:AddButton("Spawn draggable label", function()
 		local Label = Library:AddDraggableLabel({
 			Text = "N3 HUB • Watermark",
@@ -1648,8 +939,6 @@ Try("Overlays: L3 Draggable menu", function()
 			end)
 		end
 
-		-- Holder & Container pakai AutomaticSize/Scale yang bisa collapse jadi 0px
-		-- kalau isinya dibikin manual. Set eksplisit biar pasti keliatan.
 		local MenuWidth, ItemH, ItemPad, Count = 170, 26, 7, 3
 		local ContainerH = (Count * ItemH) + ((Count - 1) * ItemPad) + (ItemPad * 2)
 
@@ -1764,10 +1053,6 @@ Try("Overlays: R3 Context menu (right-click)", function()
 		return
 	end
 
-	-- FIX v2: AddContextMenu nge-return TABLE { Open, Close, Toggle, SetSize,
-	-- Destroy, Menu, Holder, Active } — BUKAN object dengan AddButton.
-	-- Item harus dibikin manual ke Ctx.Menu. List=1 -> library bikinin
-	-- UIListLayout + AutomaticSize.Y di Menu.
 	local Ctx = Library:AddContextMenu(
 		Target,
 		UDim2.fromOffset(160, 0),
@@ -1794,7 +1079,6 @@ Try("Overlays: R3 Context menu (right-click)", function()
 		end)
 	end
 
-	-- Library nggak auto-bind right-click, kita bind sendiri
 	Target.InputBegan:Connect(function(Input)
 		if Input.UserInputType == Enum.UserInputType.MouseButton2 then
 			if Ctx.Toggle then Ctx:Toggle() end
@@ -1806,14 +1090,6 @@ Try("Overlays: R3 Context menu (right-click)", function()
 	end)
 end)
 
---================================================================================
--- OPSIONAL: FILE SETTINGS TERPISAH
---================================================================================
--- Preview ini NGGAK punya setingan UI. Kalau ModuleScript "N3V4_UISettings"
--- ada di ReplicatedStorage, dia di-require di sini dan nambah tab setting
--- sendiri ("UI Settings" + "Wallpaper & Surface"). Kalau nggak ada, ya nggak
--- muncul — preview tetep jalan normal.
--- Jalur 1: ModuleScript "N3V4_UISettings" di ReplicatedStorage
 pcall(function()
 	local Mod = ReplicatedStorage:FindFirstChild("N3V4_UISettings")
 	if Mod then
@@ -1824,10 +1100,6 @@ pcall(function()
 	end
 end)
 
--- Jalur 2: file settings dipaste sebagai LOCALSCRIPT -> dia register diri ke
--- shared.N3V4_UISettings. Kalau dia belum sempet, tunggu sebentar di background.
--- (File settings itu sebenernya juga bisa nempel SENDIRI; flag attached
---  di shared mencegah tab dobel.)
 task.spawn(function()
 	for _ = 1, 30 do
 		if shared.N3V4_UISettings_Attached then
@@ -1842,9 +1114,6 @@ task.spawn(function()
 	end
 end)
 
---================================================================================
--- FINAL REPORT
---================================================================================
 PrintReport()
 
 SafeNotify({
