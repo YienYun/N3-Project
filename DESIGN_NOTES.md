@@ -1681,3 +1681,11 @@ ASLI jadi knob 0-100% akhirnya beneran berfungsi. Frame garis:
 BorderSizePixel 0, fill MainColor tetep. SafeLine return stroke-nya;
 Divider.Lines = daftar stroke; ApplyDividerAppearance fade via
 Stroke.Transparency. Assign transparansi pasca-create DIHAPUS semua.
+
+## v4.12.11 — BAKE dump user: LineTransparency 0.4 / TextTransparency 0
+User confirm v4.12.10 sehat ("nah gitu dong mantap") dan dump resep
+lewat tombol Print: "[N3V4 DIVIDER] LineTransparency = 0.4 |
+TextTransparency = 0". Sesuai aturan standing: print user = bake
+verbatim. Default Library.DividerAppearance.LineTransparency 0.3 ->
+0.4; TextTransparency tetep 0. Slider MOD baca default dari LIB jadi
+ikut otomatis.

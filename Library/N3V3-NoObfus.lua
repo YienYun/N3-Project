@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.12.10 loaded — ROOT CAKEET: property transparansi border lama GA ADA di Roblox modern (itu error console lu), outline garis sekarang UIStroke (Color accent + Thickness 1 + Transparency ASLI), pixel identik border 1px dulu; knob 0-100% akhirnya beneran jalan (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.12.11 loaded — DEFAULT BAKE: dump user [N3V4 DIVIDER] LineTransparency = 0.4 | TextTransparency = 0 jadi default library verbatim (geser slider + Print lagi kalau mau ganti resep) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5807,10 +5807,10 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.12.10"
+	Library.N3V4Version = "4.12.11"
 
 	Library.DividerAppearance = {
-		LineTransparency = 0.3,
+		LineTransparency = 0.4,
 		TextTransparency = 0,
 	}
 
