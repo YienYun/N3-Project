@@ -117,6 +117,39 @@ LayoutOrder 1 dengan Size 1,-24 biar nggak ketabrak. Info.Icon nil/false =
 tanpa icon. Preview demo 3 varian: with-icon accent, with-icon custom color,
 no-icon.
 
+## 🎚️ v4.12.0 — SECTION SETTINGS: preview setingan manual + preset
+
+User: v4.11.4 masih "terlalu mencolok", mau atur sendiri simetris +
+transparansi warna, minta preview setingan, dan minta gue kontribusi
+desain (jangan yesman).
+
+Diagnosa teknis (kenapa masih mencolok): garis section tinggi 2px;
+border 1px inset makan pixel atas+bawah -> fill MainColor tidak
+kelihatan sama sekali; border AccentColor transparency 0 = seluruh
+garis kebaca accent solid (visual sama dgn v4.11.3 yang ditolak).
+Kunci kelembutan bukan warna/fill melainkan TRANSPARANSI border.
+
+Kontribusi desain gue:
+- Default BorderTransparency 0.45 = outline accent kalem, bukan bar.
+- Knob jarak text-garis SATU nilai untuk dua sisi => simetri kiri/
+  kanan dijamin oleh konstruksi, tidak mungkin pincang (user suka
+  simetris).
+- Registry section di library => semua dial LIVE ke section existing.
+- Preset mood (Soft/Solid/Ghost/Netral) biar eksplorasi cepat tanpa
+  gerakin 5 slider.
+
+Implementasi:
+- LIB: Library.SectionAppearance {AccentBorder, BorderTransparency
+  0.45, TextTransparency 0.5, Gap 10, Thickness 2} + SectionRegistry
+  + ApplySectionAppearance + SetSectionAppearance (retune border
+  color/transparency, gap, thickness, text transparency live).
+  AddDivider mendaftarkan {Text, Lines, HalfX} lalu apply.
+- MOD: groupbox kiri T1 "Section Divider" (toggle SD_Acc, slider
+  SD_BT/SD_TT/SD_Gap/SD_Th, print+copy BuildSection sesuai aturan
+  v4.8.5) dan kanan "Divider Presets" (4 preset + SyncKnobs via
+  Library.Options). DEFAULTS.Section + Reset scheme apply.
+  Simetri T1 5/5 -> 6/6.
+
 ## ↩️ v4.11.4 — SECTION v2: desain garis balik ke asli, cuma border yang sync
 
 Salah gue di v4.11.3: request "garisnya juga ikut color" gue eksekusi

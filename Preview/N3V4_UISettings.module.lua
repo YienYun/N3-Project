@@ -13,6 +13,17 @@
 -- terus bilang "gas implementasikan ke code utama"). Sama persis kayak
 -- default di LIBRARY, jadi buka Studio = langsung tampilan lu, tanpa seting.
 --
+-- v4.12.0: SECTION SETTINGS — user: "terlalu mencolok", "gue mau atur
+--         sendiri simetrisnya dan transparansi warnanya", "kasih
+--         preview setingan". Diagnosa gue: garis section 2px dan
+--         border 1px makan atas+bawah -> border 0% kebaca solid
+--         accent. Default border transparency sekarang 45% (subtle).
+--         Groupbox KIRI baru "Section Divider": toggle garis luar
+--         ikut accent, slider transparansi luar, transparansi text,
+--         jarak text-garis (SATU nilai buat dua sisi = simetris
+--         dijamin), ketebalan garis; + print & copy resep (aturan
+--         v4.8.5). Groupbox KANAN baru "Divider Presets": Soft 45%
+--         (bawaan), Solid 0%, Ghost 70%, Netral outline. T1 5/5 -> 6/6.
 -- v4.10.0: ICON ANIM — semua icon groupbox zoom sedikit + miring sedikit
 --         saat cursor masuk kartu group, tween balik saat keluar
 --         (UIScale + UIRotation, Quint-out). Setup manual di groupbox
@@ -181,6 +192,13 @@ Settings.DEFAULTS = {
 		Zoom = 15,
 		Tilt = 10,
 		Speed = 0.30,
+	},
+	Section = { -- v4.12.0: section divider appearance (border subtle default)
+		AccentBorder = true,
+		BorderTransparency = 0.45,
+		TextTransparency = 0.5,
+		Gap = 10,
+		Thickness = 2,
 	},
 }
 
@@ -390,6 +408,20 @@ function Settings:Attach(Library, Window, Options)
 			string.format("\tZoom = %d,", A.Zoom or 15),
 			string.format("\tTilt = %d,", A.Tilt or 10),
 			string.format("\tSpeed = %.2f,", A.Speed or 0.30),
+			"})",
+		}, "\n")
+	end
+
+	local function BuildSection()
+		local A = Library.SectionAppearance or {}
+		return table.concat({
+			"--[[ N3V4 SECTION ]]",
+			"Library:SetSectionAppearance({",
+			string.format("\tAccentBorder = %s,", tostring(A.AccentBorder ~= false)),
+			string.format("\tBorderTransparency = %.2f,", A.BorderTransparency or 0.45),
+			string.format("\tTextTransparency = %.2f,", A.TextTransparency or 0.5),
+			string.format("\tGap = %d,", A.Gap or 10),
+			string.format("\tThickness = %d,", A.Thickness or 2),
 			"})",
 		}, "\n")
 	end
@@ -800,6 +832,81 @@ function Settings:Attach(Library, Window, Options)
 		end)
 	end)
 
+	Try("Settings: section divider", function()
+		-- v4.12.0: manual section tuning (user: gue mau atur sendiri)
+		local SA0 = Library.SectionAppearance or {}
+		local Box = T1:AddLeftGroupbox("Section Divider", "sliders-horizontal")
+
+		Box:AddToggle("SD_Acc", {
+			Text = "Garis luar ikut accent", Default = SA0.AccentBorder ~= false,
+			Callback = function(On)
+				Library:SetSectionAppearance({ AccentBorder = On })
+			end,
+		})
+		Box:AddSlider("SD_BT", {
+			Text = "Transparansi garis luar (0% = mencolok)", Default = math.floor((SA0.BorderTransparency or 0.45) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				Library:SetSectionAppearance({ BorderTransparency = Value / 100 })
+			end,
+		})
+		Box:AddSlider("SD_TT", {
+			Text = "Transparansi text section", Default = math.floor((SA0.TextTransparency or 0.5) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Callback = function(Value)
+				Library:SetSectionAppearance({ TextTransparency = Value / 100 })
+			end,
+		})
+		Box:AddSlider("SD_Gap", {
+			Text = "Jarak text-garis (simetris 2 sisi)", Default = SA0.Gap or 10, Min = 2, Max = 40, Rounding = 0, Suffix = "px",
+			Callback = function(Value)
+				Library:SetSectionAppearance({ Gap = Value })
+			end,
+		})
+		Box:AddSlider("SD_Th", {
+			Text = "Ketebalan garis section", Default = SA0.Thickness or 2, Min = 1, Max = 4, Rounding = 0, Suffix = "px",
+			Callback = function(Value)
+				Library:SetSectionAppearance({ Thickness = Value })
+			end,
+		})
+		Box:AddButton("Print resep section", function()
+			print("[N3V4 RESEP SECTION] paste ini balik:\n" .. BuildSection())
+		end)
+		Box:AddButton("Copy resep section", function()
+			local Text = BuildSection()
+			if CopyClip(Text) then
+				SafeNotify({ Title = "Resep section", Description = "Copied ke clipboard.", Icon = "clipboard-check", Time = 3 })
+			else
+				print("[N3V4 RESEP SECTION]\n" .. Text)
+				SafeNotify({ Title = "Resep section", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+			end
+		end)
+	end)
+
+	Try("Settings: divider presets", function()
+		-- v4.12.0: quick moods biar ga usah dial satu-satu
+		local Box = T1:AddRightGroupbox("Divider Presets", "wand-sparkles")
+
+		local function SyncKnobs()
+			local A = Library.SectionAppearance or {}
+			pcall(function() Library.Options.SD_Acc:SetValue(A.AccentBorder ~= false) end)
+			pcall(function() Library.Options.SD_BT:SetValue(tostring(math.floor((A.BorderTransparency or 0) * 100 + 0.5))) end)
+			pcall(function() Library.Options.SD_TT:SetValue(tostring(math.floor((A.TextTransparency or 0) * 100 + 0.5))) end)
+			pcall(function() Library.Options.SD_Gap:SetValue(tostring(A.Gap)) end)
+			pcall(function() Library.Options.SD_Th:SetValue(tostring(A.Thickness)) end)
+		end
+		local function Preset(Name, Info)
+			Box:AddButton(Name, function()
+				Library:SetSectionAppearance(Info)
+				SyncKnobs()
+				SafeNotify({ Title = "Section", Description = "Preset: " .. Name, Icon = "wand-sparkles", Time = 3 })
+			end)
+		end
+
+		Preset("Soft (bawaan: luar 45%)", { AccentBorder = true, BorderTransparency = 0.45 })
+		Preset("Solid (luar 0%)", { AccentBorder = true, BorderTransparency = 0 })
+		Preset("Ghost (luar 70%)", { AccentBorder = true, BorderTransparency = 0.7 })
+		Preset("Netral (outline abu)", { AccentBorder = false })
+	end)
+
 	Try("Settings: glow presets", function()
 		-- v4.9.2: "kasih tombol seting gue jir biar gue yang atur cok"
 		local Box = T1:AddRightGroupbox("Preset Glow", "wand-sparkles")
@@ -1161,6 +1268,7 @@ function Settings:Attach(Library, Window, Options)
 			pcall(function()
 				Library:SetCursorGlow(DEFAULTS.Glow)
 				Library:SetIconAnim(DEFAULTS.IconAnim)
+				Library:SetSectionAppearance(DEFAULTS.Section)
 				Library:SetTabAppearance(DEFAULTS.Tab)
 				if Library.Animations then
 					Library.Animations.TabHoverZoom = DEFAULTS.TabHoverZoom ~= false

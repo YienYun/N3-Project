@@ -1725,6 +1725,48 @@ function Library:SetCursorGlow(Info: { [string]: any })
 	Library:ApplyCursorGlow()
 end
 
+-- N3V4 v4.12.0: SECTION APPEARANCE — divider lines keep the original
+-- library design (MainColor fill + 1px border); this config only tunes
+-- how loud the themed border/text read, plus the symmetric text gap
+-- and the line thickness. NOTE: the line is 2px tall and the 1px
+-- border eats top+bottom, so a border at 0 transparency reads as a
+-- solid accent bar — that is why the default border sits at 45%.
+-- One Gap value feeds both sides: symmetric by construction.
+Library.SectionAppearance = {
+	AccentBorder = true, -- false = border falls back to OutlineColor
+	BorderTransparency = 0.45, -- keeps the themed outline subtle
+	TextTransparency = 0.5,
+	Gap = 10, -- px between the text and each line (both sides)
+	Thickness = 2, -- px line height
+}
+Library.SectionRegistry = {}
+
+function Library:ApplySectionAppearance(Section)
+	local A = Library.SectionAppearance
+	local Border = A.AccentBorder ~= false and "AccentColor" or "OutlineColor"
+	local Gap = math.clamp(A.Gap, 0, 60)
+	local Thickness = math.clamp(A.Thickness, 1, 6)
+	for _, Line in ipairs(Section.Lines) do
+		Line.BorderColor3 = Border
+		Line.BorderTransparency = math.clamp(A.BorderTransparency, 0, 1)
+		Line.Size = UDim2.new(0.5, -(Section.HalfX + Gap), 0, Thickness)
+	end
+	if Section.Text then
+		Section.Text.TextTransparency = math.clamp(A.TextTransparency, 0, 1)
+	end
+end
+
+function Library:SetSectionAppearance(Info: { [string]: any })
+	for Key, Val in pairs(Info or {}) do
+		if Library.SectionAppearance[Key] ~= nil then
+			Library.SectionAppearance[Key] = Val
+		end
+	end
+	for _, Section in ipairs(Library.SectionRegistry) do
+		Library:ApplySectionAppearance(Section)
+	end
+end
+
 -- N3V4 v4.11.0: STATUS BAR SWAP — the top search bar can swap into a
 -- live status strip (Fps / Ping / Server / Executor cards). The frame
 -- counter loop only runs while the strip is visible: hidden = zero
@@ -1889,7 +1931,7 @@ function Library:StartCursorGlowLoop()
 end
 -- v4.7.2: version print so "your library is old / not yet" debates end:
 -- this line SHOWS in Output on every require when the paste is really new.
-print("[N3V4 Library] v4.11.4 loaded — SECTION v2: desain garis BALIK ke asli (fill MainColor + border 1px), yang ikut theme cuma GARIS LUAR nya (BorderColor accent) + text (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.12.0 loaded — SECTION SETTINGS: border accent default 45% transparency (biar ga mencolok), knob manual transparansi/simetris/tebal + preset + print resep (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 -- Content background color (Container + sidebar). Nil = follow theme (old behavior).
 function Library:GetCanvasColor(): Color3
@@ -6053,18 +6095,18 @@ do
 				Text = Text,
 				TextColor3 = "AccentColor", -- v4.11.3: section text rides the synced theme
 				TextSize = 14,
-				TextTransparency = 0.5,
+				TextTransparency = Library.SectionAppearance.TextTransparency,
 				TextXAlignment = Enum.TextXAlignment.Center,
 				Parent = InnerHolder,
 			})
 
 			local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
-			local SizeX = X // 2 + 10
+			local HalfX = X // 2
+			local SizeX = HalfX + Library.SectionAppearance.Gap
 
-			-- v4.11.4: original line design restored (MainColor fill + 1px
-			-- border); ONLY the outer border rides the synced theme now
-			-- (user: do not change the design, just the outer line color).
-			New("Frame", {
+			-- v4.12.0: lines are registered so SetSectionAppearance can
+			-- retune border color/transparency, gap and thickness live
+			local LineLeft = New("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),
 				BackgroundColor3 = "MainColor",
 				BorderColor3 = "AccentColor",
@@ -6073,7 +6115,7 @@ do
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,
 			})
-			New("Frame", {
+			local LineRight = New("Frame", {
 				AnchorPoint = Vector2.new(1, 0.5),
 				BackgroundColor3 = "MainColor",
 				BorderColor3 = "AccentColor",
@@ -6082,6 +6124,9 @@ do
 				Size = UDim2.new(0.5, -SizeX, 0, 2),
 				Parent = InnerHolder,
 			})
+			local Section = { Text = TextLabel, Lines = { LineLeft, LineRight }, HalfX = HalfX }
+			table.insert(Library.SectionRegistry, Section)
+			Library:ApplySectionAppearance(Section)
 		else
 			New("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),

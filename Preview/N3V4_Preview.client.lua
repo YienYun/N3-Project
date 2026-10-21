@@ -7,6 +7,27 @@
 	 ZERO setingan desain — semua setingan ada di file terpisah:
 	 Preview/N3V4_UISettings.module.lua  (tab "UI Settings" + "Wallpaper & Surface")
 
+	 CHANGELOG v4.12.0 — SECTION SETTINGS (preview setingan buat lu):
+	   • Diagnosa "terlalu mencolok": garis section cuma 2px tinggi,
+	     border 1px makan atas+bawah -> border accent 0% kebaca sebagai
+	     bar accent SOLID (sama kayak v4.11.3 yang lu protes). Jadi
+	     kunci kelembutan = TRANSPARANSI border: default baru 45%.
+	   • Groupbox KIRI baru "Section Divider" (tab UI Settings):
+	     - toggle "Garis luar ikut accent" (off = balik outline abu)
+	     - slider transparansi garis luar 0-100% (default 45)
+	     - slider transparansi text section 0-100% (default 50)
+	     - slider jarak text-garis 2-40px: SATU nilai ngatur dua sisi
+	       kiri-kanan bareng = simetri dijamin konstruksi, ga bisa
+	       pincang
+	     - slider ketebalan garis 1-4px (default 2 = desain asli)
+	     - print + copy resep section (aturan v4.8.5)
+	   • Groupbox KANAN baru "Divider Presets": Soft 45% (bawaan),
+	     Solid 0%, Ghost 70%, Netral outline — klik langsung jadi,
+	     knob auto-sync.
+	   • Semua perubahan LIVE ke semua section yang udah ada (registry
+	     di library), jadi lu bisa dial sambil liat hasilnya.
+	   • Simetri T1: 5/5 -> 6/6.
+
 	 CHANGELOG v4.11.4 — desain garis section DIBALIKIN KE ASLI:
 	   • v4.11.3 gue salah: gue ganti DESAIN garis jadi bar solid
 	     accent (fill accent, border dibuang) -> kelihatan tebal
@@ -530,7 +551,7 @@
 	   Tekan Play -> 5 tab showcase + 2 tab setingan. Toggle UI: RightControl.
 
 	 CARA CEK COPY-AN LU BARU ATAU LAMA: lihat footer window.
-	   footer "v4.11.4" = baru. Module TIDAK berubah rilis ini. Selain itu = copy-an lama, paste ulang.
+	   footer "v4.12.0" = baru. Selain itu = copy-an lama, paste ulang.
 	================================================================================
 ]]
 
@@ -562,7 +583,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.11.4",
+	Footer = "N3V4 • UI Preview Kit v4.12.0",
 	Icon = "rbxassetid://117688744510818", -- N3 logo
 
 	-- Asset buat demo Image / SpotlightCard / Feed / ValueImages
