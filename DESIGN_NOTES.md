@@ -1852,3 +1852,12 @@ harus sinkron jangan hardcode."
   keliatan live saat tuning. Print/Copy tetep di dua box.
 - Checker: pin bake (Offset 0.01 + RGB 85/224/85) + pin MakeGradient
   di semua call site + count >= 8.
+
+## v4.15.1 — GRADIENT NAVBAR (search bar + kartu status)
+User: "gue lupa harusnya lu bikin juga di search bar navbar atas itu...
+sama fps ping dll."
+- SearchFrame (bar search MainColor di TopBar) + 4 kartu status
+  Fps/Ping/Server/Executor (dibuat sekali saat window => registry
+  aman, tanpa cleanup khusus) ikut MakeGradient yang SAMA => sync
+  penuh ke semua knob Gradient 3D, nol hardcode.
+- Pin checker: MakeGradient(SearchFrame) + MakeGradient(Card).

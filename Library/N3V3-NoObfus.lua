@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.15.0 loaded — GRADIENT BAKE + MERATA: dump user dibake verbatim (Offset 0.01, Top/Bottom 85, Middle 224) dan gradient 3D sekarang SYNC ke slider (body track, BUKAN fill ungu), input textbox, dropdown v1 (display+menu) & v2 (display+popup, registry di-cleanup saat close) lewat satu helper MakeGradient + satu state + satu apply (nol hardcode) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.15.1 loaded — GRADIENT NAVBAR: search bar atas (SearchFrame) + empat kartu status Fps/Ping/Server/Executor ikut gradient 3D yang SAMA (MakeGradient + state sync, nol hardcode; kartu dibuat sekali saat window jadi registry aman) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5808,7 +5808,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.15.0"
+	Library.N3V4Version = "4.15.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11424,6 +11424,7 @@ function Library:CreateWindow(WindowInfo)
 			Color = "OutlineColor",
 			Parent = SearchFrame,
 		})
+		MakeGradient(SearchFrame)
 
 		-- Icon Search Kiri
 		local SearchIcon = Library:GetIcon("search")
@@ -11489,6 +11490,7 @@ function Library:CreateWindow(WindowInfo)
 				Color = "OutlineColor",
 				Parent = Card,
 			})
+			MakeGradient(Card)
 			New("UIListLayout", {
 				FillDirection = Enum.FillDirection.Horizontal,
 				HorizontalAlignment = Enum.HorizontalAlignment.Center,
