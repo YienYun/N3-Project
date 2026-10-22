@@ -1813,3 +1813,18 @@ Fix v4.14.1:
   — baca ATAU tulis; (b) "kasih tombol setingan" dari user artinya
   LENGKAP sesuai kalimat dia (transparansi, jarak, dll), bukan versi
   minimal gue.
+
+## v4.14.2 — PRINT/COPY DI BOX KIRI GRADIENT (standing rule kelewat)
+User: "printnya mana cok? gue udah buat cuma print nya mana? gue mau
+print hasil gue ga bisa!" — dia geser knob di box KIRI "Button
+Gradient", tapi Print/Copy cuma ada di box kanan "Sample Gradient".
+Standing rule v4.8.5: TIAP settings groupbox nutup pakai print+copy —
+gue langgar pas v4.14.1 (box kiri gue akhiri di slider).
+
+Fix: fungsi PrintGrad/CopyGrad jadi local shared (single
+implementation), dipanggil button di DUA box: box kiri nutup pakai
+Print+Copy sekarang, box kanan tetep. Checker pin: jumlah string
+'Print setingan gradient' & 'Copy setingan gradient' di MOD harus
+persis 2-2 + PrintGrad ada.
+Pelajaran: standing rule list itu DIPAKAI saat nulis box baru, bukan
+diingat sesudah user nagih.

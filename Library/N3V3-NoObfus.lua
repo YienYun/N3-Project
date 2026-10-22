@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.14.1 loaded — GRADIENT FIX+LENGKAP: rotasi default -90 (atas-tengah-bawah bener), loop apply hidup lagi (liveness via Parent, bukan property hantu), setingan lengkap: toggle + 4 slider (rotasi, posisi tengah, transparansi tengah, offset) + 3 colorpicker (atas/tengah/bawah) + sample + print/copy dump penuh (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.14.2 loaded — PRINT/COPY ADA DI DUA BOX GRADIENT (standing rule: tiap settings groupbox nutup pakai print+copy; box kiri Button Gradient sekarang punya Print + Copy setingan gradient sendiri, fungsi shared single-implementation sama box kanan) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5808,7 +5808,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.14.1"
+	Library.N3V4Version = "4.14.2"
 
 	Library.ButtonGradient = {
 		Enabled = true,

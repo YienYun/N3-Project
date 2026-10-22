@@ -749,6 +749,25 @@ function Settings:Attach(Library, Window, Options)
 					tostring(G.Enabled), G.Rotation, G.MiddlePosition, G.MiddleTransparency, G.Offset,
 					T1r, T1g, T1b, T2r, T2g, T2b, T3r, T3g, T3b)
 			end
+			local function PrintGrad()
+				local G = Library.ButtonGradient
+				local T1r, T1g, T1b = RGB(G.ColorTop)
+				local T2r, T2g, T2b = RGB(G.ColorMiddle)
+				local T3r, T3g, T3b = RGB(G.ColorBottom)
+				print(string.format("[N3V4 BUTTON GRADIENT] Enabled = %s | Rotation = %s | MiddlePosition = %s | MiddleTransparency = %s | Offset = %s | Top = %d,%d,%d | Middle = %d,%d,%d | Bottom = %d,%d,%d",
+					tostring(G.Enabled), G.Rotation, G.MiddlePosition, G.MiddleTransparency, G.Offset,
+					T1r, T1g, T1b, T2r, T2g, T2b, T3r, T3g, T3b))
+				SafeNotify({ Title = "Button gradient", Description = "Cek Output.", Icon = "info", Time = 3 })
+			end
+			local function CopyGrad()
+				local Text = Dump()
+				if CopyClip(Text) then
+					SafeNotify({ Title = "Button gradient", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
+				else
+					print("[N3V4 BUTTON GRADIENT] paste ini balik:\n" .. Text)
+					SafeNotify({ Title = "Button gradient", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+				end
+			end
 
 			local Box = T1:AddLeftGroupbox("Button Gradient", "sparkles")
 			local TogGrad = Box:AddToggle("BG_ON", {
@@ -799,32 +818,17 @@ function Settings:Attach(Library, Window, Options)
 					Library:SetButtonGradient({ Offset = Value / 100 })
 				end,
 			})
+			Box:AddButton("Print setingan gradient", PrintGrad)
+			Box:AddButton("Copy setingan gradient", CopyGrad)
 
 			local Box = T1:AddRightGroupbox("Sample Gradient", "copy")
 			Box:AddButton("SAMPLE: button gradasi 3D", function()
 				SafeNotify({ Title = "Button gradient", Description = "Button biasa + gradient 3 stop.", Icon = "info", Time = 3 })
 			end)
-			Box:AddButton("Print setingan gradient", function()
-				local G = Library.ButtonGradient
-				local T1r, T1g, T1b = RGB(G.ColorTop)
-				local T2r, T2g, T2b = RGB(G.ColorMiddle)
-				local T3r, T3g, T3b = RGB(G.ColorBottom)
-				print(string.format("[N3V4 BUTTON GRADIENT] Enabled = %s | Rotation = %s | MiddlePosition = %s | MiddleTransparency = %s | Offset = %s | Top = %d,%d,%d | Middle = %d,%d,%d | Bottom = %d,%d,%d",
-					tostring(G.Enabled), G.Rotation, G.MiddlePosition, G.MiddleTransparency, G.Offset,
-					T1r, T1g, T1b, T2r, T2g, T2b, T3r, T3g, T3b))
-				SafeNotify({ Title = "Button gradient", Description = "Cek Output.", Icon = "info", Time = 3 })
-			end)
-			Box:AddButton("Copy setingan gradient", function()
-				local Text = Dump()
-				if CopyClip(Text) then
-					SafeNotify({ Title = "Button gradient", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
-				else
-					print("[N3V4 BUTTON GRADIENT] paste ini balik:\n" .. Text)
-					SafeNotify({ Title = "Button gradient", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
-				end
-			end)
+			Box:AddButton("Print setingan gradient", PrintGrad)
+			Box:AddButton("Copy setingan gradient", CopyGrad)
 		else
-			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (ButtonGradient / SetButtonGradient ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.14.1 biar box Button Gradient + Sample Gradient muncul")
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (ButtonGradient / SetButtonGradient ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.14.2 biar box Button Gradient + Sample Gradient muncul")
 		end
 
 		local Box = T1:AddRightGroupbox("Tab Aktif & Zoom", "zap")
