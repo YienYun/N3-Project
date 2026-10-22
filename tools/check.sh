@@ -95,7 +95,7 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.14.0 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.14.1 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + card icon + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconCard' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
@@ -175,14 +175,14 @@ chk "v4.12.5: komentar sampah dibersihkan (LIB <=149 baris asli, MOD/PRE nol)" \
 chk "v4.12.4: module bersih dari sampah section settings" \
 	"! grep -q 'AddSlider(\"SD_BT\"' '$MOD' && ! grep -q 'AddRightGroupbox(\"Divider Presets\"' '$MOD' && ! grep -q 'local function BuildSection' '$MOD' && ! grep -q '^\\tSection = {' '$MOD'"
 chk "v4.12.6: transparansi divider bisa diatur user (API LIB + knob MOD + sample live)" \
-	"grep -q 'Library.DividerAppearance = {' '$LIB' && grep -q 'function Library:SetDividerTransparency' '$LIB' && grep -q 'function Library:ApplyDividerAppearance' '$LIB' && grep -qF 'LineFrames[2] = SafeLine({' '$LIB' && grep -q 'Stroke.Transparency = Library.DividerAppearance.LineTransparency' '$LIB' && grep -q 'table.insert(Library.DividerInstances, Divider)' '$LIB' && grep -q 'AddSlider(\"SD_LT\"' '$MOD' && grep -q 'AddSlider(\"SD_TT\"' '$MOD' && grep -q 'AddDivider(\"Contoh garis\")' '$MOD' && grep -q 'AddDivider(\"Contoh text\")' '$MOD' && grep -q 'type(Library.SetDividerTransparency) == \"function\"' '$MOD' && grep -q 'Library.N3V4Version = \"4.14.0\"' '$LIB' && grep -q 'local function SafeLine(Properties)' '$LIB' && grep -q 'pcall(New, \"Frame\", Properties)' '$LIB' && grep -q 'pcall(Library.ApplyDividerAppearance, Library)' '$LIB'"
+	"grep -q 'Library.DividerAppearance = {' '$LIB' && grep -q 'function Library:SetDividerTransparency' '$LIB' && grep -q 'function Library:ApplyDividerAppearance' '$LIB' && grep -qF 'LineFrames[2] = SafeLine({' '$LIB' && grep -q 'Stroke.Transparency = Library.DividerAppearance.LineTransparency' '$LIB' && grep -q 'table.insert(Library.DividerInstances, Divider)' '$LIB' && grep -q 'AddSlider(\"SD_LT\"' '$MOD' && grep -q 'AddSlider(\"SD_TT\"' '$MOD' && grep -q 'AddDivider(\"Contoh garis\")' '$MOD' && grep -q 'AddDivider(\"Contoh text\")' '$MOD' && grep -q 'type(Library.SetDividerTransparency) == \"function\"' '$MOD' && grep -q 'Library.N3V4Version = \"4.14.1\"' '$LIB' && grep -q 'local function SafeLine(Properties)' '$LIB' && grep -q 'pcall(New, \"Frame\", Properties)' '$LIB' && grep -q 'pcall(Library.ApplyDividerAppearance, Library)' '$LIB'"
 chk "v4.13.0: centang hijau kanan di dropdown v1+v2, dot lama hapus" \
 	"grep -q 'local SelectedCheckColor = Color3.fromRGB(86, 197, 110)' '$LIB' && grep -qF 'Rec.Check.Visible = On' '$LIB' && grep -qF 'Check.Visible = not not Selected' '$LIB' && ! grep -q 'Rec.Dot.Visible' '$LIB' && ! grep -q 'Dot = Dot' '$LIB' && [ \"\$(grep -c 'ImageColor3 = SelectedCheckColor' '$LIB')\" -eq 2 ]"
 chk "v4.13.2: slider arrows hapus bersih, ga ada sisa up/down" \
 	"! grep -q 'ArrowHolder' '$LIB' && ! grep -q 'SetArrows' '$LIB' && ! grep -q 'MakeArrowButton' '$LIB' && ! grep -q 'ChevronDownIcon' '$LIB' && ! grep -qF 'Slider:SetValue(Slider.Value + 1)' '$LIB' && ! grep -q 'ArrowsHolding' '$LIB'"
 chk "v4.14.0: gradient 3D semua button + knob + sample + print/copy" \
-	"grep -q 'Library.ButtonGradient = {' '$LIB' && grep -q 'function Library:SetButtonGradient' '$LIB' && grep -q 'New(\"UIGradient\", {' '$LIB' && grep -q 'table.insert(Library.ButtonGradientInstances, Gradient)' '$LIB' && grep -q 'AddToggle(\"BG_ON\"' '$MOD' && grep -q 'AddSlider(\"BG_MD\"' '$MOD' && grep -q 'type(Library.SetButtonGradient) == \"function\"' '$MOD'"
-chk "footer v4.14.0" "grep -q 'Preview Kit v4.14.0' '$PRE'"
+	"grep -q 'Library.ButtonGradient = {' '$LIB' && grep -qF 'Gradient.Rotation = G.Rotation' '$LIB' && grep -qF 'if Gradient.Parent then' '$LIB' && grep -q 'AddSlider(\"BG_ROT\"' '$MOD' && grep -q 'AddSlider(\"BG_POS\"' '$MOD' && grep -q 'AddSlider(\"BG_TR\"' '$MOD' && grep -q 'AddSlider(\"BG_OFF\"' '$MOD' && grep -q 'AddColorPicker(\"BG_C1\"' '$MOD' && grep -q 'AddColorPicker(\"BG_C2\"' '$MOD' && grep -q 'AddColorPicker(\"BG_C3\"' '$MOD' && ! grep -q 'MiddleDark' '$LIB' '$MOD'"
+chk "footer v4.14.1" "grep -q 'Preview Kit v4.14.1' '$PRE'"
 
 echo "== 5. GAME SCRIPTS (HARAM disentuh) =="
 chk "Games/*.lua identik dengan baseline ec0f3a1" \

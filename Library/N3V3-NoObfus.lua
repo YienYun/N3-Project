@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.14.0 loaded — BUTTON GRADIENT 3D: semua button elemen punya UIGradient 3 stop (atas putih, tengah sedikit hitam default 35%, bawah putih) = efek bevel 3D; knob toggle + gelap tengah di UI Settings box Button Gradient, sample + print/copy di box Sample Gradient (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.14.1 loaded — GRADIENT FIX+LENGKAP: rotasi default -90 (atas-tengah-bawah bener), loop apply hidup lagi (liveness via Parent, bukan property hantu), setingan lengkap: toggle + 4 slider (rotasi, posisi tengah, transparansi tengah, offset) + 3 colorpicker (atas/tengah/bawah) + sample + print/copy dump penuh (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5808,36 +5808,53 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.14.0"
+	Library.N3V4Version = "4.14.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
-		MiddleDark = 0.35,
+		Rotation = -90,
+		MiddlePosition = 0.5,
+		MiddleTransparency = 0,
+		Offset = 0,
+		ColorTop = Color3.new(1, 1, 1),
+		ColorMiddle = Color3.new(0.65, 0.65, 0.65),
+		ColorBottom = Color3.new(1, 1, 1),
 	}
 
 	Library.ButtonGradientInstances = {}
 
 	function Library:ApplyButtonGradient()
-		local Middle = 1 - Library.ButtonGradient.MiddleDark
+		local G = Library.ButtonGradient
+		local Pos = math.clamp(G.MiddlePosition, 0.02, 0.98)
 		local Sequence = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
-			ColorSequenceKeypoint.new(0.5, Color3.new(Middle, Middle, Middle)),
-			ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0, G.ColorTop),
+			ColorSequenceKeypoint.new(Pos, G.ColorMiddle),
+			ColorSequenceKeypoint.new(1, G.ColorBottom),
+		})
+		local Trans = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(Pos, G.MiddleTransparency),
+			NumberSequenceKeypoint.new(1, 0),
 		})
 		for _, Gradient in ipairs(Library.ButtonGradientInstances) do
-			if Gradient.Parent and not Gradient.Parent.Destroyed then
-				Gradient.Enabled = Library.ButtonGradient.Enabled
+			if Gradient.Parent then
+				Gradient.Enabled = G.Enabled
 				Gradient.Color = Sequence
+				Gradient.Transparency = Trans
+				Gradient.Rotation = G.Rotation
+				Gradient.Offset = Vector2.new(G.Offset, 0)
 			end
 		end
 	end
 
-	function Library:SetButtonGradient(Enabled, MiddleDark)
-		if type(Enabled) == "boolean" then
-			Library.ButtonGradient.Enabled = Enabled
-		end
-		if type(MiddleDark) == "number" then
-			Library.ButtonGradient.MiddleDark = math.clamp(MiddleDark, 0, 1)
+	function Library:SetButtonGradient(Info)
+		if type(Info) == "table" then
+			for Key, Value in Info do
+				local Current = Library.ButtonGradient[Key]
+				if Current ~= nil and type(Current) == type(Value) then
+					Library.ButtonGradient[Key] = Value
+				end
+			end
 		end
 		local Ok, Err = pcall(Library.ApplyButtonGradient, Library)
 		if not Ok then
@@ -6288,14 +6305,22 @@ do
 				Parent = Base,
 			})
 
-			local Middle = 1 - Library.ButtonGradient.MiddleDark
+			local G = Library.ButtonGradient
+			local Pos = math.clamp(G.MiddlePosition, 0.02, 0.98)
 			local Gradient = New("UIGradient", {
 				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
-					ColorSequenceKeypoint.new(0.5, Color3.new(Middle, Middle, Middle)),
-					ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+					ColorSequenceKeypoint.new(0, G.ColorTop),
+					ColorSequenceKeypoint.new(Pos, G.ColorMiddle),
+					ColorSequenceKeypoint.new(1, G.ColorBottom),
 				}),
-				Enabled = Library.ButtonGradient.Enabled,
+				Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0),
+					NumberSequenceKeypoint.new(Pos, G.MiddleTransparency),
+					NumberSequenceKeypoint.new(1, 0),
+				}),
+				Enabled = G.Enabled,
+				Rotation = G.Rotation,
+				Offset = Vector2.new(G.Offset, 0),
 				Parent = Base,
 			})
 			table.insert(Library.ButtonGradientInstances, Gradient)

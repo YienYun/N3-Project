@@ -737,17 +737,66 @@ function Settings:Attach(Library, Window, Options)
 	end)
 
 		if type(Library.ButtonGradient) == "table" and type(Library.SetButtonGradient) == "function" then
+			local function RGB(C)
+				return math.floor(C.R * 255 + 0.5), math.floor(C.G * 255 + 0.5), math.floor(C.B * 255 + 0.5)
+			end
+			local function Dump()
+				local G = Library.ButtonGradient
+				local T1r, T1g, T1b = RGB(G.ColorTop)
+				local T2r, T2g, T2b = RGB(G.ColorMiddle)
+				local T3r, T3g, T3b = RGB(G.ColorBottom)
+				return string.format("Library:SetButtonGradient({ Enabled = %s, Rotation = %s, MiddlePosition = %s, MiddleTransparency = %s, Offset = %s, ColorTop = Color3.fromRGB(%d, %d, %d), ColorMiddle = Color3.fromRGB(%d, %d, %d), ColorBottom = Color3.fromRGB(%d, %d, %d) })",
+					tostring(G.Enabled), G.Rotation, G.MiddlePosition, G.MiddleTransparency, G.Offset,
+					T1r, T1g, T1b, T2r, T2g, T2b, T3r, T3g, T3b)
+			end
+
 			local Box = T1:AddLeftGroupbox("Button Gradient", "sparkles")
-			Box:AddToggle("BG_ON", {
+			local TogGrad = Box:AddToggle("BG_ON", {
 				Text = "Gradient 3D aktif", Default = Library.ButtonGradient.Enabled,
 				Callback = function(Value)
-					Library:SetButtonGradient(Value, nil)
+					Library:SetButtonGradient({ Enabled = Value })
 				end,
 			})
-			Box:AddSlider("BG_MD", {
-				Text = "Gelap tengah gradient", Default = math.floor(Library.ButtonGradient.MiddleDark * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			TogGrad:AddColorPicker("BG_C1", {
+				Title = "Atas", Default = Library.ButtonGradient.ColorTop,
+				Callback = function(Color)
+					Library:SetButtonGradient({ ColorTop = Color })
+				end,
+			})
+			TogGrad:AddColorPicker("BG_C2", {
+				Title = "Tengah", Default = Library.ButtonGradient.ColorMiddle,
+				Callback = function(Color)
+					Library:SetButtonGradient({ ColorMiddle = Color })
+				end,
+			})
+			TogGrad:AddColorPicker("BG_C3", {
+				Title = "Bawah", Default = Library.ButtonGradient.ColorBottom,
+				Callback = function(Color)
+					Library:SetButtonGradient({ ColorBottom = Color })
+				end,
+			})
+			Box:AddSlider("BG_ROT", {
+				Text = "Rotasi gradient", Default = Library.ButtonGradient.Rotation, Min = -180, Max = 180, Rounding = 0, Suffix = "deg",
 				Callback = function(Value)
-					Library:SetButtonGradient(nil, Value / 100)
+					Library:SetButtonGradient({ Rotation = Value })
+				end,
+			})
+			Box:AddSlider("BG_POS", {
+				Text = "Posisi stop tengah", Default = math.floor(Library.ButtonGradient.MiddlePosition * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetButtonGradient({ MiddlePosition = math.clamp(Value / 100, 0.02, 0.98) })
+				end,
+			})
+			Box:AddSlider("BG_TR", {
+				Text = "Transparansi tengah", Default = math.floor(Library.ButtonGradient.MiddleTransparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetButtonGradient({ MiddleTransparency = Value / 100 })
+				end,
+			})
+			Box:AddSlider("BG_OFF", {
+				Text = "Offset gradient", Default = math.floor(Library.ButtonGradient.Offset * 100 + 0.5), Min = -100, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetButtonGradient({ Offset = Value / 100 })
 				end,
 			})
 
@@ -756,11 +805,17 @@ function Settings:Attach(Library, Window, Options)
 				SafeNotify({ Title = "Button gradient", Description = "Button biasa + gradient 3 stop.", Icon = "info", Time = 3 })
 			end)
 			Box:AddButton("Print setingan gradient", function()
-				print(("[N3V4 BUTTON GRADIENT] Enabled = %s | MiddleDark = %s"):format(tostring(Library.ButtonGradient.Enabled), Library.ButtonGradient.MiddleDark))
+				local G = Library.ButtonGradient
+				local T1r, T1g, T1b = RGB(G.ColorTop)
+				local T2r, T2g, T2b = RGB(G.ColorMiddle)
+				local T3r, T3g, T3b = RGB(G.ColorBottom)
+				print(string.format("[N3V4 BUTTON GRADIENT] Enabled = %s | Rotation = %s | MiddlePosition = %s | MiddleTransparency = %s | Offset = %s | Top = %d,%d,%d | Middle = %d,%d,%d | Bottom = %d,%d,%d",
+					tostring(G.Enabled), G.Rotation, G.MiddlePosition, G.MiddleTransparency, G.Offset,
+					T1r, T1g, T1b, T2r, T2g, T2b, T3r, T3g, T3b))
 				SafeNotify({ Title = "Button gradient", Description = "Cek Output.", Icon = "info", Time = 3 })
 			end)
 			Box:AddButton("Copy setingan gradient", function()
-				local Text = ("Library:SetButtonGradient(%s, %s)"):format(tostring(Library.ButtonGradient.Enabled), Library.ButtonGradient.MiddleDark)
+				local Text = Dump()
 				if CopyClip(Text) then
 					SafeNotify({ Title = "Button gradient", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
 				else
@@ -769,7 +824,7 @@ function Settings:Attach(Library, Window, Options)
 				end
 			end)
 		else
-			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (ButtonGradient / SetButtonGradient ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.14.0 biar box Button Gradient + Sample Gradient muncul")
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (ButtonGradient / SetButtonGradient ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.14.1 biar box Button Gradient + Sample Gradient muncul")
 		end
 
 		local Box = T1:AddRightGroupbox("Tab Aktif & Zoom", "zap")

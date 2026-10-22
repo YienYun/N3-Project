@@ -1777,3 +1777,39 @@ gimana dll. gasken bro!"
   chk v4.9.2 konteks Try("Settings: info") -> Resep Tema harus utuh).
 - Scope jujur: button ELEMEN (AddButton). Tab/footer/display dropdown
   nggak disentuh — kalau mau melar, user yang minta.
+
+## v4.14.1 — GRADIENT FIX + SETINGAN LENGKAP (tiga kesalahan gue di v4.14.0)
+User rage valid, tiga bug/kekurangan v4.14.0:
+1. ROTASI KELUPAAN: UIGradient default Rotation 0 = gradient jalan
+   KIRI-KANAN, padahal spec asli dia "atas putih tengah hitam bawah
+   putih" = vertikal. Dia yang harusing ingat-inatin "-90 derajat".
+2. SLIDER GA NGARUH: loop ApplyButtonGradient cek
+   `Gradient.Parent.Destroyed` — Parent itu INSTANCE Roblox, property
+   Destroyed GA ADA => baca member hantu = error runtime => pcall nelan
+   => apply mati total => semua knob jadi patung. (Pola hantu yang sama
+   kayak BorderTransparency v4.12.6! Beda bentuk: baca vs tulis.)
+3. SETINGAN KEMISKINAN: 1 toggle + 1 slider, padahal dia minta "lengkap
+   transparansi, jarak, dll" + warna atas/tengah/bawah bisa dipilih.
+
+Fix v4.14.1:
+- Default Rotation = -90 (vertikal: atas-tengah-bawah bener).
+- Liveness loop: `if Gradient.Parent then` (Parent nil setelah
+  destroy) — nol property hantu.
+- State lengkap: Enabled, Rotation, MiddlePosition, MiddleTransparency,
+  Offset, ColorTop, ColorMiddle, ColorBottom. API diganti table:
+  Library:SetButtonGradient({ Key = Value, ... }) dengan guard tipe
+  per-key (pola SetTabAppearance).
+- CreateButton build gradient dari state penuh (ColorSequence 3 stop
+  warna pilihan + NumberSequence transparansi tengah + Rotation +
+  Offset Vector2).
+- MOD box kiri "Button Gradient": toggle BG_ON + TIGA ColorPicker
+  addon di toggle itu (Atas/Tengah/Bawah — ColorPicker library ini
+  emang harus nempel toggle jadi addon) + 4 slider: BG_ROT -180..180,
+  BG_POS posisi stop tengah %, BG_TR transparansi tengah %, BG_OFF
+  offset %. Box kanan "Sample Gradient": sample + Print dump penuh +
+  Copy snippet SetButtonGradient({...}) lengkap buat dia dump -> gue
+  bake kemudian.
+- Pelajaran ganda: (a) property/anggota Roblox WAJIB diverifikasi eksis
+  — baca ATAU tulis; (b) "kasih tombol setingan" dari user artinya
+  LENGKAP sesuai kalimat dia (transparansi, jarak, dll), bukan versi
+  minimal gue.
