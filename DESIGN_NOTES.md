@@ -1861,3 +1861,20 @@ sama fps ping dll."
   aman, tanpa cleanup khusus) ikut MakeGradient yang SAMA => sync
   penuh ke semua knob Gradient 3D, nol hardcode.
 - Pin checker: MakeGradient(SearchFrame) + MakeGradient(Card).
+
+## v4.15.2 — FIX SCOPE MakeGradient (error nil di CreateWindow)
+Error user v4.15.1: "ReplicatedStorage.N3V4:11427: attempt to call a
+nil value" di CreateWindow. Root cause: MakeGradient gue definisi
+sebagai local DI DALAM do-block komponen (±5850); call site elemen
+(AddButton/AddSlider/AddDropdown/AddInput) ada di do-block yang sama =
+aman, tapi CreateWindow (navbar search + kartu status, ±11427) ada DI
+LUAR block itu => MakeGradient nil di sana.
+Kenapa gates lolos: gate analyze gue cuma grep SyntaxError; local out
+of scope = dipanggil sebagai global nil = runtime error, bukan syntax.
+Fix: MakeGradient jadi local TOP-LEVEL (kolom 0) tepat setelah
+definisi New() => kelihatan seluruh file. Checker pin penempatan:
+harus ada '^local function MakeGradient(Parent)' dan NOT ada versi
+indent-tab.
+Pelajaran: helper yang dipakai lintas blok WAJIB top-level; dan gate
+analyze patut di-grep juga untuk "Unknown global '<nama helper gue>'"
+buat call site lintas scope.

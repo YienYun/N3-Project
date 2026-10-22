@@ -1486,6 +1486,29 @@ local function New(ClassName: string, Properties: { [string]: any }): any
 	return Instance
 end
 
+local function MakeGradient(Parent)
+	local G = Library.ButtonGradient
+	local Pos = math.clamp(G.MiddlePosition, 0.02, 0.98)
+	local Gradient = New("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, G.ColorTop),
+			ColorSequenceKeypoint.new(Pos, G.ColorMiddle),
+			ColorSequenceKeypoint.new(1, G.ColorBottom),
+		}),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(Pos, G.MiddleTransparency),
+			NumberSequenceKeypoint.new(1, 0),
+		}),
+		Enabled = G.Enabled,
+		Rotation = G.Rotation,
+		Offset = Vector2.new(G.Offset, 0),
+		Parent = Parent,
+	})
+	table.insert(Library.ButtonGradientInstances, Gradient)
+	return Gradient
+end
+
 local WallpaperScaleTypes = {}
 for _, ScaleItem in Enum.ScaleType:GetEnumItems() do
 	WallpaperScaleTypes[ScaleItem.Name] = ScaleItem
@@ -1752,7 +1775,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.15.1 loaded — GRADIENT NAVBAR: search bar atas (SearchFrame) + empat kartu status Fps/Ping/Server/Executor ikut gradient 3D yang SAMA (MakeGradient + state sync, nol hardcode; kartu dibuat sekali saat window jadi registry aman) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.15.2 loaded — FIX SCOPE: MakeGradient sekarang local TOP-LEVEL (sebelumnya kejepit di do-block komponen, jadi CreateWindow/navbar liat nil dan error attempt to call a nil value); semua call site lama + navbar + kartu status sekarang satu scope (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5808,7 +5831,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.15.1"
+	Library.N3V4Version = "4.15.2"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -5862,28 +5885,6 @@ do
 		end
 	end
 
-	local function MakeGradient(Parent)
-		local G = Library.ButtonGradient
-		local Pos = math.clamp(G.MiddlePosition, 0.02, 0.98)
-		local Gradient = New("UIGradient", {
-			Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, G.ColorTop),
-				ColorSequenceKeypoint.new(Pos, G.ColorMiddle),
-				ColorSequenceKeypoint.new(1, G.ColorBottom),
-			}),
-			Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 0),
-				NumberSequenceKeypoint.new(Pos, G.MiddleTransparency),
-				NumberSequenceKeypoint.new(1, 0),
-			}),
-			Enabled = G.Enabled,
-			Rotation = G.Rotation,
-			Offset = Vector2.new(G.Offset, 0),
-			Parent = Parent,
-		})
-		table.insert(Library.ButtonGradientInstances, Gradient)
-		return Gradient
-	end
 
 	Library.DividerAppearance = {
 		LineTransparency = 0.4,
