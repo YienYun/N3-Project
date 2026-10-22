@@ -1738,3 +1738,16 @@ setting menyusul KALAU user minta (pola divider: dia yang request).
 - Semua connection masuk Slider.Connections (cleanup Destroy aman).
 - Checker pin: ChevronDownIcon top-level, SetArrows, kedua SetValue
   +/-1, ArrowsHolding, Size track -16. 73 checks.
+
+## v4.13.2 — SLIDER ARROWS DIHAPUS BERSIH (verdict user: "jelek")
+User setelah lihat v4.13.1 di preview: "hapus saja deh jir gue ga suka.
+jelek soalnya. hapus bro sampai bersih biar ga ada up down lagi."
+Revert total: ArrowHolder + 2 button + icons + SetArrows +
+MakeArrowButton + state hover/holding + hook drag-hold + SetDisabled
+arrow + ChevronDownIcon top-level + track -16px => SEMUA lenyap;
+slider balik persis perilaku pra-v4.13.1. Checker pin ABSENSI enam
+nama biar fitur ini nggak hidup lagi diam-diam.
+Pelajaran (sama kayak section saga): fitur visual yang udah diskusi +
+GO pun masih bisa ditolak mata user saat lihat render aslinya — revert
+bersih adalah fitur juga. Dan: print/changelog JANGAN sebut literal
+nama yang di-pin absensi (self-pin trap, ketiga kalinya).
