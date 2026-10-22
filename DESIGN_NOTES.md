@@ -1751,3 +1751,29 @@ Pelajaran (sama kayak section saga): fitur visual yang udah diskusi +
 GO pun masih bisa ditolak mata user saat lihat render aslinya — revert
 bersih adalah fitur juga. Dan: print/changelog JANGAN sebut literal
 nama yang di-pin absensi (self-pin trap, ketiga kalinya).
+
+## v4.14.0 — BUTTON GRADIENT 3D (spec user langsung + GO)
+User: "semua button harus kita upgrade visualnya... gradian biar kayak
+3d... di tengah itu sedikit hitam di atas bawah putih. jadinya ada 3
+bro... kasih tombol setingan biar gue bisa print nanti selera gue
+gimana dll. gasken bro!"
+
+- Implementasi: UIGradient child di Base setiap button (CreateButton =
+  bottleneck tunggal SEMUA button elemen, termasuk pasangan double-
+  click). ColorSequence 3 keypoint: 0 = putih, 0.5 = abu gelap
+  (1 - MiddleDark), 1 = putih. Sebagai MULTIPLIER warna background:
+  atas/bawah = warna asli button, tengah = sedikit hitam = bevel 3D.
+  Theme-safe: gradient nggak nyentuh warna tema, cuma modulasi.
+- State: Library.ButtonGradient { Enabled = true, MiddleDark = 0.35 }
+  + registry ButtonGradientInstances (skip yang Parent-nya udah
+  Destroyed) + ApplyButtonGradient + SetButtonGradient(Enabled,
+  MiddleDark) di-pcall (pola v4.12.9).
+- MOD tab UI Settings: box KIRI "Button Gradient" (toggle BG_ON +
+  slider BG_MD 0-100%) dan box KANAN "Sample Gradient" (button sample
+  live + Print + Copy snippet Library:SetButtonGradient(...)) — pola
+  divider: user geser, lihat sample realtime, Print dump, gue bake
+  kemudian. Guard versi handshake sama kayak box divider.
+- Simetri T1 6/6 -> 7/7. Block dipasang SESUDAH box Resep Tema (pin
+  chk v4.9.2 konteks Try("Settings: info") -> Resep Tema harus utuh).
+- Scope jujur: button ELEMEN (AddButton). Tab/footer/display dropdown
+  nggak disentuh — kalau mau melar, user yang minta.

@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.13.2 loaded — SLIDER ARROWS DIHAPUS BERSIH (user: jelek): seluruh fitur panah naik-turun slider v4.13.1 lenyap tanpa sisa, track balik full width, slider persis perilaku sebelum upgrade itu (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.14.0 loaded — BUTTON GRADIENT 3D: semua button elemen punya UIGradient 3 stop (atas putih, tengah sedikit hitam default 35%, bawah putih) = efek bevel 3D; knob toggle + gelap tengah di UI Settings box Button Gradient, sample + print/copy di box Sample Gradient (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5808,7 +5808,42 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.13.2"
+	Library.N3V4Version = "4.14.0"
+
+	Library.ButtonGradient = {
+		Enabled = true,
+		MiddleDark = 0.35,
+	}
+
+	Library.ButtonGradientInstances = {}
+
+	function Library:ApplyButtonGradient()
+		local Middle = 1 - Library.ButtonGradient.MiddleDark
+		local Sequence = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.5, Color3.new(Middle, Middle, Middle)),
+			ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+		})
+		for _, Gradient in ipairs(Library.ButtonGradientInstances) do
+			if Gradient.Parent and not Gradient.Parent.Destroyed then
+				Gradient.Enabled = Library.ButtonGradient.Enabled
+				Gradient.Color = Sequence
+			end
+		end
+	end
+
+	function Library:SetButtonGradient(Enabled, MiddleDark)
+		if type(Enabled) == "boolean" then
+			Library.ButtonGradient.Enabled = Enabled
+		end
+		if type(MiddleDark) == "number" then
+			Library.ButtonGradient.MiddleDark = math.clamp(MiddleDark, 0, 1)
+		end
+		local Ok, Err = pcall(Library.ApplyButtonGradient, Library)
+		if not Ok then
+			warn("[N3V4] apply button gradient gagal: " .. tostring(Err))
+		end
+	end
 
 	Library.DividerAppearance = {
 		LineTransparency = 0.4,
@@ -6252,6 +6287,18 @@ do
 				Transparency = Button.Disabled and 0.5 or 0,
 				Parent = Base,
 			})
+
+			local Middle = 1 - Library.ButtonGradient.MiddleDark
+			local Gradient = New("UIGradient", {
+				Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+					ColorSequenceKeypoint.new(0.5, Color3.new(Middle, Middle, Middle)),
+					ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+				}),
+				Enabled = Library.ButtonGradient.Enabled,
+				Parent = Base,
+			})
+			table.insert(Library.ButtonGradientInstances, Gradient)
 
 			table.insert(
 				Library.Corners,

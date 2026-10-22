@@ -736,6 +736,42 @@ function Settings:Attach(Library, Window, Options)
 		Box:AddLabel("Preview = showcase komponen aja.", true)
 	end)
 
+		if type(Library.ButtonGradient) == "table" and type(Library.SetButtonGradient) == "function" then
+			local Box = T1:AddLeftGroupbox("Button Gradient", "sparkles")
+			Box:AddToggle("BG_ON", {
+				Text = "Gradient 3D aktif", Default = Library.ButtonGradient.Enabled,
+				Callback = function(Value)
+					Library:SetButtonGradient(Value, nil)
+				end,
+			})
+			Box:AddSlider("BG_MD", {
+				Text = "Gelap tengah gradient", Default = math.floor(Library.ButtonGradient.MiddleDark * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetButtonGradient(nil, Value / 100)
+				end,
+			})
+
+			local Box = T1:AddRightGroupbox("Sample Gradient", "copy")
+			Box:AddButton("SAMPLE: button gradasi 3D", function()
+				SafeNotify({ Title = "Button gradient", Description = "Button biasa + gradient 3 stop.", Icon = "info", Time = 3 })
+			end)
+			Box:AddButton("Print setingan gradient", function()
+				print(("[N3V4 BUTTON GRADIENT] Enabled = %s | MiddleDark = %s"):format(tostring(Library.ButtonGradient.Enabled), Library.ButtonGradient.MiddleDark))
+				SafeNotify({ Title = "Button gradient", Description = "Cek Output.", Icon = "info", Time = 3 })
+			end)
+			Box:AddButton("Copy setingan gradient", function()
+				local Text = ("Library:SetButtonGradient(%s, %s)"):format(tostring(Library.ButtonGradient.Enabled), Library.ButtonGradient.MiddleDark)
+				if CopyClip(Text) then
+					SafeNotify({ Title = "Button gradient", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
+				else
+					print("[N3V4 BUTTON GRADIENT] paste ini balik:\n" .. Text)
+					SafeNotify({ Title = "Button gradient", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+				end
+			end)
+		else
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (ButtonGradient / SetButtonGradient ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.14.0 biar box Button Gradient + Sample Gradient muncul")
+		end
+
 		local Box = T1:AddRightGroupbox("Tab Aktif & Zoom", "zap")
 
 		local TA1 = Library.TabAppearance or {}
