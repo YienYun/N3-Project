@@ -769,9 +769,9 @@ function Settings:Attach(Library, Window, Options)
 				end
 			end
 
-			local Box = T1:AddLeftGroupbox("Button Gradient", "sparkles")
+			local Box = T1:AddLeftGroupbox("Gradient 3D", "sparkles")
 			local TogGrad = Box:AddToggle("BG_ON", {
-				Text = "Gradient 3D aktif", Default = Library.ButtonGradient.Enabled,
+				Text = "Gradient 3D aktif (semua elemen)", Default = Library.ButtonGradient.Enabled,
 				Callback = function(Value)
 					Library:SetButtonGradient({ Enabled = Value })
 				end,
@@ -825,6 +825,13 @@ function Settings:Attach(Library, Window, Options)
 			Box:AddButton("SAMPLE: button gradasi 3D", function()
 				SafeNotify({ Title = "Button gradient", Description = "Button biasa + gradient 3 stop.", Icon = "info", Time = 3 })
 			end)
+			Box:AddSlider("BG_SAMPLE_SL", {
+				Text = "Sample slider", Default = 50, Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function() end,
+			})
+			Box:AddInput("BG_SAMPLE_IN", {
+				Text = "Sample input", Placeholder = "gradient di body input",
+			})
 			Box:AddButton("Print setingan gradient", PrintGrad)
 			Box:AddButton("Copy setingan gradient", CopyGrad)
 		else

@@ -1828,3 +1828,27 @@ Print+Copy sekarang, box kanan tetep. Checker pin: jumlah string
 persis 2-2 + PrintGrad ada.
 Pelajaran: standing rule list itu DIPAKAI saat nulis box baru, bukan
 diingat sesudah user nagih.
+
+## v4.15.0 — GRADIENT BAKE VERBATIM + MERATA KE SLIDER/INPUT/DROPDOWN
+Dump user (print v4.14.2) dibake VERBATIM sesuai standing rule:
+Enabled true | Rotation -90 | MiddlePosition 0.5 | MiddleTransparency 0
+| Offset 0.01 | Top 85,85,85 | Middle 224,224,224 | Bottom 85,85,85.
+(Rasa dia: tengah TERANG, tepi gelap = band glow di tengah button.)
+
+Request lanjut: "terapin ini ke slider, dropdown, input juga... di
+slider itu bukan yang unggunya/bar slidernya tapi di slider nya...
+harus sinkron jangan hardcode."
+- Slider: gradient di BODY track (Bar TextButton MainColor), BUKAN di
+  Fill ungu — sesuai klarifikasi dia.
+- Input: body TextBox (AddInput).
+- Dropdown v1: DisplayContainer + frame menu (MenuTable.Menu).
+- Dropdown v2: DisplayContainer + PopupFrame; gradient popup di-
+  remove dari registry saat ClosePopup (bocor memori dicegah).
+- Sinkron: SATU helper local MakeGradient(Parent) + SATU state
+  Library.ButtonGradient + SATU loop apply + SATU registry => semua
+  elemen ikut knob yang sama realtime, nol hardcode per elemen.
+- MOD: box kiri rename "Gradient 3D", toggle "(semua elemen)"; box
+  kanan dapet sample slider + sample input biar semua jenis elemen
+  keliatan live saat tuning. Print/Copy tetep di dua box.
+- Checker: pin bake (Offset 0.01 + RGB 85/224/85) + pin MakeGradient
+  di semua call site + count >= 8.

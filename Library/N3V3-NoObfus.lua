@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.14.2 loaded — PRINT/COPY ADA DI DUA BOX GRADIENT (standing rule: tiap settings groupbox nutup pakai print+copy; box kiri Button Gradient sekarang punya Print + Copy setingan gradient sendiri, fungsi shared single-implementation sama box kanan) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.15.0 loaded — GRADIENT BAKE + MERATA: dump user dibake verbatim (Offset 0.01, Top/Bottom 85, Middle 224) dan gradient 3D sekarang SYNC ke slider (body track, BUKAN fill ungu), input textbox, dropdown v1 (display+menu) & v2 (display+popup, registry di-cleanup saat close) lewat satu helper MakeGradient + satu state + satu apply (nol hardcode) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5808,17 +5808,17 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.14.2"
+	Library.N3V4Version = "4.15.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
 		Rotation = -90,
 		MiddlePosition = 0.5,
 		MiddleTransparency = 0,
-		Offset = 0,
-		ColorTop = Color3.new(1, 1, 1),
-		ColorMiddle = Color3.new(0.65, 0.65, 0.65),
-		ColorBottom = Color3.new(1, 1, 1),
+		Offset = 0.01,
+		ColorTop = Color3.fromRGB(85, 85, 85),
+		ColorMiddle = Color3.fromRGB(224, 224, 224),
+		ColorBottom = Color3.fromRGB(85, 85, 85),
 	}
 
 	Library.ButtonGradientInstances = {}
@@ -5860,6 +5860,29 @@ do
 		if not Ok then
 			warn("[N3V4] apply button gradient gagal: " .. tostring(Err))
 		end
+	end
+
+	local function MakeGradient(Parent)
+		local G = Library.ButtonGradient
+		local Pos = math.clamp(G.MiddlePosition, 0.02, 0.98)
+		local Gradient = New("UIGradient", {
+			Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, G.ColorTop),
+				ColorSequenceKeypoint.new(Pos, G.ColorMiddle),
+				ColorSequenceKeypoint.new(1, G.ColorBottom),
+			}),
+			Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0),
+				NumberSequenceKeypoint.new(Pos, G.MiddleTransparency),
+				NumberSequenceKeypoint.new(1, 0),
+			}),
+			Enabled = G.Enabled,
+			Rotation = G.Rotation,
+			Offset = Vector2.new(G.Offset, 0),
+			Parent = Parent,
+		})
+		table.insert(Library.ButtonGradientInstances, Gradient)
+		return Gradient
 	end
 
 	Library.DividerAppearance = {
@@ -6305,25 +6328,7 @@ do
 				Parent = Base,
 			})
 
-			local G = Library.ButtonGradient
-			local Pos = math.clamp(G.MiddlePosition, 0.02, 0.98)
-			local Gradient = New("UIGradient", {
-				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, G.ColorTop),
-					ColorSequenceKeypoint.new(Pos, G.ColorMiddle),
-					ColorSequenceKeypoint.new(1, G.ColorBottom),
-				}),
-				Transparency = NumberSequence.new({
-					NumberSequenceKeypoint.new(0, 0),
-					NumberSequenceKeypoint.new(Pos, G.MiddleTransparency),
-					NumberSequenceKeypoint.new(1, 0),
-				}),
-				Enabled = G.Enabled,
-				Rotation = G.Rotation,
-				Offset = Vector2.new(G.Offset, 0),
-				Parent = Base,
-			})
-			table.insert(Library.ButtonGradientInstances, Gradient)
+			MakeGradient(Base)
 
 			table.insert(
 				Library.Corners,
@@ -7226,6 +7231,8 @@ do
 			Parent = Holder,
 		})
 
+		MakeGradient(Box)
+
 		New("UIPadding", {
 			PaddingBottom = UDim.new(0, 3),
 			PaddingLeft = UDim.new(0, 8),
@@ -7471,6 +7478,7 @@ do
 			Color = "OutlineColor",
 			Parent = Bar,
 		})
+		MakeGradient(Bar)
 
 
 		local DisplayLabel = New("TextLabel", {
@@ -7949,6 +7957,7 @@ do
 			Parent = DisplayContainer,
 		})
 
+		MakeGradient(DisplayContainer)
 		local DropdownCorner = New("UICorner", {
 			TopLeftRadius = UDim.new(0, Library.CornerRadius / 2),
 			TopRightRadius = UDim.new(0, Library.CornerRadius / 2),
@@ -8058,6 +8067,7 @@ do
 			"Dropdown"
 		)
 		Dropdown.Menu = MenuTable
+		MakeGradient(MenuTable.Menu)
 
 		function Dropdown:RecalculateListSize(Count)
 			local Y = math.clamp((Count or GetTableSize(Dropdown.Values)) * 21, 0, Info.MaxVisibleDropdownItems * 21)
@@ -8763,6 +8773,7 @@ do
 			Color = "OutlineColor",
 			Parent = DisplayContainer,
 		})
+		MakeGradient(DisplayContainer)
 		local DisplayCorner = New("UICorner", {
 			TopLeftRadius = UDim.new(0, Library.CornerRadius / 2),
 			TopRightRadius = UDim.new(0, Library.CornerRadius / 2),
@@ -8802,7 +8813,7 @@ do
 			})
 		end
 
-		local PopupOverlay, PopupFrame
+		local PopupOverlay, PopupFrame, PopupGradient
 		local SummaryTotal, SummaryList
 		local RowRecs = {}
 
@@ -8846,6 +8857,14 @@ do
 			PopupOverlay, PopupFrame = nil, nil
 			SummaryTotal, SummaryList = nil, nil
 			table.clear(RowRecs)
+
+			if PopupGradient then
+				local GradIdx = table.find(Library.ButtonGradientInstances, PopupGradient)
+				if GradIdx then
+					table.remove(Library.ButtonGradientInstances, GradIdx)
+				end
+				PopupGradient = nil
+			end
 
 			if Instant then
 				if Overlay then
@@ -8970,6 +8989,7 @@ do
 				})
 			)
 			Library:AddOutline(PopupFrame)
+			PopupGradient = MakeGradient(PopupFrame)
 
 			local Inner = New("Frame", {
 				BackgroundTransparency = 1,
