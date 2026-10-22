@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.13.0 loaded — DROPDOWN CHECK: baris yang ke-select punya icon centang hijau 14px di KANAN (v1 + v2, multi = semua yang ke-select); dot bulat accent v2 DIHAPUS diganti centang (lean: -1 instance per baris) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.13.1 loaded — SLIDER ARROWS: kolom panah 14x15px di KANAN track (stacked chevron up/down 7px), klik = value +/-1 lewat SetValue (clamp + callback nyala), muncul fade 0.12s saat hover slider, dipaksa sembunyi selama drag/hold, release + masih hover = muncul lagi (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -3697,6 +3697,7 @@ end
 
 local CheckIcon = Library:GetIcon("check")
 local SelectedCheckColor = Color3.fromRGB(86, 197, 110)
+local ChevronDownIcon = Library:GetIcon("chevron-down")
 local ArrowIcon = Library:GetIcon("chevron-up")
 local ResizeIcon = Library:GetIcon("move-diagonal-2")
 local KeyIcon = Library:GetIcon("key")
@@ -3708,6 +3709,7 @@ function Library:SetIconModule(module: IconModule)
 
 	-- Top ten fixes 🚀
 	CheckIcon = Library:GetIcon("check")
+	ChevronDownIcon = Library:GetIcon("chevron-down")
 	ArrowIcon = Library:GetIcon("chevron-up")
 	ResizeIcon = Library:GetIcon("move-diagonal-2")
 	KeyIcon = Library:GetIcon("key")
@@ -5808,7 +5810,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.13.0"
+	Library.N3V4Version = "4.13.1"
 
 	Library.DividerAppearance = {
 		LineTransparency = 0.4,
@@ -7390,7 +7392,7 @@ do
 			AnchorPoint = Vector2.new(0, 1),
 			BackgroundColor3 = "MainColor",
 			Position = UDim2.fromScale(0, 1),
-			Size = UDim2.new(1, 0, 0, 15),
+			Size = UDim2.new(1, -16, 0, 15),
 			Text = "",
 			Parent = Holder,
 		})
@@ -7399,6 +7401,77 @@ do
 			Color = "OutlineColor",
 			Parent = Bar,
 		})
+
+		local ArrowHolder = New("Frame", {
+			AnchorPoint = Vector2.new(1, 1),
+			BackgroundTransparency = 1,
+			Position = UDim2.fromScale(1, 1),
+			Size = UDim2.fromOffset(14, 15),
+			Parent = Holder,
+		})
+
+		local ArrowsHover = false
+		local ArrowsHolding = false
+		local ArrowImages = {}
+		local ArrowButtons = {}
+
+		local function SetArrows(Show: boolean)
+			local Target = Show and 0.45 or 1
+			for _, Image in ArrowImages do
+				TweenService:Create(Image, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { ImageTransparency = Target }):Play()
+			end
+		end
+
+		local function MakeArrowButton(OffsetY, Icon, OnClick)
+			local Button = New("TextButton", {
+				Active = not Slider.Disabled,
+				AutoButtonColor = false,
+				BackgroundTransparency = 1,
+				Position = UDim2.fromOffset(0, OffsetY),
+				Size = UDim2.fromOffset(14, 7),
+				Text = "",
+				Parent = ArrowHolder,
+			})
+			local Image = New("ImageLabel", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				BackgroundTransparency = 1,
+				Image = Icon and Icon.Url or "",
+				ImageColor3 = "FontColor",
+				ImageRectOffset = Icon and Icon.ImageRectOffset or Vector2.zero,
+				ImageRectSize = Icon and Icon.ImageRectSize or Vector2.zero,
+				ImageTransparency = 1,
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromOffset(8, 8),
+				Parent = Button,
+			})
+			table.insert(Slider.Connections, Button.MouseEnter:Connect(function()
+				Image.ImageColor3 = Library.Scheme.AccentColor
+			end))
+			table.insert(Slider.Connections, Button.MouseLeave:Connect(function()
+				Image.ImageColor3 = Library.Scheme.FontColor
+			end))
+			table.insert(Slider.Connections, Button.MouseButton1Click:Connect(OnClick))
+			table.insert(ArrowButtons, Button)
+			return Image
+		end
+
+		table.insert(ArrowImages, MakeArrowButton(0, ArrowIcon, function()
+			Slider:SetValue(Slider.Value + 1)
+		end))
+		table.insert(ArrowImages, MakeArrowButton(8, ChevronDownIcon, function()
+			Slider:SetValue(Slider.Value - 1)
+		end))
+
+		table.insert(Slider.Connections, Holder.MouseEnter:Connect(function()
+			ArrowsHover = true
+			if not ArrowsHolding and not Slider.Disabled then
+				SetArrows(true)
+			end
+		end))
+		table.insert(Slider.Connections, Holder.MouseLeave:Connect(function()
+			ArrowsHover = false
+			SetArrows(false)
+		end))
 
 		local DisplayLabel = New("TextLabel", {
 			BackgroundTransparency = 1,
@@ -7562,6 +7635,12 @@ do
 			end
 
 			Bar.Active = not Slider.Disabled
+			for _, ArrowButton in ArrowButtons do
+				ArrowButton.Active = not Slider.Disabled
+			end
+			if Slider.Disabled then
+				SetArrows(false)
+			end
 			Slider:UpdateColors()
 		end
 
@@ -7692,12 +7771,18 @@ do
 				end
 
 				local SliderDragging = true
+				ArrowsHolding = true
+				SetArrows(false)
 				local SliderDragKind = Input.UserInputType
 
 				local SliderReleaseConn = nil
 				SliderReleaseConn = UserInputService.InputEnded:Connect(function(EndInput: InputObject)
 					if EndInput.UserInputType == SliderDragKind then
 						SliderDragging = false
+						ArrowsHolding = false
+						if ArrowsHover and not Slider.Disabled then
+							SetArrows(true)
+						end
 						if SliderReleaseConn then
 							SliderReleaseConn:Disconnect()
 							SliderReleaseConn = nil

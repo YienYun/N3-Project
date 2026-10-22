@@ -1714,3 +1714,27 @@ Implementasi:
   keliatan pas list dibuka — user minta "pengen lihat previewnya".
 - Checker: pin warna konstan + kedua toggle + absensi Dot lama +
   jumlah ImageColor3 SelectedCheckColor == 2 (v1+v2, nggak lebih).
+
+## v4.13.1 — SLIDER ARROWS +/-1 (diskusi -> GO, rekomendasi gue dipakai semua)
+Keputusan user: stacked atas-bawah di kolom 14px (rekomendasi), step
++/-1 satuan value mentah (rekomendasi), release + masih hover = muncul
+lagi (rekomendasi). Animasi/durasi KONSTANTA internal dulu — knob
+setting menyusul KALAU user minta (pola divider: dia yang request).
+
+- Track Bar dipendekin 16px (Size 1,-16); kolom ArrowHolder 14x15px
+  anchor kanan-bawah nempel 2px di samping track (tinggi = tinggi
+  track, ga makan tempat vertikal).
+- Dua TextButton stacked 14x7: up (chevron-up, pakai ArrowIcon top-level
+  yang udah ada) + down (ChevronDownIcon top-level BARU, di-reresolve
+  di SetIconModule). Icon 8px, ImageColor3 theme string "FontColor",
+  hover panah = AccentColor (assign Color3 asli, aman bug #31).
+- Klik = Slider:SetValue(Value +/- 1) => clamp Min/Max + Display +
+  RunChanged (Callback/Changed/dependency nyala sama kayak drag).
+- Show/hide: Holder.MouseEnter -> SetArrows(true) tween fade 0.12s ke
+  transparency 0.45; MouseLeave -> fade ke 1. Selama drag/hold track:
+  ArrowsHolding = true + SetArrows(false) (suppress); InputEnded release
+  -> kalau ArrowsHover masih true, muncul lagi.
+- SetDisabled: arrow buttons ikut Active=false + panah disembunyiin.
+- Semua connection masuk Slider.Connections (cleanup Destroy aman).
+- Checker pin: ChevronDownIcon top-level, SetArrows, kedua SetValue
+  +/-1, ArrowsHolding, Size track -16. 73 checks.
