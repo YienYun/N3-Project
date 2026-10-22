@@ -1752,7 +1752,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.12.11 loaded — DEFAULT BAKE: dump user [N3V4 DIVIDER] LineTransparency = 0.4 | TextTransparency = 0 jadi default library verbatim (geser slider + Print lagi kalau mau ganti resep) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.13.0 loaded — DROPDOWN CHECK: baris yang ke-select punya icon centang hijau 14px di KANAN (v1 + v2, multi = semua yang ke-select); dot bulat accent v2 DIHAPUS diganti centang (lean: -1 instance per baris) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -3696,6 +3696,7 @@ function Library:OnUnload(Callback)
 end
 
 local CheckIcon = Library:GetIcon("check")
+local SelectedCheckColor = Color3.fromRGB(86, 197, 110)
 local ArrowIcon = Library:GetIcon("chevron-up")
 local ResizeIcon = Library:GetIcon("move-diagonal-2")
 local KeyIcon = Library:GetIcon("key")
@@ -5807,7 +5808,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.12.11"
+	Library.N3V4Version = "4.13.0"
 
 	Library.DividerAppearance = {
 		LineTransparency = 0.4,
@@ -8199,6 +8200,19 @@ do
 					Parent = Button,
 				})
 
+				local Check = New("ImageLabel", {
+					BackgroundTransparency = 1,
+					AnchorPoint = Vector2.new(1, 0.5),
+					Image = CheckIcon and CheckIcon.Url or "",
+					ImageColor3 = SelectedCheckColor,
+					ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
+					ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
+					Position = UDim2.new(1, -7, 0.5, 0),
+					Size = UDim2.fromOffset(14, 14),
+					Visible = false,
+					Parent = Container,
+				})
+
 				local Selected
 				if Info.Multi then
 					Selected = Dropdown.Value[Value]
@@ -8215,6 +8229,7 @@ do
 
 					Container.BackgroundTransparency = Selected and 0 or 1
 					Button.TextTransparency = IsDisabled and 0.8 or Selected and 0 or 0.5
+					Check.Visible = not not Selected
 
 					if Image then
 						Image.ImageTransparency = IsDisabled and 0.8 or Selected and 0 or 0.5
@@ -8723,7 +8738,7 @@ do
 
 			for _, Rec in RowRecs do
 				local On = IsSelected(Rec.Item.Text)
-				Rec.Dot.Visible = On
+				Rec.Check.Visible = On
 				Rec.Row.BackgroundTransparency = On and 0.55 or 1
 				Rec.Label.TextTransparency = Rec.Item.Disabled and 0.65 or (On and 0 or 0.35)
 			end
@@ -9067,21 +9082,21 @@ do
 					ZIndex = 9102,
 					Parent = Row,
 				})
-				local Dot = New("Frame", {
-					BackgroundColor3 = "AccentColor",
+				local Check = New("ImageLabel", {
+					BackgroundTransparency = 1,
 					AnchorPoint = Vector2.new(1, 0.5),
+					Image = CheckIcon and CheckIcon.Url or "",
+					ImageColor3 = SelectedCheckColor,
+					ImageRectOffset = CheckIcon and CheckIcon.ImageRectOffset or Vector2.zero,
+					ImageRectSize = CheckIcon and CheckIcon.ImageRectSize or Vector2.zero,
 					Position = UDim2.new(1, -10, 0.5, 0),
-					Size = UDim2.fromOffset(8, 8),
+					Size = UDim2.fromOffset(14, 14),
 					Visible = false,
 					ZIndex = 9102,
 					Parent = Row,
 				})
-				New("UICorner", {
-					CornerRadius = UDim.new(1, 0),
-					Parent = Dot,
-				})
 
-				table.insert(RowRecs, { Item = Item, Row = Row, Label = RowLabel, Dot = Dot })
+				table.insert(RowRecs, { Item = Item, Row = Row, Label = RowLabel, Check = Check })
 
 				if not Item.Disabled then
 					Row.MouseEnter:Connect(function()

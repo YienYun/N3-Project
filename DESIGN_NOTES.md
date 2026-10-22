@@ -1689,3 +1689,28 @@ TextTransparency = 0". Sesuai aturan standing: print user = bake
 verbatim. Default Library.DividerAppearance.LineTransparency 0.3 ->
 0.4; TextTransparency tetep 0. Slider MOD baca default dari LIB jadi
 ikut otomatis.
+
+## v4.13.0 — DROPDOWN CHECK (diskusi dulu, baru kode — sesuai aturan)
+Request user (diskusi -> GO): "ketika gue select listnya harusnya ada
+icons kecil centang/checklist... warna hijau... di kanan nya", berlaku
+v1 DAN v2, multi = semua baris yang ke-select (konsisten v2).
+
+Keputusan diskusi yang user kunci: (1) dot bulat accent v2 DIGANTI
+centang (satu penanda, bukan dua), (2) hijau = usul gue RGB(86,197,110)
+(user nggak kasih hex lain => konstanta semantic, bukan theme string,
+bukan knob/box baru = nol sampah), (3) v1 multi konsisten v2.
+
+Implementasi:
+- CheckIcon = Library:GetIcon("check") UDAH ADA top-level (line ~3698,
+  di-reresolve di SetIconModule) — dipakai, bukan bikin baru.
+- local SelectedCheckColor = Color3.fromRGB(86, 197, 110) top-level.
+- V1 (AddDropdown, menu context): ImageLabel check 14px anchor kanan
+  offset -7 (nyamain UIPadding baris) per row; toggle di
+  Table:UpdateButton() (kepanggil saat klik, drag-select, build).
+- V2 (AddDropdownV2): Dot Frame+UICorner (2 instance) DIGANTI ImageLabel
+  check 14px offset -10 (slot dot lama) = lean -1 instance/baris;
+  RowRecs.Dot -> RowRecs.Check; Refresh toggle Rec.Check.Visible.
+- Preview: Dropdown_Single demo udah Default = 1 jadi centang langsung
+  keliatan pas list dibuka — user minta "pengen lihat previewnya".
+- Checker: pin warna konstan + kedua toggle + absensi Dot lama +
+  jumlah ImageColor3 SelectedCheckColor == 2 (v1+v2, nggak lebih).
