@@ -2057,3 +2057,41 @@ Checker: 2 merah dulu — (a) label baru "Print setingan gradient kartu"
 mengandung substring pin lama count==2 → pin lama diperketat ke
 signature lengkap '...", PrintGrad'; (b) pin GradientConf salah prefix
 (Card. vs CardObj.) → dipotong prefixnya. Sekarang 80 checks.
+
+## v4.20.0 — MODULAR VISUALS: N3V4Visuals ModuleScript + engine gradient EasyVisuals
+Keputusan user (4 poin): modular GO; module hilang = fitur mati +
+print instruksi (bukan fallback); preset kurasi 8 (Gold Silver
+Chrome Rainbow Neon Sunset Oceanic Lava); knob 3-stop v4.19 jadi
+preset "Custom" (tetap hidup).
+Arsitektur: file BARU Library/N3V4Visuals.module.lua (= ModuleScript
+"N3V4Visuals" di ReplicatedStorage, SEBELAH ModuleScript N3V4; user
+bikin manual di Studio, paste isi file ini). Isinya: (1) engine
+Gradient adaptasi EasyVisuals source user — Heartbeat loop: Offset
+MENGALIR (OffsetSpeed*dt, warna di-sample ulang tiap frame jadi pita
+warna jalan), RotationSpeed (spin), blend morph (SetColorSequence
+seq+blendRate: keypoint di-lerp bertahap), auto-Destroy pas parent
+mati, Pause/Resume; (2) Presets.Order + Presets.Sequence (8 sequence
+multi-keypoint ditranskrip verbatim dari preset source user);
+(3) SELURUH body AddViewport + AddSpotlightCard pindah ke sini
+sebagai local function(Env, Groupbox, Idx, Info), Env = {New,
+Library, Options} di-inject dari LIB biar closure deps aman.
+LIB: require guard di atas (script.Parent:FindFirstChild
+("N3V4Visuals") + pcall + validasi tipe; gagal/hilang = print
+VisualsMissing sekali); AddViewport/AddSpotlightCard jadi delegate
+tipis (return nil + print kalau Visuals nil); wrapper legacy
+RichAddViewport (Info.Object) TETAP di LIB dan nge-chain ke delegate
+✓. Neto LIB -520 baris (16314 → 15794).
+CardGradient reshape: {Enabled, Preset="Custom", OffsetSpeed=0.3,
+RotationSpeed=0, ColorTop/Middle/Bottom}; knob v4.19 (ROT/POS/TR/OFF)
+DIGANTI dropdown CG_PRESET (9 opsi) + CG_FLOW (0-200%) + CG_SPIN
+(-180..180 deg/s); picker Custom CG_C1/2/3 tetap. ApplyImageGradient
+(engine): disable = base balik Scheme.MainColor; enable = base putih
++ Gradient.new(ImagePanel, seq preset/custom, 0) + SetOffsetSpeed +
+SetRotationSpeed; GradientConf per-kartu tetap skip apply global.
+PRE: kartu 3D demo SetImageGradient({Preset="Gold", OffsetSpeed=0.35}).
+Checker: $VIS masuk loop syntax + pin v4.17.1/4.18.0/4.19.0 dipindah
+ke $VIS (kode组件 udah di sana, string Env.Library dst); chk v4.20.0
+baru. Merah dulu: (a) komentar delegate INDONESIAN kena guard v4.8.1
+→ English; (b) escape pin 3-byte \\" nutup string bash (27 tempat) →
+4-byte; (c) absence pin World3D salah (legacy viewport Object path
+memang tetap di LIB) → diganti absence Name="ImagePanel" di LIB.

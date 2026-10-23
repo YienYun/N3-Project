@@ -11,6 +11,21 @@ local GuiService: GuiService = cloneref(game:GetService("GuiService"))
 local TextService: TextService = cloneref(game:GetService("TextService"))
 local Teams: Teams = cloneref(game:GetService("Teams"))
 local TweenService: TweenService = cloneref(game:GetService("TweenService"))
+local Visuals = nil
+local VisualsMissing = "[N3V4] ModuleScript N3V4Visuals ga ketemu — fitur viewport 3D + spotlight card MATI. Bikin ModuleScript bernama N3V4Visuals SEBELAH ModuleScript N3V4 di ReplicatedStorage, isinya dari file Library/N3V4Visuals.module.lua, lalu Play ulang."
+do
+	local Found = script.Parent and script.Parent:FindFirstChild("N3V4Visuals")
+	if Found then
+		local Ok, Mod = pcall(require, Found)
+		if Ok and type(Mod) == "table" and type(Mod.AddViewport) == "function" and type(Mod.AddSpotlightCard) == "function" then
+			Visuals = Mod
+		else
+			print(VisualsMissing)
+		end
+	else
+		print(VisualsMissing)
+	end
+end
 
 local getgenv = getgenv or function()
 	return shared
@@ -1639,10 +1654,9 @@ end
 
 Library.CardGradient = {
 	Enabled = true,
-	Rotation = -90,
-	MiddlePosition = 0.5,
-	MiddleTransparency = 0,
-	Offset = 0.01,
+	Preset = "Custom",
+	OffsetSpeed = 0.3,
+	RotationSpeed = 0,
 	ColorTop = Color3.fromRGB(38, 38, 44),
 	ColorMiddle = Color3.fromRGB(110, 110, 122),
 	ColorBottom = Color3.fromRGB(38, 38, 44),
@@ -1664,17 +1678,14 @@ function Library:SetCardGradient(Info)
 	if typeof(Info.Enabled) == "boolean" then
 		G.Enabled = Info.Enabled
 	end
-	if typeof(Info.Rotation) == "number" then
-		G.Rotation = Info.Rotation
+	if typeof(Info.Preset) == "string" then
+		G.Preset = Info.Preset
 	end
-	if typeof(Info.MiddlePosition) == "number" then
-		G.MiddlePosition = math.clamp(Info.MiddlePosition, 0.02, 0.98)
+	if typeof(Info.OffsetSpeed) == "number" then
+		G.OffsetSpeed = math.clamp(Info.OffsetSpeed, -2, 2)
 	end
-	if typeof(Info.MiddleTransparency) == "number" then
-		G.MiddleTransparency = math.clamp(Info.MiddleTransparency, 0, 1)
-	end
-	if typeof(Info.Offset) == "number" then
-		G.Offset = math.clamp(Info.Offset, -1, 1)
+	if typeof(Info.RotationSpeed) == "number" then
+		G.RotationSpeed = math.clamp(Info.RotationSpeed, -360, 360)
 	end
 	if typeof(Info.ColorTop) == "Color3" then
 		G.ColorTop = Info.ColorTop
@@ -1954,7 +1965,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.19.0 loaded — CARD GRADIENT + BAKE: dump user dibake verbatim ke CardPanels (Gap 8, FrameTransparency 0.7, TextSize 14); ImagePanel sekarang punya background gradient berwarna 3 stop (atas/tengah/bawah) dengan setingan global Library.CardPanels-nya saudara: Library.CardGradient + SetCardGradient (toggle, 3 warna, rotasi, posisi, transparansi, offset) + PER-KARTU override lewat Card:SetImageGradient (flow rarity dari script game lu, kartu override gak ketimpa knob global) + Card:ClearImageGradient buat balik ke global; UIGradient nempel di background panel, base di-putihin pas enable biar warna rarity beneran keluar (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.20.0 loaded — MODULAR VISUALS: kode viewport 3D + spotlight card PINDAH ke ModuleScript N3V4Visuals (file Library/N3V4Visuals.module.lua, paste sebagai ModuleScript sebelah N3V4 di ReplicatedStorage); LIB cuma delegate tipis jadi ga bengkak; gradient kartu sekarang pakai engine ala EasyVisuals source lu: warna MENGALIR (OffsetSpeed) + spin (RotationSpeed) + blend morph + preset metal multi-keypoint (Gold/Silver/Chrome/Rainbow/Neon/Sunset/Oceanic/Lava) + Custom = 3 stop warna lu; flow rarity satu baris: Card:SetImageGradient dengan Preset (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5519,558 +5530,27 @@ local BaseGroupbox = {}
 do
 	local Funcs = {}
 
-	--// GENERIC 3D VIEWPORT COMPONENT (MEWAH & BISA DIPUTAR 3D)
+	--// VISUAL DELEGATES: component bodies live in ModuleScript N3V4Visuals (modular, lean LIB)
 	function Funcs:AddViewport(Idx, Info)
 		if self.Destroyed then
 			return nil
 		end
-
-		local Groupbox = self
-		local Container = Groupbox.Container
-
-		local ViewportFrame = New("ViewportFrame", {
-			BackgroundColor3 = "MainColor",
-			BackgroundTransparency = 0.5,
-			Size = UDim2.new(1, 0, 0, Info.Height or 140),
-			LightColor = Color3.fromRGB(255, 255, 255),
-			LightDirection = Vector3.new(-1, 2, -1),
-			Ambient = Color3.fromRGB(180, 180, 180),
-			Parent = Container,
-		})
-		table.insert(
-			Library.Corners,
-			New("UICorner", {
-				CornerRadius = UDim.new(0, Library.CornerRadius),
-				Parent = ViewportFrame,
-			})
-		)
-		New("UIStroke", {
-			Color = "OutlineColor",
-			Thickness = 1,
-			Parent = ViewportFrame,
-		})
-
-		local Camera = Instance.new("Camera")
-		Camera.FieldOfView = 50
-		Camera.Parent = ViewportFrame
-		ViewportFrame.CurrentCamera = Camera
-
-		local WorldModel = Instance.new("WorldModel")
-		WorldModel.Parent = ViewportFrame
-
-		local CurrentModel = nil
-		local AngleX = 14
-		local AngleY = 0
-		local CameraDistance = 10
-		local Dragging = false
-		local LastMousePos = Vector2.zero
-
-		local function OrbitCamera()
-			if not CurrentModel then
-				return
-			end
-			local cf = CurrentModel:IsA("Model") and CurrentModel:GetBoundingBox() or CurrentModel.CFrame
-			local az = math.rad(AngleY)
-			local el = math.rad(AngleX)
-			local off = Vector3.new(math.sin(az) * math.cos(el), math.sin(el), math.cos(az) * math.cos(el)) * CameraDistance
-			Camera.CFrame = CFrame.new(cf.Position + off, cf.Position)
+		if not Visuals then
+			print(VisualsMissing)
+			return nil
 		end
-
-		local function AutoFocus(targetInstance)
-			if not targetInstance then
-				return
-			end
-			local cf, size
-			if targetInstance:IsA("Model") then
-				cf, size = targetInstance:GetBoundingBox()
-			else
-				cf, size = targetInstance.CFrame, targetInstance.Size
-			end
-			local maxDim = math.max(size.X, size.Y, size.Z)
-			CameraDistance = maxDim / (2 * math.tan(math.rad(Camera.FieldOfView / 2))) * 1.35
-			AngleY = 0
-			AngleX = 14
-			OrbitCamera()
-		end
-
-		local ViewportObj = {
-			Frame = ViewportFrame,
-			Camera = Camera,
-			WorldModel = WorldModel,
-			Type = "Viewport",
-		}
-
-		function ViewportObj:SetModel(modelSource)
-			WorldModel:ClearAllChildren()
-			CurrentModel = nil
-			if not modelSource then
-				return
-			end
-
-			local clone = modelSource:Clone()
-			if clone:IsA("Model") or clone:IsA("BasePart") then
-				for _, desc in ipairs(clone:GetDescendants()) do
-					if desc:IsA("LuaSourceContainer") or desc:IsA("Sound") then
-						desc:Destroy()
-					elseif desc:IsA("BasePart") then
-						desc.Anchored = true
-						desc.CanCollide = false
-					end
-				end
-				if clone:IsA("BasePart") then
-					clone.Anchored = true
-				end
-
-				clone.Parent = WorldModel
-				CurrentModel = clone
-				AutoFocus(clone)
-			end
-		end
-
-		-- AUTO ROTATE & INTERACTIVE DRAG
-		local SpinConnection = nil
-		if Info.Spin ~= false then
-			SpinConnection = game:GetService("RunService").RenderStepped:Connect(function(dt)
-				if not Dragging and CurrentModel then
-					AngleY = (AngleY + dt * 40) % 360
-					OrbitCamera()
-				end
-			end)
-		end
-
-		if Info.Interactive then
-			ViewportFrame.InputBegan:Connect(function(input)
-				if
-					input.UserInputType == Enum.UserInputType.MouseButton2
-					or input.UserInputType == Enum.UserInputType.Touch
-				then
-					Dragging = true
-					LastMousePos = Vector2.new(input.Position.X, input.Position.Y)
-				end
-			end)
-			game:GetService("UserInputService").InputEnded:Connect(function(input)
-				if
-					input.UserInputType == Enum.UserInputType.MouseButton2
-					or input.UserInputType == Enum.UserInputType.Touch
-				then
-					Dragging = false
-				end
-			end)
-			game:GetService("UserInputService").InputChanged:Connect(function(input)
-				if
-					Dragging
-					and (
-						input.UserInputType == Enum.UserInputType.MouseMovement
-						or input.UserInputType == Enum.UserInputType.Touch
-					)
-				then
-					local curPos = Vector2.new(input.Position.X, input.Position.Y)
-					local delta = curPos - LastMousePos
-					LastMousePos = curPos
-					AngleY = (AngleY - delta.X * 0.8) % 360
-					AngleX = math.clamp(AngleX + delta.Y * 0.5, -75, 75)
-					OrbitCamera()
-				end
-			end)
-		end
-
-		Groupbox:Resize()
-		table.insert(Groupbox.Elements, ViewportObj)
-		if Idx then
-			Options[Idx] = ViewportObj
-		end
-
-		return ViewportObj
+		return Visuals.AddViewport({ New = New, Library = Library, Options = Options }, self, Idx, Info)
 	end
 
-	--// SPOTLIGHT CARD: PANEL GAMBAR/3D + PANEL TEXT (FRAME PISAH, MODE NO-TEXT)
 	function Funcs:AddSpotlightCard(Idx, Info)
 		if self.Destroyed then
 			return nil
 		end
-
-		local Groupbox = self
-		local Container = Groupbox.Container
-
-		local CardFrame = New("Frame", {
-			BackgroundColor3 = "MainColor",
-			BackgroundTransparency = 0.5,
-			Size = UDim2.new(1, 0, 0, Info.Height or 120),
-			Parent = Container,
-		})
-		table.insert(
-			Library.Corners,
-			New("UICorner", {
-				CornerRadius = UDim.new(0, Library.CornerRadius),
-				Parent = CardFrame,
-			})
-		)
-		New("UIStroke", {
-			Color = "OutlineColor",
-			Thickness = 1,
-			Parent = CardFrame,
-		})
-
-		local ImagePanel = New("Frame", {
-			Name = "ImagePanel",
-			BackgroundColor3 = "MainColor",
-			Position = UDim2.fromOffset(4, 4),
-			Parent = CardFrame,
-		})
-		table.insert(
-			Library.Corners,
-			New("UICorner", {
-				CornerRadius = UDim.new(0, Library.CornerRadius),
-				Parent = ImagePanel,
-			})
-		)
-		local ImageStroke = New("UIStroke", {
-			Color = "OutlineColor",
-			Thickness = 1,
-			Parent = ImagePanel,
-		})
-		local ImageGrad = New("UIGradient", {
-			Parent = ImagePanel,
-		})
-
-		local MediaBox = New("Frame", {
-			BackgroundTransparency = 1,
-			ClipsDescendants = true,
-			Position = UDim2.fromOffset(3, 3),
-			Size = UDim2.new(1, -6, 1, -6),
-			Parent = ImagePanel,
-		})
-		table.insert(
-			Library.Corners,
-			New("UICorner", {
-				CornerRadius = UDim.new(0, Library.CornerRadius),
-				Parent = MediaBox,
-			})
-		)
-
-		local IconImg = New("ImageLabel", {
-			BackgroundTransparency = 1,
-			Size = UDim2.fromScale(1, 1),
-			Image = Info.Image or "",
-			ScaleType = Enum.ScaleType.Fit,
-			Parent = MediaBox,
-		})
-
-		local Viewport3D = New("ViewportFrame", {
-			BackgroundTransparency = 1,
-			Size = UDim2.fromScale(1, 1),
-			LightColor = Color3.fromRGB(255, 255, 255),
-			Ambient = Color3.fromRGB(190, 190, 190),
-			LightDirection = Vector3.new(-1, 2, -1),
-			Visible = false,
-			Parent = MediaBox,
-		})
-		local Cam3D = Instance.new("Camera")
-		Cam3D.FieldOfView = 48
-		Cam3D.Parent = Viewport3D
-		Viewport3D.CurrentCamera = Cam3D
-		local World3D = Instance.new("WorldModel")
-		World3D.Parent = Viewport3D
-
-		local TextPanel = New("Frame", {
-			Name = "TextPanel",
-			BackgroundColor3 = "MainColor",
-			ClipsDescendants = true,
-			Parent = CardFrame,
-		})
-		table.insert(
-			Library.Corners,
-			New("UICorner", {
-				CornerRadius = UDim.new(0, Library.CornerRadius),
-				Parent = TextPanel,
-			})
-		)
-		local TextStroke = New("UIStroke", {
-			Color = "OutlineColor",
-			Thickness = 1,
-			Parent = TextPanel,
-		})
-		New("UIListLayout", {
-			Padding = UDim.new(0, 2),
-			Parent = TextPanel,
-		})
-		New("UIPadding", {
-			PaddingBottom = UDim.new(0, 5),
-			PaddingLeft = UDim.new(0, 6),
-			PaddingRight = UDim.new(0, 6),
-			PaddingTop = UDim.new(0, 5),
-			Parent = TextPanel,
-		})
-
-		local TitleLabel = New("TextLabel", {
-			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, 0),
-			Text = Info.Title or "",
-			TextSize = 13,
-			RichText = true,
-			Font = Enum.Font.GothamBold,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextTruncate = Enum.TextTruncate.AtEnd,
-			Parent = TextPanel,
-		})
-		local DescLabel = New("TextLabel", {
-			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, 0),
-			Text = Info.Description or "",
-			TextSize = 11,
-			RichText = true,
-			TextWrapped = true,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Parent = TextPanel,
-		})
-		local BindMirror = New("TextLabel", {
-			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, 0),
-			Text = "",
-			TextSize = 11,
-			RichText = true,
-			TextWrapped = true,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Visible = false,
-			Parent = TextPanel,
-		})
-
-		local CardObj = {
-			Frame = CardFrame,
-			Icon = IconImg,
-			Viewport = Viewport3D,
-			Title = TitleLabel,
-			Desc = DescLabel,
-			Type = "SpotlightCard",
-			TextLabels = { TitleLabel, DescLabel, BindMirror },
-			NoTextLocked = Info.NoText == true,
-			HasText = false,
-		}
-		if not CardObj.NoTextLocked and (Info.Title or Info.Description or Info.Lines or Info.BindLabel) then
-			CardObj.HasText = true
+		if not Visuals then
+			print(VisualsMissing)
+			return nil
 		end
-
-		local LinesHolder = {}
-
-		function CardObj:Relayout()
-			local P = Library.CardPanels
-			TextPanel.Visible = CardObj.HasText
-			ImageStroke.Transparency = P.Outline and 0 or 1
-			TextStroke.Transparency = P.Outline and 0 or 1
-			ImagePanel.BackgroundTransparency = P.FrameTransparency
-			TextPanel.BackgroundTransparency = P.FrameTransparency
-			for _, Lbl in ipairs(CardObj.TextLabels) do
-				if Lbl.Parent then
-					Lbl.TextSize = Lbl == TitleLabel and P.TextSize + 1 or P.TextSize
-				end
-			end
-			local frac = math.clamp(P.ImageWidth, 20, 70) / 100
-			local gap = math.clamp(P.Gap, 0, 24)
-			if CardObj.HasText then
-				ImagePanel.Size = UDim2.new(frac, -8 * frac - gap / 2, 1, -8)
-				TextPanel.Position = UDim2.new(frac, 4 - 8 * frac + gap / 2, 0, 4)
-				TextPanel.Size = UDim2.new(1 - frac, -8 * (1 - frac) - gap / 2, 1, -8)
-			else
-				ImagePanel.Size = UDim2.new(1, -8, 1, -8)
-			end
-		end
-
-		function CardObj:SetLines(Lines)
-			for _, Lbl in ipairs(LinesHolder) do
-				Lbl:Destroy()
-			end
-			table.clear(LinesHolder)
-			CardObj.TextLabels = { TitleLabel, DescLabel, BindMirror }
-			if type(Lines) == "table" then
-				for _, Row in ipairs(Lines) do
-					local C = Row.Color or Library.Scheme.AccentColor
-					local Lbl = New("TextLabel", {
-						AutomaticSize = Enum.AutomaticSize.Y,
-						BackgroundTransparency = 1,
-						Size = UDim2.new(1, 0, 0, 0),
-						RichText = true,
-						TextWrapped = true,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						Text = string.format(
-							'<font color="rgb(%d, %d, %d)">%s</font>: %s',
-							math.floor(C.R * 255 + 0.5), math.floor(C.G * 255 + 0.5), math.floor(C.B * 255 + 0.5),
-							tostring(Row.Label or ""), tostring(Row.Value or "")
-						),
-						Parent = TextPanel,
-					})
-					table.insert(LinesHolder, Lbl)
-					table.insert(CardObj.TextLabels, Lbl)
-				end
-			end
-			CardObj:Relayout()
-		end
-
-		local BindConn = nil
-
-		function CardObj:BindLabel(Source)
-			if BindConn then
-				BindConn:Disconnect()
-				BindConn = nil
-			end
-			if Source and pcall(function()
-				return Source.Text
-			end) then
-				BindMirror.Visible = true
-				BindMirror.Text = tostring(Source.Text)
-				BindConn = Source:GetPropertyChangedSignal("Text"):Connect(function()
-					BindMirror.Text = tostring(Source.Text)
-				end)
-			else
-				BindMirror.Visible = false
-				BindMirror.Text = ""
-			end
-			CardObj:Relayout()
-		end
-
-		function CardObj:ApplyImageGradient()
-			local Conf = CardObj.GradientConf or Library.CardGradient
-			ImageGrad.Enabled = Conf.Enabled
-			if Conf.Enabled then
-				ImagePanel.BackgroundColor3 = Color3.new(1, 1, 1)
-			else
-				ImagePanel.BackgroundColor3 = Library.Scheme.MainColor
-			end
-			local Pos = math.clamp(Conf.MiddlePosition, 0.02, 0.98)
-			ImageGrad.Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, Conf.ColorTop),
-				ColorSequenceKeypoint.new(Pos, Conf.ColorMiddle),
-				ColorSequenceKeypoint.new(1, Conf.ColorBottom),
-			})
-			ImageGrad.Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 0),
-				NumberSequenceKeypoint.new(Pos, Conf.MiddleTransparency),
-				NumberSequenceKeypoint.new(1, 0),
-			})
-			ImageGrad.Rotation = Conf.Rotation
-			ImageGrad.Offset = Vector2.new(Conf.Offset, 0)
-		end
-
-		function CardObj:SetImageGradient(Info)
-			if typeof(Info) ~= "table" then
-				return
-			end
-			if not CardObj.GradientConf then
-				CardObj.GradientConf = table.clone(Library.CardGradient)
-			end
-			local C = CardObj.GradientConf
-			if typeof(Info.Enabled) == "boolean" then
-				C.Enabled = Info.Enabled
-			end
-			if typeof(Info.Rotation) == "number" then
-				C.Rotation = Info.Rotation
-			end
-			if typeof(Info.MiddlePosition) == "number" then
-				C.MiddlePosition = math.clamp(Info.MiddlePosition, 0.02, 0.98)
-			end
-			if typeof(Info.MiddleTransparency) == "number" then
-				C.MiddleTransparency = math.clamp(Info.MiddleTransparency, 0, 1)
-			end
-			if typeof(Info.Offset) == "number" then
-				C.Offset = math.clamp(Info.Offset, -1, 1)
-			end
-			if typeof(Info.ColorTop) == "Color3" then
-				C.ColorTop = Info.ColorTop
-			end
-			if typeof(Info.ColorMiddle) == "Color3" then
-				C.ColorMiddle = Info.ColorMiddle
-			end
-			if typeof(Info.ColorBottom) == "Color3" then
-				C.ColorBottom = Info.ColorBottom
-			end
-			CardObj:ApplyImageGradient()
-		end
-
-		function CardObj:ClearImageGradient()
-			CardObj.GradientConf = nil
-			CardObj:ApplyImageGradient()
-		end
-
-		local CurSpinAngle = 0
-		game:GetService("RunService").RenderStepped:Connect(function(dt)
-			local petModel = World3D:FindFirstChildWhichIsA("Model") or World3D:FindFirstChildWhichIsA("BasePart")
-			if Viewport3D.Visible and petModel then
-				CurSpinAngle = (CurSpinAngle + dt * 45) % 360
-				local cf, size
-				if petModel:IsA("Model") then
-					cf, size = petModel:GetBoundingBox()
-				else
-					cf, size = petModel.CFrame, petModel.Size
-				end
-				local maxDim = math.max(size.X, size.Y, size.Z)
-				local dist = maxDim / (2 * math.tan(math.rad(Cam3D.FieldOfView / 2))) * 1.35
-				local rad = math.rad(CurSpinAngle)
-				Cam3D.CFrame = CFrame.new(
-					cf.Position + Vector3.new(math.sin(rad) * dist, dist * 0.25, math.cos(rad) * dist),
-					cf.Position
-				)
-			end
-		end)
-
-		function CardObj:SetData(titleText, descText, imageAsset, modelSource)
-			if titleText then
-				TitleLabel.Text = titleText
-			end
-			if descText then
-				DescLabel.Text = descText
-			end
-			if (titleText or descText) and not CardObj.NoTextLocked then
-				CardObj.HasText = true
-			end
-
-			if modelSource then
-				World3D:ClearAllChildren()
-				local clone = modelSource:Clone()
-				for _, desc in ipairs(clone:GetDescendants()) do
-					if desc:IsA("BasePart") then
-						desc.Anchored = true
-						desc.CanCollide = false
-					end
-					if desc:IsA("LuaSourceContainer") or desc:IsA("Sound") then
-						desc:Destroy()
-					end
-				end
-				if clone:IsA("BasePart") then
-					clone.Anchored = true
-				end
-				clone.Parent = World3D
-
-				Viewport3D.Visible = true
-				IconImg.Visible = false
-			else
-				Viewport3D.Visible = false
-				IconImg.Visible = true
-				if imageAsset and imageAsset ~= "" then
-					IconImg.Image = imageAsset
-				end
-			end
-			CardObj:Relayout()
-		end
-
-		if Info.Lines then
-			CardObj:SetLines(Info.Lines)
-		end
-		if Info.BindLabel then
-			CardObj:BindLabel(Info.BindLabel)
-		end
-		CardObj:Relayout()
-		CardObj:ApplyImageGradient()
-
-		table.insert(Library.SpotlightCards, CardObj)
-		Groupbox:Resize()
-		table.insert(Groupbox.Elements, CardObj)
-		if Idx then
-			Options[Idx] = CardObj
-		end
-
-		return CardObj
+		return Visuals.AddSpotlightCard({ New = New, Library = Library, Options = Options }, self, Idx, Info)
 	end
 
 	--// COMPONENT: Clean 2-Line Scroll Feed (Persis Chilli Asli: Anti-Bocor & Lega)
@@ -6232,7 +5712,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.19.0"
+	Library.N3V4Version = "4.20.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,

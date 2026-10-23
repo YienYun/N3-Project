@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.19.0",
+	Footer = "N3V4 • UI Preview Kit v4.20.0",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -801,11 +801,7 @@ Try("Media: R1 SpotlightCard 2D <-> 3D", function()
 		})
 	end
 	if Card and Card.SetImageGradient then
-		Card:SetImageGradient({
-			ColorTop = Color3.fromRGB(255, 210, 30),
-			ColorMiddle = Color3.fromRGB(140, 80, 10),
-			ColorBottom = Color3.fromRGB(45, 25, 5),
-		})
+		Card:SetImageGradient({ Preset = "Gold", OffsetSpeed = 0.35 })
 	end
 
 	local CardNT = Box:AddSpotlightCard("Media_NoText", {

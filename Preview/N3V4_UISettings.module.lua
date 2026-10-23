@@ -1011,8 +1011,8 @@ function Settings:Attach(Library, Window, Options)
 				local A1, A2, A3 = RGBCG(G.ColorTop)
 				local B1, B2, B3 = RGBCG(G.ColorMiddle)
 				local C1, C2, C3 = RGBCG(G.ColorBottom)
-				return string.format("Library:SetCardGradient({ Enabled = %s, Rotation = %s, MiddlePosition = %s, MiddleTransparency = %s, Offset = %s, ColorTop = Color3.fromRGB(%d, %d, %d), ColorMiddle = Color3.fromRGB(%d, %d, %d), ColorBottom = Color3.fromRGB(%d, %d, %d) })",
-					tostring(G.Enabled), G.Rotation, G.MiddlePosition, G.MiddleTransparency, G.Offset,
+				return string.format("Library:SetCardGradient({ Enabled = %s, Preset = \"%s\", OffsetSpeed = %s, RotationSpeed = %s, ColorTop = Color3.fromRGB(%d, %d, %d), ColorMiddle = Color3.fromRGB(%d, %d, %d), ColorBottom = Color3.fromRGB(%d, %d, %d) })",
+					tostring(G.Enabled), G.Preset, G.OffsetSpeed, G.RotationSpeed,
 					A1, A2, A3, B1, B2, B3, C1, C2, C3)
 			end
 			local function PrintCardGrad()
@@ -1020,8 +1020,8 @@ function Settings:Attach(Library, Window, Options)
 				local A1, A2, A3 = RGBCG(G.ColorTop)
 				local B1, B2, B3 = RGBCG(G.ColorMiddle)
 				local C1, C2, C3 = RGBCG(G.ColorBottom)
-				print(string.format("[N3V4 CARD GRADIENT] Enabled = %s | Rotation = %s | MiddlePosition = %s | MiddleTransparency = %s | Offset = %s | Top = %d,%d,%d | Middle = %d,%d,%d | Bottom = %d,%d,%d",
-					tostring(G.Enabled), G.Rotation, G.MiddlePosition, G.MiddleTransparency, G.Offset,
+				print(string.format("[N3V4 CARD GRADIENT] Enabled = %s | Preset = %s | OffsetSpeed = %s | RotationSpeed = %s | Top = %d,%d,%d | Middle = %d,%d,%d | Bottom = %d,%d,%d",
+					tostring(G.Enabled), G.Preset, G.OffsetSpeed, G.RotationSpeed,
 					A1, A2, A3, B1, B2, B3, C1, C2, C3))
 				SafeNotify({ Title = "Gradient kartu", Description = "Cek Output.", Icon = "info", Time = 3 })
 			end
@@ -1034,6 +1034,8 @@ function Settings:Attach(Library, Window, Options)
 					SafeNotify({ Title = "Gradient kartu", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
 				end
 			end
+
+			local PRESET_LIST = { "Custom", "Gold", "Silver", "Chrome", "Rainbow", "Neon", "Sunset", "Oceanic", "Lava" }
 
 			local Box = T1:AddLeftGroupbox("Gradient Kartu", "sparkles")
 			local TogCG = Box:AddToggle("CG_ON", {
@@ -1060,28 +1062,22 @@ function Settings:Attach(Library, Window, Options)
 					Library:SetCardGradient({ ColorBottom = Color })
 				end,
 			})
-			Box:AddSlider("CG_ROT", {
-				Text = "Rotasi gradient", Default = Library.CardGradient.Rotation, Min = -180, Max = 180, Rounding = 0, Suffix = "deg",
+			Box:AddDropdown("CG_PRESET", {
+				Text = "Preset gradient metal", Values = PRESET_LIST, Default = table.find(PRESET_LIST, Library.CardGradient.Preset) or 1,
 				Callback = function(Value)
-					Library:SetCardGradient({ Rotation = Value })
+					Library:SetCardGradient({ Preset = Value })
 				end,
 			})
-			Box:AddSlider("CG_POS", {
-				Text = "Posisi stop tengah", Default = math.floor(Library.CardGradient.MiddlePosition * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Box:AddSlider("CG_FLOW", {
+				Text = "Kecepatan aliran warna", Default = math.floor(Library.CardGradient.OffsetSpeed * 100 + 0.5), Min = 0, Max = 200, Rounding = 0, Suffix = "%",
 				Callback = function(Value)
-					Library:SetCardGradient({ MiddlePosition = math.clamp(Value / 100, 0.02, 0.98) })
+					Library:SetCardGradient({ OffsetSpeed = Value / 100 })
 				end,
 			})
-			Box:AddSlider("CG_TR", {
-				Text = "Transparansi tengah", Default = math.floor(Library.CardGradient.MiddleTransparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+			Box:AddSlider("CG_SPIN", {
+				Text = "Kecepatan putar gradient", Default = Library.CardGradient.RotationSpeed, Min = -180, Max = 180, Rounding = 0, Suffix = "deg/s",
 				Callback = function(Value)
-					Library:SetCardGradient({ MiddleTransparency = Value / 100 })
-				end,
-			})
-			Box:AddSlider("CG_OFF", {
-				Text = "Offset gradient", Default = math.floor(Library.CardGradient.Offset * 100 + 0.5), Min = -100, Max = 100, Rounding = 0, Suffix = "%",
-				Callback = function(Value)
-					Library:SetCardGradient({ Offset = Value / 100 })
+					Library:SetCardGradient({ RotationSpeed = Value })
 				end,
 			})
 			Box:AddButton("Print setingan gradient kartu", PrintCardGrad)
