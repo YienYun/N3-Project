@@ -47,7 +47,7 @@ function Gradient.new(UIInstance, ColorSeq, Transparency)
 		if self.Blending then
 			local rate = math.clamp(self.BlendRate * dt * 8, 0, 1)
 			local kp = {}
-			for i = 0, SAMPLES - 1 do
+			for i = 0, SAMPLES do
 				local t = i / SAMPLES
 				local cur = SampleSequence(self.Current, t)
 				local tgt = SampleSequence(self.Target, t)
@@ -61,7 +61,7 @@ function Gradient.new(UIInstance, ColorSeq, Transparency)
 			end
 		end
 		local out = {}
-		for i = 0, SAMPLES - 1 do
+		for i = 0, SAMPLES do
 			local t = i / SAMPLES
 			table.insert(out, ColorSequenceKeypoint.new(t, SampleSequence(self.Current, t + self.Offset)))
 		end

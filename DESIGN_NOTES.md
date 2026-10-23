@@ -2095,3 +2095,15 @@ baru. Merah dulu: (a) komentar delegate INDONESIAN kena guard v4.8.1
 → English; (b) escape pin 3-byte \\" nutup string bash (27 tempat) →
 4-byte; (c) absence pin World3D salah (legacy viewport Object path
 memang tetap di LIB) → diganti absence Name="ImagePanel" di LIB.
+
+## v4.20.1 — FIX ENGINE: ColorSequence wajib end di t=1
+Error user spam: "ColorSequence must end at time=1.0" di N3V4Visuals
+line 68 (Heartbeat engine). Salah gue: loop sampling output cuma
+bikin keypoint t = 0..7/8 (SAMPLES-1) — ColorSequence Roblox WAJIB
+punya keypoint terakhir di time 1.0. Fix: kedua loop (blend + output)
+jadi `for i = 0, SAMPLES do` → 9 keypoint, t=1 di-sample lewat wrap
+modulo jadi warnanya sama dengan t=0 = flow seamless DAN legal.
+Checker pin: count loop baru == 2 + absensi loop lama.
+Pelajaran escape chk (ketiga kalinya): count-pin di dalam double
+quote wajib `\$(` (nunda substitution ke eval), bukan `$(` (ke-
+substitute pas parse baris). Byte persis: `\"` quote + `\$` dollar.

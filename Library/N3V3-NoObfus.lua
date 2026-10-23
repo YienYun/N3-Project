@@ -1965,7 +1965,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.20.0 loaded — MODULAR VISUALS: kode viewport 3D + spotlight card PINDAH ke ModuleScript N3V4Visuals (file Library/N3V4Visuals.module.lua, paste sebagai ModuleScript sebelah N3V4 di ReplicatedStorage); LIB cuma delegate tipis jadi ga bengkak; gradient kartu sekarang pakai engine ala EasyVisuals source lu: warna MENGALIR (OffsetSpeed) + spin (RotationSpeed) + blend morph + preset metal multi-keypoint (Gold/Silver/Chrome/Rainbow/Neon/Sunset/Oceanic/Lava) + Custom = 3 stop warna lu; flow rarity satu baris: Card:SetImageGradient dengan Preset (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.20.1 loaded — FIX ENGINE: loop sampling gradient sekarang nutup keypoint di t=1 (ColorSequence wajib end di 1.0; loop lama berhenti di 7/8 jadi error ColorSequence must end at time=1.0 tiap frame); t=1 pakai warna t=0 lewat wrap modulo jadi flow tetep seamless (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5712,7 +5712,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.20.0"
+	Library.N3V4Version = "4.20.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
