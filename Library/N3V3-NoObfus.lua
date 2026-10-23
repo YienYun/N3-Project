@@ -1567,7 +1567,7 @@ function Library:ApplyOutlineSpin()
 			end
 			if S.Enabled then
 				Obj.Grad.Rotation = 0
-				Obj.Tween = TweenService:Create(Obj.Grad, TweenInfo.new(math.clamp(S.Speed, 0.5, 20), Enum.EasingStyle.Linear, -1), { Rotation = 360 })
+				Obj.Tween = TweenService:Create(Obj.Grad, TweenInfo.new(math.clamp(S.Speed, 0.5, 20), Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 })
 				Obj.Tween:Play()
 			else
 				Obj.Tween = nil
@@ -1862,7 +1862,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.16.0 loaded — OUTLINE SPIN: pita cahaya putih-silver muter terus di outline window (radar sweep, setengah keliling, loop infinite); state Library.OutlineSpin + API SetOutlineSpin/AddOutlineSpin/ApplyOutlineSpin top-level; window daftar lewat AddOutlineSpin(MainFrame); knob lengkap + sample hidup + print/copy di Tab 1 box Outline Muter (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.16.1 loaded — FIX TWEENINFO: argumen ketiga TweenInfo.new itu EasingDirection, bukan repeatCount; -1 infinite repeat dipindah ke posisi keempat (Enum.EasingDirection.InOut, -1); outline spin sekarang jalan tanpa error (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5918,7 +5918,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.16.0"
+	Library.N3V4Version = "4.16.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,

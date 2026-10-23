@@ -1908,3 +1908,16 @@ BENERAN dan ikut semua knob lewat registry yang sama.
 Default bake: Enabled true, Speed 4, ColorA fromRGB(255,255,255),
 ColorB fromRGB(192,196,204). Gates: 76 checks, symmetry 8/8+4/4,
 0 SyntaxError, 0 unknown-global nama baru.
+
+## v4.16.1 — FIX TWEENINFO ARG ORDER (outline spin error saat lahir)
+Error user: "TweenInfo.new third argument expects Enum.EasingDirection
+input" di ApplyOutlineSpin. Salah gue: signature TweenInfo.new =
+(time, easingStyle, EASINGDIRECTION, repeatCount, reverses, delay) —
+gue taro -1 (repeatCount) di posisi ketiga. Fix: (speed, Linear,
+Enum.EasingDirection.InOut, -1). Checker pin urutan argumen ini biar
+gak keulang (grep -qF 'Enum.EasingStyle.Linear,
+Enum.EasingDirection.InOut, -1').
+Pelajaran: argumen posisional API Roblox yang opsional-di-tengah
+(gini) wajib dicek urutannya satu-satu; luau-analyze nonstrict TANPA
+defs gak ngecek arity/tipe argumen → blind spot kedua setelah
+unknown-member.
