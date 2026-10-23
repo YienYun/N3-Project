@@ -2137,3 +2137,25 @@ engine di VIS; absensi CG_FLOW/CG_SPIN di MOD. Sempat 4x merah
 semua urusan checker (label yatim, pin line tanpa bungkus quote,
 fragmen '$VIS' ketuker '$LIB', over-escape 4 backslash vs 3) —
 konvensi final: quote pola = \\\" (3 byte), count-pin = \"\$(...).
+
+## v4.21.1 — DUA BUG GUE: ImageGrad yatim + demo KeyBox salah pintu
+Dump user 2x berturut-turut: line 495 'index nil with Enabled' +
+warn AddKeyBox, padahal marker v4.21.0 udah muncul = paste bersih,
+kode gue yang rusak. Round pertama gue salah nuduh "paste campur" —
+koreksi terbuka ke user.
+Bug 1: surgery v4.21.0 kehilangan baris creation
+`local ImageGrad = Env.New("UIGradient", { Parent = ImagePanel })` —
+ApplyImageGradient nge-index global nil. Pesan error 'Enabled' itu
+ImageGrad.Enabled, bukan Conf.Enabled (jebakan: dua-duanya di line
+yang sama). Fix: creation disisipin setelah ImageStroke.
+Bug 2: AddKeyBox cuma ada di KeyTab khusus (Window:AddKeyTab
+@13099, Tab:AddKeyBox @13225, return Tab @13424) — BUKAN di tab
+biasa. Forensik lama gue cuma buktiin "function Tab:AddKeyBox ada
+di file" tanpa cek Tab-nya kelas mana = kesimpulan salah. PRE demo
+manggil AdvancedTab:AddKeyBox = salah pintu dari dulu, warn-nya
+selalu sah. Fix PRE: guard typeof(Window.AddKeyTab), bikin KeyTab
+"Execute" (icon key) + AddKeyBox di situ. Preview sekarang punya
+tab Execute = showcase AddKeyTab yang bener.
+Checker: pin guard di-161 diganti ke Window.AddKeyTab +
+KeyTab:AddKeyBox; pin creation ImageGrad (-qF, anti-jebakan escape)
+ditambah ke chk v4.21. Gates 83/83.

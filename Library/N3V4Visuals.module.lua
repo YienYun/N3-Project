@@ -293,6 +293,10 @@ local function AddSpotlightCard(Env, Groupbox, Idx, Info)
 		Parent = ImagePanel,
 	})
 
+	local ImageGrad = Env.New("UIGradient", {
+		Parent = ImagePanel,
+	})
+
 	local MediaBox = Env.New("Frame", {
 		BackgroundTransparency = 1,
 		ClipsDescendants = true,

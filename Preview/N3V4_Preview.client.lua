@@ -704,11 +704,12 @@ Try("Advanced: R3 Dialog", function()
 end)
 
 Try("Advanced: KeyBox (execute key)", function()
-	if typeof(AdvancedTab.AddKeyBox) ~= "function" then
-		warn("[N3V4 Preview] AddKeyBox nggak ada di library ini — paste ulang Library/N3V3-NoObfus.lua terbaru.")
+	if typeof(Window.AddKeyTab) ~= "function" then
+		warn("[N3V4 Preview] AddKeyTab nggak ada di library ini — paste ulang Library/N3V3-NoObfus.lua terbaru.")
 		return
 	end
-	AdvancedTab:AddKeyBox(function(KeyText)
+	local KeyTab = Window:AddKeyTab("Execute", "key", "Demo KeyTab + AddKeyBox")
+	KeyTab:AddKeyBox(function(KeyText)
 		SafeNotify({ Title = "KeyBox", Description = "Key masuk: " .. tostring(KeyText), Time = 3 })
 	end)
 end)
