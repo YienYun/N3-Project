@@ -2107,3 +2107,33 @@ Checker pin: count loop baru == 2 + absensi loop lama.
 Pelajaran escape chk (ketiga kalinya): count-pin di dalam double
 quote wajib `\$(` (nunda substitution ke eval), bukan `$(` (ke-
 substitute pas parse baris). Byte persis: `\"` quote + `\$` dollar.
+
+## v4.21.0 — CARD GRADIENT STATIC: animasi dibuang, background doang
+Komplain user (frustrasi berat): animasi patah-patah, ganti preset
+gold/custom warna ga berubah, custom keliatan aneh, dan kesimpulan
+dia: "jangan ada animasinya bro, ini hanya untuk background, gue
+suka yang chromium".
+Root cause patah-patah: engine flow gue rebuild ColorSequence 9
+keypoint TIAP FRAME PER KARTU di Heartbeat = churn alokasi = stutter
++ CPU buang. Root cause "ga berubah"/"aneh": blend morph + resampling
+8 sampel bikin preset/custom gak keluar sebagaimana adanya; plus
+aturan override per-kartu (kartu PRE pegang Gold) bikin knob global
+terlihat mati di kartu itu.
+Keputusan: gradient kartu = STATIC assignment sekali (ImageGrad.Color
+= sequence preset / 3-stop custom langsung, ImageGrad.Rotation =
+Conf.Rotation). Nol update per frame = mulus absolut + zero CPU.
+Engine Gradient (Gradient.new/SampleSequence/SetOffsetSpeed dst)
+DIBUANG BERSIH dari N3V4Visuals (module 749 → 631 baris); return
+table tinggal Presets + 2 komponen. OffsetSpeed/RotationSpeed hapus
+dari state/API/print; knob CG_FLOW/CG_SPIN hapus; ganti CG_ROT
+(rotasi statis -180..180, default -90) = kombinasi preset x rotasi x
+warna custom x override per-kartu.
+Preset tetep 8 metal + Custom (Chrome kesayangan user aman, urutan
+dropdown tidak berubah). SetImageGradient per-kartu sekarang
+{Enabled, Preset, Rotation, ColorTop/Middle/Bottom}.
+Checker: region 188-192 direkonstruksi (pin v4.19 pernah yatim tanpa
+label di round lama — ketemu sekarang); pin v4.20/21 baru; absensi
+engine di VIS; absensi CG_FLOW/CG_SPIN di MOD. Sempat 4x merah
+semua urusan checker (label yatim, pin line tanpa bungkus quote,
+fragmen '$VIS' ketuker '$LIB', over-escape 4 backslash vs 3) —
+konvensi final: quote pola = \\\" (3 byte), count-pin = \"\$(...).

@@ -1,111 +1,3 @@
-local RunService = game:GetService("RunService")
-
-local SAMPLES = 8
-
-local Gradient = {}
-Gradient.__index = Gradient
-
-local function SampleSequence(Sequence, Time)
-	local t = Time % 1
-	local kp = Sequence.Keypoints
-	for i = 1, #kp - 1 do
-		local a, b = kp[i], kp[i + 1]
-		if t >= a.Time and t <= b.Time then
-			local span = b.Time - a.Time
-			local alpha = span == 0 and 0 or (t - a.Time) / span
-			return a.Value:Lerp(b.Value, alpha)
-		end
-	end
-	return kp[#kp].Value
-end
-
-function Gradient.new(UIInstance, ColorSeq, Transparency)
-	local self = setmetatable({}, Gradient)
-	self.UIInstance = UIInstance
-	self.Instance = UIInstance:FindFirstChildWhichIsA("UIGradient") or Instance.new("UIGradient")
-	self.Instance.Parent = UIInstance
-	self.Current = ColorSeq
-	self.Target = ColorSeq
-	self.Blending = false
-	self.BlendRate = 1
-	self.Offset = 0
-	self.OffsetSpeed = 0
-	self.Rotation = 0
-	self.RotationSpeed = 0
-	self.Transparency = typeof(Transparency) == "number" and NumberSequence.new(Transparency) or Transparency
-	self.IsPaused = false
-	self.Connection = RunService.Heartbeat:Connect(function(dt)
-		if self.IsPaused then
-			return
-		end
-		if not self.UIInstance or not self.UIInstance.Parent then
-			self:Destroy()
-			return
-		end
-		self.Offset += self.OffsetSpeed * dt
-		self.Rotation += self.RotationSpeed * dt
-		if self.Blending then
-			local rate = math.clamp(self.BlendRate * dt * 8, 0, 1)
-			local kp = {}
-			for i = 0, SAMPLES do
-				local t = i / SAMPLES
-				local cur = SampleSequence(self.Current, t)
-				local tgt = SampleSequence(self.Target, t)
-				table.insert(kp, ColorSequenceKeypoint.new(t, cur:Lerp(tgt, rate)))
-			end
-			if rate >= 1 then
-				self.Current = self.Target
-				self.Blending = false
-			else
-				self.Current = ColorSequence.new(kp)
-			end
-		end
-		local out = {}
-		for i = 0, SAMPLES do
-			local t = i / SAMPLES
-			table.insert(out, ColorSequenceKeypoint.new(t, SampleSequence(self.Current, t + self.Offset)))
-		end
-		self.Instance.Color = ColorSequence.new(out)
-		self.Instance.Transparency = self.Transparency
-		self.Instance.Rotation = self.Rotation
-	end)
-	return self
-end
-
-function Gradient:SetColorSequence(Sequence, BlendRate)
-	self.Target = Sequence
-	self.BlendRate = BlendRate or 1
-	if self.BlendRate >= 1 then
-		self.Current = Sequence
-		self.Blending = false
-	else
-		self.Blending = true
-	end
-end
-
-function Gradient:SetOffsetSpeed(Speed)
-	self.OffsetSpeed = Speed
-end
-
-function Gradient:SetRotationSpeed(Speed)
-	self.RotationSpeed = Speed
-end
-
-function Gradient:Pause()
-	self.IsPaused = true
-end
-
-function Gradient:Resume()
-	self.IsPaused = false
-end
-
-function Gradient:Destroy()
-	if self.Connection then
-		self.Connection:Disconnect()
-		self.Connection = nil
-	end
-end
-
 local function C3(r, g, b)
 	return Color3.new(r, g, b)
 end
@@ -600,28 +492,22 @@ local function AddSpotlightCard(Env, Groupbox, Idx, Info)
 
 	function CardObj:ApplyImageGradient()
 		local Conf = CardObj.GradientConf or Env.Library.CardGradient
-		if CardObj.GradientObj then
-			CardObj.GradientObj:Destroy()
-			CardObj.GradientObj = nil
-		end
+		ImageGrad.Enabled = Conf.Enabled
 		if not Conf.Enabled then
 			ImagePanel.BackgroundColor3 = Env.Library.Scheme.MainColor
 			return
 		end
 		ImagePanel.BackgroundColor3 = Color3.new(1, 1, 1)
-		local Seq
 		if Conf.Preset == "Custom" then
-			Seq = ColorSequence.new({
+			ImageGrad.Color = ColorSequence.new({
 				ColorSequenceKeypoint.new(0, Conf.ColorTop),
 				ColorSequenceKeypoint.new(0.5, Conf.ColorMiddle),
 				ColorSequenceKeypoint.new(1, Conf.ColorBottom),
 			})
 		else
-			Seq = Presets.Sequence[Conf.Preset] or Presets.Sequence.Gold
+			ImageGrad.Color = Presets.Sequence[Conf.Preset] or Presets.Sequence.Gold
 		end
-		CardObj.GradientObj = Gradient.new(ImagePanel, Seq, 0)
-		CardObj.GradientObj:SetOffsetSpeed(Conf.OffsetSpeed)
-		CardObj.GradientObj:SetRotationSpeed(Conf.RotationSpeed)
+		ImageGrad.Rotation = Conf.Rotation
 	end
 
 	function CardObj:SetImageGradient(Info)
@@ -638,11 +524,8 @@ local function AddSpotlightCard(Env, Groupbox, Idx, Info)
 		if typeof(Info.Preset) == "string" then
 			C.Preset = Info.Preset
 		end
-		if typeof(Info.OffsetSpeed) == "number" then
-			C.OffsetSpeed = math.clamp(Info.OffsetSpeed, -2, 2)
-		end
-		if typeof(Info.RotationSpeed) == "number" then
-			C.RotationSpeed = math.clamp(Info.RotationSpeed, -360, 360)
+		if typeof(Info.Rotation) == "number" then
+			C.Rotation = math.clamp(Info.Rotation, -360, 360)
 		end
 		if typeof(Info.ColorTop) == "Color3" then
 			C.ColorTop = Info.ColorTop
@@ -742,7 +625,6 @@ local function AddSpotlightCard(Env, Groupbox, Idx, Info)
 end
 
 return {
-	Gradient = Gradient,
 	Presets = Presets,
 	AddViewport = AddViewport,
 	AddSpotlightCard = AddSpotlightCard,

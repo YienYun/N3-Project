@@ -1655,8 +1655,7 @@ end
 Library.CardGradient = {
 	Enabled = true,
 	Preset = "Custom",
-	OffsetSpeed = 0.3,
-	RotationSpeed = 0,
+	Rotation = -90,
 	ColorTop = Color3.fromRGB(38, 38, 44),
 	ColorMiddle = Color3.fromRGB(110, 110, 122),
 	ColorBottom = Color3.fromRGB(38, 38, 44),
@@ -1681,11 +1680,8 @@ function Library:SetCardGradient(Info)
 	if typeof(Info.Preset) == "string" then
 		G.Preset = Info.Preset
 	end
-	if typeof(Info.OffsetSpeed) == "number" then
-		G.OffsetSpeed = math.clamp(Info.OffsetSpeed, -2, 2)
-	end
-	if typeof(Info.RotationSpeed) == "number" then
-		G.RotationSpeed = math.clamp(Info.RotationSpeed, -360, 360)
+	if typeof(Info.Rotation) == "number" then
+		G.Rotation = math.clamp(Info.Rotation, -360, 360)
 	end
 	if typeof(Info.ColorTop) == "Color3" then
 		G.ColorTop = Info.ColorTop
@@ -1965,7 +1961,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.20.1 loaded — FIX ENGINE: loop sampling gradient sekarang nutup keypoint di t=1 (ColorSequence wajib end di 1.0; loop lama berhenti di 7/8 jadi error ColorSequence must end at time=1.0 tiap frame); t=1 pakai warna t=0 lewat wrap modulo jadi flow tetep seamless (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.21.0 loaded — CARD GRADIENT STATIC: animasi flow/spin DIHAPUS total dari background kartu (engine rebuild sequence per frame = patah-patah + CPU buang); gradient sekarang static assignment sekali = mulus absolut zero CPU; preset metal tetep 8 + Custom 3 stop langsung tanpa resampling (Custom ga aneh lagi); ganti preset = langsung berubah; knob aliran/putar diganti rotasi statis (kombinasi preset x rotasi x warna); engine Gradient dibuang bersih dari N3V4Visuals (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5712,7 +5708,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.20.1"
+	Library.N3V4Version = "4.21.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
