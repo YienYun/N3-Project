@@ -1862,7 +1862,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.17.0 loaded — GLOW ON CLICK: pulse RGB outline sekarang dipicu CLICK kontrol doang (button/toggle/tab/dropdown/color picker/keybox — semua GuiButton kehook satu pusat lewat Activated + DescendantAdded di MainFrame); auto-pulse tiap 25 detik DIHAPUS, pulse non-click di toggle SetValue DIHAPUS, drag surface (slider bar, popup overlay+frame, palette sat/hue/alpha) di-exclude pakai attribute NoGlowPulse (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.17.1 loaded — FIX VIEWPORT 3D: bug kamera kabur eksponensial (dist dihitung ulang tiap frame dari posisi kamera lama + offset vertikal di luar radius = jarak naik 3 persen per frame, makanya asset hilang sendiri tanpa diklik); sekarang jarak KONSTAN lewat CameraDistance + orbit spherical bener (AngleX vertikal akhirnya hidup, clamp -75..75); putar manual pindah ke KLIK KANAN + drag sesuai request, klik kiri di viewport sekarang diem (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5467,10 +5467,22 @@ do
 		WorldModel.Parent = ViewportFrame
 
 		local CurrentModel = nil
-		local AngleX = 0
+		local AngleX = 14
 		local AngleY = 0
+		local CameraDistance = 10
 		local Dragging = false
 		local LastMousePos = Vector2.zero
+
+		local function OrbitCamera()
+			if not CurrentModel then
+				return
+			end
+			local cf = CurrentModel:IsA("Model") and CurrentModel:GetBoundingBox() or CurrentModel.CFrame
+			local az = math.rad(AngleY)
+			local el = math.rad(AngleX)
+			local off = Vector3.new(math.sin(az) * math.cos(el), math.sin(el), math.cos(az) * math.cos(el)) * CameraDistance
+			Camera.CFrame = CFrame.new(cf.Position + off, cf.Position)
+		end
 
 		local function AutoFocus(targetInstance)
 			if not targetInstance then
@@ -5483,8 +5495,10 @@ do
 				cf, size = targetInstance.CFrame, targetInstance.Size
 			end
 			local maxDim = math.max(size.X, size.Y, size.Z)
-			local dist = maxDim / (2 * math.tan(math.rad(Camera.FieldOfView / 2))) * 1.35
-			Camera.CFrame = CFrame.new(cf.Position + Vector3.new(0, size.Y * 0.1, dist), cf.Position)
+			CameraDistance = maxDim / (2 * math.tan(math.rad(Camera.FieldOfView / 2))) * 1.35
+			AngleY = 0
+			AngleX = 14
+			OrbitCamera()
 		end
 
 		local ViewportObj = {
@@ -5527,13 +5541,7 @@ do
 			SpinConnection = game:GetService("RunService").RenderStepped:Connect(function(dt)
 				if not Dragging and CurrentModel then
 					AngleY = (AngleY + dt * 40) % 360
-					local cf, _ = CurrentModel:IsA("Model") and CurrentModel:GetBoundingBox() or CurrentModel.CFrame
-					local dist = (Camera.CFrame.Position - cf.Position).Magnitude
-					local rad = math.rad(AngleY)
-					Camera.CFrame = CFrame.new(
-						cf.Position + Vector3.new(math.sin(rad) * dist, dist * 0.25, math.cos(rad) * dist),
-						cf.Position
-					)
+					OrbitCamera()
 				end
 			end)
 		end
@@ -5541,7 +5549,7 @@ do
 		if Info.Interactive then
 			ViewportFrame.InputBegan:Connect(function(input)
 				if
-					input.UserInputType == Enum.UserInputType.MouseButton1
+					input.UserInputType == Enum.UserInputType.MouseButton2
 					or input.UserInputType == Enum.UserInputType.Touch
 				then
 					Dragging = true
@@ -5550,7 +5558,7 @@ do
 			end)
 			game:GetService("UserInputService").InputEnded:Connect(function(input)
 				if
-					input.UserInputType == Enum.UserInputType.MouseButton1
+					input.UserInputType == Enum.UserInputType.MouseButton2
 					or input.UserInputType == Enum.UserInputType.Touch
 				then
 					Dragging = false
@@ -5568,15 +5576,8 @@ do
 					local delta = curPos - LastMousePos
 					LastMousePos = curPos
 					AngleY = (AngleY - delta.X * 0.8) % 360
-					if CurrentModel then
-						local cf, _ = CurrentModel:IsA("Model") and CurrentModel:GetBoundingBox() or CurrentModel.CFrame
-						local dist = (Camera.CFrame.Position - cf.Position).Magnitude
-						local rad = math.rad(AngleY)
-						Camera.CFrame = CFrame.new(
-							cf.Position + Vector3.new(math.sin(rad) * dist, dist * 0.25, math.cos(rad) * dist),
-							cf.Position
-						)
-					end
+					AngleX = math.clamp(AngleX + delta.Y * 0.5, -75, 75)
+					OrbitCamera()
 				end
 			end)
 		end
@@ -5921,7 +5922,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.17.0"
+	Library.N3V4Version = "4.17.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,

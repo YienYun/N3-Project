@@ -1968,3 +1968,28 @@ count SetAttribute == 6 + absensi task.wait(25)/MASUKKAN DI SINI/
 call ad-hoc). Sempat merah 1x: count-pin kelebihan backslash
 (file bytes \\" = nutup double-quote bash di tengah string) →
 konvensi escape chk: literal quote di pattern = \" (satu backslash).
+
+## v4.17.1 — FIX VIEWPORT 3D: kamera kabur eksponensial + orbit bener + klik kanan
+User report: (1) viewport interaktif geser-geser ga work, klik kiri
+malah model menjauh; (2) Asset 3D baru muncul udah hilang sendiri
+tanpa diklik. Dua-duanya BUG, satu akar:
+Spin loop & drag handler AddViewport menghitung `dist` dari POSISI
+KAMERA SAAT INI lalu menaruh kamera baru di (sin*dist, 0.25*dist,
+cos*dist) — magnitudo vektor itu dist*sqrt(1+0.0625) = dist*1.0308 →
+jarak NAIK 3.08% TIAP FRAME. Spin 60fps = kamera kabur x6/detik →
+model lenyap dalam detik (Asset 3D). Drag = sama, makanya "klik kiri
+malah menjauh". AngleX vertikal juga dead code (deklar doang).
+Fix di AddViewport: CameraDistance KONSTAN (diset AutoFocus dari
+bounding box, gak pernah dihitung ulang dari kamera), orbit spherical
+bener: offset = (sin az * cos el, sin el, cos az * cos el) * dist;
+AngleX hidup + clamp -75..75 (drag vertikal sekarang miringin view);
+putar manual pindah ke MouseButton2 (klik kanan) + Touch sesuai
+request user, klik kiri di viewport sekarang diem.
+Scope check: 2 copy rumus mirip di AddSpotlightCard (5715) &
+CreateDashboardWindow (14707) TIDAK kabur — dist mereka dari
+bounding box model (konstan), bukan dari kamera → dibiarkan (lean).
+Pin checker v4.17.1: OrbitCamera + CameraDistance konstan + clamp
+AngleX + MouseButton2 + absensi dist-dari-kamera + label PRE "Klik
+kanan + drag...". Sempat 2x merah: (a) absence pin kegedean (kena 2
+copy aman) → dipersempit ke signature kabur aslinya; (b) pin pakai
+BRE padahal pattern punya `*` literal → pindah -qF.

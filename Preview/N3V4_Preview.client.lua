@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.17.0",
+	Footer = "N3V4 • UI Preview Kit v4.17.1",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -717,7 +717,7 @@ local MediaTab = Window:AddTab("Media", "image", "Viewport 3D, image, video, spo
 
 Try("Media: L1 Viewport interaktif", function()
 	local Box = MediaTab:AddLeftGroupbox("Viewport Interaktif", "rotate-3d")
-	Box:AddLabel("Drag mouse di dalam viewport buat muter manual.", true)
+	Box:AddLabel("Klik kanan + drag di dalam viewport buat muter manual.", true)
 
 	local VP = Box:AddViewport("Media_Viewport", { Height = 220, Spin = false, Interactive = true })
 	if VP and VP.SetModel then
