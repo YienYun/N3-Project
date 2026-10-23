@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.18.0",
+	Footer = "N3V4 • UI Preview Kit v4.19.0",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -798,6 +798,13 @@ Try("Media: R1 SpotlightCard 2D <-> 3D", function()
 		Card:SetLines({
 			{ Label = "Rarity", Value = "Mythic", Color = Color3.fromRGB(255, 210, 30) },
 			{ Label = "Mutasi", Value = "Shiny", Color = Color3.fromRGB(0, 220, 255) },
+		})
+	end
+	if Card and Card.SetImageGradient then
+		Card:SetImageGradient({
+			ColorTop = Color3.fromRGB(255, 210, 30),
+			ColorMiddle = Color3.fromRGB(140, 80, 10),
+			ColorBottom = Color3.fromRGB(45, 25, 5),
 		})
 	end
 

@@ -2029,3 +2029,31 @@ Media_NoText (NoText=true) demo mode full; label penjelasan.
 Checker: chk v4.18.0 21 pin (state/API/registry/panel names/knob/
 sample/print-copy count==2/NoText/SetLines di PRE/BindLabel di MOD).
 Sempat merah 1x: pin BindLabel salah file (PRE vs MOD) → dipindah.
+
+## v4.19.0 — CARD GRADIENT: background gradient 3 stop di ImagePanel + bake dump
+Bake dump user verbatim ke Library.CardPanels: Gap = 8,
+FrameTransparency = 0.7, TextSize = 14 (ImageWidth 40 & Outline true
+tetap).
+Fitur: ImagePanel punya UIGradient di BACKGROUND-nya (gradient
+berwarna di belakang image/3D). State global Library.CardGradient
+{Enabled true, Rotation -90, MiddlePosition 0.5, MiddleTransparency 0,
+Offset 0.01, Top 38/38/44, Middle 110/110/122, Bottom 38/38/44} +
+SetCardGradient guarded + ApplyCardGradient loop registry.
+PER-KARTU override (flow rarity dari script game user):
+Card:SetImageGradient(Info) — pertama kali table.clone(global) lalu
+merge guarded; kartu yang punya GradientConf DILEWATI apply global
+(jadi knob settings gak nimpah warna rarity). Card:ClearImageGradient
+balik ke global. Jawaban "3 ok?" = 3 stop warna (atas/tengah/bawah)
+pola kembar gradient button.
+Detail penting: UIGradient MULTIPLY pixel background — base MainColor
+gelap bikin warna rarity mati. ApplyImageGradient set
+BackgroundColor3 = putih pas Enabled (warna gradient keluar murni),
+balik Library.Scheme.MainColor pas disabled.
+MOD T1 10/10: kiri "Gradient Kartu" = CG_ON + CG_C1/2/3 + CG_ROT/
+CG_POS/CG_TR/CG_OFF + Print/Copy; kanan "Sample Gradient Kartu" =
+kartu NoText live (ikut knob global) + Print/Copy.
+PRE: Media_Spotlight di-override gradient emas mythic (demo rarity).
+Checker: 2 merah dulu — (a) label baru "Print setingan gradient kartu"
+mengandung substring pin lama count==2 → pin lama diperketat ke
+signature lengkap '...", PrintGrad'; (b) pin GradientConf salah prefix
+(Card. vs CardObj.) → dipotong prefixnya. Sekarang 80 checks.

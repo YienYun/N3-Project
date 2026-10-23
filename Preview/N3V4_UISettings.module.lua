@@ -1002,6 +1002,103 @@ function Settings:Attach(Library, Window, Options)
 			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (CardPanels / SetCardPanels ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.18.0 biar box Kartu Media + Sample Kartu muncul")
 		end
 
+		if type(Library.CardGradient) == "table" and type(Library.SetCardGradient) == "function" then
+			local function RGBCG(C)
+				return math.floor(C.R * 255 + 0.5), math.floor(C.G * 255 + 0.5), math.floor(C.B * 255 + 0.5)
+			end
+			local function DumpCardGrad()
+				local G = Library.CardGradient
+				local A1, A2, A3 = RGBCG(G.ColorTop)
+				local B1, B2, B3 = RGBCG(G.ColorMiddle)
+				local C1, C2, C3 = RGBCG(G.ColorBottom)
+				return string.format("Library:SetCardGradient({ Enabled = %s, Rotation = %s, MiddlePosition = %s, MiddleTransparency = %s, Offset = %s, ColorTop = Color3.fromRGB(%d, %d, %d), ColorMiddle = Color3.fromRGB(%d, %d, %d), ColorBottom = Color3.fromRGB(%d, %d, %d) })",
+					tostring(G.Enabled), G.Rotation, G.MiddlePosition, G.MiddleTransparency, G.Offset,
+					A1, A2, A3, B1, B2, B3, C1, C2, C3)
+			end
+			local function PrintCardGrad()
+				local G = Library.CardGradient
+				local A1, A2, A3 = RGBCG(G.ColorTop)
+				local B1, B2, B3 = RGBCG(G.ColorMiddle)
+				local C1, C2, C3 = RGBCG(G.ColorBottom)
+				print(string.format("[N3V4 CARD GRADIENT] Enabled = %s | Rotation = %s | MiddlePosition = %s | MiddleTransparency = %s | Offset = %s | Top = %d,%d,%d | Middle = %d,%d,%d | Bottom = %d,%d,%d",
+					tostring(G.Enabled), G.Rotation, G.MiddlePosition, G.MiddleTransparency, G.Offset,
+					A1, A2, A3, B1, B2, B3, C1, C2, C3))
+				SafeNotify({ Title = "Gradient kartu", Description = "Cek Output.", Icon = "info", Time = 3 })
+			end
+			local function CopyCardGrad()
+				local Text = DumpCardGrad()
+				if CopyClip(Text) then
+					SafeNotify({ Title = "Gradient kartu", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
+				else
+					print("[N3V4 CARD GRADIENT] paste ini balik:\n" .. Text)
+					SafeNotify({ Title = "Gradient kartu", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+				end
+			end
+
+			local Box = T1:AddLeftGroupbox("Gradient Kartu", "sparkles")
+			local TogCG = Box:AddToggle("CG_ON", {
+				Text = "Gradient background image panel", Default = Library.CardGradient.Enabled,
+				Callback = function(Value)
+					Library:SetCardGradient({ Enabled = Value })
+				end,
+			})
+			TogCG:AddColorPicker("CG_C1", {
+				Title = "Atas", Default = Library.CardGradient.ColorTop,
+				Callback = function(Color)
+					Library:SetCardGradient({ ColorTop = Color })
+				end,
+			})
+			TogCG:AddColorPicker("CG_C2", {
+				Title = "Tengah", Default = Library.CardGradient.ColorMiddle,
+				Callback = function(Color)
+					Library:SetCardGradient({ ColorMiddle = Color })
+				end,
+			})
+			TogCG:AddColorPicker("CG_C3", {
+				Title = "Bawah", Default = Library.CardGradient.ColorBottom,
+				Callback = function(Color)
+					Library:SetCardGradient({ ColorBottom = Color })
+				end,
+			})
+			Box:AddSlider("CG_ROT", {
+				Text = "Rotasi gradient", Default = Library.CardGradient.Rotation, Min = -180, Max = 180, Rounding = 0, Suffix = "deg",
+				Callback = function(Value)
+					Library:SetCardGradient({ Rotation = Value })
+				end,
+			})
+			Box:AddSlider("CG_POS", {
+				Text = "Posisi stop tengah", Default = math.floor(Library.CardGradient.MiddlePosition * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetCardGradient({ MiddlePosition = math.clamp(Value / 100, 0.02, 0.98) })
+				end,
+			})
+			Box:AddSlider("CG_TR", {
+				Text = "Transparansi tengah", Default = math.floor(Library.CardGradient.MiddleTransparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetCardGradient({ MiddleTransparency = Value / 100 })
+				end,
+			})
+			Box:AddSlider("CG_OFF", {
+				Text = "Offset gradient", Default = math.floor(Library.CardGradient.Offset * 100 + 0.5), Min = -100, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetCardGradient({ Offset = Value / 100 })
+				end,
+			})
+			Box:AddButton("Print setingan gradient kartu", PrintCardGrad)
+			Box:AddButton("Copy setingan gradient kartu", CopyCardGrad)
+
+			local Box = T1:AddRightGroupbox("Sample Gradient Kartu", "wand-sparkles")
+			Box:AddSpotlightCard("CG_SAMPLE", {
+				Height = 96,
+				NoText = true,
+			})
+			Box:AddLabel("Background panel gambar = gradient global live.", true)
+			Box:AddButton("Print setingan gradient kartu", PrintCardGrad)
+			Box:AddButton("Copy setingan gradient kartu", CopyCardGrad)
+		else
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (CardGradient / SetCardGradient ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.19.0 biar box Gradient Kartu + Sample Gradient Kartu muncul")
+		end
+
 		local Box = T1:AddRightGroupbox("Tab Aktif & Zoom", "zap")
 
 		local TA1 = Library.TabAppearance or {}

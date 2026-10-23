@@ -1597,11 +1597,11 @@ function Library:SetOutlineSpin(Info)
 end
 
 Library.CardPanels = {
-	Gap = 6,
+	Gap = 8,
 	ImageWidth = 40,
 	Outline = true,
-	FrameTransparency = 0.5,
-	TextSize = 12,
+	FrameTransparency = 0.7,
+	TextSize = 14,
 }
 
 Library.SpotlightCards = {}
@@ -1635,6 +1635,57 @@ function Library:SetCardPanels(Info)
 		P.TextSize = math.clamp(Info.TextSize, 8, 20)
 	end
 	Library:ApplyCardPanels()
+end
+
+Library.CardGradient = {
+	Enabled = true,
+	Rotation = -90,
+	MiddlePosition = 0.5,
+	MiddleTransparency = 0,
+	Offset = 0.01,
+	ColorTop = Color3.fromRGB(38, 38, 44),
+	ColorMiddle = Color3.fromRGB(110, 110, 122),
+	ColorBottom = Color3.fromRGB(38, 38, 44),
+}
+
+function Library:ApplyCardGradient()
+	for _, Card in ipairs(Library.SpotlightCards) do
+		if Card.Frame.Parent and not Card.GradientConf then
+			Card:ApplyImageGradient()
+		end
+	end
+end
+
+function Library:SetCardGradient(Info)
+	if typeof(Info) ~= "table" then
+		return
+	end
+	local G = Library.CardGradient
+	if typeof(Info.Enabled) == "boolean" then
+		G.Enabled = Info.Enabled
+	end
+	if typeof(Info.Rotation) == "number" then
+		G.Rotation = Info.Rotation
+	end
+	if typeof(Info.MiddlePosition) == "number" then
+		G.MiddlePosition = math.clamp(Info.MiddlePosition, 0.02, 0.98)
+	end
+	if typeof(Info.MiddleTransparency) == "number" then
+		G.MiddleTransparency = math.clamp(Info.MiddleTransparency, 0, 1)
+	end
+	if typeof(Info.Offset) == "number" then
+		G.Offset = math.clamp(Info.Offset, -1, 1)
+	end
+	if typeof(Info.ColorTop) == "Color3" then
+		G.ColorTop = Info.ColorTop
+	end
+	if typeof(Info.ColorMiddle) == "Color3" then
+		G.ColorMiddle = Info.ColorMiddle
+	end
+	if typeof(Info.ColorBottom) == "Color3" then
+		G.ColorBottom = Info.ColorBottom
+	end
+	Library:ApplyCardGradient()
 end
 
 local WallpaperScaleTypes = {}
@@ -1903,7 +1954,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.18.0 loaded — SPOTLIGHT CARD UPGRADE: kartu lama sekarang dua panel ber-frame pisah (ImagePanel kiri muat image ATAU 3D, TextPanel kanan) dengan gap sebagai cut; isi text opsional per kartu: baris manual berwarna (SetLines) ATAU impor live TextLabel game (BindLabel, mirror realtime) ATAU keduanya; NoText = true bikin gambar full kayak dulu; penampilan global lewat Library.CardPanels + SetCardPanels (Gap/ImageWidth/Outline/FrameTransparency/TextSize) dengan knob + sample hidup + print/copy di Tab 1 (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.19.0 loaded — CARD GRADIENT + BAKE: dump user dibake verbatim ke CardPanels (Gap 8, FrameTransparency 0.7, TextSize 14); ImagePanel sekarang punya background gradient berwarna 3 stop (atas/tengah/bawah) dengan setingan global Library.CardPanels-nya saudara: Library.CardGradient + SetCardGradient (toggle, 3 warna, rotasi, posisi, transparansi, offset) + PER-KARTU override lewat Card:SetImageGradient (flow rarity dari script game lu, kartu override gak ketimpa knob global) + Card:ClearImageGradient buat balik ke global; UIGradient nempel di background panel, base di-putihin pas enable biar warna rarity beneran keluar (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5678,6 +5729,9 @@ do
 			Thickness = 1,
 			Parent = ImagePanel,
 		})
+		local ImageGrad = New("UIGradient", {
+			Parent = ImagePanel,
+		})
 
 		local MediaBox = New("Frame", {
 			BackgroundTransparency = 1,
@@ -5876,6 +5930,69 @@ do
 			CardObj:Relayout()
 		end
 
+		function CardObj:ApplyImageGradient()
+			local Conf = CardObj.GradientConf or Library.CardGradient
+			ImageGrad.Enabled = Conf.Enabled
+			if Conf.Enabled then
+				ImagePanel.BackgroundColor3 = Color3.new(1, 1, 1)
+			else
+				ImagePanel.BackgroundColor3 = Library.Scheme.MainColor
+			end
+			local Pos = math.clamp(Conf.MiddlePosition, 0.02, 0.98)
+			ImageGrad.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Conf.ColorTop),
+				ColorSequenceKeypoint.new(Pos, Conf.ColorMiddle),
+				ColorSequenceKeypoint.new(1, Conf.ColorBottom),
+			})
+			ImageGrad.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0),
+				NumberSequenceKeypoint.new(Pos, Conf.MiddleTransparency),
+				NumberSequenceKeypoint.new(1, 0),
+			})
+			ImageGrad.Rotation = Conf.Rotation
+			ImageGrad.Offset = Vector2.new(Conf.Offset, 0)
+		end
+
+		function CardObj:SetImageGradient(Info)
+			if typeof(Info) ~= "table" then
+				return
+			end
+			if not CardObj.GradientConf then
+				CardObj.GradientConf = table.clone(Library.CardGradient)
+			end
+			local C = CardObj.GradientConf
+			if typeof(Info.Enabled) == "boolean" then
+				C.Enabled = Info.Enabled
+			end
+			if typeof(Info.Rotation) == "number" then
+				C.Rotation = Info.Rotation
+			end
+			if typeof(Info.MiddlePosition) == "number" then
+				C.MiddlePosition = math.clamp(Info.MiddlePosition, 0.02, 0.98)
+			end
+			if typeof(Info.MiddleTransparency) == "number" then
+				C.MiddleTransparency = math.clamp(Info.MiddleTransparency, 0, 1)
+			end
+			if typeof(Info.Offset) == "number" then
+				C.Offset = math.clamp(Info.Offset, -1, 1)
+			end
+			if typeof(Info.ColorTop) == "Color3" then
+				C.ColorTop = Info.ColorTop
+			end
+			if typeof(Info.ColorMiddle) == "Color3" then
+				C.ColorMiddle = Info.ColorMiddle
+			end
+			if typeof(Info.ColorBottom) == "Color3" then
+				C.ColorBottom = Info.ColorBottom
+			end
+			CardObj:ApplyImageGradient()
+		end
+
+		function CardObj:ClearImageGradient()
+			CardObj.GradientConf = nil
+			CardObj:ApplyImageGradient()
+		end
+
 		local CurSpinAngle = 0
 		game:GetService("RunService").RenderStepped:Connect(function(dt)
 			local petModel = World3D:FindFirstChildWhichIsA("Model") or World3D:FindFirstChildWhichIsA("BasePart")
@@ -5944,6 +6061,7 @@ do
 			CardObj:BindLabel(Info.BindLabel)
 		end
 		CardObj:Relayout()
+		CardObj:ApplyImageGradient()
 
 		table.insert(Library.SpotlightCards, CardObj)
 		Groupbox:Resize()
@@ -6114,7 +6232,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.18.0"
+	Library.N3V4Version = "4.19.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
