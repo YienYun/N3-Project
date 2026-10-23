@@ -2237,3 +2237,32 @@ paket; GradientTemplates/init.luau kosong.
 Checker: pin versi bump v4.23.0 + chk baru 14 fragmen (10 preset +
 Transparency/Solid/ImageGrad.Transparency + Bubblegum di MOD).
 Gates 85/85, symmetry 10/10, 0 SyntaxError.
+
+## v4.24.0 — STROKE PRESETS DARI SOURCE EASYVISUAL (dropdown style outline)
+User pilih upgrade stroke presets (diskusi via pilihan). Integrasi
+KE resep outline spin v4.16 yang locked: Classic = perilaku lama
+100% utuh jadi default; 18 style baru = dropdown opsional.
+Parameter tiap style DIEKSTRAK dari file Presets/*.luau source
+(channel stroke doang, karena fitur outline kita = stroke):
+rotasi stroke + multiplier flow + multiplier spin terhadap knob
+Speed (itu param `speed` source). Contoh verbatim: Chrome rot -89
+flow 0.58; Gold rot 75 flow -1; Galaxy rot -90 flow -0.3 spin -15
+(dari Connection strokeGradient:SetRotation(-Rotation)); Green/
+RainbowOutline rot awal 5 spin +1 flow 0; ShineOutline spin +1
+sequence dibangun dari ColorA via makeLighter 0.6; Wave sequence
+solid ColorA + transparency band verbatim.
+Deviasi JUJUR (disebut di reply): osilasi math.sin rotasi Electric/
+Sunset/Galaxy-var diratain (Galaxy dapet spin linear persis angka
+source; Electric/Sunset spin 0 + flow tinggi); transparency-offset
+animasi Ghost/Wave di-source jadi transparency statik (band-nya
+tetep verbatim) karena engine kita blend warna doang per-frame.
+Mesin: VIS export AttachGradient(Grad, GetConf) — state masuk ke
+ticker Heartbeat yang SAMA punya gradient kartu (nol koneksi baru,
+sesuai lean mandate); TargetSequence dapet override Conf.Sequence
+biar stroke bisa pakai sequence apa aja; blend 0.5s pas ganti style.
+LIB: OutlineSpin.Preset + guard string di SetOutlineSpin; StrokeStyles
+table data murni; ApplyOutlineSpin restructure (Classic branch =
+byte-identik resep lama termasuk Tween spin; style branch attach
+state per Obj.GState, fallback statik kalo module VIS ilang).
+MOD: dropdown OS_PRE (19 nilai) + dump/print bawa Preset.
+Checker: chk v4.24 (10 fragmen). Gates 86/86.

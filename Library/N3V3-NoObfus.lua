@@ -1529,6 +1529,40 @@ Library.OutlineSpin = {
 	Speed = 5.5,
 	ColorA = Color3.fromRGB(255, 255, 255),
 	ColorB = Color3.fromRGB(193, 193, 193),
+	Preset = "Classic",
+}
+
+Library.StrokeStyles = {
+	Chrome = { Sequence = "Chrome", Rot = -89, Flow = 0.58, Spin = 0 },
+	Gold = { Sequence = "Gold", Rot = 75, Flow = -1, Spin = 0 },
+	Silver = { Sequence = "Silver", Rot = -79, Flow = 0.56, Spin = 0 },
+	Fire = { Sequence = "Fire", Rot = 75, Flow = -1, Spin = 0 },
+	Ice = { Sequence = "Ice", Rot = -61, Flow = 0.23, Spin = 0 },
+	Neon = { Sequence = "Neon", Rot = -45, Flow = -0.7, Spin = 0 },
+	Death = { Sequence = "Death", Rot = -85, Flow = -1, Spin = 0 },
+	Galaxy = { Sequence = "Galaxy", Rot = -90, Flow = -0.3, Spin = -15 },
+	Electric = { Sequence = "Electric", Rot = 60, Flow = -2, Spin = 0 },
+	Sunset = { Sequence = "Sunset", Rot = 60, Flow = -0.6, Spin = 0 },
+	Rainbow = { Sequence = "Rainbow", Rot = 0, Flow = -1, Spin = 0 },
+	Lava = { Sequence = "Lava", Rot = 0, Flow = -1, Spin = 0 },
+	Oceanic = { Sequence = "Oceanic", Rot = 0, Flow = -1, Spin = 0 },
+	Ghost = { Sequence = "Ghost", Trans = "Ghost", Rot = 0, Flow = -0.9, Spin = 0 },
+	Wave = { Trans = "Wave", Rot = 0, Flow = 1, Spin = 0, Build = function(Base)
+		return ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Base),
+			ColorSequenceKeypoint.new(0.5, Base),
+			ColorSequenceKeypoint.new(1, Base),
+		})
+	end },
+	GreenOutline = { Sequence = "Green", Trans = "Green", Rot = 5, Flow = 0, Spin = 1 },
+	RainbowOutline = { Sequence = "Rainbow", Rot = 5, Flow = 0, Spin = 1 },
+	ShineOutline = { Rot = 0.75, Flow = 0, Spin = 1, Build = function(Base)
+		return ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Base),
+			ColorSequenceKeypoint.new(0.5, Base:Lerp(Color3.new(1, 1, 1), 0.6)),
+			ColorSequenceKeypoint.new(1, Base),
+		})
+	end },
 }
 
 Library.OutlineSpinObjects = {}
@@ -1563,29 +1597,76 @@ end
 
 function Library:ApplyOutlineSpin()
 	local S = Library.OutlineSpin
+	local Style = nil
+	if S.Preset ~= "Classic" then
+		Style = Library.StrokeStyles[S.Preset]
+	end
 	for _, Obj in ipairs(Library.OutlineSpinObjects) do
 		if Obj.Grad.Parent then
 			Obj.Stroke.Enabled = S.Enabled
-			Obj.Grad.Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, S.ColorA),
-				ColorSequenceKeypoint.new(0.35, S.ColorB),
-				ColorSequenceKeypoint.new(1, S.ColorA),
-			})
-			Obj.Grad.Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 0),
-				NumberSequenceKeypoint.new(0.15, 0),
-				NumberSequenceKeypoint.new(0.35, 1),
-				NumberSequenceKeypoint.new(1, 1),
-			})
 			if Obj.Tween then
 				Obj.Tween:Cancel()
+				Obj.Tween = nil
 			end
-			if S.Enabled then
+			if Obj.GState and (not S.Enabled or not Style) then
+				Obj.GState.Dead = true
+				Obj.GState = nil
+			end
+			if not S.Enabled then
+				continue
+			end
+			if not Style then
+				Obj.Grad.Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, S.ColorA),
+					ColorSequenceKeypoint.new(0.35, S.ColorB),
+					ColorSequenceKeypoint.new(1, S.ColorA),
+				})
+				Obj.Grad.Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0),
+					NumberSequenceKeypoint.new(0.15, 0),
+					NumberSequenceKeypoint.new(0.35, 1),
+					NumberSequenceKeypoint.new(1, 1),
+				})
 				Obj.Grad.Rotation = 0
 				Obj.Tween = TweenService:Create(Obj.Grad, TweenInfo.new(math.clamp(S.Speed, 0.5, 20), Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 })
 				Obj.Tween:Play()
 			else
-				Obj.Tween = nil
+				local Seq = nil
+				if Style.Build then
+					Seq = Style.Build(S.ColorA)
+				elseif Visuals then
+					Seq = Visuals.Presets.Sequence[Style.Sequence]
+				end
+				if not Seq then
+					Seq = ColorSequence.new({
+						ColorSequenceKeypoint.new(0, S.ColorA),
+						ColorSequenceKeypoint.new(1, S.ColorA),
+					})
+				end
+				Obj.Seq = Seq
+				if Visuals then
+					Obj.Grad.Transparency = (Style.Trans and Visuals.Presets.Transparency[Style.Trans]) or Visuals.Presets.Solid
+				end
+				if Obj.GState then
+					Obj.GState.Target = Seq
+					Obj.GState.BlendT = 0
+					Obj.GState.Painted = false
+				elseif Visuals and type(Visuals.AttachGradient) == "function" then
+					Obj.GState = Visuals.AttachGradient(Obj.Grad, function()
+						local Cur = Library.StrokeStyles[Library.OutlineSpin.Preset]
+						local Sp = Library.OutlineSpin.Speed
+						return {
+							Enabled = Library.OutlineSpin.Enabled,
+							Sequence = Obj.Seq,
+							Rotation = Cur and Cur.Rot or 0,
+							OffsetSpeed = Cur and Sp * Cur.Flow or 0,
+							RotationSpeed = Cur and Sp * Cur.Spin or 0,
+						}
+					end)
+				else
+					Obj.Grad.Color = Seq
+					Obj.Grad.Rotation = Style.Rot
+				end
 			end
 		end
 	end
@@ -1607,6 +1688,11 @@ function Library:SetOutlineSpin(Info)
 	end
 	if typeof(Info.ColorB) == "Color3" then
 		S.ColorB = Info.ColorB
+	end
+	if typeof(Info.Preset) == "string" then
+		if Info.Preset == "Classic" or Library.StrokeStyles[Info.Preset] then
+			S.Preset = Info.Preset
+		end
 	end
 	Library:ApplyOutlineSpin()
 end
@@ -1984,7 +2070,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.23.0 loaded — PRESET LENGKAP DARI SOURCE EASYVISUAL: 18 preset diporting verbatim (Gold, Silver, Chrome, Rainbow, Neon, Sunset, Oceanic, Lava + baru: Fire, Ice, Electric, Galaxy, Matrix, Zebra, Death, Ghost, Bubblegum, Green) termasuk TransparencySequence fade-band Ghost/Bubblegum/Green persis kayak source; di script game tinggal Library:SetCardGradient({ Preset = \"Chrome\" }) maka jadinya Chrome; Dropshadow/Stroke/Outline itu engine efek bukan preset background jadi ga ikut (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.24.0 loaded — STROKE PRESETS DARI SOURCE EASYVISUAL: outline spin punya dropdown style (Classic = resep locked default + 18 style stroke verbatim dari folder Presets/: Chrome, Gold, Silver, Fire, Ice, Neon, Death, Galaxy, Electric, Sunset, Rainbow, Lava, Oceanic, Ghost, Wave, GreenOutline, RainbowOutline, ShineOutline); rotasi stroke + multiplier flow/spin = angka persis source, digerakkan ticker gradient yang sama bukan koneksi baru; Shine/Wave dibangun dari Warna pita lu; osilasi sin Electric/Sunset diratain (catatan DESIGN_NOTES) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5731,7 +5817,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.23.0"
+	Library.N3V4Version = "4.24.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,

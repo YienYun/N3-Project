@@ -846,15 +846,15 @@ function Settings:Attach(Library, Window, Options)
 				local S = Library.OutlineSpin
 				local Ar, Ag, Ab = RGB2(S.ColorA)
 				local Br, Bg, Bb = RGB2(S.ColorB)
-				return string.format("Library:SetOutlineSpin({ Enabled = %s, Speed = %s, ColorA = Color3.fromRGB(%d, %d, %d), ColorB = Color3.fromRGB(%d, %d, %d) })",
-					tostring(S.Enabled), S.Speed, Ar, Ag, Ab, Br, Bg, Bb)
+				return string.format("Library:SetOutlineSpin({ Enabled = %s, Preset = \"%s\", Speed = %s, ColorA = Color3.fromRGB(%d, %d, %d), ColorB = Color3.fromRGB(%d, %d, %d) })",
+					tostring(S.Enabled), S.Preset, S.Speed, Ar, Ag, Ab, Br, Bg, Bb)
 			end
 			local function PrintSpin()
 				local S = Library.OutlineSpin
 				local Ar, Ag, Ab = RGB2(S.ColorA)
 				local Br, Bg, Bb = RGB2(S.ColorB)
-				print(string.format("[N3V4 OUTLINE SPIN] Enabled = %s | Speed = %s | ColorA = %d,%d,%d | ColorB = %d,%d,%d",
-					tostring(S.Enabled), S.Speed, Ar, Ag, Ab, Br, Bg, Bb))
+				print(string.format("[N3V4 OUTLINE SPIN] Enabled = %s | Preset = %s | Speed = %s | ColorA = %d,%d,%d | ColorB = %d,%d,%d",
+					tostring(S.Enabled), S.Preset, S.Speed, Ar, Ag, Ab, Br, Bg, Bb))
 				SafeNotify({ Title = "Outline muter", Description = "Cek Output.", Icon = "info", Time = 3 })
 			end
 			local function CopySpin()
@@ -866,6 +866,8 @@ function Settings:Attach(Library, Window, Options)
 					SafeNotify({ Title = "Outline muter", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
 				end
 			end
+
+			local STROKE_LIST = { "Classic", "Chrome", "Gold", "Silver", "Fire", "Ice", "Neon", "Death", "Galaxy", "Electric", "Sunset", "Rainbow", "Lava", "Oceanic", "Ghost", "Wave", "GreenOutline", "RainbowOutline", "ShineOutline" }
 
 			local Box = T1:AddLeftGroupbox("Outline Muter", "refresh-cw")
 			local TogSpin = Box:AddToggle("OS_ON", {
@@ -890,6 +892,12 @@ function Settings:Attach(Library, Window, Options)
 				Text = "Kecepatan putar", Default = Library.OutlineSpin.Speed, Min = 1, Max = 20, Rounding = 1, Suffix = "s/putaran",
 				Callback = function(Value)
 					Library:SetOutlineSpin({ Speed = Value })
+				end,
+			})
+			Box:AddDropdown("OS_PRE", {
+				Text = "Style stroke (source EasyVisual)", Values = STROKE_LIST, Default = table.find(STROKE_LIST, Library.OutlineSpin.Preset) or 1,
+				Callback = function(Value)
+					Library:SetOutlineSpin({ Preset = Value })
 				end,
 			})
 			Box:AddButton("Print setingan outline muter", PrintSpin)

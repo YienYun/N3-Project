@@ -192,6 +192,13 @@ local Presets = {
 			NumberSequenceKeypoint.new(0.7, 1),
 			NumberSequenceKeypoint.new(1, 1),
 		}),
+		Wave = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.25, 1),
+			NumberSequenceKeypoint.new(0.5, 1),
+			NumberSequenceKeypoint.new(0.75, 1),
+			NumberSequenceKeypoint.new(1, 0),
+		}),
 	},
 	Solid = NumberSequence.new(0),
 }
@@ -265,6 +272,9 @@ local function BlendSequences(From, To, Alpha)
 end
 
 local function TargetSequence(Conf)
+	if Conf.Sequence then
+		return Conf.Sequence
+	end
 	if Conf.Preset == "Custom" then
 		return ColorSequence.new({
 			ColorSequenceKeypoint.new(0, Conf.ColorTop),
@@ -901,9 +911,30 @@ local function AddSpotlightCard(Env, Groupbox, Idx, Info)
 	return CardObj
 end
 
+local function AttachGradient(Grad, GetConf)
+	local Conf = GetConf()
+	local Target = TargetSequence(Conf)
+	local St = {
+		Grad = Grad,
+		GetConf = GetConf,
+		Current = Target,
+		Target = Target,
+		BlendT = 1,
+		Offset = 0,
+		Speed = 0,
+		Spin = 0,
+		Painted = false,
+		Dead = false,
+	}
+	table.insert(Active, St)
+	EnsureTicker()
+	return St
+end
+
 return {
 	Presets = Presets,
 	SampleSequence = EvalColorSequence,
+	AttachGradient = AttachGradient,
 	AddViewport = AddViewport,
 	AddSpotlightCard = AddSpotlightCard,
 }
