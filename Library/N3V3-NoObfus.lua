@@ -1511,9 +1511,9 @@ end
 
 Library.OutlineSpin = {
 	Enabled = true,
-	Speed = 4,
+	Speed = 5.5,
 	ColorA = Color3.fromRGB(255, 255, 255),
-	ColorB = Color3.fromRGB(192, 196, 204),
+	ColorB = Color3.fromRGB(193, 193, 193),
 }
 
 Library.OutlineSpinObjects = {}
@@ -1553,13 +1553,13 @@ function Library:ApplyOutlineSpin()
 			Obj.Stroke.Enabled = S.Enabled
 			Obj.Grad.Color = ColorSequence.new({
 				ColorSequenceKeypoint.new(0, S.ColorA),
-				ColorSequenceKeypoint.new(0.5, S.ColorB),
+				ColorSequenceKeypoint.new(0.35, S.ColorB),
 				ColorSequenceKeypoint.new(1, S.ColorA),
 			})
 			Obj.Grad.Transparency = NumberSequence.new({
 				NumberSequenceKeypoint.new(0, 0),
-				NumberSequenceKeypoint.new(0.3, 0),
-				NumberSequenceKeypoint.new(0.5, 1),
+				NumberSequenceKeypoint.new(0.15, 0),
+				NumberSequenceKeypoint.new(0.35, 1),
 				NumberSequenceKeypoint.new(1, 1),
 			})
 			if Obj.Tween then
@@ -1862,7 +1862,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.16.1 loaded — FIX TWEENINFO: argumen ketiga TweenInfo.new itu EasingDirection, bukan repeatCount; -1 infinite repeat dipindah ke posisi keempat (Enum.EasingDirection.InOut, -1); outline spin sekarang jalan tanpa error (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.16.2 loaded — OUTLINE SPIN TUNING: bake dump user verbatim (Speed 5.5, ColorB silver 193,193,193) + pita DIPENDEKKIN (15 persen nyala penuh, fade beres di 35 persen; sebelumnya 30/50) + keypoint warna ekor digeser ke 0.35 biar silver-nya tetep keliatan di dalam fade (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5918,7 +5918,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.16.1"
+	Library.N3V4Version = "4.16.2"
 
 	Library.ButtonGradient = {
 		Enabled = true,

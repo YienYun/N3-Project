@@ -1921,3 +1921,20 @@ Pelajaran: argumen posisional API Roblox yang opsional-di-tengah
 (gini) wajib dicek urutannya satu-satu; luau-analyze nonstrict TANPA
 defs gak ngecek arity/tipe argumen → blind spot kedua setelah
 unknown-member.
+
+## v4.16.2 — OUTLINE SPIN TUNING: bake dump user + pita dipendekkin
+Dump user (bake verbatim, protokol v4.12.11/v4.15.0): Speed = 5.5,
+ColorB = Color3.fromRGB(193, 193, 193) (silver murni pilihan dia);
+ColorA 255,255,255 & Enabled true udah sama.
+Request: "panjangnya jangan terlalu panjang, sedikit lebih pendek."
+Curve lama: transparency 0 s/d 0.3 lalu fade ke 1 di 0.5 (setengah
+keliling nyala). Baru: 0 s/d 0.15, fade beres di 0.35 — pita ±30%
+lebih pendek.
+Penyesuaian wajib (root-cause, bukan kosmetik): keypoint ColorB di
+ColorSequence digeser 0.5 → 0.35. Kalau nggak, ekor silver jatuh di
+zona yang udah fully transparent = warna pilihannya gak pernah
+keliatan. Sekarang fade warna persis nutup fade alpha: kepala putih
+→ ekor silver → hilang.
+MOD gak disentuh (knob baca state otomatis, Rounding 1 muat 5.5).
+Checker: pin bake baru (Speed 5.5 / 193,193,193) + pin 3 keypoint
+curve (0.35 ColorB, 0.15/0 alpha) + version/footer 4.16.2.
