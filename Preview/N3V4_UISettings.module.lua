@@ -917,6 +917,91 @@ function Settings:Attach(Library, Window, Options)
 			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (OutlineSpin / SetOutlineSpin ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.16.0 biar box Outline Muter + Sample Outline Muter muncul")
 		end
 
+		if type(Library.CardPanels) == "table" and type(Library.SetCardPanels) == "function" then
+			local function DumpPanels()
+				local P = Library.CardPanels
+				return string.format("Library:SetCardPanels({ Gap = %s, ImageWidth = %s, Outline = %s, FrameTransparency = %s, TextSize = %s })",
+					P.Gap, P.ImageWidth, tostring(P.Outline), P.FrameTransparency, P.TextSize)
+			end
+			local function PrintPanels()
+				local P = Library.CardPanels
+				print(string.format("[N3V4 CARD PANELS] Gap = %s | ImageWidth = %s | Outline = %s | FrameTransparency = %s | TextSize = %s",
+					P.Gap, P.ImageWidth, tostring(P.Outline), P.FrameTransparency, P.TextSize))
+				SafeNotify({ Title = "Kartu media", Description = "Cek Output.", Icon = "info", Time = 3 })
+			end
+			local function CopyPanels()
+				local Text = DumpPanels()
+				if CopyClip(Text) then
+					SafeNotify({ Title = "Kartu media", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
+				else
+					print("[N3V4 CARD PANELS] paste ini balik:\n" .. Text)
+					SafeNotify({ Title = "Kartu media", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+				end
+			end
+
+			local Box = T1:AddLeftGroupbox("Kartu Media", "layout-dashboard")
+			Box:AddSlider("CP_GAP", {
+				Text = "Gap cut antar panel", Default = Library.CardPanels.Gap, Min = 0, Max = 24, Rounding = 0, Suffix = "px",
+				Callback = function(Value)
+					Library:SetCardPanels({ Gap = Value })
+				end,
+			})
+			Box:AddSlider("CP_WID", {
+				Text = "Lebar sisi gambar", Default = Library.CardPanels.ImageWidth, Min = 20, Max = 70, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetCardPanels({ ImageWidth = Value })
+				end,
+			})
+			Box:AddToggle("CP_OUT", {
+				Text = "Outline frame panel", Default = Library.CardPanels.Outline,
+				Callback = function(Value)
+					Library:SetCardPanels({ Outline = Value })
+				end,
+			})
+			Box:AddSlider("CP_TR", {
+				Text = "Transparansi frame", Default = math.floor(Library.CardPanels.FrameTransparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetCardPanels({ FrameTransparency = Value / 100 })
+				end,
+			})
+			Box:AddSlider("CP_TS", {
+				Text = "Ukuran text panel", Default = Library.CardPanels.TextSize, Min = 8, Max = 20, Rounding = 0, Suffix = "px",
+				Callback = function(Value)
+					Library:SetCardPanels({ TextSize = Value })
+				end,
+			})
+			Box:AddButton("Print setingan kartu media", PrintPanels)
+			Box:AddButton("Copy setingan kartu media", CopyPanels)
+
+			local Box = T1:AddRightGroupbox("Sample Kartu", "list")
+			local SampleCard = Box:AddSpotlightCard("CP_SAMPLE", {
+				Height = 118,
+				Title = "Sample Item",
+				Lines = {
+					{ Label = "Rarity", Value = "Mythic", Color = Color3.fromRGB(255, 210, 30) },
+					{ Label = "Status", Value = "Equipped", Color = Color3.fromRGB(86, 197, 110) },
+				},
+			})
+			local LiveSrc = Instance.new("TextLabel")
+			LiveSrc.Text = "Bind live: detik 0"
+			task.spawn(function()
+				local n = 0
+				while true do
+					task.wait(1)
+					n += 1
+					LiveSrc.Text = "Bind live: detik " .. n
+				end
+			end)
+			if SampleCard then
+				SampleCard:BindLabel(LiveSrc)
+			end
+			Box:AddLabel("Frame gambar + frame text pisah, gap = cut.", true)
+			Box:AddButton("Print setingan kartu media", PrintPanels)
+			Box:AddButton("Copy setingan kartu media", CopyPanels)
+		else
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (CardPanels / SetCardPanels ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.18.0 biar box Kartu Media + Sample Kartu muncul")
+		end
+
 		local Box = T1:AddRightGroupbox("Tab Aktif & Zoom", "zap")
 
 		local TA1 = Library.TabAppearance or {}

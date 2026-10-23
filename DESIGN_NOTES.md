@@ -1993,3 +1993,39 @@ AngleX + MouseButton2 + absensi dist-dari-kamera + label PRE "Klik
 kanan + drag...". Sempat 2x merah: (a) absence pin kegedean (kena 2
 copy aman) → dipersempit ke signature kabur aslinya; (b) pin pakai
 BRE padahal pattern punya `*` literal → pindah -qF.
+
+## v4.18.0 — SPOTLIGHT CARD UPGRADE: dua panel ber-frame pisah (image/3D + text)
+Request user: upgrade komponen YANG UDAH ADA (bukan komponen baru):
+image kiri + text kanan "kayak dikasih cut/dipisah", image punya
+frame sendiri, text punya frame sendiri, isi text opsional (impor
+TextLabel game / manual baris berwarna kayak Rarity-Name / no-text =
+full kayak dulu), jalan buat sisi image MAUPUN 3D, setingan lengkap.
+Struktur baru AddSpotlightCard: CardFrame > ImagePanel (frame:
+MainColor + corner registry + UIStroke OutlineColor) > MediaBox
+(inset 3, clip) > IconImg/Viewport3D; CardFrame > TextPanel (frame
+sama) > UIListLayout+UIPadding > TitleLabel(autoY) + DescLabel
+(autoY) + baris SetLines (RichText <font color> label berwarna +
+nilai putih) + BindMirror (autoY, live mirror TextLabel sumber via
+GetPropertyChangedSignal("Text")).
+Mode: HasText = (not Info.NoText) and (Title/Description/Lines/
+BindLabel ada); SetData(title/desc) menyalakan mode text kecuali
+NoTextLocked; Relayout() ngatur size/posisi dua panel pakai math
+scale+offset (imageW = (W-8)*frac - gap/2 dst) jadi ikut resize
+otomatis tanpa signal tambahan.
+State global Library.CardPanels {Gap 6, ImageWidth 40, Outline true,
+FrameTransparency 0.5, TextSize 12} + ApplyCardPanels (loop registry
+SpotlightCards, liveness Frame.Parent) + SetCardPanels guarded per
+key + clamp — pola kembar OutlineSpin/ButtonGradient.
+API kartu: CardObj:SetLines(list {Label,Value,Color}), CardObj:
+BindLabel(instance) live mirror + disconnect conn lama, CardObj:
+Relayout(). SetData lama tetap kompatibel.
+MOD T1 9/9: kiri "Kartu Media" (layout-dashboard) = CP_GAP/CP_WID/
+CP_TR/CP_TS slider + CP_OUT toggle + Print/Copy; kanan "Sample
+Kartu" (list) = kartu sample Lines berwarna + bind live TextLabel
+(counter detik via task.spawn) + Print/Copy. Sampah dibuang sebelum
+commit: picker CP_CC callback kosong + local TogOut nganggur.
+PRE: Media_Spotlight + SetLines Rarity/Mutasi berwarna; kartu baru
+Media_NoText (NoText=true) demo mode full; label penjelasan.
+Checker: chk v4.18.0 21 pin (state/API/registry/panel names/knob/
+sample/print-copy count==2/NoText/SetLines di PRE/BindLabel di MOD).
+Sempat merah 1x: pin BindLabel salah file (PRE vs MOD) → dipindah.

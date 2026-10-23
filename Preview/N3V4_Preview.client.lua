@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.17.1",
+	Footer = "N3V4 • UI Preview Kit v4.18.0",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -794,6 +794,22 @@ Try("Media: R1 SpotlightCard 2D <-> 3D", function()
 	if Card and Card.SetData then
 		Card:SetData("Mythic Pet", "Rate 2.4K/s · Scale 1.8 · 96 Kg · Mutasi: Shiny", nil, DemoEgg)
 	end
+	if Card and Card.SetLines then
+		Card:SetLines({
+			{ Label = "Rarity", Value = "Mythic", Color = Color3.fromRGB(255, 210, 30) },
+			{ Label = "Mutasi", Value = "Shiny", Color = Color3.fromRGB(0, 220, 255) },
+		})
+	end
+
+	local CardNT = Box:AddSpotlightCard("Media_NoText", {
+		Height = 90,
+		NoText = true,
+		Image = CONFIG.ImageAsset,
+	})
+	if CardNT then
+		CardNT:SetData(nil, nil, CONFIG.ImageAsset, nil)
+	end
+	Box:AddLabel("Kartu bawah = mode no-text (gambar full).", true)
 
 	Box:AddButton("Swap ke gambar 2D", function()
 		if Card and Card.SetData then

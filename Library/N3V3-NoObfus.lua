@@ -1596,6 +1596,47 @@ function Library:SetOutlineSpin(Info)
 	Library:ApplyOutlineSpin()
 end
 
+Library.CardPanels = {
+	Gap = 6,
+	ImageWidth = 40,
+	Outline = true,
+	FrameTransparency = 0.5,
+	TextSize = 12,
+}
+
+Library.SpotlightCards = {}
+
+function Library:ApplyCardPanels()
+	for _, Card in ipairs(Library.SpotlightCards) do
+		if Card.Frame.Parent then
+			Card:Relayout()
+		end
+	end
+end
+
+function Library:SetCardPanels(Info)
+	if typeof(Info) ~= "table" then
+		return
+	end
+	local P = Library.CardPanels
+	if typeof(Info.Gap) == "number" then
+		P.Gap = math.clamp(Info.Gap, 0, 24)
+	end
+	if typeof(Info.ImageWidth) == "number" then
+		P.ImageWidth = math.clamp(Info.ImageWidth, 20, 70)
+	end
+	if typeof(Info.Outline) == "boolean" then
+		P.Outline = Info.Outline
+	end
+	if typeof(Info.FrameTransparency) == "number" then
+		P.FrameTransparency = math.clamp(Info.FrameTransparency, 0, 1)
+	end
+	if typeof(Info.TextSize) == "number" then
+		P.TextSize = math.clamp(Info.TextSize, 8, 20)
+	end
+	Library:ApplyCardPanels()
+end
+
 local WallpaperScaleTypes = {}
 for _, ScaleItem in Enum.ScaleType:GetEnumItems() do
 	WallpaperScaleTypes[ScaleItem.Name] = ScaleItem
@@ -1862,7 +1903,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.17.1 loaded — FIX VIEWPORT 3D: bug kamera kabur eksponensial (dist dihitung ulang tiap frame dari posisi kamera lama + offset vertikal di luar radius = jarak naik 3 persen per frame, makanya asset hilang sendiri tanpa diklik); sekarang jarak KONSTAN lewat CameraDistance + orbit spherical bener (AngleX vertikal akhirnya hidup, clamp -75..75); putar manual pindah ke KLIK KANAN + drag sesuai request, klik kiri di viewport sekarang diem (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.18.0 loaded — SPOTLIGHT CARD UPGRADE: kartu lama sekarang dua panel ber-frame pisah (ImagePanel kiri muat image ATAU 3D, TextPanel kanan) dengan gap sebagai cut; isi text opsional per kartu: baris manual berwarna (SetLines) ATAU impor live TextLabel game (BindLabel, mirror realtime) ATAU keduanya; NoText = true bikin gambar full kayak dulu; penampilan global lewat Library.CardPanels + SetCardPanels (Gap/ImageWidth/Outline/FrameTransparency/TextSize) dengan knob + sample hidup + print/copy di Tab 1 (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5591,7 +5632,7 @@ do
 		return ViewportObj
 	end
 
-	--// SPOTLIGHT CARD: 3D VIEWPORT READY + CLEAN NEWLINE TEXT
+	--// SPOTLIGHT CARD: PANEL GAMBAR/3D + PANEL TEXT (FRAME PISAH, MODE NO-TEXT)
 	function Funcs:AddSpotlightCard(Idx, Info)
 		if self.Destroyed then
 			return nil
@@ -5619,13 +5660,39 @@ do
 			Parent = CardFrame,
 		})
 
-		-- CONTAINER KIRI (BISA GAMBAR 2D ATAU VIEWPORT 3D)
-		local MediaBox = New("Frame", {
-			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(8, 8),
-			Size = UDim2.new(0, (Info.Height or 120) - 16, 1, -16),
+		local ImagePanel = New("Frame", {
+			Name = "ImagePanel",
+			BackgroundColor3 = "MainColor",
+			Position = UDim2.fromOffset(4, 4),
 			Parent = CardFrame,
 		})
+		table.insert(
+			Library.Corners,
+			New("UICorner", {
+				CornerRadius = UDim.new(0, Library.CornerRadius),
+				Parent = ImagePanel,
+			})
+		)
+		local ImageStroke = New("UIStroke", {
+			Color = "OutlineColor",
+			Thickness = 1,
+			Parent = ImagePanel,
+		})
+
+		local MediaBox = New("Frame", {
+			BackgroundTransparency = 1,
+			ClipsDescendants = true,
+			Position = UDim2.fromOffset(3, 3),
+			Size = UDim2.new(1, -6, 1, -6),
+			Parent = ImagePanel,
+		})
+		table.insert(
+			Library.Corners,
+			New("UICorner", {
+				CornerRadius = UDim.new(0, Library.CornerRadius),
+				Parent = MediaBox,
+			})
+		)
 
 		local IconImg = New("ImageLabel", {
 			BackgroundTransparency = 1,
@@ -5651,41 +5718,70 @@ do
 		local World3D = Instance.new("WorldModel")
 		World3D.Parent = Viewport3D
 
-		-- CONTAINER KANAN (TEKS BERTINGKAT KE BAWAH)
-		local InfoContainer = New("Frame", {
-			BackgroundTransparency = 1,
-			Position = UDim2.new(0, (Info.Height or 120) + 2, 0, 6),
-			Size = UDim2.new(1, -((Info.Height or 120) + 8), 1, -12),
+		local TextPanel = New("Frame", {
+			Name = "TextPanel",
+			BackgroundColor3 = "MainColor",
+			ClipsDescendants = true,
 			Parent = CardFrame,
 		})
+		table.insert(
+			Library.Corners,
+			New("UICorner", {
+				CornerRadius = UDim.new(0, Library.CornerRadius),
+				Parent = TextPanel,
+			})
+		)
+		local TextStroke = New("UIStroke", {
+			Color = "OutlineColor",
+			Thickness = 1,
+			Parent = TextPanel,
+		})
 		New("UIListLayout", {
-			FillDirection = Enum.FillDirection.Vertical,
 			Padding = UDim.new(0, 2),
-			Parent = InfoContainer,
+			Parent = TextPanel,
+		})
+		New("UIPadding", {
+			PaddingBottom = UDim.new(0, 5),
+			PaddingLeft = UDim.new(0, 6),
+			PaddingRight = UDim.new(0, 6),
+			PaddingTop = UDim.new(0, 5),
+			Parent = TextPanel,
 		})
 
 		local TitleLabel = New("TextLabel", {
+			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, 18),
-			Text = Info.Title or "Title",
+			Size = UDim2.new(1, 0, 0, 0),
+			Text = Info.Title or "",
 			TextSize = 13,
 			RichText = true,
 			Font = Enum.Font.GothamBold,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextTruncate = Enum.TextTruncate.AtEnd,
-			Parent = InfoContainer,
+			Parent = TextPanel,
 		})
-
 		local DescLabel = New("TextLabel", {
+			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 1, -20),
-			Text = Info.Description or "Description",
+			Size = UDim2.new(1, 0, 0, 0),
+			Text = Info.Description or "",
 			TextSize = 11,
 			RichText = true,
 			TextWrapped = true,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			TextYAlignment = Enum.TextYAlignment.Top,
-			Parent = InfoContainer,
+			Parent = TextPanel,
+		})
+		local BindMirror = New("TextLabel", {
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, 0),
+			Text = "",
+			TextSize = 11,
+			RichText = true,
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Visible = false,
+			Parent = TextPanel,
 		})
 
 		local CardObj = {
@@ -5695,7 +5791,90 @@ do
 			Title = TitleLabel,
 			Desc = DescLabel,
 			Type = "SpotlightCard",
+			TextLabels = { TitleLabel, DescLabel, BindMirror },
+			NoTextLocked = Info.NoText == true,
+			HasText = false,
 		}
+		if not CardObj.NoTextLocked and (Info.Title or Info.Description or Info.Lines or Info.BindLabel) then
+			CardObj.HasText = true
+		end
+
+		local LinesHolder = {}
+
+		function CardObj:Relayout()
+			local P = Library.CardPanels
+			TextPanel.Visible = CardObj.HasText
+			ImageStroke.Transparency = P.Outline and 0 or 1
+			TextStroke.Transparency = P.Outline and 0 or 1
+			ImagePanel.BackgroundTransparency = P.FrameTransparency
+			TextPanel.BackgroundTransparency = P.FrameTransparency
+			for _, Lbl in ipairs(CardObj.TextLabels) do
+				if Lbl.Parent then
+					Lbl.TextSize = Lbl == TitleLabel and P.TextSize + 1 or P.TextSize
+				end
+			end
+			local frac = math.clamp(P.ImageWidth, 20, 70) / 100
+			local gap = math.clamp(P.Gap, 0, 24)
+			if CardObj.HasText then
+				ImagePanel.Size = UDim2.new(frac, -8 * frac - gap / 2, 1, -8)
+				TextPanel.Position = UDim2.new(frac, 4 - 8 * frac + gap / 2, 0, 4)
+				TextPanel.Size = UDim2.new(1 - frac, -8 * (1 - frac) - gap / 2, 1, -8)
+			else
+				ImagePanel.Size = UDim2.new(1, -8, 1, -8)
+			end
+		end
+
+		function CardObj:SetLines(Lines)
+			for _, Lbl in ipairs(LinesHolder) do
+				Lbl:Destroy()
+			end
+			table.clear(LinesHolder)
+			CardObj.TextLabels = { TitleLabel, DescLabel, BindMirror }
+			if type(Lines) == "table" then
+				for _, Row in ipairs(Lines) do
+					local C = Row.Color or Library.Scheme.AccentColor
+					local Lbl = New("TextLabel", {
+						AutomaticSize = Enum.AutomaticSize.Y,
+						BackgroundTransparency = 1,
+						Size = UDim2.new(1, 0, 0, 0),
+						RichText = true,
+						TextWrapped = true,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						Text = string.format(
+							'<font color="rgb(%d, %d, %d)">%s</font>: %s',
+							math.floor(C.R * 255 + 0.5), math.floor(C.G * 255 + 0.5), math.floor(C.B * 255 + 0.5),
+							tostring(Row.Label or ""), tostring(Row.Value or "")
+						),
+						Parent = TextPanel,
+					})
+					table.insert(LinesHolder, Lbl)
+					table.insert(CardObj.TextLabels, Lbl)
+				end
+			end
+			CardObj:Relayout()
+		end
+
+		local BindConn = nil
+
+		function CardObj:BindLabel(Source)
+			if BindConn then
+				BindConn:Disconnect()
+				BindConn = nil
+			end
+			if Source and pcall(function()
+				return Source.Text
+			end) then
+				BindMirror.Visible = true
+				BindMirror.Text = tostring(Source.Text)
+				BindConn = Source:GetPropertyChangedSignal("Text"):Connect(function()
+					BindMirror.Text = tostring(Source.Text)
+				end)
+			else
+				BindMirror.Visible = false
+				BindMirror.Text = ""
+			end
+			CardObj:Relayout()
+		end
 
 		local CurSpinAngle = 0
 		game:GetService("RunService").RenderStepped:Connect(function(dt)
@@ -5725,6 +5904,9 @@ do
 			if descText then
 				DescLabel.Text = descText
 			end
+			if (titleText or descText) and not CardObj.NoTextLocked then
+				CardObj.HasText = true
+			end
 
 			if modelSource then
 				World3D:ClearAllChildren()
@@ -5752,8 +5934,18 @@ do
 					IconImg.Image = imageAsset
 				end
 			end
+			CardObj:Relayout()
 		end
 
+		if Info.Lines then
+			CardObj:SetLines(Info.Lines)
+		end
+		if Info.BindLabel then
+			CardObj:BindLabel(Info.BindLabel)
+		end
+		CardObj:Relayout()
+
+		table.insert(Library.SpotlightCards, CardObj)
 		Groupbox:Resize()
 		table.insert(Groupbox.Elements, CardObj)
 		if Idx then
@@ -5922,7 +6114,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.17.1"
+	Library.N3V4Version = "4.18.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
