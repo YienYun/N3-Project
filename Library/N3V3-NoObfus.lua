@@ -1509,6 +1509,93 @@ local function MakeGradient(Parent)
 	return Gradient
 end
 
+Library.OutlineSpin = {
+	Enabled = true,
+	Speed = 4,
+	ColorA = Color3.fromRGB(255, 255, 255),
+	ColorB = Color3.fromRGB(192, 196, 204),
+}
+
+Library.OutlineSpinObjects = {}
+
+function Library:AddOutlineSpin(Parent)
+	local Holder = New("Frame", {
+		Name = "OutlineSpin",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.new(1, 0, 1, 0),
+		ZIndex = Parent.ZIndex + 2,
+		Parent = Parent,
+	})
+	table.insert(Library.Corners, New("UICorner", {
+		CornerRadius = UDim.new(0, 10),
+		Parent = Holder,
+	}))
+	local Stroke = New("UIStroke", {
+		Color = Color3.fromRGB(255, 255, 255),
+		Thickness = 1.8,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Parent = Holder,
+	})
+	local Grad = New("UIGradient", {
+		Parent = Stroke,
+	})
+	table.insert(Library.OutlineSpinObjects, { Stroke = Stroke, Grad = Grad, Tween = nil })
+	Library:ApplyOutlineSpin()
+	return Holder
+end
+
+function Library:ApplyOutlineSpin()
+	local S = Library.OutlineSpin
+	for _, Obj in ipairs(Library.OutlineSpinObjects) do
+		if Obj.Grad.Parent then
+			Obj.Stroke.Enabled = S.Enabled
+			Obj.Grad.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, S.ColorA),
+				ColorSequenceKeypoint.new(0.5, S.ColorB),
+				ColorSequenceKeypoint.new(1, S.ColorA),
+			})
+			Obj.Grad.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0),
+				NumberSequenceKeypoint.new(0.3, 0),
+				NumberSequenceKeypoint.new(0.5, 1),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			if Obj.Tween then
+				Obj.Tween:Cancel()
+			end
+			if S.Enabled then
+				Obj.Grad.Rotation = 0
+				Obj.Tween = TweenService:Create(Obj.Grad, TweenInfo.new(math.clamp(S.Speed, 0.5, 20), Enum.EasingStyle.Linear, -1), { Rotation = 360 })
+				Obj.Tween:Play()
+			else
+				Obj.Tween = nil
+			end
+		end
+	end
+end
+
+function Library:SetOutlineSpin(Info)
+	if typeof(Info) ~= "table" then
+		return
+	end
+	local S = Library.OutlineSpin
+	if typeof(Info.Enabled) == "boolean" then
+		S.Enabled = Info.Enabled
+	end
+	if typeof(Info.Speed) == "number" then
+		S.Speed = math.clamp(Info.Speed, 0.5, 20)
+	end
+	if typeof(Info.ColorA) == "Color3" then
+		S.ColorA = Info.ColorA
+	end
+	if typeof(Info.ColorB) == "Color3" then
+		S.ColorB = Info.ColorB
+	end
+	Library:ApplyOutlineSpin()
+end
+
 local WallpaperScaleTypes = {}
 for _, ScaleItem in Enum.ScaleType:GetEnumItems() do
 	WallpaperScaleTypes[ScaleItem.Name] = ScaleItem
@@ -1775,7 +1862,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.15.2 loaded — FIX SCOPE: MakeGradient sekarang local TOP-LEVEL (sebelumnya kejepit di do-block komponen, jadi CreateWindow/navbar liat nil dan error attempt to call a nil value); semua call site lama + navbar + kartu status sekarang satu scope (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.16.0 loaded — OUTLINE SPIN: pita cahaya putih-silver muter terus di outline window (radar sweep, setengah keliling, loop infinite); state Library.OutlineSpin + API SetOutlineSpin/AddOutlineSpin/ApplyOutlineSpin top-level; window daftar lewat AddOutlineSpin(MainFrame); knob lengkap + sample hidup + print/copy di Tab 1 box Outline Muter (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5831,7 +5918,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.15.2"
+	Library.N3V4Version = "4.16.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11106,6 +11193,8 @@ function Library:CreateWindow(WindowInfo)
 		for _, grad in ipairs(OuterGradients) do
 			grad.Color = GetSolidSequence(Library.Scheme.AccentColor)
 		end
+
+		Library:AddOutlineSpin(MainFrame)
 
 		--// 3. FLUID LERP ENGINE: SATU ALIRAN PENUH TANPA JEDA & TANPA KEJUT \\--
 		local PulseGeneration = 0

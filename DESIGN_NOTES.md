@@ -1878,3 +1878,33 @@ indent-tab.
 Pelajaran: helper yang dipakai lintas blok WAJIB top-level; dan gate
 analyze patut di-grep juga untuk "Unknown global '<nama helper gue>'"
 buat call site lintas scope.
+
+## v4.16.0 — OUTLINE SPIN: pita cahaya muter di outline window (opsi A radar sweep)
+Request user: outline window dikasih gradient warna yang MUTER TERUS
+(loop infinite), tapi cuma SETENGAH keliling yang nyala ("setengah
+saja jangan full"). Diskusi dulu (dia minta konfirmasi paham), dia
+pilih A = radar sweep (bukan B uler-pinggir 4 stroke), warna default
+putih cahaya silver, minta knob warna + speed + dll.
+Kenapa overlay Holder sendiri (bukan nempel NeonWindowStroke): stroke
+itu udah punya UIGradient yang DIKELOLA glow engine (OuterGradients +
+GetSolidSequence + PulseWindowGlow) — numpang di sana = nabrak resep
+glow v1 yang locked. Holder transparan (pola InnerBorderFrame:
+AnchorPoint tengah, ZIndex parent+2, corner 10) + UIStroke putih 1.8
+Border + UIGradient sendiri = nol interferensi.
+Visual: ColorSequence A(putih)→B(silver)→A; Transparency 0 s/d 0.3
+lalu fade ke 1 di 0.5 → setengah keliling nyala, setengah hilang;
+Rotation 0→360 tween Linear repeat -1 = muter terus.
+Sinkron pola gradient button: satu state Library.OutlineSpin +
+registry OutlineSpinObjects + ApplyOutlineSpin loop (liveness
+Grad.Parent) + SetOutlineSpin(Info) guarded per-key. API = member
+Library (BUKAN local) → kebal bug scope v4.15.2.
+CreateWindow: Library:AddOutlineSpin(MainFrame) setelah OuterGradients
+solid-sequence loop. MOD T1 8/8: kiri "Outline Muter" (refresh-cw) =
+OS_ON toggle + OS_C1/OS_C2 picker + OS_SPD slider 1–20s Rounding 1 +
+Print/Copy (ATURAN v4.14.2: dipasang SAAT NULIS); kanan "Sample
+Outline Muter" (loader) = mini window RAW (Instance.new, MainColor +
+stroke accent) didaftarkan AddOutlineSpin(SampleWin) → sample muter
+BENERAN dan ikut semua knob lewat registry yang sama.
+Default bake: Enabled true, Speed 4, ColorA fromRGB(255,255,255),
+ColorB fromRGB(192,196,204). Gates: 76 checks, symmetry 8/8+4/4,
+0 SyntaxError, 0 unknown-global nama baru.

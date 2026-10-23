@@ -838,6 +838,85 @@ function Settings:Attach(Library, Window, Options)
 			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (ButtonGradient / SetButtonGradient ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.14.2 biar box Button Gradient + Sample Gradient muncul")
 		end
 
+		if type(Library.OutlineSpin) == "table" and type(Library.SetOutlineSpin) == "function" then
+			local function RGB2(C)
+				return math.floor(C.R * 255 + 0.5), math.floor(C.G * 255 + 0.5), math.floor(C.B * 255 + 0.5)
+			end
+			local function DumpSpin()
+				local S = Library.OutlineSpin
+				local Ar, Ag, Ab = RGB2(S.ColorA)
+				local Br, Bg, Bb = RGB2(S.ColorB)
+				return string.format("Library:SetOutlineSpin({ Enabled = %s, Speed = %s, ColorA = Color3.fromRGB(%d, %d, %d), ColorB = Color3.fromRGB(%d, %d, %d) })",
+					tostring(S.Enabled), S.Speed, Ar, Ag, Ab, Br, Bg, Bb)
+			end
+			local function PrintSpin()
+				local S = Library.OutlineSpin
+				local Ar, Ag, Ab = RGB2(S.ColorA)
+				local Br, Bg, Bb = RGB2(S.ColorB)
+				print(string.format("[N3V4 OUTLINE SPIN] Enabled = %s | Speed = %s | ColorA = %d,%d,%d | ColorB = %d,%d,%d",
+					tostring(S.Enabled), S.Speed, Ar, Ag, Ab, Br, Bg, Bb))
+				SafeNotify({ Title = "Outline muter", Description = "Cek Output.", Icon = "info", Time = 3 })
+			end
+			local function CopySpin()
+				local Text = DumpSpin()
+				if CopyClip(Text) then
+					SafeNotify({ Title = "Outline muter", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
+				else
+					print("[N3V4 OUTLINE SPIN] paste ini balik:\n" .. Text)
+					SafeNotify({ Title = "Outline muter", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+				end
+			end
+
+			local Box = T1:AddLeftGroupbox("Outline Muter", "refresh-cw")
+			local TogSpin = Box:AddToggle("OS_ON", {
+				Text = "Pita cahaya muter di outline window", Default = Library.OutlineSpin.Enabled,
+				Callback = function(Value)
+					Library:SetOutlineSpin({ Enabled = Value })
+				end,
+			})
+			TogSpin:AddColorPicker("OS_C1", {
+				Title = "Warna pita", Default = Library.OutlineSpin.ColorA,
+				Callback = function(Color)
+					Library:SetOutlineSpin({ ColorA = Color })
+				end,
+			})
+			TogSpin:AddColorPicker("OS_C2", {
+				Title = "Warna ekor", Default = Library.OutlineSpin.ColorB,
+				Callback = function(Color)
+					Library:SetOutlineSpin({ ColorB = Color })
+				end,
+			})
+			Box:AddSlider("OS_SPD", {
+				Text = "Kecepatan putar", Default = Library.OutlineSpin.Speed, Min = 1, Max = 20, Rounding = 1, Suffix = "s/putaran",
+				Callback = function(Value)
+					Library:SetOutlineSpin({ Speed = Value })
+				end,
+			})
+			Box:AddButton("Print setingan outline muter", PrintSpin)
+			Box:AddButton("Copy setingan outline muter", CopySpin)
+
+			local Box = T1:AddRightGroupbox("Sample Outline Muter", "loader")
+			local SampleWin = Instance.new("Frame")
+			SampleWin.BackgroundColor3 = (Library.Scheme and Library.Scheme.MainColor) or Color3.fromRGB(36, 36, 36)
+			SampleWin.BorderSizePixel = 0
+			SampleWin.Size = UDim2.new(1, -16, 0, 90)
+			SampleWin.Parent = Box.Container
+			local SampleCorner = Instance.new("UICorner")
+			SampleCorner.CornerRadius = UDim.new(0, 10)
+			SampleCorner.Parent = SampleWin
+			local SampleStroke = Instance.new("UIStroke")
+			SampleStroke.Color = (Library.Scheme and Library.Scheme.AccentColor) or Color3.fromRGB(218, 68, 255)
+			SampleStroke.Thickness = 1.8
+			SampleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			SampleStroke.Parent = SampleWin
+			Library:AddOutlineSpin(SampleWin)
+			Box:AddLabel("Mini window di atas = outline muter beneran.", true)
+			Box:AddButton("Print setingan outline muter", PrintSpin)
+			Box:AddButton("Copy setingan outline muter", CopySpin)
+		else
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (OutlineSpin / SetOutlineSpin ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.16.0 biar box Outline Muter + Sample Outline Muter muncul")
+		end
+
 		local Box = T1:AddRightGroupbox("Tab Aktif & Zoom", "zap")
 
 		local TA1 = Library.TabAppearance or {}
