@@ -1035,7 +1035,7 @@ function Settings:Attach(Library, Window, Options)
 				end
 			end
 
-			local PRESET_LIST = { "Custom", "Gold", "Silver", "Chrome", "Rainbow", "Neon", "Sunset", "Oceanic", "Lava" }
+			local PRESET_LIST = { "Custom", "Gold", "Silver", "Chrome", "Rainbow", "Neon", "Sunset", "Oceanic", "Lava", "Fire", "Ice", "Electric", "Galaxy", "Matrix", "Zebra", "Death", "Ghost", "Bubblegum", "Green" }
 
 			local CGSync = false
 			local DropCG = nil

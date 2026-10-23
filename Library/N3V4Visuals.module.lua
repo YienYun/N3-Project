@@ -3,7 +3,7 @@ local function C3(r, g, b)
 end
 
 local Presets = {
-	Order = { "Custom", "Gold", "Silver", "Chrome", "Rainbow", "Neon", "Sunset", "Oceanic", "Lava" },
+	Order = { "Custom", "Gold", "Silver", "Chrome", "Rainbow", "Neon", "Sunset", "Oceanic", "Lava", "Fire", "Ice", "Electric", "Galaxy", "Matrix", "Zebra", "Death", "Ghost", "Bubblegum", "Green" },
 	Sequence = {
 		Gold = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, C3(0.8353, 0.6824, 0.2196)),
@@ -81,7 +81,119 @@ local Presets = {
 			ColorSequenceKeypoint.new(0.8681, C3(1, 0.7843, 0)),
 			ColorSequenceKeypoint.new(1, C3(1, 0, 0)),
 		}),
+		Fire = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(1, 0.917647, 0)),
+			ColorSequenceKeypoint.new(0.1510416716337204, Color3.new(1, 0.917647, 0)),
+			ColorSequenceKeypoint.new(0.3072916567325592, Color3.new(1, 0.6, 0)),
+			ColorSequenceKeypoint.new(0.4965277910232544, Color3.new(0.545098, 0.368627, 0.035294)),
+			ColorSequenceKeypoint.new(0.6649305820465088, Color3.new(1, 0.666666, 0)),
+			ColorSequenceKeypoint.new(0.8385416865348816, Color3.new(0.678431, 0.490196, 0.113725)),
+			ColorSequenceKeypoint.new(1, Color3.new(1, 0.917647, 0)),
+		}),
+		Ice = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(109, 210, 212)),
+			ColorSequenceKeypoint.new(0.171875, Color3.new(0.8784313797950745, 0.9411764740943909, 1)),
+			ColorSequenceKeypoint.new(0.3177083432674408, Color3.fromRGB(140, 208, 209)),
+			ColorSequenceKeypoint.new(0.4670138955116272, Color3.fromRGB(109, 210, 212)),
+			ColorSequenceKeypoint.new(0.4982638955116272, Color3.fromRGB(109, 210, 212)),
+			ColorSequenceKeypoint.new(0.5034722089767456, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.71875, Color3.new(0.7058823704719543, 1, 0.9529411792755127)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(109, 210, 212)),
+		}),
+		Electric = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 150, 255)),
+			ColorSequenceKeypoint.new(0.15, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.3, Color3.fromRGB(100, 200, 255)),
+			ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 200, 255)),
+			ColorSequenceKeypoint.new(0.75, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.9, Color3.fromRGB(50, 150, 255)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 150, 255)),
+		}),
+		Galaxy = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(75, 0, 130)),
+			ColorSequenceKeypoint.new(0.25, Color3.fromRGB(138, 43, 226)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(25, 25, 112)),
+			ColorSequenceKeypoint.new(0.75, Color3.fromRGB(72, 61, 139)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(75, 0, 130)),
+		}),
+		Matrix = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.015625, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.1458333283662796, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.2482638955116272, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.3559027910232544, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.4970000088214874, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.503000020980835, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.647569477558136, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.7829861044883728, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.890625, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.9774305820465088, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0)),
+		}),
+		Zebra = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.015625, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.1458333283662796, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.2482638955116272, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.3559027910232544, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.4970000088214874, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.503000020980835, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.647569477558136, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.7829861044883728, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.890625, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.9774305820465088, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0)),
+		}),
+		Death = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(0.6, 0, 0)),
+			ColorSequenceKeypoint.new(0.125, Color3.new(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.2552083432674408, Color3.new(0.411764, 0, 0)),
+			ColorSequenceKeypoint.new(0.3767361044883728, Color3.new(0.3, 0, 0)),
+			ColorSequenceKeypoint.new(0.5, Color3.new(0.690196, 0, 0)),
+			ColorSequenceKeypoint.new(0.6197916865348816, Color3.new(0.3, 0, 0)),
+			ColorSequenceKeypoint.new(0.7378472089767456, Color3.new(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.8680555820465088, Color3.new(0.3, 0, 0)),
+			ColorSequenceKeypoint.new(1, Color3.new(0.6, 0, 0)),
+		}),
+		Ghost = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.5, Color3.new(0.7098039388656616, 0.7215686440467834, 0.7372549176216125)),
+			ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+		}),
+		Bubblegum = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(0.9529411792755127, 0.3960784375667572, 0.6941176652908325)),
+			ColorSequenceKeypoint.new(0.5, Color3.new(1, 0.6549019813537598, 0.8901960849761963)),
+			ColorSequenceKeypoint.new(1, Color3.new(0.9529411792755127, 0.3960784375667572, 0.6941176652908325)),
+		}),
+		Green = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 0)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 0)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 0)),
+		}),
 	},
+	Transparency = {
+		Ghost = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.09894459694623947, 0),
+			NumberSequenceKeypoint.new(0.5, 1),
+			NumberSequenceKeypoint.new(0.8997361660003662, 0),
+			NumberSequenceKeypoint.new(1, 0),
+		}),
+		Bubblegum = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.09894459694623947, 0),
+			NumberSequenceKeypoint.new(0.5, 1),
+			NumberSequenceKeypoint.new(0.8997361660003662, 0),
+			NumberSequenceKeypoint.new(1, 0),
+		}),
+		Green = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.7, 1),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+	},
+	Solid = NumberSequence.new(0),
 }
 
 --// GENERIC 3D VIEWPORT COMPONENT (RICH ORBIT + MANUAL DRAG)
@@ -662,6 +774,11 @@ local function AddSpotlightCard(Env, Groupbox, Idx, Info)
 		end
 		ImageGrad.Color = TrueSequence(GradState.Current, GradState.Offset)
 		ImageGrad.Rotation = Conf.Rotation + GradState.Spin
+		if Conf.Preset == "Custom" then
+			ImageGrad.Transparency = Presets.Solid
+		else
+			ImageGrad.Transparency = Presets.Transparency[Conf.Preset] or Presets.Solid
+		end
 	end
 
 	function CardObj:SetImageGradient(Info)

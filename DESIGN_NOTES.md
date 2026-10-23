@@ -2211,3 +2211,29 @@ grup GW_*). Fix: capture PickC1/2/3 dihapus, sync lewat
 Library.Options.CG_C1/2/3:SetValueRGB + guard existence. DropCG aman
 karena Funcs:AddDropdown beneran `return Dropdown` (diverifikasi
 @8549). Pin checker baru: Library.Options.CG_C1:SetValueRGB.
+
+## v4.23.0 — PRESET LENGKAP DARI SOURCE EASYVISUAL (verbatim)
+User: "gue mau yang lengkap, bubblegum dll kan ada di source gue,
+pakai dari source biar lengkap, gue ingin lihat style easyvisual
+gue". Konfirmasi juga: pemakaian di game script = tinggal panggil
+Preset = "Chrome" maka jadi Chrome.
+Diborong: 10 preset top-level baru — Fire, Ice, Electric, Galaxy,
+Matrix, Zebra, Death, Ghost, Bubblegum, Green — nilai keypoint
+VERBATIM full-precision dari file .luau source (fromRGB dipertahanin
+buat Electric/Galaxy/Green/Ice campuran, komentar source di-strip
+sesuai zero-comment rule). Total 18 preset + Custom = 19 item
+dropdown (Order VIS = PRESET_LIST MOD sinkron).
+TransparencySequence source ikut diporting: Ghost + Bubblegum punya
+fade-band tengah (0→1→0 di 0.0989/0.5/0.8997), Green punya fade
+bawah (0.7→1). Presets.Transparency map + Presets.Solid =
+NumberSequence.new(0); ApplyImageGradient pasang transparency statik
+per preset (Custom = Solid). Blend animasi cuma warna (transparency
+snap pas ganti preset — lean, source pun morph warna doang yang
+per-frame).
+GAH ikut: Dropshadow.luau + Stroke.luau = engine kelas efek (bukan
+preset background); Presets/ subfolder = varian Stroke/Outline
+(wilayah outline spin v4.16 yang udah locked); wally.luau = metadata
+paket; GradientTemplates/init.luau kosong.
+Checker: pin versi bump v4.23.0 + chk baru 14 fragmen (10 preset +
+Transparency/Solid/ImageGrad.Transparency + Bubblegum di MOD).
+Gates 85/85, symmetry 10/10, 0 SyntaxError.

@@ -1984,7 +1984,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.22.0 loaded — GRADIENT ANIMASI GAYA SOURCE: engine EasyVisual diporting beneran (flow = Offset scroll + spin = Rotation + blend 0.5s pas ganti preset, SATU ticker Heartbeat bersama buat semua kartu bukan per-kartu); color picker sync: pilih preset = 3 picker keisi warna preset itu, sentuh picker = otomatis pindah Custom; knob Aliran + Putaran balik (default halus: flow 0.35, spin 0); Chrome + 8 preset metal tetep utuh (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.23.0 loaded — PRESET LENGKAP DARI SOURCE EASYVISUAL: 18 preset diporting verbatim (Gold, Silver, Chrome, Rainbow, Neon, Sunset, Oceanic, Lava + baru: Fire, Ice, Electric, Galaxy, Matrix, Zebra, Death, Ghost, Bubblegum, Green) termasuk TransparencySequence fade-band Ghost/Bubblegum/Green persis kayak source; di script game tinggal Library:SetCardGradient({ Preset = \"Chrome\" }) maka jadinya Chrome; Dropshadow/Stroke/Outline itu engine efek bukan preset background jadi ga ikut (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5731,7 +5731,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.22.0"
+	Library.N3V4Version = "4.23.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
