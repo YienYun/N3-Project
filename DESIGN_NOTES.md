@@ -2159,3 +2159,43 @@ tab Execute = showcase AddKeyTab yang bener.
 Checker: pin guard di-161 diganti ke Window.AddKeyTab +
 KeyTab:AddKeyBox; pin creation ImageGrad (-qF, anti-jebakan escape)
 ditambah ke chk v4.21. Gates 83/83.
+
+## v4.22.0 — GRADIENT ANIMASI GAYA SOURCE (balik, tapi bener)
+User balik arah: static ternyata jelek buat dia, minta animasi
+"yang sempurna kayak di source" + picker sync ("kalo gue pake gold
+maka color pickernya ganti lah") + contoh pemakaian di script game.
+Diskusi dulu (3 keputusan dikunci via pilihan): (1) flow+spin
+default halus (flow 0.35, spin 0), (2) ganti preset = blend ±0.5s,
+(3) pilih preset -> 3 picker keisi warna preset, sentuh picker ->
+auto Custom.
+Engine: PORTING SETIA dari Library/EasyVisual/Gradient.luau —
+EvalColorSequence (tiled x0..2 + lerp antar keypoint), TrueSequence
+(= CalculateTrueColorSequence: shift keypoint by Offset mod 1, sort,
+tambal endpoint 0/1), BlendSequences (= EqualizeColorSequenceKeypoints:
+beda jumlah kp = snap bentuk warna-from, sama jumlah = lerp per kp).
+Perbedaan dari source (disengaja, lean + anti-stutter):
+- SATU ticker Heartbeat bersama untuk semua kartu (source = koneksi
+  per instance); auto-remove kalo Grad.Parent nil / Disabled / Dead;
+  disconnect kalo registry kosong.
+- Blend BOUNDED 0.5s (source = blendRate asimtotik selamanya);
+  alpha naik linear, nyampe 1 = snap Current=Target persis.
+- Idle total: flow 0 + spin 0 + blend kelar -> Painted flag, nol
+  write nol rebuild (static v4.21 tetep didapet gratis).
+- Offset di-wrap %1 (source biarin grow forever); speed ramp sumber
+  dipertahanin: Speed += (target-Speed)*dt.
+State: OffsetSpeed=0.35, RotationSpeed=0 balik ke CardGradient +
+guard clamp (flow ±4, spin ±360) di SetCardGradient/SetImageGradient.
+LIB baru: Library:SampleCardGradient(Preset) -> 3 Color3 (t=0/0.5/1)
+buat picker sync; VIS export SampleSequence = EvalColorSequence.
+MOD: PickC1/2/3 + DropCG dicapture; CGSync guard anti-recursion
+(SetValueRGB/SetValue dua-duanya mancing callback — diverifikasi di
+LIB: ColorPicker:Update->RunChanged, Dropdown:SetValue->RunChanged);
+CGForceCustom(Key,Color); knob CG_FLOW (0-200%, format v4.20 direuse)
++ CG_SPIN (-180..180 deg/s) balik; Dump/Print bawa OffsetSpeed/
+RotationSpeed. CG_ROT label jadi "Rotasi dasar gradient".
+Checker: pin absensi engine v4.21 DICABUT (engine balik), pin
+ImageGrad.Color=Presets.Sequence -> Presets.Sequence[Conf.Preset],
+chk v4.22 baru 14 fragmen semua -qF KECUALI AddSlider (jebakan baru:
+-qF perlakuin backslash literal, BRE -q malah bener buat \\\" —
+konvensi: fragmen ber-quote pake -q + \\\" 3-backslash, fragmen
+tanpa quote aman -qF). Gates 84/84. Module 631 -> 792 baris.

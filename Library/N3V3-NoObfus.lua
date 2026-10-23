@@ -1656,6 +1656,8 @@ Library.CardGradient = {
 	Enabled = true,
 	Preset = "Custom",
 	Rotation = -90,
+	OffsetSpeed = 0.35,
+	RotationSpeed = 0,
 	ColorTop = Color3.fromRGB(38, 38, 44),
 	ColorMiddle = Color3.fromRGB(110, 110, 122),
 	ColorBottom = Color3.fromRGB(38, 38, 44),
@@ -1683,6 +1685,12 @@ function Library:SetCardGradient(Info)
 	if typeof(Info.Rotation) == "number" then
 		G.Rotation = math.clamp(Info.Rotation, -360, 360)
 	end
+	if typeof(Info.OffsetSpeed) == "number" then
+		G.OffsetSpeed = math.clamp(Info.OffsetSpeed, -4, 4)
+	end
+	if typeof(Info.RotationSpeed) == "number" then
+		G.RotationSpeed = math.clamp(Info.RotationSpeed, -360, 360)
+	end
 	if typeof(Info.ColorTop) == "Color3" then
 		G.ColorTop = Info.ColorTop
 	end
@@ -1693,6 +1701,21 @@ function Library:SetCardGradient(Info)
 		G.ColorBottom = Info.ColorBottom
 	end
 	Library:ApplyCardGradient()
+end
+
+function Library:SampleCardGradient(Preset)
+	if Preset == "Custom" then
+		local G = Library.CardGradient
+		return G.ColorTop, G.ColorMiddle, G.ColorBottom
+	end
+	if not Visuals or type(Visuals.SampleSequence) ~= "function" then
+		return nil
+	end
+	local Seq = Visuals.Presets and Visuals.Presets.Sequence and Visuals.Presets.Sequence[Preset]
+	if not Seq then
+		return nil
+	end
+	return Visuals.SampleSequence(Seq.Keypoints, 0), Visuals.SampleSequence(Seq.Keypoints, 0.5), Visuals.SampleSequence(Seq.Keypoints, 1)
 end
 
 local WallpaperScaleTypes = {}
@@ -1961,7 +1984,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.21.0 loaded — CARD GRADIENT STATIC: animasi flow/spin DIHAPUS total dari background kartu (engine rebuild sequence per frame = patah-patah + CPU buang); gradient sekarang static assignment sekali = mulus absolut zero CPU; preset metal tetep 8 + Custom 3 stop langsung tanpa resampling (Custom ga aneh lagi); ganti preset = langsung berubah; knob aliran/putar diganti rotasi statis (kombinasi preset x rotasi x warna); engine Gradient dibuang bersih dari N3V4Visuals (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.22.0 loaded — GRADIENT ANIMASI GAYA SOURCE: engine EasyVisual diporting beneran (flow = Offset scroll + spin = Rotation + blend 0.5s pas ganti preset, SATU ticker Heartbeat bersama buat semua kartu bukan per-kartu); color picker sync: pilih preset = 3 picker keisi warna preset itu, sentuh picker = otomatis pindah Custom; knob Aliran + Putaran balik (default halus: flow 0.35, spin 0); Chrome + 8 preset metal tetep utuh (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5708,7 +5731,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.21.0"
+	Library.N3V4Version = "4.22.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,

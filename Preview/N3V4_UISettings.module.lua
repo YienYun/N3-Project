@@ -1011,8 +1011,8 @@ function Settings:Attach(Library, Window, Options)
 				local A1, A2, A3 = RGBCG(G.ColorTop)
 				local B1, B2, B3 = RGBCG(G.ColorMiddle)
 				local C1, C2, C3 = RGBCG(G.ColorBottom)
-				return string.format("Library:SetCardGradient({ Enabled = %s, Preset = \"%s\", Rotation = %s, ColorTop = Color3.fromRGB(%d, %d, %d), ColorMiddle = Color3.fromRGB(%d, %d, %d), ColorBottom = Color3.fromRGB(%d, %d, %d) })",
-					tostring(G.Enabled), G.Preset, G.Rotation,
+				return string.format("Library:SetCardGradient({ Enabled = %s, Preset = \"%s\", Rotation = %s, OffsetSpeed = %s, RotationSpeed = %s, ColorTop = Color3.fromRGB(%d, %d, %d), ColorMiddle = Color3.fromRGB(%d, %d, %d), ColorBottom = Color3.fromRGB(%d, %d, %d) })",
+					tostring(G.Enabled), G.Preset, G.Rotation, G.OffsetSpeed, G.RotationSpeed,
 					A1, A2, A3, B1, B2, B3, C1, C2, C3)
 			end
 			local function PrintCardGrad()
@@ -1020,8 +1020,8 @@ function Settings:Attach(Library, Window, Options)
 				local A1, A2, A3 = RGBCG(G.ColorTop)
 				local B1, B2, B3 = RGBCG(G.ColorMiddle)
 				local C1, C2, C3 = RGBCG(G.ColorBottom)
-				print(string.format("[N3V4 CARD GRADIENT] Enabled = %s | Preset = %s | Rotation = %s | Top = %d,%d,%d | Middle = %d,%d,%d | Bottom = %d,%d,%d",
-					tostring(G.Enabled), G.Preset, G.Rotation,
+				print(string.format("[N3V4 CARD GRADIENT] Enabled = %s | Preset = %s | Rotation = %s | Flow = %s | Spin = %s | Top = %d,%d,%d | Middle = %d,%d,%d | Bottom = %d,%d,%d",
+					tostring(G.Enabled), G.Preset, G.Rotation, G.OffsetSpeed, G.RotationSpeed,
 					A1, A2, A3, B1, B2, B3, C1, C2, C3))
 				SafeNotify({ Title = "Gradient kartu", Description = "Cek Output.", Icon = "info", Time = 3 })
 			end
@@ -1037,6 +1037,21 @@ function Settings:Attach(Library, Window, Options)
 
 			local PRESET_LIST = { "Custom", "Gold", "Silver", "Chrome", "Rainbow", "Neon", "Sunset", "Oceanic", "Lava" }
 
+			local CGSync = false
+			local DropCG = nil
+			local PickC1, PickC2, PickC3 = nil, nil, nil
+			local function CGForceCustom(Key, Color)
+				if CGSync then
+					return
+				end
+				if DropCG then
+					CGSync = true
+					DropCG:SetValue("Custom")
+					CGSync = false
+				end
+				Library:SetCardGradient({ Preset = "Custom", [Key] = Color })
+			end
+
 			local Box = T1:AddLeftGroupbox("Gradient Kartu", "sparkles")
 			local TogCG = Box:AddToggle("CG_ON", {
 				Text = "Gradient background image panel", Default = Library.CardGradient.Enabled,
@@ -1044,34 +1059,60 @@ function Settings:Attach(Library, Window, Options)
 					Library:SetCardGradient({ Enabled = Value })
 				end,
 			})
-			TogCG:AddColorPicker("CG_C1", {
+			PickC1 = TogCG:AddColorPicker("CG_C1", {
 				Title = "Atas", Default = Library.CardGradient.ColorTop,
 				Callback = function(Color)
-					Library:SetCardGradient({ ColorTop = Color })
+					CGForceCustom("ColorTop", Color)
 				end,
 			})
-			TogCG:AddColorPicker("CG_C2", {
+			PickC2 = TogCG:AddColorPicker("CG_C2", {
 				Title = "Tengah", Default = Library.CardGradient.ColorMiddle,
 				Callback = function(Color)
-					Library:SetCardGradient({ ColorMiddle = Color })
+					CGForceCustom("ColorMiddle", Color)
 				end,
 			})
-			TogCG:AddColorPicker("CG_C3", {
+			PickC3 = TogCG:AddColorPicker("CG_C3", {
 				Title = "Bawah", Default = Library.CardGradient.ColorBottom,
 				Callback = function(Color)
-					Library:SetCardGradient({ ColorBottom = Color })
+					CGForceCustom("ColorBottom", Color)
 				end,
 			})
-			Box:AddDropdown("CG_PRESET", {
+			DropCG = Box:AddDropdown("CG_PRESET", {
 				Text = "Preset gradient metal", Values = PRESET_LIST, Default = table.find(PRESET_LIST, Library.CardGradient.Preset) or 1,
 				Callback = function(Value)
+					if CGSync then
+						return
+					end
 					Library:SetCardGradient({ Preset = Value })
+					if Value == "Custom" or type(Library.SampleCardGradient) ~= "function" then
+						return
+					end
+					local S1, S2, S3 = Library:SampleCardGradient(Value)
+					if S1 then
+						CGSync = true
+						PickC1:SetValueRGB(S1)
+						PickC2:SetValueRGB(S2)
+						PickC3:SetValueRGB(S3)
+						CGSync = false
+					end
 				end,
 			})
 			Box:AddSlider("CG_ROT", {
-				Text = "Rotasi gradient (statis)", Default = Library.CardGradient.Rotation, Min = -180, Max = 180, Rounding = 0, Suffix = "deg",
+				Text = "Rotasi dasar gradient", Default = Library.CardGradient.Rotation, Min = -180, Max = 180, Rounding = 0, Suffix = "deg",
 				Callback = function(Value)
 					Library:SetCardGradient({ Rotation = Value })
+				end,
+			})
+			Box:AddSlider("CG_FLOW", {
+				Text = "Kecepatan aliran warna", Default = math.floor(Library.CardGradient.OffsetSpeed * 100 + 0.5), Min = 0, Max = 200, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetCardGradient({ OffsetSpeed = Value / 100 })
+				end,
+			})
+			Box:AddSlider("CG_SPIN", {
+				Text = "Kecepatan putar gradient", Default = Library.CardGradient.RotationSpeed, Min = -180, Max = 180, Rounding = 0, Suffix = "deg/s",
+				Callback = function(Value)
+					Library:SetCardGradient({ RotationSpeed = Value })
 				end,
 			})
 			Box:AddButton("Print setingan gradient kartu", PrintCardGrad)

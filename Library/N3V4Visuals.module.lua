@@ -85,6 +85,136 @@ local Presets = {
 }
 
 --// GENERIC 3D VIEWPORT COMPONENT (RICH ORBIT + MANUAL DRAG)
+local RunService = game:GetService("RunService")
+local BLEND_TIME = 0.5
+
+local function EvalColorSequence(keypoints, time)
+	local sequence = {}
+	time += 1
+	for x = 0, 2 do
+		for i = 1, #keypoints do
+			table.insert(sequence, { Time = keypoints[i].Time + x, Value = keypoints[i].Value })
+		end
+	end
+	for i = 1, #sequence - 1 do
+		local thisKeypoint = sequence[i]
+		local nextKeypoint = sequence[i + 1]
+		if time >= thisKeypoint.Time and time < nextKeypoint.Time then
+			local alpha = (time - thisKeypoint.Time) / (nextKeypoint.Time - thisKeypoint.Time)
+			return Color3.new(
+				(nextKeypoint.Value.R - thisKeypoint.Value.R) * alpha + thisKeypoint.Value.R,
+				(nextKeypoint.Value.G - thisKeypoint.Value.G) * alpha + thisKeypoint.Value.G,
+				(nextKeypoint.Value.B - thisKeypoint.Value.B) * alpha + thisKeypoint.Value.B
+			)
+		end
+	end
+	return keypoints[#keypoints].Value
+end
+
+local function TrueSequence(Sequence, Offset)
+	if Offset == 0 then
+		return Sequence
+	end
+	local shifted = {}
+	for i, v in ipairs(Sequence.Keypoints) do
+		local t = v.Time + Offset
+		if t > 1 or t < 0 then
+			t = t % 1
+		end
+		shifted[i] = ColorSequenceKeypoint.new(t, v.Value)
+	end
+	table.sort(shifted, function(a, b)
+		return a.Time < b.Time
+	end)
+	if shifted[1].Time ~= 0 then
+		table.insert(shifted, 1, ColorSequenceKeypoint.new(0, EvalColorSequence(shifted, 0)))
+	end
+	if shifted[#shifted].Time ~= 1 then
+		table.insert(shifted, ColorSequenceKeypoint.new(1, EvalColorSequence(shifted, 1)))
+	end
+	return ColorSequence.new(shifted)
+end
+
+local function BlendSequences(From, To, Alpha)
+	local kpA = To.Keypoints
+	local kpB = From.Keypoints
+	local newkeypoints = {}
+	if #kpA ~= #kpB then
+		for i, v in ipairs(kpA) do
+			newkeypoints[i] = ColorSequenceKeypoint.new(v.Time, EvalColorSequence(kpB, v.Time))
+		end
+	else
+		for i, v in ipairs(kpA) do
+			local sample = EvalColorSequence(kpB, v.Time)
+			newkeypoints[i] = ColorSequenceKeypoint.new(v.Time, sample:Lerp(v.Value, Alpha))
+		end
+	end
+	return ColorSequence.new(newkeypoints)
+end
+
+local function TargetSequence(Conf)
+	if Conf.Preset == "Custom" then
+		return ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Conf.ColorTop),
+			ColorSequenceKeypoint.new(0.5, Conf.ColorMiddle),
+			ColorSequenceKeypoint.new(1, Conf.ColorBottom),
+		})
+	end
+	return Presets.Sequence[Conf.Preset] or Presets.Sequence.Gold
+end
+
+local Active = {}
+local Ticker = nil
+
+local function EnsureTicker()
+	if Ticker then
+		return
+	end
+	Ticker = RunService.Heartbeat:Connect(function(dt)
+		for i = #Active, 1, -1 do
+			local St = Active[i]
+			if St.Dead or not St.Grad.Parent then
+				table.remove(Active, i)
+			else
+				local Conf = St.GetConf()
+				if not Conf.Enabled then
+					St.Dead = true
+					table.remove(Active, i)
+				else
+					if St.BlendT < 1 then
+						St.BlendT = math.min(1, St.BlendT + dt / BLEND_TIME)
+						if St.BlendT >= 1 then
+							St.Current = St.Target
+						else
+							St.Current = BlendSequences(St.Current, St.Target, St.BlendT)
+						end
+					end
+					St.Speed = St.Speed + (Conf.OffsetSpeed - St.Speed) * dt
+					if Conf.OffsetSpeed == 0 and math.abs(St.Speed) < 0.002 then
+						St.Speed = 0
+					end
+					St.Offset += St.Speed * dt
+					if St.Offset > 1 or St.Offset < -1 then
+						St.Offset = St.Offset % 1
+					end
+					if Conf.RotationSpeed ~= 0 then
+						St.Spin = (St.Spin + Conf.RotationSpeed * dt) % 360
+					end
+					if St.Speed ~= 0 or Conf.RotationSpeed ~= 0 or St.BlendT < 1 or not St.Painted then
+						St.Grad.Color = TrueSequence(St.Current, St.Offset)
+						St.Grad.Rotation = Conf.Rotation + St.Spin
+						St.Painted = St.Speed == 0 and Conf.RotationSpeed == 0 and St.BlendT >= 1
+					end
+				end
+			end
+		end
+		if #Active == 0 then
+			Ticker:Disconnect()
+			Ticker = nil
+		end
+	end)
+end
+
 local function AddViewport(Env, Groupbox, Idx, Info)
 	if Groupbox.Destroyed then
 		return nil
@@ -494,24 +624,44 @@ local function AddSpotlightCard(Env, Groupbox, Idx, Info)
 		CardObj:Relayout()
 	end
 
+	local GradState = nil
+
 	function CardObj:ApplyImageGradient()
 		local Conf = CardObj.GradientConf or Env.Library.CardGradient
 		ImageGrad.Enabled = Conf.Enabled
 		if not Conf.Enabled then
 			ImagePanel.BackgroundColor3 = Env.Library.Scheme.MainColor
+			if GradState then
+				GradState.Dead = true
+				GradState = nil
+			end
 			return
 		end
 		ImagePanel.BackgroundColor3 = Color3.new(1, 1, 1)
-		if Conf.Preset == "Custom" then
-			ImageGrad.Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, Conf.ColorTop),
-				ColorSequenceKeypoint.new(0.5, Conf.ColorMiddle),
-				ColorSequenceKeypoint.new(1, Conf.ColorBottom),
-			})
+		local Target = TargetSequence(Conf)
+		if not GradState then
+			GradState = {
+				Grad = ImageGrad,
+				GetConf = function()
+					return CardObj.GradientConf or Env.Library.CardGradient
+				end,
+				Current = Target,
+				Target = Target,
+				BlendT = 1,
+				Offset = 0,
+				Speed = 0,
+				Spin = 0,
+				Painted = false,
+				Dead = false,
+			}
+			table.insert(Active, GradState)
+			EnsureTicker()
 		else
-			ImageGrad.Color = Presets.Sequence[Conf.Preset] or Presets.Sequence.Gold
+			GradState.Target = Target
+			GradState.BlendT = 0
 		end
-		ImageGrad.Rotation = Conf.Rotation
+		ImageGrad.Color = TrueSequence(GradState.Current, GradState.Offset)
+		ImageGrad.Rotation = Conf.Rotation + GradState.Spin
 	end
 
 	function CardObj:SetImageGradient(Info)
@@ -530,6 +680,12 @@ local function AddSpotlightCard(Env, Groupbox, Idx, Info)
 		end
 		if typeof(Info.Rotation) == "number" then
 			C.Rotation = math.clamp(Info.Rotation, -360, 360)
+		end
+		if typeof(Info.OffsetSpeed) == "number" then
+			C.OffsetSpeed = math.clamp(Info.OffsetSpeed, -4, 4)
+		end
+		if typeof(Info.RotationSpeed) == "number" then
+			C.RotationSpeed = math.clamp(Info.RotationSpeed, -360, 360)
 		end
 		if typeof(Info.ColorTop) == "Color3" then
 			C.ColorTop = Info.ColorTop
@@ -630,6 +786,7 @@ end
 
 return {
 	Presets = Presets,
+	SampleSequence = EvalColorSequence,
 	AddViewport = AddViewport,
 	AddSpotlightCard = AddSpotlightCard,
 }
