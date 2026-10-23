@@ -1862,7 +1862,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.16.2 loaded — OUTLINE SPIN TUNING: bake dump user verbatim (Speed 5.5, ColorB silver 193,193,193) + pita DIPENDEKKIN (15 persen nyala penuh, fade beres di 35 persen; sebelumnya 30/50) + keypoint warna ekor digeser ke 0.35 biar silver-nya tetep keliatan di dalam fade (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.17.0 loaded — GLOW ON CLICK: pulse RGB outline sekarang dipicu CLICK kontrol doang (button/toggle/tab/dropdown/color picker/keybox — semua GuiButton kehook satu pusat lewat Activated + DescendantAdded di MainFrame); auto-pulse tiap 25 detik DIHAPUS, pulse non-click di toggle SetValue DIHAPUS, drag surface (slider bar, popup overlay+frame, palette sat/hue/alpha) di-exclude pakai attribute NoGlowPulse (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -4992,6 +4992,7 @@ do
 			Size = UDim2.fromOffset(200, 200),
 			Parent = ColorHolder,
 		})
+		SatVipMap:SetAttribute("NoGlowPulse", true)
 
 		local SatVibCursor = New("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
@@ -5014,6 +5015,7 @@ do
 			Text = "",
 			Parent = ColorHolder,
 		})
+		HueSelector:SetAttribute("NoGlowPulse", true)
 		New("UIGradient", {
 			Color = ColorSequence.new(HueSequenceTable),
 			Rotation = 90,
@@ -5040,6 +5042,7 @@ do
 				TileSize = UDim2.fromOffset(8, 8),
 				Parent = ColorHolder,
 			})
+			TransparencySelector:SetAttribute("NoGlowPulse", true)
 
 			TransparencyColor = New("Frame", {
 				BackgroundColor3 = ColorPicker.Value,
@@ -5918,7 +5921,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.16.2"
+	Library.N3V4Version = "4.17.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -6456,9 +6459,6 @@ do
 					return
 				end
 				Library:PlayClickSound()
-				if Library.PulseWindowGlow then
-					Library:PulseWindowGlow() -- <-- TAMBAH INI
-				end
 
 				if Button.DoubleClick then
 					Button.Locked = true
@@ -6856,11 +6856,6 @@ do
 			end
 
 			Library:UpdateDependencyBoxes()
-
-			--// MASUKKAN DI SINI BIAR PAS DI-KLIK ANIMASINYA JALAN:
-			if Library.PulseWindowGlow then
-				Library:PulseWindowGlow()
-			end
 
 			if not Toggle.AnyKeyPickerPicking then
 				Toggle:RunChanged()
@@ -7561,6 +7556,7 @@ do
 			Text = "",
 			Parent = Holder,
 		})
+		Bar:SetAttribute("NoGlowPulse", true)
 
 		New("UIStroke", {
 			Color = "OutlineColor",
@@ -9051,6 +9047,7 @@ do
 				ZIndex = 9100,
 				Parent = MainFrame,
 			})
+			PopupOverlay:SetAttribute("NoGlowPulse", true)
 			TweenService:Create(PopupOverlay, Library.WindowAnimationInfo, {
 				BackgroundTransparency = 0.5,
 			}):Play()
@@ -9069,6 +9066,7 @@ do
 				ZIndex = 9101,
 				Parent = PopupOverlay,
 			})
+			PopupFrame:SetAttribute("NoGlowPulse", true)
 			table.insert(
 				Library.Corners,
 				New("UICorner", {
@@ -11291,14 +11289,19 @@ function Library:CreateWindow(WindowInfo)
 			end)
 		end
 
-		coroutine.wrap(function()
-			while not Library.Unloaded and MainFrame and MainFrame.Parent do
-				task.wait(25)
-				if Library.Toggled and MainFrame.Visible then
+		local function HookGlowClicks(Obj)
+			if Obj:IsA("GuiButton") and not Obj:GetAttribute("NoGlowPulse") then
+				Obj.Activated:Connect(function()
 					Library:PulseWindowGlow()
-				end
+				end)
 			end
-		end)()
+		end
+
+		for _, Obj in ipairs(MainFrame:GetDescendants()) do
+			HookGlowClicks(Obj)
+		end
+
+		MainFrame.DescendantAdded:Connect(HookGlowClicks)
 
 		Library:MakeLine(MainFrame, {
 			Position = UDim2.fromOffset(0, 48),

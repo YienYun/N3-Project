@@ -1938,3 +1938,33 @@ keliatan. Sekarang fade warna persis nutup fade alpha: kepala putih
 MOD gak disentuh (knob baca state otomatis, Rounding 1 muat 5.5).
 Checker: pin bake baru (Speed 5.5 / 193,193,193) + pin 3 keypoint
 curve (0.35 ColorB, 0.15/0 alpha) + version/footer 4.16.2.
+
+## v4.17.0 — GLOW ON CLICK: pulse RGB cuma dipicu click kontrol
+Keputusan user (diskusi 4 poin): (1) auto-pulse 25 detik HAPUS;
+(2) trigger = click kontrol (button/toggle/tab/dll), BUKAN click
+sembarang objek window; (3) slider/input NGGAK ikut ("button-button
+saja"); (4) gasken.
+Arsitektur: SATU hook pusat di CreateWindow (menggantikan loop 25s):
+HookGlowClicks(Obj) — kalau Obj GuiButton DAN nggak punya attribute
+NoGlowPulse → Obj.Activated:Connect(PulseWindowGlow). Dipasang lewat
+MainFrame:GetDescendants() awal + MainFrame.DescendantAdded → semua
+kontrol yang udah ada DAN yang dibikin nanti (tab, toggle, button,
+dropdown display+row, swatch picker, keybox, kartu, panah) kecover
+otomatis. Mesin PulseWindowGlow + resep glow TIDAK disentuh.
+Exclude via SetAttribute("NoGlowPulse", true) di 6 drag/click-catcher
+surface: slider Bar (TextButton!), PopupOverlay + PopupFrame v2
+(TextButton click-catcher, parent MainFrame), SatVipMap +
+TransparencySelector (ImageButton drag), HueSelector (TextButton
+drag). Pelajaran: kelas GuiButton nggak selalu = tombol diskrit —
+drag surface di lib ini banyak yang TextButton, makanya exclude-nya
+per-object attribute, bukan per-class.
+Dua call site ad-hoc lama dicabut (single implementation): pulse di
+Button.Base.MouseButton1Click (dobel sama Activated) dan pulse di
+Toggle:SetValue (kepicu non-click: keybind/script — user minta strict
+click). Klik close/minimize: PulseWindowGlow punya guard
+Unloaded/Toggled/Parent → aman.
+Checker: chk v4.17.0 (hook + DescendantAdded + guard attribute +
+count SetAttribute == 6 + absensi task.wait(25)/MASUKKAN DI SINI/
+call ad-hoc). Sempat merah 1x: count-pin kelebihan backslash
+(file bytes \\" = nutup double-quote bash di tengah string) →
+konvensi escape chk: literal quote di pattern = \" (satu backslash).
