@@ -1039,7 +1039,6 @@ function Settings:Attach(Library, Window, Options)
 
 			local CGSync = false
 			local DropCG = nil
-			local PickC1, PickC2, PickC3 = nil, nil, nil
 			local function CGForceCustom(Key, Color)
 				if CGSync then
 					return
@@ -1059,19 +1058,19 @@ function Settings:Attach(Library, Window, Options)
 					Library:SetCardGradient({ Enabled = Value })
 				end,
 			})
-			PickC1 = TogCG:AddColorPicker("CG_C1", {
+			TogCG:AddColorPicker("CG_C1", {
 				Title = "Atas", Default = Library.CardGradient.ColorTop,
 				Callback = function(Color)
 					CGForceCustom("ColorTop", Color)
 				end,
 			})
-			PickC2 = TogCG:AddColorPicker("CG_C2", {
+			TogCG:AddColorPicker("CG_C2", {
 				Title = "Tengah", Default = Library.CardGradient.ColorMiddle,
 				Callback = function(Color)
 					CGForceCustom("ColorMiddle", Color)
 				end,
 			})
-			PickC3 = TogCG:AddColorPicker("CG_C3", {
+			TogCG:AddColorPicker("CG_C3", {
 				Title = "Bawah", Default = Library.CardGradient.ColorBottom,
 				Callback = function(Color)
 					CGForceCustom("ColorBottom", Color)
@@ -1088,11 +1087,11 @@ function Settings:Attach(Library, Window, Options)
 						return
 					end
 					local S1, S2, S3 = Library:SampleCardGradient(Value)
-					if S1 then
+					if S1 and Library.Options.CG_C1 then
 						CGSync = true
-						PickC1:SetValueRGB(S1)
-						PickC2:SetValueRGB(S2)
-						PickC3:SetValueRGB(S3)
+						Library.Options.CG_C1:SetValueRGB(S1)
+						Library.Options.CG_C2:SetValueRGB(S2)
+						Library.Options.CG_C3:SetValueRGB(S3)
 						CGSync = false
 					end
 				end,

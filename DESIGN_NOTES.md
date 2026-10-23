@@ -2199,3 +2199,15 @@ chk v4.22 baru 14 fragmen semua -qF KECUALI AddSlider (jebakan baru:
 -qF perlakuin backslash literal, BRE -q malah bener buat \\\" —
 konvensi: fragmen ber-quote pake -q + \\\" 3-backslash, fragmen
 tanpa quote aman -qF). Gates 84/84. Module 631 -> 792 baris.
+
+## v4.22.1 — picker sync crash: AddColorPicker return self, bukan ColorPicker
+Dump user: MOD:1093 'call missing method SetValueRGB of table' pas
+milih preset di dropdown. Root cause: Funcs:AddColorPicker berakhir
+`Options[Idx] = ColorPicker; return self` (self = Toggle induk, buat
+chaining addon) — jadi `PickC1 = TogCG:AddColorPicker(...)` nangkep
+Toggle, bukan ColorPicker. Objek asli hidupnya di Options[Idx], dan
+MOD emang udah punya pola akses `Library.Options.<Idx>` (dipake
+grup GW_*). Fix: capture PickC1/2/3 dihapus, sync lewat
+Library.Options.CG_C1/2/3:SetValueRGB + guard existence. DropCG aman
+karena Funcs:AddDropdown beneran `return Dropdown` (diverifikasi
+@8549). Pin checker baru: Library.Options.CG_C1:SetValueRGB.
