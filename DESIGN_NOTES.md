@@ -2283,3 +2283,30 @@ Checker: 6 pin nilai di-update (Preset Custom->Chrome di chk v4.19,
 OffsetSpeed 0.35->0.1 + RotationSpeed 0->2 di chk v4.22 [dua-duanya
 -qF bukan -q — pelajaran repeat: cek flag grep pin sebelum replace],
 Speed 5.5->8.5 di chk v4.16) + pin versi v4.24.1. Gates 86/86.
+
+## v4.25.0 — FIDELITAS 100% SOURCE STROKE PRESETS (nol deviasi)
+User pilih patch fidelitas (diskusi via pilihan). Tiga deviasi yang
+gue sebut jujur di reply v4.24.0 sekarang DIHAPUS:
+1. Osilasi math.sin rotasi stroke: Electric = 60 - sin(phase)*30
+   dengan phase rate speed*45*0.05 = 2.25x (StrokeStyles.Osc = -30,
+   OscRate = 2.25); Sunset = 60 - sin(phase)*20 rate speed*20*0.1 =
+   2x (Osc = -20, OscRate = 2). Ticker nambahin sin(St.OscPhase)*
+   OscAmp ke Rotation.
+2. Transparency-offset per-frame: GhostStroke SetTransparencyOffset-
+   Speed(-speed*0.9) + WaveStroke (speed*0.9) → Conf.TransparencySpeed
+   = Sp * TransFlow; ticker geser NumberSequence lewat
+   TrueNumberSequence + EvalNumberSequence (portingan verbatim rumus
+   tiled 0..2 source dari Gradient.luau evalNumberSequence).
+3. Pulse ketebalan stroke Electric (Connection3 source):
+   sizeMultiplier = 1 + 0.4*(sin(tick()*speed*3)*0.5+0.5) → ticker
+   tulis UIStroke.Thickness = PulseBase(1.8) * (1 + 0.4*(sin*0.5+
+   0.5)), phase rate Sp*3. Smoothing 0.08 source dilewat (write per
+   frame udah mulus) — satu-satunya sisa beda, disebut di reply.
+Kontrak Conf ticker diperluas opsional (Transparency, Transparency-
+Speed, OscAmp, OscRate, PulseBase, PulseAmp, PulseRate) — conf kartu
+lama ga punya key ini jadi aman backward-compat (nil or 0).
+ApplyOutlineSpin reset Obj.Stroke.Thickness = 1.8 tiap apply biar
+pulse ga nyangkut pas pindah style; Obj.Trans nyimpen seq transparency
+buat GetConf. Idle-check ticker diperluas (Moving termasuk TransOn/
+Osc/Pulse) biar static tetep zero-write.
+Checker: chk v4.25 (10 fragmen) + pin versi. Gates 87/87.

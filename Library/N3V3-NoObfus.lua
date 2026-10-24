@@ -1541,13 +1541,13 @@ Library.StrokeStyles = {
 	Neon = { Sequence = "Neon", Rot = -45, Flow = -0.7, Spin = 0 },
 	Death = { Sequence = "Death", Rot = -85, Flow = -1, Spin = 0 },
 	Galaxy = { Sequence = "Galaxy", Rot = -90, Flow = -0.3, Spin = -15 },
-	Electric = { Sequence = "Electric", Rot = 60, Flow = -2, Spin = 0 },
-	Sunset = { Sequence = "Sunset", Rot = 60, Flow = -0.6, Spin = 0 },
+	Electric = { Sequence = "Electric", Rot = 60, Flow = -2, Spin = 0, Osc = -30, OscRate = 2.25, Pulse = true },
+	Sunset = { Sequence = "Sunset", Rot = 60, Flow = -0.6, Spin = 0, Osc = -20, OscRate = 2 },
 	Rainbow = { Sequence = "Rainbow", Rot = 0, Flow = -1, Spin = 0 },
 	Lava = { Sequence = "Lava", Rot = 0, Flow = -1, Spin = 0 },
 	Oceanic = { Sequence = "Oceanic", Rot = 0, Flow = -1, Spin = 0 },
-	Ghost = { Sequence = "Ghost", Trans = "Ghost", Rot = 0, Flow = -0.9, Spin = 0 },
-	Wave = { Trans = "Wave", Rot = 0, Flow = 1, Spin = 0, Build = function(Base)
+	Ghost = { Sequence = "Ghost", Trans = "Ghost", Rot = 0, Flow = -0.9, Spin = 0, TransFlow = -0.9 },
+	Wave = { Trans = "Wave", Rot = 0, Flow = 1, Spin = 0, TransFlow = 0.9, Build = function(Base)
 		return ColorSequence.new({
 			ColorSequenceKeypoint.new(0, Base),
 			ColorSequenceKeypoint.new(0.5, Base),
@@ -1604,6 +1604,7 @@ function Library:ApplyOutlineSpin()
 	for _, Obj in ipairs(Library.OutlineSpinObjects) do
 		if Obj.Grad.Parent then
 			Obj.Stroke.Enabled = S.Enabled
+			Obj.Stroke.Thickness = 1.8
 			if Obj.Tween then
 				Obj.Tween:Cancel()
 				Obj.Tween = nil
@@ -1644,9 +1645,12 @@ function Library:ApplyOutlineSpin()
 					})
 				end
 				Obj.Seq = Seq
+				local TransSeq = NumberSequence.new(0)
 				if Visuals then
-					Obj.Grad.Transparency = (Style.Trans and Visuals.Presets.Transparency[Style.Trans]) or Visuals.Presets.Solid
+					TransSeq = (Style.Trans and Visuals.Presets.Transparency[Style.Trans]) or Visuals.Presets.Solid
 				end
+				Obj.Trans = TransSeq
+				Obj.Grad.Transparency = TransSeq
 				if Obj.GState then
 					Obj.GState.Target = Seq
 					Obj.GState.BlendT = 0
@@ -1661,6 +1665,13 @@ function Library:ApplyOutlineSpin()
 							Rotation = Cur and Cur.Rot or 0,
 							OffsetSpeed = Cur and Sp * Cur.Flow or 0,
 							RotationSpeed = Cur and Sp * Cur.Spin or 0,
+							Transparency = Obj.Trans,
+							TransparencySpeed = Cur and Sp * (Cur.TransFlow or 0) or 0,
+							OscAmp = Cur and Cur.Osc or 0,
+							OscRate = Cur and Sp * (Cur.OscRate or 0) or 0,
+							PulseBase = Cur and Cur.Pulse and 1.8 or 0,
+							PulseAmp = Cur and Cur.Pulse and 0.4 or 0,
+							PulseRate = Cur and Sp * (Cur.Pulse and 3 or 0) or 0,
 						}
 					end)
 				else
@@ -2070,7 +2081,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.24.1 loaded — DEFAULT UI DIBAKE DARI DUMP USER: outline spin default = Preset RainbowOutline Speed 8.5; gradient kartu default = Preset Chrome Rotation -90 OffsetSpeed 0.1 RotationSpeed 2 (dua dump Print user dibake verbatim jadi state default Library, bukan hardcode tersebar); semua knob setingan otomatis nunjukin default baru karena baca dari state (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.25.0 loaded — FIDELITAS 100% SOURCE STROKE PRESETS: tiga deviasi lama dihapus — osilasi math.sin rotasi Electric (amp -30 rate 2.25x) + Sunset (amp -20 rate 2x) jalan beneran; transparency-offset Ghost (-0.9x) + Wave (0.9x) digeser per-frame lewat TrueNumberSequence (portingan evalNumberSequence source); pulse ketebalan stroke Electric = 1 + 0.4*(sin*0.5+0.5) persis Connection3; semua tetap lewat satu ticker bersama (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5817,7 +5828,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.24.1"
+	Library.N3V4Version = "4.25.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,

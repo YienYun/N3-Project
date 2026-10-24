@@ -254,6 +254,49 @@ local function TrueSequence(Sequence, Offset)
 	return ColorSequence.new(shifted)
 end
 
+local function EvalNumberSequence(keypoints, time)
+	local sequence = {}
+	time += 1
+	for x = 0, 2 do
+		for i = 1, #keypoints do
+			table.insert(sequence, { Time = keypoints[i].Time + x, Value = keypoints[i].Value })
+		end
+	end
+	for i = 1, #sequence - 1 do
+		local thisKeypoint = sequence[i]
+		local nextKeypoint = sequence[i + 1]
+		if time >= thisKeypoint.Time and time < nextKeypoint.Time then
+			local alpha = (time - thisKeypoint.Time) / (nextKeypoint.Time - thisKeypoint.Time)
+			return thisKeypoint.Value + (nextKeypoint.Value - thisKeypoint.Value) * alpha
+		end
+	end
+	return keypoints[#keypoints].Value
+end
+
+local function TrueNumberSequence(Sequence, Offset)
+	if Offset == 0 then
+		return Sequence
+	end
+	local shifted = {}
+	for i, v in ipairs(Sequence.Keypoints) do
+		local t = v.Time + Offset
+		if t > 1 or t < 0 then
+			t = t % 1
+		end
+		shifted[i] = NumberSequenceKeypoint.new(t, v.Value)
+	end
+	table.sort(shifted, function(a, b)
+		return a.Time < b.Time
+	end)
+	if shifted[1].Time ~= 0 then
+		table.insert(shifted, 1, NumberSequenceKeypoint.new(0, EvalNumberSequence(shifted, 0)))
+	end
+	if shifted[#shifted].Time ~= 1 then
+		table.insert(shifted, NumberSequenceKeypoint.new(1, EvalNumberSequence(shifted, 1)))
+	end
+	return NumberSequence.new(shifted)
+end
+
 local function BlendSequences(From, To, Alpha)
 	local kpA = To.Keypoints
 	local kpB = From.Keypoints
@@ -322,10 +365,40 @@ local function EnsureTicker()
 					if Conf.RotationSpeed ~= 0 then
 						St.Spin = (St.Spin + Conf.RotationSpeed * dt) % 360
 					end
-					if St.Speed ~= 0 or Conf.RotationSpeed ~= 0 or St.BlendT < 1 or not St.Painted then
+					local TSpeed = Conf.TransparencySpeed or 0
+					local TransOn = TSpeed ~= 0 and Conf.Transparency ~= nil
+					if TransOn then
+						St.TransOffset += TSpeed * dt
+						if St.TransOffset > 1 or St.TransOffset < -1 then
+							St.TransOffset = St.TransOffset % 1
+						end
+					end
+					local OscAmp = Conf.OscAmp or 0
+					if OscAmp ~= 0 then
+						St.OscPhase += (Conf.OscRate or 0) * dt
+					end
+					local Pulsing = (Conf.PulseAmp or 0) ~= 0
+					if Pulsing then
+						St.PulsePhase += (Conf.PulseRate or 0) * dt
+					end
+					local Moving = St.Speed ~= 0 or Conf.RotationSpeed ~= 0 or St.BlendT < 1 or TransOn or OscAmp ~= 0 or Pulsing
+					if Moving or not St.Painted then
 						St.Grad.Color = TrueSequence(St.Current, St.Offset)
-						St.Grad.Rotation = Conf.Rotation + St.Spin
-						St.Painted = St.Speed == 0 and Conf.RotationSpeed == 0 and St.BlendT >= 1
+						local Rot = Conf.Rotation + St.Spin
+						if OscAmp ~= 0 then
+							Rot = Rot + math.sin(St.OscPhase) * OscAmp
+						end
+						St.Grad.Rotation = Rot
+						if TransOn then
+							St.Grad.Transparency = TrueNumberSequence(Conf.Transparency, St.TransOffset)
+						end
+						if Pulsing then
+							local Par = St.Grad.Parent
+							if Par and Par:IsA("UIStroke") then
+								Par.Thickness = Conf.PulseBase * (1 + Conf.PulseAmp * (math.sin(St.PulsePhase) * 0.5 + 0.5))
+							end
+						end
+						St.Painted = not Moving
 					end
 				end
 			end
@@ -773,6 +846,9 @@ local function AddSpotlightCard(Env, Groupbox, Idx, Info)
 				Offset = 0,
 				Speed = 0,
 				Spin = 0,
+				TransOffset = 0,
+				OscPhase = 0,
+				PulsePhase = 0,
 				Painted = false,
 				Dead = false,
 			}
@@ -923,6 +999,9 @@ local function AttachGradient(Grad, GetConf)
 		Offset = 0,
 		Speed = 0,
 		Spin = 0,
+		TransOffset = 0,
+		OscPhase = 0,
+		PulsePhase = 0,
 		Painted = false,
 		Dead = false,
 	}
