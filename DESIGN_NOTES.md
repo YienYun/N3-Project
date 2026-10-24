@@ -2418,3 +2418,41 @@ utama (Z <= ~10) tapi di bawah popup 9100 / notifikasi / cursor
 naik ke Target.ZIndex-1 = 99 (di bawah dashboard, di atas window
 utama = benar secara visual).
 Checker: pin ZOFF + ZOFF+5. Gates 89/89. Versi 4.27.2.
+
+## v4.28.0 — SHADOW MODERN 4 LAYER + KLIK KARTU = POPOVER DETAILS
+Keluhan user (screenshot): bayangan dashboard "miring ga seimbang,
+jelek, kaku" + minta klik kartu (misal Eggs) muncul dropdown isi
+text rincian (Mythic: 39, Rare: 394, dll). Catatan forensik: arc
+teal/merah di sudut bawah screenshot = arc gradient outline-spin
+yang lagi lewat (normal, sama kayak pita di window utama), BUKAN
+bayangan bocor.
+Root cause shadow jelek: offset dropshadow DIAGONAL (-Offset,
++Offset) warisan port EasyVisual → bayangan geser kiri-bawah =
+kesan miring; single layer hard-edge = kaku.
+Redesign (VIS AttachDropshadow + ticker): SHADOW_LAYERS = 4 clone
+bertingkat; layer i melebar i px per sisi (Size +2i, radius +i) dan
+turun Depth*(i/4) — X tetap center jadi SIMETRIS; transparansi per
+layer = Trans^(1/4) sehingga alpha compound keempat layer persis
+sama dengan transparansi setting user (falloff halus tepi luar ->
+inti gelap = shadow modern lembut). Depth/Color/Trans lerp sama
+kayak dulu; Moving gate sekarang cuma untuk write warna/transparansi,
+geometry (pos/size/z) per-frame per-layer. Offset setting lama
+(0..16) jadi arti "kedalaman total" — dump user v4.26 tetap valid.
+Fitur popover (LIB dashboard): kartu jadi TextButton (AutoButtonColor
+false) biar klikabel; CardData.Details = list {Label, Value}; klik
+kartu = toggle popover (Frame "Details" parent WinFrame ZOFF+8,
+radius locked, stroke OutlineColor, label kiri AccentColor + nilai
+kanan putih sesuai aturan prefix-themed/value-white, UIListLayout);
+posisi auto: bawah kartu, flip ke atas kalau mentok bawah window;
+masuk fade+slide 0.14s; tutup via klik luar (UIS InputBegan rect
+test), klik kartu lagi, scroll Container (CanvasPosition connect),
+minimize, atau Destroy. API baru: Dash:SetDetails(Idx, Rows) —
+update live tanpa flicker kalau popover kartu itu lagi kebuka;
+AddStat/AddMeter terima Conf.Details awal. SetMeterDetails alias
+dibuang? TIDAK — sempat nongol doang, hapus manual: alias
+SetMeterDetails dihapus dari niat, yang ada cuma SetDetails.
+Bonus fix: SetTitle dulu cuma assign variabel lokal TitleText tanpa
+nyentuh label topbar → sekarang TopTitle.Text di-update.
+PRE demo: Cash + Eggs punya Details awal; loop live SetDetails tiap
+detik (Mythic/Rare/Epic + Session/Bank) biar popover kelihatan hidup.
+Checker: chk v4.28 (3 chk baru). Gates 92/92. Versi 4.28.0.

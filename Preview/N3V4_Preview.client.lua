@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.27.2",
+	Footer = "N3V4 • UI Preview Kit v4.28.0",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -1025,10 +1025,10 @@ Try("Overlays: R2 Dashboard + Loading states", function()
 		})
 		Dash:AddStat("Fps", { Title = "FPS", Icon = "gauge", Suffix = " fps", Default = 60 })
 		Dash:AddStat("Player", { Title = "Players", Icon = "list", Default = 12 })
-		Dash:AddStat("Cash", { Title = "Cash", Icon = "sparkles", Suffix = " k", Default = 128 })
+		Dash:AddStat("Cash", { Title = "Cash", Icon = "sparkles", Suffix = " k", Default = 128, Details = { { Label = "Session", Value = 41 }, { Label = "Bank", Value = 87 } } })
 		Dash:AddMeter("Cpu", { Title = "CPU", Icon = "zap", Default = 35 })
 		Dash:AddMeter("Mem", { Title = "Memory", Icon = "droplets", Default = 62 })
-		Dash:AddMeter("Egg", { Title = "Eggs", Icon = "image", Min = 0, Max = 500, Default = 128, Suffix = "/500" })
+		Dash:AddMeter("Egg", { Title = "Eggs", Icon = "image", Min = 0, Max = 500, Default = 128, Suffix = "/500", Details = { { Label = "Mythic", Value = 12 }, { Label = "Rare", Value = 84 }, { Label = "Epic", Value = 32 } } })
 		task.spawn(function()
 			while Dash.Frame.Parent do
 				task.wait(1)
@@ -1037,6 +1037,15 @@ Try("Overlays: R2 Dashboard + Loading states", function()
 				Dash:SetMeter("Cpu", 20 + math.random(0, 60))
 				Dash:SetMeter("Mem", 40 + math.random(0, 50))
 				Dash:SetMeter("Egg", math.min(500, 128 + math.random(0, 60)))
+				Dash:SetDetails("Egg", {
+					{ Label = "Mythic", Value = math.random(5, 40) },
+					{ Label = "Rare", Value = math.random(200, 400) },
+					{ Label = "Epic", Value = math.random(20, 60) },
+				})
+				Dash:SetDetails("Cash", {
+					{ Label = "Session", Value = math.random(20, 60) },
+					{ Label = "Bank", Value = math.random(60, 120) },
+				})
 			end
 		end)
 	end)
