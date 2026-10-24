@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.32.0 loaded — MENU CEPAT PAKAI KOMPONEN ASLI LIBRARY: sesuai verdict user (jangan bikin toggle/button tiruan), object Menu dari AddDraggableMenu sekarang mewarisi class groupbox (metatable BaseGroupbox -> Funcs) jadi Menu:AddToggle / AddButton / AddLabel / AddSlider / AddDropdown dll = KOMPONEN YANG SAMA PERSIS kayak di groupbox window utama (single implementation, nol clone, style otomatis sedarah UI termasuk theme strings + animasi); return jadi (Holder, Container, Menu), return lama tetep utuh buat menu Keybinds internal; preview langsung pakai komponen asli (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.32.1 loaded — FIX MENU RESIZE: komponen groupbox (AddLabel dkk, 31 titik panggil) kontraknya manggil Groupbox:Resize() yang biasanya method per-instance; object Menu warisan Funcs kemarin belum punya itu = crash missing method Resize pas preview nambah label; Menu sekarang punya method Resize (menu pakai autosize jadi layout recompute otomatis, method-nya ada buat memenuhi kontrak komponen); menu cepat sekarang beneran bisa nangkringin komponen asli library tanpa crash (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -3455,6 +3455,9 @@ function Library:AddDraggableMenu(Name: string)
 		Destroyed = false,
 		Type = "DraggableMenu",
 	}, Library.__GroupboxClass or {})
+
+	function Menu:Resize()
+	end
 
 	function Menu:Destroy()
 		Menu.Destroyed = true
@@ -5890,7 +5893,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.32.0"
+	Library.N3V4Version = "4.32.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,

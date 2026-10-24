@@ -2711,3 +2711,17 @@ pakai Menu:AddLabel/AddToggle("MF_ARM"/"MF_ESP")/AddButton asli;
 label groupbox update. Checker: pin __GroupboxClass + setmetatable +
 PRE Menu:AddToggle/AddButton + absence fake helper & probe + buang
 pin presence fake yang jadi kontradiktif. Versi 4.32.0. Gates 95/95.
+
+## v4.32.1 — FIX MENU:Resize (kontrak per-instance komponen)
+Dump user: N3V4:6234 'attempt to call missing method Resize of
+table' dari Funcs:AddLabel via preview spawn menu. Root cause:
+komponen groupbox (31 titik panggil Groupbox:Resize()) mengandalkan
+method Resize yang selama ini didefinisikan PER-INSTANCE saat
+groupbox dibuat (bukan di Funcs/BaseGroupbox); object Menu yang
+warisi BaseGroupbox lewat metatable cuma dapet method Funcs, nggak
+ikut method pendamping per-instance itu.
+Fix: Menu:Resize() added di AddDraggableMenu — body kosong karena
+menu pakai AutomaticSize (layout recompute otomatis), method-nya
+ada murni buat memenuhi kontrak komponen supaya AddLabel/AddToggle/
+AddButton dll jalan di menu tanpa crash.
+Pin: presence 'function Menu:Resize()'. Versi 4.32.1. Gates 95/95.
