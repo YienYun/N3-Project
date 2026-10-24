@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.35.2 loaded — BAKE DUMP USER + BOLD + TEXT SIZE KNOBS: dump setingan user (RowHeight 72, TileSize 48, Glow 0.65, Plate 0.35, Row 0.3, Overlay 0.38, Chip 28, TabPill 27) dibake VERBATIM jadi default PanelStyle baru — default lama kelewat kecil sampe dia narik knob mentok, itu verdict UX; text row sekarang BOLD default (GothamBold) + knob BoldText + knob TitleSize (12-20 default 15) + InfoSize (10-16 default 12) biar dia bisa opsi bold dll sesuka dia; image tile default 48 biar user game kebaca jelas; fix ikutan: offset X text row sekarang ikut TileSize (14+TileSize) bukan hardcode 46 yang ketimpa tile besar, IconW ikut BtnH; Restyle apply font/size/offset live; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.36.0 loaded — CHIP JADI CHECKLIST WINDOW + BAKE DUMP KEDUA: jawaban user via checklist: pill ON/OFF accent DIHAPUS, chip sekarang model toggle checklist yang ada di window lu: label kiri + kotak MainColor ber-ring outline di kanan, state ON = glyph check hijau locked RGB(86,197,110) sprite sheet1 rect(175,450) di dalam kotak, OFF = kotak kosong — baris tetep horizontal scroll; dump kedua user dibake verbatim jadi default (Glow 0.5, Plate 0 solid, Chip 25, TabPill 25, TitleSize 18); Restyle chip lewat Chip.Relayout (lebar ukur ulang ikut InfoSize/BoldText, kotak ikut ChipHeight, plate ikut PlateTransparency); (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5905,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.35.2"
+	Library.N3V4Version = "4.36.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -15004,16 +15004,16 @@ end
 Library.PanelStyle = {
 	RowHeight = 72,
 	TileSize = 48,
-	GlowTransparency = 0.65,
-	PlateTransparency = 0.35,
+	GlowTransparency = 0.5,
+	PlateTransparency = 0,
 	RowTransparency = 0.3,
 	OverlayTransparency = 0.38,
-	ChipHeight = 28,
-	TabPillHeight = 27,
+	ChipHeight = 25,
+	TabPillHeight = 25,
 	Wallpaper = true,
 	GlowRing = true,
 	BoldText = true,
-	TitleSize = 15,
+	TitleSize = 18,
 	InfoSize = 12,
 }
 Library.Panels = {}
@@ -15432,46 +15432,80 @@ function Library:CreatePanel(Info)
 		ChipInfo = ChipInfo or {}
 		local State = ChipInfo.Default == true
 		local Chip = { Label = LabelText, State = State }
-		local Measured = TextService:GetTextSize(LabelText .. ": OFF", 11, Enum.Font.Code, Vector2.new(10000, 10000))
+		local S = Library.PanelStyle
+		local function LabelWidth()
+			return TextService:GetTextSize(LabelText, S.InfoSize, S.BoldText and Enum.Font.GothamBold or Enum.Font.Code, Vector2.new(10000, 10000)).X
+		end
+		local function BoxSize()
+			return math.clamp(S.ChipHeight - 7, 12, 24)
+		end
 		Chip.Button = New("TextButton", {
 			AutoButtonColor = false,
-			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-			BackgroundTransparency = 0.35,
-			Size = UDim2.fromOffset(Measured.X + 18, Library.PanelStyle.ChipHeight),
+			BackgroundTransparency = 1,
+			Size = UDim2.fromOffset(LabelWidth() + BoxSize() + 8, S.ChipHeight),
 			Text = "",
 			ZIndex = ZOFF + 3,
 			Parent = ChipBar,
 		})
-		table.insert(Library.Corners, New("UICorner", {
-			CornerRadius = UDim.new(0, math.floor(Library.CornerRadius / 2)),
-			Parent = Chip.Button,
-		}))
-		AddLight(Chip.Button)
-		New("UIStroke", {
-			Color = "OutlineColor",
-			Thickness = 1,
-			Parent = Chip.Button,
-		})
 		Chip.Text = New("TextLabel", {
 			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 1, 0),
-			Text = "",
-			TextSize = 11,
-			Font = Enum.Font.Code,
+			Size = UDim2.new(1, -BoxSize() - 8, 1, 0),
+			Text = LabelText,
+			TextSize = S.InfoSize,
+			Font = S.BoldText and Enum.Font.GothamBold or Enum.Font.Code,
 			TextColor3 = "FontColor",
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
 			ZIndex = ZOFF + 4,
 			Parent = Chip.Button,
 		})
+		local ChipBox = New("Frame", {
+			AnchorPoint = Vector2.new(1, 0.5),
+			BackgroundColor3 = "MainColor",
+			BackgroundTransparency = S.PlateTransparency,
+			Position = UDim2.new(1, 0, 0.5, 0),
+			Size = UDim2.fromOffset(BoxSize(), BoxSize()),
+			ZIndex = ZOFF + 4,
+			Parent = Chip.Button,
+		})
+		New("UICorner", {
+			CornerRadius = UDim.new(0, 4),
+			Parent = ChipBox,
+		})
+		New("UIStroke", {
+			Color = "OutlineColor",
+			Thickness = 1,
+			Parent = ChipBox,
+		})
+		local CheckIcon = New("ImageLabel", {
+			BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Image = "rbxassetid://136111683851629",
+			ImageRectOffset = Vector2.new(175, 450),
+			ImageRectSize = Vector2.new(24, 24),
+			ScaleType = Enum.ScaleType.Fit,
+			Size = UDim2.fromOffset(BoxSize() - 8, BoxSize() - 8),
+			ImageColor3 = Color3.fromRGB(86, 197, 110),
+			ZIndex = ZOFF + 5,
+			Parent = ChipBox,
+		})
 		local function Paint()
 			Chip.State = State
-			Chip.Text.Text = LabelText .. ": " .. (State and "ON" or "OFF")
-			FillInstance({
-				BackgroundColor3 = State and "AccentColor" or Color3.fromRGB(0, 0, 0),
-				BackgroundTransparency = State and 0 or Library.PanelStyle.PlateTransparency,
-			}, Chip.Button)
+			CheckIcon.Visible = State
+		end
+		local function RelayoutChip()
+			Chip.Button.Size = UDim2.fromOffset(LabelWidth() + BoxSize() + 8, S.ChipHeight)
+			Chip.Text.Size = UDim2.new(1, -BoxSize() - 8, 1, 0)
+			Chip.Text.TextSize = S.InfoSize
+			Chip.Text.Font = S.BoldText and Enum.Font.GothamBold or Enum.Font.Code
+			ChipBox.Size = UDim2.fromOffset(BoxSize(), BoxSize())
+			ChipBox.BackgroundTransparency = S.PlateTransparency
+			CheckIcon.Size = UDim2.fromOffset(BoxSize() - 8, BoxSize() - 8)
 		end
 		Paint()
 		Chip.Repaint = Paint
+		Chip.Relayout = RelayoutChip
 		Chip.Button.MouseButton1Click:Connect(function()
 			State = not State
 			Paint()
@@ -15818,7 +15852,7 @@ function Library:CreatePanel(Info)
 		ChipBar.Size = UDim2.new(1, 0, 0, S.ChipHeight + 6)
 		ClosePlate.BackgroundTransparency = S.PlateTransparency
 		for _, Chip in ipairs(Panel.Chips) do
-			Chip.Button.Size = UDim2.fromOffset(Chip.Button.Size.X.Offset, S.ChipHeight)
+			Chip.Relayout()
 			Chip.Repaint()
 		end
 		for _, Tab in ipairs(Panel.Tabs) do

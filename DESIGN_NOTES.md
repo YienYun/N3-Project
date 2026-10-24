@@ -2959,3 +2959,19 @@ hardcode 46 ketimpa tile 48 => sekarang TextX = 14 + TileSize (creation
 + Restyle via rec.HasTile); IconW = BtnH + 5 ikut RowHeight.
 MOD: toggle PS_BT + slider PS_TSZ/PS_ISZ + dump 13 field. Pins:
 BoldText/TitleSize LIB. Versi 4.35.2. Gates 97/97.
+
+## v4.36.0 — CHIP = CHECKLIST WINDOW (jawaban ask_user) + bake dump kedua
+User via checklist: target = chip_check (pill ON/OFF accent dihapus,
+ganti model toggle checklist window, bar horizontal tetep); checklist
+= komponen check hijau window (UI), bukan protokol.
+Implementasi: chip = TextButton transparan berisi label kiri (FontColor,
+ikut BoldText/InfoSize) + kotak MainColor ber-ring OutlineColor di
+kanan; state ON = glyph check sprite sheet1 rbxassetid://136111683851629
+rect(175,450) 24x24 Fit warna hijau locked RGB(86,197,110) di dalam
+kotak, OFF = kotak kosong — persis bahasa AddToggle window v4.13.0.
+Accent fill + suffix ": ON/: OFF" MATI. Chip.Relayout baru: lebar ukur
+ulang ikut InfoSize/BoldText, kotak ikut clamp(ChipHeight-7,12,24),
+plate kotak ikut PlateTransparency; Restyle panggil Relayout+Repaint.
+Dump kedua user dibake verbatim jadi default PanelStyle: Glow 0.5,
+Plate 0 (solid), Chip 25, TabPill 25, TitleSize 18 (sisanya sama).
+Pins: TitleSize 18 + ChipBox + rect check. Versi 4.36.0. Gates 97/97.
