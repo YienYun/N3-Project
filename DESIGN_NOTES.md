@@ -2579,3 +2579,33 @@ FillExp destroy+rebuild Line di Host = ExpInner; UIListLayout tetep
 anak Inner (pola list bener, sama kayak Container/List utama);
 destroy-on-close nil-kan ExpInner. Pin: 'CardData.ExpInner = Inner'
 + 'Parent = Host,'. Versi 4.30.2. Gates 95/95.
+
+## v4.31.0 — DUMP USER DIBAKE + DRAGGABLE MENU PUNYA ISI & API
+Dump user dibake verbatim jadi default Library.DashboardStyle:
+StatHeight 25, MeterHeight 34, DividerTransparency 0.5,
+HoverTransparency 0.65, TextSize 13, CustomLabelColor false,
+LabelColor Color3.fromRGB(255,255,255). (MOD slider baca default dari
+config saat build, jadi setingan langsung sinkron.)
+Draggable menu: user nanya "gunanya apa? bisa add toggle kan? kosong
+isinya". Fungsi komponen ini = menu cepat MENGAMBANG DI LUAR window
+utama (quick toggles/actions tanpa buka UI besar); internal library
+pakai dia untuk menu Keybinds. Sebelumnya nge-return raw (Holder,
+Container) tanpa API isi → preview spawn kosong melompong.
+Upgrade: return nilai KETIGA = object Menu (return lama utuh, menu
+Keybinds internal ga kesentuh) dengan API: AddLabel (wrap+autosize),
+AddButton (row MainColor trans 0.4 hover 0.15, radius locked,
+SafeCallback), AddToggle (row 20px: text FontColor kiri + pill mini
+28x16 kanan, knob 12 tween posisi, pill accent pas ON, Callback(nilai),
+obj return punya SetValue). Semua theme-string (FontColor/MainColor/
+AccentColor) = sedarah library.
+PRE: spawn "Menu Cepat" sekarang langsung isi (label + 3 toggle +
+2 button termasuk tutup-menu) biar wujudnya keliatan; label deskripsi
+groupbox update sebut API baru.
+PELAJARAN CHECKER PENTING: flag analyze yang BENAR =
+`--mode=nonstrict` (pakai di check.sh); `--no-strict` DITOLAK binary
+dan output usage sehingga grep SyntaxError = 0 PALSU — semua verifikasi
+manual sebelumnya pakai flag salah; gate check.sh tetap source of
+truth dan dia yang nangkep 2 SyntaxError PRE kali ini (kurung `}`
+nyasar di baris AddButton preview karena nyontek pola table).
+Pins: bake values + Menu API frags + PRE frags. Gates 95/95.
+Versi 4.31.0.
