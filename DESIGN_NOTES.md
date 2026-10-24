@@ -2873,3 +2873,22 @@ Demo PRE: GlowColor rarity per item (kuning/biru/ungu/emas/cyan/abu/
 oranye/steel) biar mata langsung nangkep pola rarity glow.
 Pins: AddLight + GlowColor LIB/PRE; pin ring abu v4.33.1 dihapus
 (kontradiksi sendiri setelah ring jadi glow). Versi 4.34.1. 97/97.
+
+## v4.34.2 — VENDOR/CHILLI + verdict forensik banding
+User perintah: "lu edit... push di github gue... nanti gue copy
+chilinya" = dia mau part Chilli ada di repo buat dia copy ke Studio.
+Forensik penuh: tarball repo spicy diekstrak; ChilliLibraryEngine +
+Engine2 = VM Luraph v15 obfuscated; Core/Core2 = closure factory
+(return function(C0[, Opts])); Chilli.lua = router URL payload remote
+per-game; patch perakit = function(arg, arg2) assert magic 1129531443
++ checksum string 45 char. Grep magic ke SELURUH tarball = KOSONG →
+magic table + checksum string hidup cuma di bytecode VM → urutan
+rakit engine→core→patch→Library table TIDAK bisa direkonstruksi jadi
+ModuleScript plain. Jadi: standalone Chilli di Studio mustahil dari
+file leak; ChiliSource dia yang return function = patch mentah tanpa
+VM pemanggil.
+Tindakan: Vendor/Chilli/ = salinan mentah Engine+Engine2+Core2 (buat
+referensi visual + copy user) + README forensik (isi file, verdict,
+rute banding live = payload executor in-game berdampingan preview
+Studio, warning akun alt). PRE notify mode banding kasus function
+sekarang jujur soal verdict + rute itu. LIB marker 4.34.2. Gates 97/97.

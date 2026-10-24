@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.34.1 loaded — FIX PANEL KAKU + CAHAYA TILE: teriakan user bener — tile image Chilli punya glow WARNA rarity di belakang sprite (ungu/merah/hijau/orange), punya kita plate hitam mati; dan panel kita flat tanpa gradient padahal window lu hidup; sekarang: tile = plate GlowColor (AddItem GlowColor, default AccentColor theme string) trans 0.55 + gradient vertikal Rotation -90 putih->gelap (kunci gradient lu) = cahaya jatuh dari atas + ring stroke sewarna glow trans 0.35 + sprite putih; semua surface berisi (button aksi, header button, pill tab, chip) dapet AddLight = gradient vertikal putih->redup biar nggak flat kayak plastik; row kartu ganti resep kartu groupbox lu: hitam solid 0.5; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.34.2 loaded — VENDOR CHILLI + VERDICT BANDING: forensik penuh tarball repo spicy = file ChilliLibraryEngine/Engine2 = VM Luraph v15 obfuscated, Core/Core2 = closure factory, patch = function checksum; magic table 1129531443 + string checksum 45 char NGGAK ADA di file mana pun (grep seluruh tarball kosong) = perakitnya hidup cuma di dalam bytecode VM; kesimpulan: standalone ModuleScript Chilli mustahil dirakit dari file leak, jadi Vendor/Chilli di repo isi part mentah buat referensi/copy user + README forensik, dan notify mode banding sekarang jujur soal verdict itu serta rute banding live = payload executor in-game + preview Studio berdampingan; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5905,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.34.1"
+	Library.N3V4Version = "4.34.2"
 
 	Library.ButtonGradient = {
 		Enabled = true,

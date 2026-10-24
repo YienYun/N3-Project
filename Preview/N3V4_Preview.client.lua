@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.34.1",
+	Footer = "N3V4 • UI Preview Kit v4.34.2",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -1102,7 +1102,7 @@ Try("Overlays: L4 Panel", function()
 			return
 		end
 		if type(Lib) == "function" then
-			SafeNotify({ Title = "Banding", Description = "ChiliSource isinya function patch Chilli (butuh engine+core buat jalan). Taro module loader lengkap yang return table Library biar banding hidup.", Time = 6 })
+			SafeNotify({ Title = "Banding", Description = "ChiliSource isinya function patch Chilli. Perakit engine+core+patch (magic table + string checksum 45 char) terkunci di dalam VM Luraph obfuscated — nggak ada sebagai source plain di repo mana pun, jadi standalone ModuleScript Chilli nggak bisa dirakit. Banding live = jalanin payload Chilli in-game via executor bareng preview Studio ini.", Time = 8 })
 			return
 		end
 		if type(Lib) ~= "table" then
