@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.31.2",
+	Footer = "N3V4 • UI Preview Kit v4.31.3",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -235,6 +235,7 @@ local function BuildMenuItem(Parent, Text, Scheme, OnClick)
 	Btn.BackgroundColor3 = Scheme.MainColor
 	Btn.BorderSizePixel = 0
 	Btn.AutoButtonColor = false
+	Btn.ZIndex = (Parent.ZIndex or 1) + 1
 	Btn.Text = "  " .. Text
 	Btn.TextSize = 13
 	Btn.Font = Enum.Font.Code
@@ -249,6 +250,7 @@ local function BuildMenuItem(Parent, Text, Scheme, OnClick)
 	local Stroke = Instance.new("UIStroke")
 	Stroke.Color = Scheme.OutlineColor
 	Stroke.Thickness = 1
+	Stroke.ZIndex = Btn.ZIndex + 1
 	Stroke.Parent = Btn
 
 	Btn.MouseButton1Click:Connect(function()
@@ -957,6 +959,8 @@ Try("Overlays: L3 Draggable menu", function()
 		local function MenuLabel(Text)
 			local L = Instance.new("TextLabel")
 			L.BackgroundTransparency = 1
+			L.Transparency = 0
+			L.ZIndex = Container.ZIndex + 1
 			L.Size = UDim2.new(1, 0, 0, 16)
 			L.Text = Text
 			L.TextSize = 12
@@ -970,12 +974,16 @@ Try("Overlays: L3 Draggable menu", function()
 		local function MenuToggle(Text, Default, Callback)
 			local Row = Instance.new("TextButton")
 			Row.BackgroundTransparency = 1
+			Row.Transparency = 0
+			Row.ZIndex = Container.ZIndex + 1
 			Row.Size = UDim2.new(1, 0, 0, 20)
 			Row.AutoButtonColor = false
 			Row.Text = ""
 			Row.Parent = Container
 			local L = Instance.new("TextLabel")
 			L.BackgroundTransparency = 1
+			L.Transparency = 0
+			L.ZIndex = Row.ZIndex + 1
 			L.Size = UDim2.new(1, -36, 1, 0)
 			L.Text = Text
 			L.TextSize = 12
@@ -984,6 +992,7 @@ Try("Overlays: L3 Draggable menu", function()
 			L.TextXAlignment = Enum.TextXAlignment.Left
 			L.Parent = Row
 			local Pill = Instance.new("Frame")
+			Pill.ZIndex = Row.ZIndex + 1
 			Pill.AnchorPoint = Vector2.new(1, 0.5)
 			Pill.Position = UDim2.new(1, 0, 0.5, 0)
 			Pill.Size = UDim2.fromOffset(28, 16)
@@ -993,6 +1002,7 @@ Try("Overlays: L3 Draggable menu", function()
 			PC.CornerRadius = UDim.new(0, 8)
 			PC.Parent = Pill
 			local Knob = Instance.new("Frame")
+			Knob.ZIndex = Pill.ZIndex + 1
 			Knob.Position = UDim2.fromOffset(2, 2)
 			Knob.Size = UDim2.fromOffset(12, 12)
 			Knob.BackgroundColor3 = Library.Scheme.FontColor

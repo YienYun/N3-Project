@@ -2665,3 +2665,23 @@ Visible/ZIndex Container+Holder+row pertama+label pertama +
 ZIndexBehavior ScreenGui. User klik sekali, paste 3 baris
 [N3V4 PROBE MENU] = angka pasti buat vonis akar. Probe DICABUT
 begitu akar ketemu. Gates 95/95 tetap.
+
+## v4.31.3 — FIX AKAR MENU KOSONG: ZIndexBehavior GLOBAL + row Z1
+Probe user memvonis: ScreenGui library = Enum.ZIndexBehavior.Global
+(tidak diset siapa pun di repo = default environment; karena itu
+New() library SELALU auto-inherit ZIndex dari parent — desain library
+memang dibangun untuk Global). Row preview dibangun Instance.new
+mentah = Z1 → di-sort DI BAWAH background Holder (Z10) → tidak
+dirender; klik tetap masuk karena Holder Frame biasa (non-Active)
+sehingga input jatuh ke TextButton Z1 di bawahnya. SATU akar ini
+menjelaskan seluruh saga: menu kosong v4.30.2, button meluber hanya
+terlihat di luar area bg pada v4.31.0, dan menu kosong v4.31.2.
+Fix preview-side: rantai ZIndex eksplisit — MenuLabel/Row =
+Container.ZIndex+1, label/pill = Row+1, knob = Pill+1; BuildMenuItem
+Btn = Parent.ZIndex+1 + Stroke Btn+1 (sekalian membenahi bug laten
+yang sama di context menu yang pakai helper itu). Defensif:
+Transparency = 0 eksplisit di MenuLabel/Row (probe sempat baca
+Trans=1 anomali pada label; zero eksplisit menutup kemungkinan
+fade nyasar). Probe DIPERTAHANKAN satu putaran lagi buat konfirmasi
+(angka harapan: Z=11/12, Trans=0), lalu dicabut.
+Pin: Row.ZIndex/Btn.ZIndex frags. Footer 4.31.3. Gates 95/95.
