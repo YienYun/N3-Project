@@ -2650,3 +2650,18 @@ LIB: NOL perubahan. Versi footer 4.31.2 (marker LIB tetep 4.31.1).
 Pin: presence MenuToggle PRE + absence hardcode MenuWidth lama.
 Gates 95/95. Style menu TETAP menunggu verdict user sebelum jadi
 fitur library.
+
+## v4.31.2-probe — PROBE DEBUG MENU CEPAT (sementara)
+Gejala terkonfirmasi lewat screenshot user: row menu CEPAT ada,
+layout makan tempat (box tinggi), KLIK MASUK (notify esp/teleport
+jalan) tapi TIDAK DIRENDER (box kosong). Teori gugur berurutan:
+ZIndex Global (grep: ZIndexBehavior tak diset di LIB/PRE = default
+Sibling), cover frame opaque (AddOutline cuma stroke), fade system
+(FadeTree cuma MainFrame/Popup), MakeDraggable/PositionDraggable
+(cuma posisi), heredoc korup (blok utuh).
+Keputusan: stop nebak — pasang PROBE sementara di PRE spawn:
+task.defer post-layout dump AbsoluteSize/Position/Transparency/
+Visible/ZIndex Container+Holder+row pertama+label pertama +
+ZIndexBehavior ScreenGui. User klik sekali, paste 3 baris
+[N3V4 PROBE MENU] = angka pasti buat vonis akar. Probe DICABUT
+begitu akar ketemu. Gates 95/95 tetap.

@@ -1037,6 +1037,32 @@ Try("Overlays: L3 Draggable menu", function()
 		Container.Size = UDim2.new(1, 0, 0, 0)
 		Holder.AutomaticSize = Enum.AutomaticSize.Y
 		Holder.Size = UDim2.fromOffset(170, 0)
+
+		task.defer(function()
+			local Gui = {}
+			for _, C in ipairs(Container:GetChildren()) do
+				if C:IsA("GuiObject") then
+					table.insert(Gui, C)
+				end
+			end
+			local G0 = Gui[1]
+			local T = G0 and G0:FindFirstChildWhichIsA("TextLabel") or nil
+			print(string.format("[N3V4 PROBE MENU] gui=%d | Cont Abs=%s Pos=%s Trans=%s Vis=%s Z=%d | Holder Abs=%s Trans=%s Z=%d | Gui ZBehavior=%s",
+				#Gui, tostring(Container.AbsoluteSize), tostring(Container.AbsolutePosition),
+				tostring(Container.Transparency), tostring(Container.Visible), Container.ZIndex,
+				tostring(Holder.AbsoluteSize), tostring(Holder.Transparency), Holder.ZIndex,
+				tostring(Library.ScreenGui.ZIndexBehavior)))
+			if G0 then
+				print(string.format("[N3V4 PROBE MENU] G0=%s Abs=%s Pos=%s Trans=%s Vis=%s Z=%d Parent=%s",
+					G0.ClassName, tostring(G0.AbsoluteSize), tostring(G0.AbsolutePosition),
+					tostring(G0.Transparency), tostring(G0.Visible), G0.ZIndex, G0.Parent.Name))
+			end
+			if T then
+				print(string.format("[N3V4 PROBE MENU] label Text=%q TextTrans=%s Trans=%s Vis=%s Color=%s Abs=%s Z=%d",
+					T.Text, tostring(T.TextTransparency), tostring(T.Transparency), tostring(T.Visible),
+					tostring(T.TextColor3), tostring(T.AbsoluteSize), T.ZIndex))
+			end
+		end)
 	end)
 end)
 
