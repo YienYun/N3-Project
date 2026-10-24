@@ -2847,3 +2847,29 @@ AddSlider(Min/Max)/AddButton, Open/Toggle) semua pcall — kalau
 ChiliSource dia memang ada di Studio, jendela Chilli asli kebuka
 sebelah panel N3 buat banding live; kalau nggak ada = notify jelas.
 ApiBox +2 label cheat-sheet baru. Pins diperbarui. Gates 97/97.
+
+## v4.34.1 — CAHAYA TILE + ANTI-KAKU (root cause "busuk/kaku")
+Teriakan user: tile image Chilli punya glow WARNA rarity di belakang
+sprite (screenshots: ungu/merah/hijau/orange), punya kita plate hitam
+mati; dan seluruh panel flat tanpa gradient padahal window dia hidup
+(gradient vertikal locked + glow). Root "kaku" = semua surface isi
+(button aksi, header, pill tab, chip) warna solid polos = plastik.
+Fix:
+- Tile v3: BackgroundColor3 = ItemInfo.GlowColor (Color3 atau theme
+  string, default "AccentColor") trans 0.55 + UIGradient vertikal
+  Rotation -90 ColorSequence putih -> RGB(75,75,95) = cahaya jatuh dari
+  atas (aturan gradient vertikal dia kepakai di tile) + ring stroke
+  SEWARNA glow trans 0.35 (ganti ring abu v4.33.1) + sprite putih pol.
+- AddLight(Obj): helper lokal CreatePanel = UIGradient vertikal
+  putih -> RGB(115,115,135); dipasang di button aksi, header button,
+  pill tab, chip = surface berisi punya falloff cahaya, nggak flat.
+- Row kartu: ganti GetBetterColor(+1) jadi hitam solid 0.5 = resep
+  kartu groupbox dia persis (sedarah window).
+- Mode banding: require ChiliSource dia return FUNCTION = module patch
+  Chilli (butuh engine+core); notify sekarang jujur jelaskan itu dan
+  minta loader lengkap yang return table Library, bukan pesan gagal
+  buta "function: 0x...".
+Demo PRE: GlowColor rarity per item (kuning/biru/ungu/emas/cyan/abu/
+oranye/steel) biar mata langsung nangkep pola rarity glow.
+Pins: AddLight + GlowColor LIB/PRE; pin ring abu v4.33.1 dihapus
+(kontradiksi sendiri setelah ring jadi glow). Versi 4.34.1. 97/97.

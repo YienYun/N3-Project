@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.34.0",
+	Footer = "N3V4 • UI Preview Kit v4.34.1",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -1024,18 +1024,21 @@ Try("Overlays: L4 Panel", function()
 		local Pets = DemoPanel:AddTab("Pets", "sparkles")
 		Pets:AddItem({
 			Icon = "zap", Text = "Pet Kilat", Subtext = "$764.9K/s", Meta = "x0.98 · 9,541 Kg",
+			GlowColor = Color3.fromRGB(255, 210, 70),
 			ButtonText = "Beli", IconButton = "sparkles",
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Beli Pet Kilat", Time = 2 }) end,
 			IconButtonCallback = function() SafeNotify({ Title = "Panel", Description = "Pet Kilat difavoritkan", Time = 2 }) end,
 		})
 		Pets:AddItem({
 			Icon = "droplets", Text = "Pet Air", Subtext = "$12.4K/s", Meta = "x1.02 · 1,204 Kg",
+			GlowColor = Color3.fromRGB(80, 160, 255),
 			ButtonText = "Beli", IconButton = "sparkles",
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Beli Pet Air", Time = 2 }) end,
 			IconButtonCallback = function() SafeNotify({ Title = "Panel", Description = "Pet Air difavoritkan", Time = 2 }) end,
 		})
 		Pets:AddItem({
 			Icon = "sparkles", Text = "Pet Aura Senja", Subtext = "$362M/s", Meta = "x1.61 · Halloween",
+			GlowColor = Color3.fromRGB(190, 90, 255),
 			ButtonText = "Beli",
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Beli Pet Aura Senja", Time = 2 }) end,
 		})
@@ -1043,16 +1046,19 @@ Try("Overlays: L4 Panel", function()
 		local Eggs = DemoPanel:AddTab("Eggs", "droplets")
 		Eggs:AddItem({
 			Icon = "sparkles", Text = "Telur Emas", Subtext = "$1.2M/s", Meta = "Limited · Abyss",
+			GlowColor = Color3.fromRGB(255, 190, 60),
 			ButtonText = "Buka",
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Buka Telur Emas", Time = 2 }) end,
 		})
 		Eggs:AddItem({
 			Icon = "droplets", Text = "Telur Es", Subtext = "Rare", ButtonText = "Buka",
+			GlowColor = Color3.fromRGB(90, 220, 255),
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Buka Telur Es", Time = 2 }) end,
 		})
 		for Stock = 1, 6 do
 			Eggs:AddItem({
 				Icon = "image", Text = "Telur Stok " .. Stock, Subtext = "$" .. Stock .. "00K/s", Meta = "Common · Gudang",
+				GlowColor = Color3.fromRGB(150, 150, 165),
 				ButtonText = "Buka",
 				Callback = function() SafeNotify({ Title = "Panel", Description = "Buka Telur Stok " .. Stock, Time = 2 }) end,
 			})
@@ -1061,12 +1067,14 @@ Try("Overlays: L4 Panel", function()
 		local Gear = DemoPanel:AddTab("Gear", "settings-2")
 		Gear:AddItem({
 			Icon = "zap", Text = "Pedang Api", Subtext = "+45% dmg", Meta = "Epic · Slot 1",
+			GlowColor = Color3.fromRGB(255, 110, 60),
 			ButtonText = "Pakai", IconButton = "key",
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Pakai Pedang Api", Time = 2 }) end,
 			IconButtonCallback = function() SafeNotify({ Title = "Panel", Description = "Kunci slot Pedang Api", Time = 2 }) end,
 		})
 		Gear:AddItem({
 			Icon = "key", Text = "Kunci Gudang", Subtext = "Rare", ButtonText = "Pakai",
+			GlowColor = Color3.fromRGB(140, 160, 190),
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Pakai Kunci Gudang", Time = 2 }) end,
 		})
 	end)
@@ -1089,8 +1097,16 @@ Try("Overlays: L4 Panel", function()
 			return
 		end
 		local OkLib, Lib = pcall(require, Source)
-		if not OkLib or type(Lib) ~= "table" then
-			SafeNotify({ Title = "Banding", Description = "require ChiliSource gagal: " .. tostring(Lib), Time = 4 })
+		if not OkLib then
+			SafeNotify({ Title = "Banding", Description = "require ChiliSource error: " .. tostring(Lib), Time = 4 })
+			return
+		end
+		if type(Lib) == "function" then
+			SafeNotify({ Title = "Banding", Description = "ChiliSource isinya function patch Chilli (butuh engine+core buat jalan). Taro module loader lengkap yang return table Library biar banding hidup.", Time = 6 })
+			return
+		end
+		if type(Lib) ~= "table" then
+			SafeNotify({ Title = "Banding", Description = "ChiliSource return tipe aneh: " .. type(Lib), Time = 4 })
 			return
 		end
 		local function Call(Obj, Names, ...)
@@ -1140,6 +1156,7 @@ Try("Overlays: L4 Panel", function()
 	ApiBox:AddLabel("Panel:SetTab / SetVisible / Toggle / Destroy, Tab:Clear", true)
 	ApiBox:AddLabel("AddChip(Label, {Default, Callback}) + HeaderButton di CreatePanel", true)
 	ApiBox:AddLabel("AddItem: Subtext/Meta berwarna, ButtonColor, IconButton", true)
+	ApiBox:AddLabel("GlowColor per item = cahaya rarity di tile image", true)
 end)
 
 Try("Overlays: R1 Overlay panel (SetRow)", function()

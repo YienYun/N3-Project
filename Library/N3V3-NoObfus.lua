@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.34.0 loaded — PANEL v2 DNA CHILLI STYLE N3: bedah screenshot panel Chilli asli (Steal Panel) = header punya button aksi kanan, baris chip status ON/OFF berwarna, row kartu 3 baris text berwarna (judul putih / value hijau / meta biru) + button aksi besar berwarna + button icon kotak; semua pola itu masuk panel kita versi bahasa UI lu: Panel:SetHeaderButton(Text, Callback) = pill AccentColor text gelap di topbar kiri close; Panel:AddChip(Label, {Default, Callback}) = chip bar dibawah topbar (ON = fill AccentColor text gelap, OFF = plate gelap text FontColor, klik toggle + callback, baris auto-relayout); AddItem sekarang dukung Subtext warna default hijau locked + Meta warna default biru (dua baris info kayak Chilli), ButtonColor per item (default AccentColor fill text gelap = bahasa CTA lu), IconButton + IconButtonCallback = button kotak 26 plate gelap berisi icon lucide di kanan button aksi; row naik 56px buat 3 baris; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.34.1 loaded — FIX PANEL KAKU + CAHAYA TILE: teriakan user bener — tile image Chilli punya glow WARNA rarity di belakang sprite (ungu/merah/hijau/orange), punya kita plate hitam mati; dan panel kita flat tanpa gradient padahal window lu hidup; sekarang: tile = plate GlowColor (AddItem GlowColor, default AccentColor theme string) trans 0.55 + gradient vertikal Rotation -90 putih->gelap (kunci gradient lu) = cahaya jatuh dari atas + ring stroke sewarna glow trans 0.35 + sprite putih; semua surface berisi (button aksi, header button, pill tab, chip) dapet AddLight = gradient vertikal putih->redup biar nggak flat kayak plastik; row kartu ganti resep kartu groupbox lu: hitam solid 0.5; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5905,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.34.0"
+	Library.N3V4Version = "4.34.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -15011,6 +15011,14 @@ function Library:CreatePanel(Info)
 	local CHIP_H = 26
 	local ZOFF = 60
 
+	local function AddLight(Obj)
+		New("UIGradient", {
+			Rotation = -90,
+			Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(115, 115, 135)),
+			Parent = Obj,
+		})
+	end
+
 	local Panel = {
 		Title = TitleText,
 		Tabs = {},
@@ -15157,6 +15165,7 @@ function Library:CreatePanel(Info)
 		Thickness = 1,
 		Parent = HdrBtn,
 	})
+	AddLight(HdrBtn)
 	local HdrText = New("TextLabel", {
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, 0, 1, 0),
@@ -15308,6 +15317,7 @@ function Library:CreatePanel(Info)
 			CornerRadius = UDim.new(0, math.floor(Library.CornerRadius / 2)),
 			Parent = Chip.Button,
 		}))
+		AddLight(Chip.Button)
 		New("UIStroke", {
 			Color = "OutlineColor",
 			Thickness = 1,
@@ -15381,6 +15391,7 @@ function Library:CreatePanel(Info)
 			CornerRadius = UDim.new(0, Library.CornerRadius),
 			Parent = Tab.Button,
 		}))
+		AddLight(Tab.Button)
 		if Icon then
 			Tab.Icon = New("ImageLabel", {
 				BackgroundTransparency = 1,
@@ -15449,9 +15460,7 @@ function Library:CreatePanel(Info)
 		function Tab:AddItem(ItemInfo)
 			ItemInfo = ItemInfo or {}
 			local Row = New("Frame", {
-				BackgroundColor3 = function()
-					return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
-				end,
+				BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 				BackgroundTransparency = 0.5,
 				Size = UDim2.new(1, 0, 0, 56),
 				ZIndex = ZOFF + 3,
@@ -15467,18 +15476,19 @@ function Library:CreatePanel(Info)
 				Transparency = 0.55,
 				Parent = Row,
 			})
+			local Glow = ItemInfo.GlowColor or "AccentColor"
 			local TileIcon = ItemInfo.Image and nil or Library:GetCustomIcon(ItemInfo.Icon)
 			local HasTile = ItemInfo.Image ~= nil or TileIcon ~= nil
 			local Tile = New("ImageLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-				BackgroundTransparency = 0.45,
+				BackgroundColor3 = Glow,
+				BackgroundTransparency = 0.55,
 				Position = UDim2.new(0, 7, 0.5, 0),
 				Size = UDim2.fromOffset(32, 32),
 				Image = ItemInfo.Image or (TileIcon and TileIcon.Url or ""),
 				ImageRectOffset = TileIcon and TileIcon.ImageRectOffset or nil,
 				ImageRectSize = TileIcon and TileIcon.ImageRectSize or nil,
-				ImageColor3 = TileIcon and (TileIcon.Custom and "WhiteColor" or "AccentColor") or "WhiteColor",
+				ImageColor3 = "WhiteColor",
 				ScaleType = ItemInfo.Image and Enum.ScaleType.Stretch or Enum.ScaleType.Fit,
 				Visible = HasTile,
 				ZIndex = ZOFF + 4,
@@ -15488,9 +15498,15 @@ function Library:CreatePanel(Info)
 				CornerRadius = UDim.new(0, 8),
 				Parent = Tile,
 			})
+			New("UIGradient", {
+				Rotation = -90,
+				Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(75, 75, 95)),
+				Parent = Tile,
+			})
 			New("UIStroke", {
-				Color = Color3.fromRGB(90, 90, 110),
+				Color = Glow,
 				Thickness = 1,
+				Transparency = 0.35,
 				Parent = Tile,
 			})
 			local TextX = HasTile and 46 or 8
@@ -15563,6 +15579,7 @@ function Library:CreatePanel(Info)
 					Thickness = 1,
 					Parent = Act,
 				})
+				AddLight(Act)
 				Act.MouseEnter:Connect(function()
 					Act.BackgroundTransparency = 0.12
 				end)
