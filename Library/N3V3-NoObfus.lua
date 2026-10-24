@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.32.2 loaded — FIX MENU AUTO-FIT LEBAR: menu cepat kemarin kekunci 170px padahal nangkringin komponen asli yang dirancang buat lebar groupbox = label luber keluar garis, text toggle kepotong pill, text button keluar kotak; sekarang Menu:Resize() (kontrak yang dipanggil TIAP komponen masuk) sekalian auto-fit lebar menu: ukur semua text pakai TextService:GetTextSize, lebar = text terpanjang + slack kontrolnya (toggle pill / padding button), clamp 170-340, tinggi tetep autosize; text panjang mana pun sekarang muat tanpa luber (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.33.0 loaded — FITUR BARU PANEL: Library:CreatePanel({Title, Width, Height, Position}) = window drawer di kanan layar sedarah desain UI (resep window dashboard: corner locked, stroke outline spin, topbar icon+judul+close); navbar TAB horizontal icon+text di atas (aktif = fill MainColor, hover trans 0.6, overflow di-scroll); list item SCROLL per tab via Tab:AddItem({Image|Icon, Text, Subtext, ButtonText, Callback}) = baris kartu image-tile kiri + judul/subtext + button aksi kanan sedarah button menu; handle tab di tepi kiri panel = button munculin/sembunyiin, slide tween 0.25s kayak toggle window utama; close x di topbar juga sembunyiin; API: Panel:AddTab/SetTab/SetVisible/Toggle/Destroy, Tab:AddItem/Clear (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5905,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.32.2"
+	Library.N3V4Version = "4.33.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -14999,6 +14999,447 @@ function Library:CreateDashboard(Info)
 
 	Resize()
 	return Dashboard
+end
+
+function Library:CreatePanel(Info)
+	Info = Info or {}
+	local TitleText = Info.Title or "Panel"
+	local Width = math.clamp(Info.Width or 280, 200, 420)
+	local Height = math.clamp(Info.Height or 380, 240, 720)
+	local TOP_H = 32
+	local TAB_H = 34
+	local ZOFF = 60
+
+	local Panel = {
+		Title = TitleText,
+		Tabs = {},
+		ActiveTab = nil,
+		Visible = true,
+		Destroyed = false,
+		Type = "Panel",
+	}
+
+	local Wrapper = New("Frame", {
+		Name = "PanelWrapper",
+		AnchorPoint = Vector2.new(1, 0.5),
+		BackgroundTransparency = 1,
+		Position = Info.Position or UDim2.new(1, -24, 0.5, 0),
+		Size = UDim2.fromOffset(Width + 20, Height),
+		ZIndex = ZOFF,
+		Parent = Library.ScreenGui or Library.LocalPlayer:WaitForChild("PlayerGui"),
+	})
+
+	local Handle = New("TextButton", {
+		Name = "PanelHandle",
+		AutoButtonColor = false,
+		AnchorPoint = Vector2.new(0, 0.5),
+		BackgroundColor3 = function()
+			return Library:GetBetterColor(Library.Scheme.BackgroundColor, -1)
+		end,
+		Position = UDim2.new(0, 0, 0.5, 0),
+		Size = UDim2.fromOffset(14, 56),
+		Text = "",
+		ZIndex = ZOFF + 1,
+		Parent = Wrapper,
+	})
+	New("UICorner", {
+		CornerRadius = UDim.new(0, 6),
+		Parent = Handle,
+	})
+	New("UIStroke", {
+		Color = "OutlineColor",
+		Thickness = 1.2,
+		Parent = Handle,
+	})
+	Library:AddOutlineSpin(Handle)
+	local HandleIcon = Library:GetCustomIcon("list")
+	local HandleImage = New("ImageLabel", {
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Image = HandleIcon and HandleIcon.Url or "",
+		ImageRectOffset = HandleIcon and HandleIcon.ImageRectOffset or nil,
+		ImageRectSize = HandleIcon and HandleIcon.ImageRectSize or nil,
+		ImageColor3 = HandleIcon and HandleIcon.Custom and "WhiteColor" or "FontColor",
+		ImageTransparency = 0.35,
+		ScaleType = Enum.ScaleType.Fit,
+		Size = UDim2.fromOffset(10, 10),
+		ZIndex = ZOFF + 2,
+		Parent = Handle,
+	})
+	Handle.MouseEnter:Connect(function()
+		HandleImage.ImageTransparency = 0
+	end)
+	Handle.MouseLeave:Connect(function()
+		HandleImage.ImageTransparency = 0.35
+	end)
+	Handle.MouseButton1Click:Connect(function()
+		Panel:Toggle()
+	end)
+
+	local WinFrame = New("Frame", {
+		Name = "Panel",
+		BackgroundColor3 = function()
+			return Library:GetBetterColor(Library.Scheme.BackgroundColor, -1)
+		end,
+		Position = UDim2.fromOffset(18, 0),
+		Size = UDim2.new(1, -18, 1, 0),
+		Active = true,
+		ClipsDescendants = true,
+		ZIndex = ZOFF + 1,
+		Parent = Wrapper,
+	})
+	table.insert(Library.Corners, New("UICorner", {
+		CornerRadius = UDim.new(0, Library.CornerRadius),
+		Parent = WinFrame,
+	}))
+	New("UIStroke", {
+		Color = "OutlineColor",
+		Thickness = 1.2,
+		Parent = WinFrame,
+	})
+	Library:AddOutlineSpin(WinFrame)
+
+	local TopBar = New("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, TOP_H),
+		ZIndex = ZOFF + 2,
+		Parent = WinFrame,
+	})
+	New("ImageLabel", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(8, 4),
+		Size = UDim2.fromOffset(24, 24),
+		Image = "rbxassetid://117688744510818",
+		ZIndex = ZOFF + 2,
+		Parent = TopBar,
+	})
+	New("TextLabel", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(38, 0),
+		Size = UDim2.new(1, -70, 1, 0),
+		Text = TitleText,
+		TextSize = 12,
+		Font = Enum.Font.GothamBold,
+		TextColor3 = Color3.fromRGB(240, 240, 245),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		ZIndex = ZOFF + 2,
+		Parent = TopBar,
+	})
+	New("Frame", {
+		BackgroundColor3 = "OutlineColor",
+		BackgroundTransparency = 0.55,
+		Position = UDim2.new(0, 0, 1, -1),
+		Size = UDim2.new(1, 0, 0, 1),
+		ZIndex = ZOFF + 2,
+		Parent = TopBar,
+	})
+	local CloseBtn = New("TextButton", {
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -8, 0.5, 0),
+		Size = UDim2.fromOffset(22, 22),
+		Text = "x",
+		TextSize = 14,
+		Font = Enum.Font.GothamBold,
+		TextColor3 = Color3.fromRGB(180, 180, 190),
+		ZIndex = ZOFF + 2,
+		Parent = TopBar,
+	})
+	CloseBtn.MouseButton1Click:Connect(function()
+		Panel:SetVisible(false)
+	end)
+
+	local TabScroll = New("ScrollingFrame", {
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0, 0, 0, TOP_H),
+		Size = UDim2.new(1, 0, 0, TAB_H),
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+		ScrollBarThickness = 2,
+		ScrollBarImageColor3 = "OutlineColor",
+		ScrollBarImageTransparency = 0.6,
+		ZIndex = ZOFF + 2,
+		Parent = WinFrame,
+	})
+	New("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 5),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = TabScroll,
+	})
+	New("UIPadding", {
+		PaddingLeft = UDim.new(0, 8),
+		PaddingRight = UDim.new(0, 8),
+		PaddingTop = UDim.new(0, 5),
+		Parent = TabScroll,
+	})
+	New("Frame", {
+		BackgroundColor3 = "OutlineColor",
+		BackgroundTransparency = 0.55,
+		Position = UDim2.new(0, 0, 0, TOP_H + TAB_H - 1),
+		Size = UDim2.new(1, 0, 0, 1),
+		ZIndex = ZOFF + 2,
+		Parent = WinFrame,
+	})
+
+	local Body = New("Frame", {
+		BackgroundTransparency = 1,
+		ClipsDescendants = true,
+		Position = UDim2.new(0, 0, 0, TOP_H + TAB_H),
+		Size = UDim2.new(1, 0, 1, -(TOP_H + TAB_H)),
+		ZIndex = ZOFF + 2,
+		Parent = WinFrame,
+	})
+
+	function Panel:SetTab(Target)
+		for _, Tab in ipairs(Panel.Tabs) do
+			local Active = Tab == Target
+			Tab.Scroll.Visible = Active
+			Tab.Button.BackgroundTransparency = Active and 0 or 1
+			Tab.Label.TextTransparency = Active and 0 or 0.5
+			if Tab.Icon then
+				Tab.Icon.ImageTransparency = Active and 0 or 0.5
+			end
+		end
+		Panel.ActiveTab = Target
+	end
+
+	function Panel:AddTab(Name, IconName)
+		local Tab = { Name = Name, Items = {} }
+		local Icon = Library:GetCustomIcon(IconName)
+		local Measured = TextService:GetTextSize(Name, 12, Enum.Font.Code, Vector2.new(10000, 10000))
+		Tab.Button = New("TextButton", {
+			AutoButtonColor = false,
+			BackgroundColor3 = "MainColor",
+			BackgroundTransparency = 1,
+			Size = UDim2.fromOffset(Measured.X + (Icon and 36 or 18), 24),
+			Text = "",
+			Parent = TabScroll,
+		})
+		table.insert(Library.Corners, New("UICorner", {
+			CornerRadius = UDim.new(0, Library.CornerRadius),
+			Parent = Tab.Button,
+		}))
+		if Icon then
+			Tab.Icon = New("ImageLabel", {
+				BackgroundTransparency = 1,
+				Position = UDim2.fromOffset(9, 5),
+				Size = UDim2.fromOffset(14, 14),
+				Image = Icon.Url,
+				ImageColor3 = Icon.Custom and "WhiteColor" or "AccentColor",
+				ImageRectOffset = Icon.ImageRectOffset,
+				ImageRectSize = Icon.ImageRectSize,
+				ImageTransparency = 0.5,
+				ScaleType = Enum.ScaleType.Fit,
+				ZIndex = ZOFF + 3,
+				Parent = Tab.Button,
+			})
+		end
+		Tab.Label = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(Icon and 27 or 9, 0),
+			Size = UDim2.new(1, Icon and -36 or -18, 1, 0),
+			Text = Name,
+			TextSize = 12,
+			Font = Enum.Font.Code,
+			TextColor3 = "FontColor",
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			TextTransparency = 0.5,
+			ZIndex = ZOFF + 3,
+			Parent = Tab.Button,
+		})
+		Tab.Button.MouseEnter:Connect(function()
+			if Panel.ActiveTab ~= Tab then
+				Tab.Button.BackgroundTransparency = 0.6
+			end
+		end)
+		Tab.Button.MouseLeave:Connect(function()
+			Tab.Button.BackgroundTransparency = Panel.ActiveTab == Tab and 0 or 1
+		end)
+		Tab.Button.MouseButton1Click:Connect(function()
+			Panel:SetTab(Tab)
+		end)
+		Tab.Scroll = New("ScrollingFrame", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 1, 0),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			CanvasSize = UDim2.new(),
+			ScrollBarThickness = 4,
+			ScrollBarImageColor3 = "OutlineColor",
+			ScrollBarImageTransparency = 0.4,
+			Visible = false,
+			ZIndex = ZOFF + 2,
+			Parent = Body,
+		})
+		New("UIListLayout", {
+			Padding = UDim.new(0, 6),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Parent = Tab.Scroll,
+		})
+		New("UIPadding", {
+			PaddingBottom = UDim.new(0, 8),
+			PaddingLeft = UDim.new(0, 8),
+			PaddingRight = UDim.new(0, 8),
+			PaddingTop = UDim.new(0, 8),
+			Parent = Tab.Scroll,
+		})
+
+		function Tab:AddItem(ItemInfo)
+			ItemInfo = ItemInfo or {}
+			local Row = New("Frame", {
+				BackgroundColor3 = function()
+					return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
+				end,
+				BackgroundTransparency = 0.5,
+				Size = UDim2.new(1, 0, 0, 46),
+				ZIndex = ZOFF + 3,
+				Parent = Tab.Scroll,
+			})
+			table.insert(Library.Corners, New("UICorner", {
+				CornerRadius = UDim.new(0, Library.CornerRadius),
+				Parent = Row,
+			}))
+			New("UIStroke", {
+				Color = "OutlineColor",
+				Thickness = 1,
+				Transparency = 0.55,
+				Parent = Row,
+			})
+			local TileIcon = ItemInfo.Image and nil or Library:GetCustomIcon(ItemInfo.Icon)
+			local HasTile = ItemInfo.Image ~= nil or TileIcon ~= nil
+			local Tile = New("ImageLabel", {
+				AnchorPoint = Vector2.new(0, 0.5),
+				BackgroundColor3 = "MainColor",
+				BackgroundTransparency = ItemInfo.Image and 1 or 0.55,
+				Position = UDim2.new(0, 7, 0.5, 0),
+				Size = UDim2.fromOffset(32, 32),
+				Image = ItemInfo.Image or (TileIcon and TileIcon.Url or ""),
+				ImageRectOffset = TileIcon and TileIcon.ImageRectOffset or nil,
+				ImageRectSize = TileIcon and TileIcon.ImageRectSize or nil,
+				ImageColor3 = TileIcon and (TileIcon.Custom and "WhiteColor" or "AccentColor") or "WhiteColor",
+				ScaleType = ItemInfo.Image and Enum.ScaleType.Stretch or Enum.ScaleType.Fit,
+				Visible = HasTile,
+				ZIndex = ZOFF + 4,
+				Parent = Row,
+			})
+			New("UICorner", {
+				CornerRadius = UDim.new(0, 8),
+				Parent = Tile,
+			})
+			local TextX = HasTile and 46 or 8
+			local BtnW = 0
+			if ItemInfo.ButtonText then
+				BtnW = math.clamp(TextService:GetTextSize(ItemInfo.ButtonText, 12, Enum.Font.Code, Vector2.new(10000, 10000)).X + 20, 44, 90)
+			end
+			New("TextLabel", {
+				BackgroundTransparency = 1,
+				Position = UDim2.fromOffset(TextX, 6),
+				Size = UDim2.new(1, -TextX - BtnW - 14, 0, 16),
+				Text = ItemInfo.Text or "",
+				TextSize = 13,
+				Font = Enum.Font.Code,
+				TextColor3 = "FontColor",
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				ZIndex = ZOFF + 4,
+				Parent = Row,
+			})
+			New("TextLabel", {
+				BackgroundTransparency = 1,
+				Position = UDim2.fromOffset(TextX, 24),
+				Size = UDim2.new(1, -TextX - BtnW - 14, 0, 14),
+				Text = ItemInfo.Subtext or "",
+				TextSize = 11,
+				Font = Enum.Font.Code,
+				TextColor3 = "FontColor",
+				TextTransparency = 0.45,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				Visible = ItemInfo.Subtext ~= nil,
+				ZIndex = ZOFF + 4,
+				Parent = Row,
+			})
+			if ItemInfo.ButtonText then
+				local Act = New("TextButton", {
+					AutoButtonColor = false,
+					AnchorPoint = Vector2.new(1, 0.5),
+					BackgroundColor3 = "MainColor",
+					Position = UDim2.new(1, -7, 0.5, 0),
+					Size = UDim2.fromOffset(BtnW, 24),
+					Text = ItemInfo.ButtonText,
+					TextSize = 12,
+					Font = Enum.Font.Code,
+					TextColor3 = "FontColor",
+					ZIndex = ZOFF + 4,
+					Parent = Row,
+				})
+				table.insert(Library.Corners, New("UICorner", {
+					CornerRadius = UDim.new(0, math.floor(Library.CornerRadius / 2)),
+					Parent = Act,
+				}))
+				New("UIStroke", {
+					Color = "OutlineColor",
+					Thickness = 1,
+					Parent = Act,
+				})
+				Act.MouseEnter:Connect(function()
+					Act.BackgroundColor3 = Library.Scheme.AccentColor
+					Act.TextColor3 = Color3.fromRGB(20, 20, 20)
+				end)
+				Act.MouseLeave:Connect(function()
+					Act.BackgroundColor3 = Library.Scheme.MainColor
+					Act.TextColor3 = Library.Scheme.FontColor
+				end)
+				Act.MouseButton1Click:Connect(function()
+					if ItemInfo.Callback then
+						Library:SafeCallback(ItemInfo.Callback, ItemInfo)
+					end
+				end)
+			end
+			Row.MouseEnter:Connect(function()
+				TweenService:Create(Row, Library.TweenInfo, { BackgroundTransparency = 0.3 }):Play()
+			end)
+			Row.MouseLeave:Connect(function()
+				TweenService:Create(Row, Library.TweenInfo, { BackgroundTransparency = 0.5 }):Play()
+			end)
+			table.insert(Tab.Items, Row)
+			return Row
+		end
+
+		function Tab:Clear()
+			for _, Row in ipairs(Tab.Items) do
+				Row:Destroy()
+			end
+			table.clear(Tab.Items)
+		end
+
+		table.insert(Panel.Tabs, Tab)
+		if not Panel.ActiveTab then
+			Panel:SetTab(Tab)
+		end
+		return Tab
+	end
+
+	function Panel:SetVisible(State)
+		Panel.Visible = State and true or false
+		TweenService:Create(Wrapper, Library.NotifyTweenInfo, {
+			Position = UDim2.new(1, Panel.Visible and -24 or Width + 4, 0.5, 0),
+		}):Play()
+	end
+
+	function Panel:Toggle()
+		Panel:SetVisible(not Panel.Visible)
+	end
+
+	function Panel:Destroy()
+		Panel.Destroyed = true
+		Wrapper:Destroy()
+	end
+
+	return Panel
 end
 
 function Library:CreateLoading(LoadingInfo)

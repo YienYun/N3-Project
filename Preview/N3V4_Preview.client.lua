@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.32.2",
+	Footer = "N3V4 • UI Preview Kit v4.33.0",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -986,6 +986,67 @@ Try("Overlays: L3 Draggable menu", function()
 		Holder.AutomaticSize = Enum.AutomaticSize.Y
 
 	end)
+end)
+
+Try("Overlays: L4 Panel", function()
+	local Box = OverlaysTab:AddLeftGroupbox("Panel", "layout-dashboard")
+	Box:AddLabel("CreatePanel = window drawer kanan: navbar tab kategori + list item scroll.", true)
+	Box:AddLabel("Baris item = image tile kiri + judul/subtext + button aksi; handle kiri = toggle slide.", true)
+
+	local DemoPanel
+	Box:AddButton("Buka / tutup panel shop", function()
+		if DemoPanel and not DemoPanel.Destroyed then
+			DemoPanel:Toggle()
+			return
+		end
+		DemoPanel = Library:CreatePanel({ Title = "Shop Cepat", Width = 290, Height = 380 })
+
+		local Pets = DemoPanel:AddTab("Pets", "sparkles")
+		Pets:AddItem({
+			Icon = "zap", Text = "Pet Kilat", Subtext = "Rare", ButtonText = "Beli",
+			Callback = function() SafeNotify({ Title = "Panel", Description = "Beli Pet Kilat", Time = 2 }) end,
+		})
+		Pets:AddItem({
+			Icon = "droplets", Text = "Pet Air", Subtext = "Common", ButtonText = "Beli",
+			Callback = function() SafeNotify({ Title = "Panel", Description = "Beli Pet Air", Time = 2 }) end,
+		})
+		Pets:AddItem({
+			Icon = "sparkles", Text = "Pet Aura Senja", Subtext = "Epic", ButtonText = "Beli",
+			Callback = function() SafeNotify({ Title = "Panel", Description = "Beli Pet Aura Senja", Time = 2 }) end,
+		})
+
+		local Eggs = DemoPanel:AddTab("Eggs", "droplets")
+		Eggs:AddItem({
+			Icon = "sparkles", Text = "Telur Emas", Subtext = "Limited", ButtonText = "Buka",
+			Callback = function() SafeNotify({ Title = "Panel", Description = "Buka Telur Emas", Time = 2 }) end,
+		})
+		Eggs:AddItem({
+			Icon = "droplets", Text = "Telur Es", Subtext = "Rare", ButtonText = "Buka",
+			Callback = function() SafeNotify({ Title = "Panel", Description = "Buka Telur Es", Time = 2 }) end,
+		})
+		for Stock = 1, 6 do
+			Eggs:AddItem({
+				Icon = "image", Text = "Telur Stok " .. Stock, Subtext = "Common", ButtonText = "Buka",
+				Callback = function() SafeNotify({ Title = "Panel", Description = "Buka Telur Stok " .. Stock, Time = 2 }) end,
+			})
+		end
+
+		local Gear = DemoPanel:AddTab("Gear", "settings-2")
+		Gear:AddItem({
+			Icon = "zap", Text = "Pedang Api", Subtext = "Epic", ButtonText = "Pakai",
+			Callback = function() SafeNotify({ Title = "Panel", Description = "Pakai Pedang Api", Time = 2 }) end,
+		})
+		Gear:AddItem({
+			Icon = "key", Text = "Kunci Gudang", Subtext = "Rare", ButtonText = "Pakai",
+			Callback = function() SafeNotify({ Title = "Panel", Description = "Pakai Kunci Gudang", Time = 2 }) end,
+		})
+	end)
+
+	local ApiBox = OverlaysTab:AddRightGroupbox("Panel API", "table")
+	ApiBox:AddLabel("Library:CreatePanel({ Title, Width, Height, Position })", true)
+	ApiBox:AddLabel("Panel:AddTab(Name, Icon) -> Tab", true)
+	ApiBox:AddLabel("Tab:AddItem({ Image|Icon, Text, Subtext, ButtonText, Callback })", true)
+	ApiBox:AddLabel("Panel:SetTab / SetVisible / Toggle / Destroy, Tab:Clear", true)
 end)
 
 Try("Overlays: R1 Overlay panel (SetRow)", function()

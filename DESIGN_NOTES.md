@@ -2745,3 +2745,44 @@ AutomaticSize Y + Size (1,0,0,0), Holder AutomaticSize Y (X manual
 dari Resize; kalau XY dibiarkan, autosize X bakal nimpa set manual).
 Pin: TextService:GetTextSize presence + absence width fixed PRE.
 Versi 4.32.2. Gates 95/95.
+
+## v4.33.0 — FITUR BARU: PANEL (drawer kanan, tab + list item scroll)
+Spesifikasi dari user: window baru di kanan, button munculin/
+sembunyiin mirip mekanisme window utama, isi list menu cepat yang
+bisa di-scroll, baris item = image + text + button di kiri, navbar
+tab kategori di atas (contoh dia: tab pet/egg shop game lain),
+harus profesional & sedarah desain UI dia. Questions diship →
+judgment call: row = tile kiri + text + button kanan-rapat-kiri,
+tab horizontal icon+text, toggle = handle drawer, instance banyak.
+Implementasi LIB (insert setelah CreateDashboard):
+- Library:CreatePanel({Title, Width=280 clamp 200-420, Height=380
+  clamp 240-720, Position}) -> Panel; wrapper frame transparan
+  anchor (1,0.5) di kanan layar ZOFF 60; WinFrame pakai resep window
+  dashboard persis (bg GetBetterColor -1, corner Library.CornerRadius
+  terdaftar, stroke OutlineColor 1.2 + AddOutlineSpin, topbar icon
+  rbxassetid://117688744510818 + judul GothamBold + divider + close x).
+- Handle drawer: TextButton 14x56 nempel tepi kiri wrapper (di luar
+  clip WinFrame supaya tetap keliatan pas panel sembunyi), icon list,
+  hover transparansi icon, klik = Panel:Toggle(); slide tween
+  Library.NotifyTweenInfo (0.25 Quad Out) posisi X -24 <-> Width+4.
+- Navbar tab: ScrollingFrame horizontal AutomaticCanvasSize X (tab
+  banyak overflow rapi), pill TextButton lebar ukur TextService,
+  icon 14 AccentColor/White + label Code 12 FontColor; aktif = bg
+  MainColor trans 0 + trans text/icon 0, inactive trans 1 / 0.5,
+  hover trans 0.6 (restore bener di MouseLeave).
+- Body: per tab ScrollingFrame AutomaticCanvasSize Y, scrollbar
+  OutlineColor trans 0.4 thickness 4 (resep scroll library), layout
+  padding 6 + UIPadding 8.
+- Tab:AddItem({Image|Icon, Text, Subtext, ButtonText, Callback}):
+  row kartu 46px bg GetBetterColor(+1) trans 0.5 hover tween 0.3
+  (restore 0.5, aturan v4.30.1 tanpa pill permanen), corner terdaftar,
+  stroke OutlineColor trans 0.55; tile 32x32 (Image stretch / icon
+  sprite fit di atas bg MainColor trans 0.55, corner 8); judul Code 13
+  FontColor + subtext Code 11 trans 0.45 truncate; button aksi kanan
+  lebar ukur text clamp 44-90, resep button menu (MainColor, stroke,
+  hover AccentColor + text gelap), callback via Library:SafeCallback.
+- API: Panel:AddTab/SetTab/SetVisible/Toggle/Destroy, Tab:AddItem/Clear.
+PRE: demo "Shop Cepat" 3 tab (Pets/Eggs/Gear) 13 item (Eggs 8 item
+buat bukti scroll), button buka/tutup di groupbox Overlays kiri +
+groupbox kanan pasangan simetri berisi cheat-sheet API panel.
+Pins: 3 signature LIB + 2 fragment PRE. Gates 97/97.
