@@ -1015,8 +1015,8 @@ function Settings:Attach(Library, Window, Options)
 		if type(Library.PanelStyle) == "table" and type(Library.SetPanelStyle) == "function" then
 			local function DumpPanelStyle()
 				local S = Library.PanelStyle
-				return string.format("Library:SetPanelStyle({ RowHeight = %d, TileSize = %d, GlowTransparency = %s, PlateTransparency = %s, RowTransparency = %s, OverlayTransparency = %s, ChipHeight = %d, TabPillHeight = %d, Wallpaper = %s, GlowRing = %s, BoldText = %s, TitleSize = %d, InfoSize = %d })",
-					S.RowHeight, S.TileSize, tostring(S.GlowTransparency), tostring(S.PlateTransparency), tostring(S.RowTransparency), tostring(S.OverlayTransparency), S.ChipHeight, S.TabPillHeight, tostring(S.Wallpaper), tostring(S.GlowRing), tostring(S.BoldText), S.TitleSize, S.InfoSize)
+				return string.format("Library:SetPanelStyle({ RowHeight = %d, TileSize = %d, GlowTransparency = %s, PlateTransparency = %s, RowTransparency = %s, OverlayTransparency = %s, ChipHeight = %d, TabPillHeight = %d, Wallpaper = %s, GlowRing = %s, BoldText = %s, TitleSize = %d, InfoSize = %d, MetallicHeader = %s, AnimateText = %s })",
+					S.RowHeight, S.TileSize, tostring(S.GlowTransparency), tostring(S.PlateTransparency), tostring(S.RowTransparency), tostring(S.OverlayTransparency), S.ChipHeight, S.TabPillHeight, tostring(S.Wallpaper), tostring(S.GlowRing), tostring(S.BoldText), S.TitleSize, S.InfoSize, tostring(S.MetallicHeader), tostring(S.AnimateText))
 			end
 			local function PrintPanelStyle()
 				print(DumpPanelStyle())
@@ -1098,6 +1098,18 @@ function Settings:Attach(Library, Window, Options)
 				Text = "Ukuran text info", Default = Library.PanelStyle.InfoSize, Min = 10, Max = 16, Rounding = 0, Suffix = "px",
 				Callback = function(Value)
 					Library:SetPanelStyle({ InfoSize = Value })
+				end,
+			})
+			Box:AddToggle("PS_MH", {
+				Text = "Header metalik bergerak", Default = Library.PanelStyle.MetallicHeader,
+				Callback = function(Value)
+					Library:SetPanelStyle({ MetallicHeader = Value })
+				end,
+			})
+			Box:AddToggle("PS_AT", {
+				Text = "Animasi text rarity/uang", Default = Library.PanelStyle.AnimateText,
+				Callback = function(Value)
+					Library:SetPanelStyle({ AnimateText = Value })
 				end,
 			})
 			Box:AddToggle("PS_WP", {

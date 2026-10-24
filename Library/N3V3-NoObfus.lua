@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.36.0 loaded — CHIP JADI CHECKLIST WINDOW + BAKE DUMP KEDUA: jawaban user via checklist: pill ON/OFF accent DIHAPUS, chip sekarang model toggle checklist yang ada di window lu: label kiri + kotak MainColor ber-ring outline di kanan, state ON = glyph check hijau locked RGB(86,197,110) sprite sheet1 rect(175,450) di dalam kotak, OFF = kotak kosong — baris tetep horizontal scroll; dump kedua user dibake verbatim jadi default (Glow 0.5, Plate 0 solid, Chip 25, TabPill 25, TitleSize 18); Restyle chip lewat Chip.Relayout (lebar ukur ulang ikut InfoSize/BoldText, kotak ikut ChipHeight, plate ikut PlateTransparency); (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.37.0 loaded — HEADER METALIK BERGERAK + TEXT RARITY BERANIMASI + WALLPAPER MATI: referensi user = foto panel game lain: header bar metalik gradasi hitam-putih BERGERAK + nama item berwarna rarity + value uang hijau animasi; wallpaper anime DIHAPUS default (Wallpaper false, overlay ikut sembunyi bareng wallpaper); TopBar sekarang punya MetallicBar: plate perak + UIGradient Rotation 90 tiga stop gelap-terang-gelap + tween Offset loop -0.6..0.6 2.4s Linear InOut infinite autoreverse = kilau metal jalan terus, judul jadi hitam di atas perak kayak foto; Library.PanelRarity = Common abu-putih(205,205,210) / Rare biru-putih(120,160,255) / Mythic merah(255,70,70) / Money hijau(70,190,100); AddItem TextColor = warna nama rarity, kalau diset nama pulse animasi base->GetBetterColor(+18) loop Sine 1.2s autoreverse, subtext uang SELALU pulse hijau tua-muda; knob MetallicHeader + AnimateText; stroke row diterangin trans 0.25 biar kartu kebaca kayak foto; pulse di-cancel rapi di Clear/Destroy/Restyle; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5905,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.36.0"
+	Library.N3V4Version = "4.37.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -15010,11 +15010,20 @@ Library.PanelStyle = {
 	OverlayTransparency = 0.38,
 	ChipHeight = 25,
 	TabPillHeight = 25,
-	Wallpaper = true,
+	Wallpaper = false,
 	GlowRing = true,
 	BoldText = true,
 	TitleSize = 18,
 	InfoSize = 12,
+	MetallicHeader = true,
+	AnimateText = true,
+}
+
+Library.PanelRarity = {
+	Common = Color3.fromRGB(205, 205, 210),
+	Rare = Color3.fromRGB(120, 160, 255),
+	Mythic = Color3.fromRGB(255, 70, 70),
+	Money = Color3.fromRGB(70, 190, 100),
 }
 Library.Panels = {}
 
@@ -15044,6 +15053,12 @@ function Library:SetPanelStyle(Info)
 	end
 	if Info.GlowRing ~= nil then
 		S.GlowRing = Info.GlowRing == true
+	end
+	if Info.MetallicHeader ~= nil then
+		S.MetallicHeader = Info.MetallicHeader == true
+	end
+	if Info.AnimateText ~= nil then
+		S.AnimateText = Info.AnimateText == true
 	end
 	Library:ApplyPanelStyle()
 end
@@ -15210,6 +15225,28 @@ function Library:CreatePanel(Info)
 		ZIndex = ZOFF + 2,
 		Parent = WinFrame,
 	})
+	local TopPlate = New("Frame", {
+		Name = "MetallicBar",
+		BackgroundColor3 = Color3.fromRGB(240, 240, 245),
+		Size = UDim2.new(1, 0, 1, 0),
+		Visible = Library.PanelStyle.MetallicHeader,
+		ZIndex = ZOFF + 2,
+		Parent = TopBar,
+	})
+	local Shine = New("UIGradient", {
+		Rotation = 90,
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(110, 110, 118)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(250, 250, 255)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(110, 110, 118)),
+		}),
+		Offset = Vector2.new(-0.6, 0),
+		Parent = TopPlate,
+	})
+	local ShineTween = TweenService:Create(Shine, TweenInfo.new(2.4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true), {
+		Offset = Vector2.new(0.6, 0),
+	})
+	ShineTween:Play()
 	New("ImageLabel", {
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(8, 4),
@@ -15225,7 +15262,7 @@ function Library:CreatePanel(Info)
 		Text = TitleText,
 		TextSize = 12,
 		Font = Enum.Font.GothamBold,
-		TextColor3 = Color3.fromRGB(240, 240, 245),
+		TextColor3 = Library.PanelStyle.MetallicHeader and Color3.fromRGB(20, 20, 20) or Library.Scheme.FontColor,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		ZIndex = ZOFF + 2,
@@ -15635,10 +15672,12 @@ function Library:CreatePanel(Info)
 			New("UIStroke", {
 				Color = "OutlineColor",
 				Thickness = 1,
-				Transparency = 0.55,
+				Transparency = 0.25,
 				Parent = Row,
 			})
 			local Glow = ItemInfo.GlowColor or "AccentColor"
+			local NameColor = ItemInfo.TextColor or nil
+			local SubColor = ItemInfo.SubtextColor or Color3.fromRGB(86, 197, 110)
 			local TileIcon = ItemInfo.Image and nil or Library:GetCustomIcon(ItemInfo.Icon)
 			local HasTile = ItemInfo.Image ~= nil or TileIcon ~= nil
 			local Tile = New("ImageLabel", {
@@ -15684,6 +15723,7 @@ function Library:CreatePanel(Info)
 				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 16),
 				Text = ItemInfo.Text or "",
 				TextSize = Library.PanelStyle.TitleSize,
+				TextColor3 = NameColor or "FontColor",
 				Font = Library.PanelStyle.BoldText and Enum.Font.GothamBold or Enum.Font.Code,
 				TextColor3 = "FontColor",
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -15698,7 +15738,7 @@ function Library:CreatePanel(Info)
 				Text = ItemInfo.Subtext or "",
 				TextSize = Library.PanelStyle.InfoSize,
 				Font = Library.PanelStyle.BoldText and Enum.Font.GothamBold or Enum.Font.Code,
-				TextColor3 = ItemInfo.SubtextColor or Color3.fromRGB(86, 197, 110),
+				TextColor3 = SubColor,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				Visible = ItemInfo.Subtext ~= nil,
@@ -15827,12 +15867,44 @@ function Library:CreatePanel(Info)
 				Act = RecAct,
 				IB = RecIB,
 				HasTile = HasTile,
+				NameColor = NameColor,
+				SubColor = SubColor,
+				Pulses = {},
 			})
+			local Rec = Tab.Items[#Tab.Items]
+			local function StartPulses()
+				for _, Tw in ipairs(Rec.Pulses) do
+					Tw:Cancel()
+				end
+				table.clear(Rec.Pulses)
+				if not Library.PanelStyle.AnimateText then
+					TitleLab.TextColor3 = NameColor or Library.Scheme.FontColor
+					SubLab.TextColor3 = SubColor
+					return
+				end
+				if NameColor then
+					local Tw = TweenService:Create(TitleLab, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+						TextColor3 = Library:GetBetterColor(NameColor, 18),
+					})
+					Tw:Play()
+					table.insert(Rec.Pulses, Tw)
+				end
+				local MoneyTw = TweenService:Create(SubLab, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+					TextColor3 = Library:GetBetterColor(SubColor, 18),
+				})
+				MoneyTw:Play()
+				table.insert(Rec.Pulses, MoneyTw)
+			end
+			StartPulses()
+			Rec.StartPulses = StartPulses
 			return Row
 		end
 
 		function Tab:Clear()
 			for _, Rec in ipairs(Tab.Items) do
+				for _, Tw in ipairs(Rec.Pulses) do
+					Tw:Cancel()
+				end
 				Rec.Row:Destroy()
 			end
 			table.clear(Tab.Items)
@@ -15848,7 +15920,14 @@ function Library:CreatePanel(Info)
 	function Panel:Restyle()
 		local S = Library.PanelStyle
 		Wallpaper.Visible = S.Wallpaper
+		PanelOverlay.Visible = S.Wallpaper
 		PanelOverlay.BackgroundTransparency = S.OverlayTransparency
+		TopPlate.Visible = S.MetallicHeader
+		ShineTween:Cancel()
+		if S.MetallicHeader then
+			ShineTween:Play()
+		end
+		TopTitle.TextColor3 = S.MetallicHeader and Color3.fromRGB(20, 20, 20) or Library.Scheme.FontColor
 		ChipBar.Size = UDim2.new(1, 0, 0, S.ChipHeight + 6)
 		ClosePlate.BackgroundTransparency = S.PlateTransparency
 		for _, Chip in ipairs(Panel.Chips) do
@@ -15871,6 +15950,7 @@ function Library:CreatePanel(Info)
 				Rec.Title.TextSize = S.TitleSize
 				Rec.Sub.TextSize = S.InfoSize
 				Rec.Meta.TextSize = S.InfoSize
+				Rec.StartPulses()
 				Rec.Tile.BackgroundTransparency = S.GlowTransparency
 				Rec.Ring.Enabled = S.GlowRing
 				Rec.Sub.Position = UDim2.fromOffset(Rec.Sub.Position.X.Offset, math.floor(S.RowHeight * 0.375))
@@ -15901,6 +15981,14 @@ function Library:CreatePanel(Info)
 
 	function Panel:Destroy()
 		Panel.Destroyed = true
+		ShineTween:Cancel()
+		for _, Tab in ipairs(Panel.Tabs) do
+			for _, Rec in ipairs(Tab.Items) do
+				for _, Tw in ipairs(Rec.Pulses) do
+					Tw:Cancel()
+				end
+			end
+		end
 		for Index = #Library.Panels, 1, -1 do
 			if Library.Panels[Index] == Panel then
 				table.remove(Library.Panels, Index)

@@ -2975,3 +2975,33 @@ plate kotak ikut PlateTransparency; Restyle panggil Relayout+Repaint.
 Dump kedua user dibake verbatim jadi default PanelStyle: Glow 0.5,
 Plate 0 (solid), Chip 25, TabPill 25, TitleSize 18 (sisanya sama).
 Pins: TitleSize 18 + ChipBox + rect check. Versi 4.36.0. Gates 97/97.
+
+## v4.37.0 — HEADER METALIK BERGERAK + TEXT RARITY BERANIMASI + WALLPAPER MATI
+Referensi user: foto panel game lain (yslemEgg) = header bar metalik
+gradasi hitam-putih BERGERAK, row kartu stroke terang, nama item
+berwarna rarity, value uang hijau. Perintah: wallpaper anime hapus,
+header metalik bergerak, text berwarna + animasi, spek rarity:
+Common abu sedikit putih, Rare biru sedikit putih animasi, uang
+hijau tua-muda animasi, Mythic merah animasi. Dia nawarin code
+example game nyata — dijawab nggak perlu dulu, foto+spek cukup.
+Implementasi:
+- PanelStyle.Wallpaper default FALSE + PanelOverlay.Visible ikut
+  Wallpaper (overlay cuma bermakna bareng wallpaper).
+- MetallicBar: plate perak RGB(240,240,245) di TopBar + UIGradient
+  Rotation 90 tiga stop (110 gelap - 250 terang - 110 gelap) + tween
+  Offset loop -0.6..0.6, 2.4s Linear InOut infinite autoreverse =
+  kilau metal jalan terus; judul topbar hitam di atas perak (putih
+  FontColor kalau metallic off); knob MetallicHeader.
+- Library.PanelRarity = Common(205,205,210) Rare(120,160,255)
+  Mythic(255,70,70) Money(70,190,100) = konstanta semantic tweakable.
+- AddItem TextColor = warna nama rarity; kalau diset, nama pulse
+  loop Sine 1.2s autoreverse base -> GetBetterColor(+18) (mesin
+  visual library sendiri); subtext uang SELALU pulse hijau tua-muda;
+  knob AnimateText matiin = text balik solid; pulse dicancel rapi di
+  Tab:Clear / Panel:Destroy / Restyle (record nyimpan NameColor,
+  SubColor, Pulses, StartPulses).
+- Stroke row trans 0.55 -> 0.25 biar kartu kebaca terang kayak foto.
+- MOD: toggle PS_MH + PS_AT + dump 15 field. PRE demo: semua item
+  pakai PanelRarity (Rare/Common/Mythic) + subtext uang.
+Pins: PanelRarity + MetallicHeader + Wallpaper false LIB + dump MOD.
+Versi 4.37.0. Gates 97/97.
