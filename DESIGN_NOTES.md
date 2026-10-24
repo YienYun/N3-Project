@@ -2540,3 +2540,25 @@ Checker: chk v4.26 diganti absence-pin bayangan (signature-level,
 marker text aman), chk v4.28 VIS jadi absence SHADOW_LAYERS, chk
 v4.29 count-pin jadi absence, chk v4.30 baru (style LIB+MOD+count
 print/copy == 2). Gates 95/95. Versi 4.30.0.
+
+## v4.30.1 — FIX BARIS DASHBOARD: pill terang + text kelelep
+Screenshot user: semua baris dashboard ketutup pill abu-abu TERANG
+(label accent kelelep, nilai putih kebaca gelap, window kedapatan
+tinggi phantom). Forensik kode: tersangka = frame HoverBg terpisah
+(anak Row, size penuh, corner sendiri) — satu instance extra yang
+transparansinya bisa ke-set non-1 di luar hover dan nutupin seluruh
+isi baris karena duduk di antara bg row dan text secara visual kalo
+transparansi default-nya bocor. Keputusan desain: HoverBg DIHAPUS,
+hover pindah ke Row itself (BackgroundColor3 theme "BackgroundColor"
++ BackgroundTransparency default 1, MouseEnter/Leave tween
+BackgroundTransparency Row ke style HoverTransparency) = lebih lean
+(satu instance kurang per baris, sesuai standing lean mandate) dan
+secara konstruksi nggak mungkin ada pill permanen: background baris
+cumak muncul pas hover. Corner locked pindah ke Row.
+Tersangka tinggi phantom: frame Exp accordion yang udah nutup tetep
+hidup size 0 di dalam UIListLayout; sekarang pasca tween close Exp
+di-Destroy (task.delay 0.2 + guard not Open) dan referensi Exp/
+ExpList di-nil — slot list beneran kosong lagi.
+Pin checker: absence 'local HoverBg = New' (signature-level, bukan
+nama polos — marker text nyebut HoverBg dan pernah bikin pin sendiri
+merah) + presence 'Gone:Destroy()'. Versi 4.30.1. Gates 95/95.

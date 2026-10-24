@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.30.0 loaded — BAYANGAN DIHAPUS TOTAL + SETINGAN DASHBOARD: seluruh sistem bayangan belakang window dibuang bersih dari library (engine di VIS, config, API, groupbox setingan, sample) sesuai verdict user — UI balik clean tanpa bayangan, dan kelas bug bayangan tutup buku permanen; dashboard sekarang PUNYA groupbox setingan lengkap di tab Visuals: tinggi baris stat/meter, transparansi garis pemisah, transparansi hover, ukuran text, toggle warna label custom + color picker (addon), tombol buka sample dashboard yang reaksi LIVE ke semua knob lewat Library:ApplyDashboardStyle; dump Library:SetDashboardStyle({...}) print+copy siap bake (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.30.1 loaded — FIX BARIS DASHBOARD: frame HoverBg terpisah (tersangka pill abu-abu terang nutup baris + bikin text kelelep) DIHAPUS — hover sekarang di-tween langsung di BackgroundTransparency Row itself (color theme BackgroundColor, transparency default 1 = baris bersih total sampe disentuh); accordion Exp yang udah nutup sekarang di-Destroy biar nggak ninggalin slot/tinggi phantom di list; label accent + nilai putih + icon accent tetep (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5877,7 +5877,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.30.0"
+	Library.N3V4Version = "4.30.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -14600,6 +14600,7 @@ function Library:CreateDashboard(Info)
 		Order += 1
 		local RowOrder = Order * 2
 		local Row = New("TextButton", {
+			BackgroundColor3 = "BackgroundColor",
 			BackgroundTransparency = 1,
 			LayoutOrder = RowOrder,
 			Size = UDim2.new(1, 0, 0, Height),
@@ -14609,16 +14610,9 @@ function Library:CreateDashboard(Info)
 			ZIndex = ZOFF + 1,
 			Parent = Container,
 		})
-		local HoverBg = New("Frame", {
-			BackgroundColor3 = "BackgroundColor",
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 1, 0),
-			ZIndex = ZOFF + 1,
-			Parent = Row,
-		})
 		table.insert(Library.Corners, New("UICorner", {
 			CornerRadius = UDim.new(0, Library.CornerRadius),
-			Parent = HoverBg,
+			Parent = Row,
 		}))
 		local Icon = New("ImageLabel", {
 			BackgroundTransparency = 1,
@@ -14668,10 +14662,10 @@ function Library:CreateDashboard(Info)
 		})
 		TweenService:Create(Row, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, Order * 0.03), { Transparency = 0 }):Play()
 		Row.MouseEnter:Connect(function()
-			TweenService:Create(HoverBg, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = Library.DashboardStyle.HoverTransparency }):Play()
+			TweenService:Create(Row, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = Library.DashboardStyle.HoverTransparency }):Play()
 		end)
 		Row.MouseLeave:Connect(function()
-			TweenService:Create(HoverBg, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
+			TweenService:Create(Row, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
 		end)
 		return Row, Icon, Label, ValueLbl, Sep, RowOrder
 	end
@@ -14761,6 +14755,17 @@ function Library:CreateDashboard(Info)
 			local Target = UDim2.new(1, 0, 0, 0)
 			if CardData.Open then
 				Target = UDim2.new(1, 0, 0, CardData.ExpHeight)
+			else
+				local Gone = CardData.Exp
+				task.delay(0.2, function()
+					if Gone.Parent and not CardData.Open then
+						Gone:Destroy()
+						if CardData.Exp == Gone then
+							CardData.Exp = nil
+							CardData.ExpList = nil
+						end
+					end
+				end)
 			end
 			TweenService:Create(CardData.Exp, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Target }):Play()
 		end
