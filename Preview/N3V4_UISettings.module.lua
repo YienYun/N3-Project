@@ -1015,8 +1015,8 @@ function Settings:Attach(Library, Window, Options)
 		if type(Library.PanelStyle) == "table" and type(Library.SetPanelStyle) == "function" then
 			local function DumpPanelStyle()
 				local S = Library.PanelStyle
-				return string.format("Library:SetPanelStyle({ RowHeight = %d, TileSize = %d, GlowTransparency = %s, PlateTransparency = %s, RowTransparency = %s, ChipHeight = %d, TabPillHeight = %d, Wallpaper = %s, GlowRing = %s })",
-					S.RowHeight, S.TileSize, tostring(S.GlowTransparency), tostring(S.PlateTransparency), tostring(S.RowTransparency), S.ChipHeight, S.TabPillHeight, tostring(S.Wallpaper), tostring(S.GlowRing))
+				return string.format("Library:SetPanelStyle({ RowHeight = %d, TileSize = %d, GlowTransparency = %s, PlateTransparency = %s, RowTransparency = %s, OverlayTransparency = %s, ChipHeight = %d, TabPillHeight = %d, Wallpaper = %s, GlowRing = %s })",
+					S.RowHeight, S.TileSize, tostring(S.GlowTransparency), tostring(S.PlateTransparency), tostring(S.RowTransparency), tostring(S.OverlayTransparency), S.ChipHeight, S.TabPillHeight, tostring(S.Wallpaper), tostring(S.GlowRing))
 			end
 			local function PrintPanelStyle()
 				print(DumpPanelStyle())
@@ -1062,6 +1062,12 @@ function Settings:Attach(Library, Window, Options)
 				Text = "Transparansi kartu row", Default = Library.PanelStyle.RowTransparency, Min = 0, Max = 1, Rounding = 2,
 				Callback = function(Value)
 					Library:SetPanelStyle({ RowTransparency = Value })
+				end,
+			})
+			Box:AddSlider("PS_OT", {
+				Text = "Transparansi overlay wallpaper", Default = Library.PanelStyle.OverlayTransparency, Min = 0, Max = 1, Rounding = 2,
+				Callback = function(Value)
+					Library:SetPanelStyle({ OverlayTransparency = Value })
 				end,
 			})
 			Box:AddSlider("PS_CH", {

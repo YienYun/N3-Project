@@ -2925,3 +2925,20 @@ sama), guard versi lama print peringatan. Pola sedarah Dashboard
 settings v4.30.0.
 Pins: PanelStyle/Restyle/wallpaper asset/close rect LIB + count 2
 'Print setingan panel' MOD. Versi 4.35.0. Gates 97/97.
+
+## v4.35.1 — FIX crash UIStroke.Visible + anti-samar (overlay peredam)
+Dump user: spam 'Visible is not a valid member of UIStroke' dari
+Restyle <- ApplyPanelStyle <- SetPanelStyle <- knob MOD. Root: gue
+pakai Rec.Ring.Visible padahal UIStroke properti tampilannya =
+Enabled (Visible cuma punya GuiObject). Fix: Rec.Ring.Enabled.
+Keluhan 'samar/buta/susah dibaca' root-nya: wallpaper full terang
+di belakang row transparan 0.5 tanpa peredam — window utama punya
+BackgroundOverlay (default hitam 0.40 enabled @422-424), panel
+kemarin nggak. Fix: PanelOverlay frame hitam di atas wallpaper di
+bawah konten (ZIndex ZOFF+1, corner terdaftar) + knob baru
+PanelStyle.OverlayTransparency default 0.45 (lebih kalem dari window
+biaya row kecil) + Restyle set live. RowTransparency default 0.5 ->
+0.35 (kartu solid, text kebaca). Text row naik: judul 13->14 (h16),
+subtext 11->12, meta 11->12. MOD: slider PS_OT + dump SetPanelStyle
+ikut OverlayTransparency. Pins: Ring.Enabled + PanelOverlay LIB +
+OverlayTransparency MOD. Versi 4.35.1. Gates 97/97.

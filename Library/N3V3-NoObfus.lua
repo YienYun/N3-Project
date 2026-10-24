@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.35.0 loaded — PANEL v3 HASIL RONDE MANUAL + PANELSTYLE SETTINGS: semua koreksi manual user masuk library: (1) wallpaper asset window utama rbxassetid://111593326989465 tint 148 stretch + corner sendiri di layer belakang panel, ikut Library.Scheme.BackgroundImage kalau user set; (2) close button = plate gelap ber-frame simetris 22x22 + ring + corner + glyph silang sprite sheet2 rect(450,100) 12px centered, BUKAN text x; (3) semua text CTA di atas accent = putih FontColor (header, button aksi, chip); (4) ChipBar jadi ScrollingFrame horizontal AutomaticCanvasSize X scrollbar 2px = tahan N chip multi-game tanpa rompak geometri; plus Library.PanelStyle + SetPanelStyle/ApplyPanelStyle + registry Library.Panels + Panel:Restyle() = setingan lengkap bagian penting (RowHeight, TileSize, GlowTransparency, PlateTransparency, RowTransparency, ChipHeight, TabPillHeight, Wallpaper, GlowRing) clamp aman, restyle LIVE semua panel kebuka lewat record per-row; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.35.1 loaded — FIX CRASH UIStroke.Visible + ANTI-SAMAR: dump user nuduh persis — Restyle nganggep UIStroke punya Visible (padahal Enabled) = spam error tiap geser knob GlowRing; sekarang Rec.Ring.Enabled; akar keluhan samar/buta = wallpaper full terang di belakang row transparan tanpa peredam (window utama lu punya BackgroundOverlay, panel kemarin nggak): sekarang ada PanelOverlay frame hitam di atas wallpaper (di bawah konten) + knob baru OverlayTransparency default 0.45 = wallpaper keliatan tapi kalem, text kebaca; RowTransparency default turun 0.5 -> 0.35 (kartu row lebih solid); text row naik: judul 14, subtext 12, meta 12 biar nggak menyipit; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5905,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.35.0"
+	Library.N3V4Version = "4.35.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -15006,7 +15006,8 @@ Library.PanelStyle = {
 	TileSize = 32,
 	GlowTransparency = 0.55,
 	PlateTransparency = 0.35,
-	RowTransparency = 0.5,
+	RowTransparency = 0.35,
+	OverlayTransparency = 0.45,
 	ChipHeight = 20,
 	TabPillHeight = 24,
 	Wallpaper = true,
@@ -15027,6 +15028,7 @@ function Library:SetPanelStyle(Info)
 	Num("GlowTransparency", 0, 1)
 	Num("PlateTransparency", 0, 1)
 	Num("RowTransparency", 0, 1)
+	Num("OverlayTransparency", 0, 1)
 	Num("ChipHeight", 16, 28)
 	Num("TabPillHeight", 20, 32)
 	if Info.Wallpaper ~= nil then
@@ -15178,6 +15180,20 @@ function Library:CreatePanel(Info)
 	table.insert(Library.Corners, New("UICorner", {
 		CornerRadius = UDim.new(0, Library.CornerRadius),
 		Parent = Wallpaper,
+	}))
+
+	local PanelOverlay = New("Frame", {
+		Name = "PanelOverlay",
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		BackgroundTransparency = Library.PanelStyle.OverlayTransparency,
+		Position = UDim2.fromScale(0, 0),
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = ZOFF + 1,
+		Parent = WinFrame,
+	})
+	table.insert(Library.Corners, New("UICorner", {
+		CornerRadius = UDim.new(0, Library.CornerRadius),
+		Parent = PanelOverlay,
 	}))
 
 	local TopBar = New("Frame", {
@@ -15623,9 +15639,9 @@ function Library:CreatePanel(Info)
 			local TitleLab = New("TextLabel", {
 				BackgroundTransparency = 1,
 				Position = UDim2.fromOffset(TextX, 5),
-				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 15),
+				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 16),
 				Text = ItemInfo.Text or "",
-				TextSize = 13,
+				TextSize = 14,
 				Font = Enum.Font.Code,
 				TextColor3 = "FontColor",
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -15638,7 +15654,7 @@ function Library:CreatePanel(Info)
 				Position = UDim2.fromOffset(TextX, 21),
 				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 13),
 				Text = ItemInfo.Subtext or "",
-				TextSize = 11,
+				TextSize = 12,
 				Font = Enum.Font.Code,
 				TextColor3 = ItemInfo.SubtextColor or Color3.fromRGB(86, 197, 110),
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -15652,7 +15668,7 @@ function Library:CreatePanel(Info)
 				Position = UDim2.fromOffset(TextX, 36),
 				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 13),
 				Text = ItemInfo.Meta or "",
-				TextSize = 11,
+				TextSize = 12,
 				Font = Enum.Font.Code,
 				TextColor3 = ItemInfo.MetaColor or Color3.fromRGB(90, 140, 255),
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -15789,6 +15805,7 @@ function Library:CreatePanel(Info)
 	function Panel:Restyle()
 		local S = Library.PanelStyle
 		Wallpaper.Visible = S.Wallpaper
+		PanelOverlay.BackgroundTransparency = S.OverlayTransparency
 		ChipBar.Size = UDim2.new(1, 0, 0, S.ChipHeight + 6)
 		ClosePlate.BackgroundTransparency = S.PlateTransparency
 		for _, Chip in ipairs(Panel.Chips) do
@@ -15802,7 +15819,7 @@ function Library:CreatePanel(Info)
 				Rec.Row.BackgroundTransparency = S.RowTransparency
 				Rec.Tile.Size = UDim2.fromOffset(S.TileSize, S.TileSize)
 				Rec.Tile.BackgroundTransparency = S.GlowTransparency
-				Rec.Ring.Visible = S.GlowRing
+				Rec.Ring.Enabled = S.GlowRing
 				Rec.Sub.Position = UDim2.fromOffset(Rec.Sub.Position.X.Offset, math.floor(S.RowHeight * 0.375))
 				Rec.Meta.Position = UDim2.fromOffset(Rec.Meta.Position.X.Offset, math.floor(S.RowHeight * 0.64))
 				local BtnH = math.clamp(S.RowHeight - 30, 20, 30)
