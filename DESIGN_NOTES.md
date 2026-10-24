@@ -2562,3 +2562,20 @@ ExpList di-nil — slot list beneran kosong lagi.
 Pin checker: absence 'local HoverBg = New' (signature-level, bukan
 nama polos — marker text nyebut HoverBg dan pernah bikin pin sendiri
 merah) + presence 'Gone:Destroy()'. Versi 4.30.1. Gates 95/95.
+
+## v4.30.2 — FIX RINCIAN ACCORDION KOSONG (parent ke UIListLayout)
+Screenshot user v4.30.1: baris dashboard UDAH BERSIH BENAR (pill
+lenyap, label accent + nilai putih kebaca) TAPI klik baris = dropdown
+kebuka KOSONG, text rincian nggak nongol.
+Root cause (fatal & bodoh): FillExp v4.29 me-parent baris Line ke
+`CardData.ExpList` yang merupakan instance **UIListLayout** — layout
+bukan GuiObject, jadi GuiObject yang di-parent ke sana NGGAK DIRENDER
+Roblox sama sekali (hierarki ada, layout nggak ngatur mereka karena
+layout ngatur anak dari PARENT-nya, render chain putus). Space
+accordion tetep grow (ExpHeight hitung dari #Rows) = persis gejala
+"dropdown kebuka tapi kosong".
+Fix: BuildExp nyimpen `CardData.ExpInner = Inner` (frame wadah);
+FillExp destroy+rebuild Line di Host = ExpInner; UIListLayout tetep
+anak Inner (pola list bener, sama kayak Container/List utama);
+destroy-on-close nil-kan ExpInner. Pin: 'CardData.ExpInner = Inner'
++ 'Parent = Host,'. Versi 4.30.2. Gates 95/95.

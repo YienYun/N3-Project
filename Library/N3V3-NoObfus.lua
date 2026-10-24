@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.30.1 loaded — FIX BARIS DASHBOARD: frame HoverBg terpisah (tersangka pill abu-abu terang nutup baris + bikin text kelelep) DIHAPUS — hover sekarang di-tween langsung di BackgroundTransparency Row itself (color theme BackgroundColor, transparency default 1 = baris bersih total sampe disentuh); accordion Exp yang udah nutup sekarang di-Destroy biar nggak ninggalin slot/tinggi phantom di list; label accent + nilai putih + icon accent tetep (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.30.2 loaded — FIX TEXT RINCIAN DASHBOARD GA NONGOL: baris details di-drop accordion tadinya di-PARENT KE UIListLayout (instance layout BUKAN GuiObject = anak GuiObject di dalemnya NGGAK DIRENDER Roblox, cuma makan tempat) — makanya dropdown kebuka tapi kosong melompong; sekarang baris rinci parent ke frame wadah (ExpInner) yang layout-nya anak frame itu, sesuai pola list bener; destroy-on-close ikut update referensi (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5877,7 +5877,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.30.1"
+	Library.N3V4Version = "4.30.2"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -14671,11 +14671,11 @@ function Library:CreateDashboard(Info)
 	end
 
 	local function FillExp(CardData)
-		local ExpList = CardData.ExpList
-		if not ExpList then
+		local Host = CardData.ExpInner
+		if not Host then
 			return
 		end
-		for _, Kid in ipairs(ExpList:GetChildren()) do
+		for _, Kid in ipairs(Host:GetChildren()) do
 			if Kid:IsA("Frame") then
 				Kid:Destroy()
 			end
@@ -14687,7 +14687,7 @@ function Library:CreateDashboard(Info)
 				LayoutOrder = i,
 				Size = UDim2.new(1, 0, 0, 16),
 				ZIndex = ZOFF + 2,
-				Parent = ExpList,
+				Parent = Host,
 			})
 			New("TextLabel", {
 				BackgroundTransparency = 1,
@@ -14733,11 +14733,12 @@ function Library:CreateDashboard(Info)
 			ZIndex = ZOFF + 1,
 			Parent = Exp,
 		})
-		CardData.ExpList = New("UIListLayout", {
+		New("UIListLayout", {
 			Padding = UDim.new(0, 1),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Parent = Inner,
 		})
+		CardData.ExpInner = Inner
 		CardData.Exp = Exp
 		FillExp(CardData)
 		return Exp
@@ -14762,7 +14763,7 @@ function Library:CreateDashboard(Info)
 						Gone:Destroy()
 						if CardData.Exp == Gone then
 							CardData.Exp = nil
-							CardData.ExpList = nil
+							CardData.ExpInner = nil
 						end
 					end
 				end)
