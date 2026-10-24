@@ -925,6 +925,79 @@ function Settings:Attach(Library, Window, Options)
 			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (OutlineSpin / SetOutlineSpin ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.16.0 biar box Outline Muter + Sample Outline Muter muncul")
 		end
 
+		if type(Library.Dropshadow) == "table" and type(Library.SetDropshadow) == "function" then
+			local function RGB3(C)
+				return math.floor(C.R * 255 + 0.5), math.floor(C.G * 255 + 0.5), math.floor(C.B * 255 + 0.5)
+			end
+			local function DumpShadow()
+				local D = Library.Dropshadow
+				local R, G, B = RGB3(D.Color)
+				return string.format("Library:SetDropshadow({ Enabled = %s, Color = Color3.fromRGB(%d, %d, %d), Transparency = %s, Offset = %s })",
+					tostring(D.Enabled), R, G, B, D.Transparency, D.Offset)
+			end
+			local function PrintShadow()
+				local D = Library.Dropshadow
+				local R, G, B = RGB3(D.Color)
+				print(string.format("[N3V4 DROPSHADOW] Enabled = %s | Color = %d,%d,%d | Transparency = %s | Offset = %s",
+					tostring(D.Enabled), R, G, B, D.Transparency, D.Offset))
+				SafeNotify({ Title = "Dropshadow", Description = "Cek Output.", Icon = "info", Time = 3 })
+			end
+			local function CopyShadow()
+				local Text = DumpShadow()
+				if CopyClip(Text) then
+					SafeNotify({ Title = "Dropshadow", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
+				else
+					print("[N3V4 DROPSHADOW] paste ini balik:\n" .. Text)
+					SafeNotify({ Title = "Dropshadow", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+				end
+			end
+
+			local Box = T1:AddLeftGroupbox("Dropshadow", "droplets")
+			local TogShadow = Box:AddToggle("DS_ON", {
+				Text = "Bayangan lembut di belakang window", Default = Library.Dropshadow.Enabled,
+				Callback = function(Value)
+					Library:SetDropshadow({ Enabled = Value })
+				end,
+			})
+			TogShadow:AddColorPicker("DS_C1", {
+				Title = "Warna bayangan", Default = Library.Dropshadow.Color,
+				Callback = function(Color)
+					Library:SetDropshadow({ Color = Color })
+				end,
+			})
+			Box:AddSlider("DS_TR", {
+				Text = "Transparansi bayangan", Default = math.floor(Library.Dropshadow.Transparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetDropshadow({ Transparency = Value / 100 })
+				end,
+			})
+			Box:AddSlider("DS_OF", {
+				Text = "Jarak geser bayangan", Default = Library.Dropshadow.Offset, Min = 0, Max = 16, Rounding = 0, Suffix = "px",
+				Callback = function(Value)
+					Library:SetDropshadow({ Offset = Value })
+				end,
+			})
+			Box:AddButton("Print setingan dropshadow", PrintShadow)
+			Box:AddButton("Copy setingan dropshadow", CopyShadow)
+
+			local Box = T1:AddRightGroupbox("Sample Dropshadow", "droplets")
+			local SampleShadow = Instance.new("Frame")
+			SampleShadow.BackgroundColor3 = (Library.Scheme and Library.Scheme.MainColor) or Color3.fromRGB(36, 36, 36)
+			SampleShadow.BorderSizePixel = 0
+			SampleShadow.Size = UDim2.new(1, -16, 0, 90)
+			SampleShadow.Position = UDim2.new(0, 8, 0, 8)
+			SampleShadow.Parent = Box.Container
+			local SampleShadowCorner = Instance.new("UICorner")
+			SampleShadowCorner.CornerRadius = UDim.new(0, 10)
+			SampleShadowCorner.Parent = SampleShadow
+			Library:AddDropshadow(SampleShadow)
+			Box:AddLabel("Frame di atas = dropshadow lumer beneran.", true)
+			Box:AddButton("Print setingan dropshadow", PrintShadow)
+			Box:AddButton("Copy setingan dropshadow", CopyShadow)
+		else
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (Dropshadow / SetDropshadow ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.26.0 biar box Dropshadow + Sample Dropshadow muncul")
+		end
+
 		if type(Library.CardPanels) == "table" and type(Library.SetCardPanels) == "function" then
 			local function DumpPanels()
 				local P = Library.CardPanels

@@ -329,6 +329,7 @@ local function TargetSequence(Conf)
 end
 
 local Active = {}
+local ShadowActive = {}
 local Ticker = nil
 
 local function EnsureTicker()
@@ -403,7 +404,30 @@ local function EnsureTicker()
 				end
 			end
 		end
-		if #Active == 0 then
+		for i = #ShadowActive, 1, -1 do
+			local St = ShadowActive[i]
+			local Conf = St.GetConf()
+			if St.Dead or not St.Target.Parent or not St.Inst.Parent or not Conf.Enabled then
+				St.Dead = true
+				St.Inst:Destroy()
+				table.remove(ShadowActive, i)
+			else
+				St.Color = St.Color:Lerp(Conf.Color, math.min(1, dt))
+				St.Trans = St.Trans + (Conf.Transparency - St.Trans) * math.min(1, dt)
+				local TargetV = Vector2.new(-Conf.Offset, Conf.Offset)
+				St.OffsetV = St.OffsetV:Lerp(TargetV, math.min(1, dt))
+				local Moving = (St.Color - Conf.Color).Magnitude > 0.004 or math.abs(St.Trans - Conf.Transparency) > 0.002 or (St.OffsetV - TargetV).Magnitude > 0.05
+				if Moving or not St.Painted then
+					St.Inst.BackgroundColor3 = St.Color
+					St.Inst.BackgroundTransparency = St.Trans
+					St.Inst.Position = St.Target.Position + UDim2.new(0, St.OffsetV.X, 0, St.OffsetV.Y)
+					St.Inst.Size = St.Target.Size
+					St.Inst.ZIndex = St.Target.ZIndex - 1
+					St.Painted = not Moving
+				end
+			end
+		end
+		if #Active == 0 and #ShadowActive == 0 then
 			Ticker:Disconnect()
 			Ticker = nil
 		end
@@ -1010,10 +1034,47 @@ local function AttachGradient(Grad, GetConf)
 	return St
 end
 
+local function AttachDropshadow(Target, GetConf)
+	local Conf = GetConf()
+	local Radius = nil
+	local SrcCorner = Target:FindFirstChildWhichIsA("UICorner")
+	if SrcCorner then
+		Radius = SrcCorner.CornerRadius
+	end
+	local Inst = Target:Clone()
+	Inst:ClearAllChildren()
+	Inst.Name = "Dropshadow"
+	if Radius then
+		local Corner = Instance.new("UICorner")
+		Corner.CornerRadius = Radius
+		Corner.Parent = Inst
+	end
+	Inst.Size = Target.Size
+	Inst.Position = Target.Position + UDim2.new(0, -Conf.Offset, 0, Conf.Offset)
+	Inst.BackgroundColor3 = Conf.Color
+	Inst.BackgroundTransparency = Conf.Transparency
+	Inst.ZIndex = Target.ZIndex - 1
+	Inst.Parent = Target.Parent
+	local St = {
+		Inst = Inst,
+		Target = Target,
+		GetConf = GetConf,
+		Color = Conf.Color,
+		Trans = Conf.Transparency,
+		OffsetV = Vector2.new(-Conf.Offset, Conf.Offset),
+		Painted = false,
+		Dead = false,
+	}
+	table.insert(ShadowActive, St)
+	EnsureTicker()
+	return St
+end
+
 return {
 	Presets = Presets,
 	SampleSequence = EvalColorSequence,
 	AttachGradient = AttachGradient,
+	AttachDropshadow = AttachDropshadow,
 	AddViewport = AddViewport,
 	AddSpotlightCard = AddSpotlightCard,
 }

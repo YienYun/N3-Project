@@ -2310,3 +2310,36 @@ pulse ga nyangkut pas pindah style; Obj.Trans nyimpen seq transparency
 buat GetConf. Idle-check ticker diperluas (Moving termasuk TransOn/
 Osc/Pulse) biar static tetep zero-write.
 Checker: chk v4.25 (10 fragmen) + pin versi. Gates 87/87.
+
+## v4.26.0 — DROPSHADOW ANIMASI DARI SOURCE (penutup trilogi EasyVisual)
+User: "gas!" buat dropshadow. Engine Dropshadow.luau diporting:
+bayangan = clone elemen (ClearAllChildren, radius UICorner diambil
+dari target sebelum clear biar sudut tetep bulat), size/position
+mirror + offset px, ZIndex target-1, lerp per-frame verbatim source:
+Color:Lerp(target, min(1, accel*dt)) accel 1, Transparency approach
+linear accel 1, Offset Vector2 lerp accel 1; idle-converged = zero
+write (Painted flag, threshold magnitude 0.004/0.002/0.05).
+DEVIASI STRUKTURAL JUJUR (disebut di reply + marker): source parent
+bayangan DI DALAM uiInstance — di Roblox konten parent selalu render
+DI BAWAH children, jadi bayangan internal ga bakal keliatan di
+belakang elemen (frame shadow source efektif non-fungsional buat
+GuiObject; path text-nya yang kerja). Port gue parent sebagai
+SIBLING di belakang (Parent = Target.Parent) = ekivalen yang kerja;
+semua mekanik lerp tetep verbatim.
+Integrasi: registry ShadowActive ikut ticker Heartbeat yang SAMA
+(gradient + stroke + shadow = satu koneksi total); disconnect kalo
+dua registry kosong. Mati otomatis kalo Target.Parent nil / Disabled
+(Inst:Destroy).
+LIB: state Dropshadow {Enabled, Color hitam, Transparency 0.55,
+Offset 4 (= vector (-4,4) persis default source)}; AddDropshadow/
+ApplyDropshadow/SetDropshadow (guard clamp trans 0..1, offset 0..16);
+state live-table dibaca GetConf tiap tick jadi knob lumer tanpa
+recreate; recreate cuma kalo state Dead/nil. MainFrame didaftarin
+sebelah AddOutlineSpin(MainFrame).
+MOD: box kiri "Dropshadow" (toggle DS_ON + picker DS_C1 addon toggle
+— pin checker lama mewajibkan picker addon toggle, bukan groupbox
+langsung; ketahuan dari gate merah pertama) + slider DS_TR % +
+DS_OF px + print/copy; box kanan "Sample Dropshadow" frame live.
+Simetri T1 jadi 11/11.
+Checker: chk v4.26 (11 fragmen termasuk count-pin print/copy
+dropshadow -eq 2). Gates 88/88.

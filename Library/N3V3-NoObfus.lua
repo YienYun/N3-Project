@@ -1708,6 +1708,55 @@ function Library:SetOutlineSpin(Info)
 	Library:ApplyOutlineSpin()
 end
 
+Library.Dropshadow = {
+	Enabled = true,
+	Color = Color3.new(0, 0, 0),
+	Transparency = 0.55,
+	Offset = 4,
+}
+
+Library.DropshadowObjects = {}
+
+function Library:AddDropshadow(Target)
+	table.insert(Library.DropshadowObjects, { Target = Target, State = nil })
+	Library:ApplyDropshadow()
+end
+
+function Library:ApplyDropshadow()
+	local D = Library.Dropshadow
+	for _, Obj in ipairs(Library.DropshadowObjects) do
+		if Obj.Target.Parent then
+			if D.Enabled and Visuals and type(Visuals.AttachDropshadow) == "function" then
+				if not Obj.State or Obj.State.Dead then
+					Obj.State = Visuals.AttachDropshadow(Obj.Target, function()
+						return Library.Dropshadow
+					end)
+				end
+			end
+		end
+	end
+end
+
+function Library:SetDropshadow(Info)
+	if typeof(Info) ~= "table" then
+		return
+	end
+	local D = Library.Dropshadow
+	if typeof(Info.Enabled) == "boolean" then
+		D.Enabled = Info.Enabled
+	end
+	if typeof(Info.Color) == "Color3" then
+		D.Color = Info.Color
+	end
+	if typeof(Info.Transparency) == "number" then
+		D.Transparency = math.clamp(Info.Transparency, 0, 1)
+	end
+	if typeof(Info.Offset) == "number" then
+		D.Offset = math.clamp(Info.Offset, 0, 16)
+	end
+	Library:ApplyDropshadow()
+end
+
 Library.CardPanels = {
 	Gap = 8,
 	ImageWidth = 40,
@@ -2081,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.25.0 loaded — FIDELITAS 100% SOURCE STROKE PRESETS: tiga deviasi lama dihapus — osilasi math.sin rotasi Electric (amp -30 rate 2.25x) + Sunset (amp -20 rate 2x) jalan beneran; transparency-offset Ghost (-0.9x) + Wave (0.9x) digeser per-frame lewat TrueNumberSequence (portingan evalNumberSequence source); pulse ketebalan stroke Electric = 1 + 0.4*(sin*0.5+0.5) persis Connection3; semua tetap lewat satu ticker bersama (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.26.0 loaded — DROPSHADOW ANIMASI DARI SOURCE (penutup trilogi EasyVisual): engine Dropshadow.luau diporting — clone elemen di-offset ke belakang jadi bayangan, warna/transparansi/offset LUMER per-frame pakai lerp acceleration verbatim source; nempel di window + sample setingan; knob Enabled/Warna/Transparansi/Jarak; satu ticker bersama (gradient + stroke + shadow, nol koneksi baru); catatan jujur: source parent bayangan DI DALAM elemen (ga bakal ketampil belakang karena konten parent selalu render di bawah child di Roblox) — port gue parent sebagai sibling di belakang, mekanik lerp tetep verbatim (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5828,7 +5877,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.25.0"
+	Library.N3V4Version = "4.26.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11100,6 +11149,7 @@ function Library:CreateWindow(WindowInfo)
 		end
 
 		Library:AddOutlineSpin(MainFrame)
+		Library:AddDropshadow(MainFrame)
 
 		--// 3. FLUID LERP ENGINE: SATU ALIRAN PENUH TANPA JEDA & TANPA KEJUT \\--
 		local PulseGeneration = 0
