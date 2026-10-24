@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.32.1 loaded — FIX MENU RESIZE: komponen groupbox (AddLabel dkk, 31 titik panggil) kontraknya manggil Groupbox:Resize() yang biasanya method per-instance; object Menu warisan Funcs kemarin belum punya itu = crash missing method Resize pas preview nambah label; Menu sekarang punya method Resize (menu pakai autosize jadi layout recompute otomatis, method-nya ada buat memenuhi kontrak komponen); menu cepat sekarang beneran bisa nangkringin komponen asli library tanpa crash (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.32.2 loaded — FIX MENU AUTO-FIT LEBAR: menu cepat kemarin kekunci 170px padahal nangkringin komponen asli yang dirancang buat lebar groupbox = label luber keluar garis, text toggle kepotong pill, text button keluar kotak; sekarang Menu:Resize() (kontrak yang dipanggil TIAP komponen masuk) sekalian auto-fit lebar menu: ukur semua text pakai TextService:GetTextSize, lebar = text terpanjang + slack kontrolnya (toggle pill / padding button), clamp 170-340, tinggi tetep autosize; text panjang mana pun sekarang muat tanpa luber (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -3457,6 +3457,18 @@ function Library:AddDraggableMenu(Name: string)
 	}, Library.__GroupboxClass or {})
 
 	function Menu:Resize()
+		local Widest = 170
+		for _, Desc in ipairs(Container:GetDescendants()) do
+			if (Desc:IsA("TextLabel") or Desc:IsA("TextButton")) and Desc.Text ~= "" then
+				local Measured = TextService:GetTextSize(Desc.Text, Desc.TextSize, Desc.Font, Vector2.new(10000, 10000))
+				local Slack = 32
+				if Desc:IsA("TextLabel") and Desc.TextXAlignment == Enum.TextXAlignment.Left then
+					Slack = 76
+				end
+				Widest = math.max(Widest, Measured.X + Slack)
+			end
+		end
+		Holder.Size = UDim2.fromOffset(math.min(340, math.ceil(Widest)), Holder.Size.Y.Offset)
 	end
 
 	function Menu:Destroy()
@@ -5893,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.32.1"
+	Library.N3V4Version = "4.32.2"
 
 	Library.ButtonGradient = {
 		Enabled = true,

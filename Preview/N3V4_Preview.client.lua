@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.32.1",
+	Footer = "N3V4 • UI Preview Kit v4.32.2",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -980,6 +980,10 @@ Try("Overlays: L3 Draggable menu", function()
 				Menu:Destroy()
 			end,
 		})
+
+		Container.AutomaticSize = Enum.AutomaticSize.Y
+		Container.Size = UDim2.new(1, 0, 0, 0)
+		Holder.AutomaticSize = Enum.AutomaticSize.Y
 
 	end)
 end)

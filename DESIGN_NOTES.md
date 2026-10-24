@@ -2725,3 +2725,23 @@ menu pakai AutomaticSize (layout recompute otomatis), method-nya
 ada murni buat memenuhi kontrak komponen supaya AddLabel/AddToggle/
 AddButton dll jalan di menu tanpa crash.
 Pin: presence 'function Menu:Resize()'. Versi 4.32.1. Gates 95/95.
+
+## v4.32.2 — MENU AUTO-FIT LEBAR (text panjang nggak luber)
+Screenshot user: menu 170px fixed vs komponen asli yang dirancang
+buat lebar groupbox = label "Quick toggle luar window:" luber keluar
+garis, text toggle kepotong ketimpa pill, text button keluar kotak.
+Verdict: "ga resize otomatis kalo text panjang".
+Fix: Menu:Resize() — kontrak yang dipanggil TIAP kali komponen masuk
+— sekarang sekalian auto-fit lebar: iterasi semua TextLabel/TextButton
+ber-text di Container, ukur via TextService:GetTextSize(font+size
+asli masing-masing), lebar butuh = text terpanjang + slack kontrol
+(TextLabel kiri +76 buat pill toggle & padding, TextButton +32 buat
+padding button), clamp 170..340, set Holder.Size X; tinggi tetap
+AutomaticSize Y. Jadi menu melebar sendiri sesuai isi, text mana pun
+muat tanpa luber.
+Catatan surgery: baris autosize PRE ternyata KEHAPUS di replace range
+v4.32.0 (spawn block) — dipasang balik di v4.32.2: Container
+AutomaticSize Y + Size (1,0,0,0), Holder AutomaticSize Y (X manual
+dari Resize; kalau XY dibiarkan, autosize X bakal nimpa set manual).
+Pin: TextService:GetTextSize presence + absence width fixed PRE.
+Versi 4.32.2. Gates 95/95.
