@@ -2632,3 +2632,21 @@ bisa balik kapan pun), TAPI nunggu arahan style dari user dulu
 mutusin. Pelajaran: pertanyaan user = diskusi, bukan eksekusi.
 Pin: absence 'function Menu:AddToggle' + presence 'return Holder,
 Container'. Versi 4.31.1. Gates 95/95.
+
+## v4.31.2 — PREVIEW DRAGGABLE MENU ISI (preview-side ONLY, LIB nol perubahan)
+User: "oke sekarang itu gunannya apa? biar gue bisa lihat previewnya."
+= minta penjelasan fungsi + preview yang bisa diliat isinya, TANPA
+rombak library (revert v4.31.1 tetap berlaku: AddDraggableMenu raw
+return (Holder, Container)).
+PRE spawn "Menu Cepat" sekarang isi, dibangun manual di sisi preview
+(pola lama yang emang dimaksud): helper lokal MenuLabel (text satu
+baris) + MenuToggle (row 20px: text Code kiri + pill 28x16 kanan,
+knob 12 tween posisi + pill tween ke AccentColor pas ON, callback
+boolean) + BuildMenuItem lama buat 2 button (Teleport / Tutup menu).
+Ukuran TIDAK hardcode lagi: Container AutomaticSize Y + Holder
+AutomaticSize Y lebar fixed 170 = tinggi ngepas isi, overflow mustahil
+(akar kerusakan v4.31.0 = sizing hardcoded pas 3 item di flow lama).
+LIB: NOL perubahan. Versi footer 4.31.2 (marker LIB tetep 4.31.1).
+Pin: presence MenuToggle PRE + absence hardcode MenuWidth lama.
+Gates 95/95. Style menu TETAP menunggu verdict user sebelum jadi
+fitur library.

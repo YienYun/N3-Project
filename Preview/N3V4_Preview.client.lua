@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.31.1",
+	Footer = "N3V4 • UI Preview Kit v4.31.2",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -947,25 +947,96 @@ end)
 Try("Overlays: L3 Draggable menu", function()
 	local Box = OverlaysTab:AddLeftGroupbox("Draggable Menu", "menu")
 	Box:AddLabel("AddDraggableMenu nge-return (Holder, Container) — raw Instance.", true)
-	Box:AddLabel("Nggak ada method AddButton, isinya dibangun manual.", true)
+	Box:AddLabel("Preview ngisi menu manual (label + toggle pill + button) pakai autosize — bahan lu nilai style.", true)
 
 	Box:AddButton("Spawn draggable menu", function()
 		local Holder, Container = Library:AddDraggableMenu("Menu Cepat")
 		if typeof(Container) ~= "Instance" then return end
+		local TS = game:GetService("TweenService")
 
-		for i = 1, 3 do
-			BuildMenuItem(Container, "Aksi " .. i, Library.Scheme, function()
-				SafeNotify({ Title = "Menu", Description = "Aksi " .. i .. " dijalankan", Time = 2 })
-			end)
+		local function MenuLabel(Text)
+			local L = Instance.new("TextLabel")
+			L.BackgroundTransparency = 1
+			L.Size = UDim2.new(1, 0, 0, 16)
+			L.Text = Text
+			L.TextSize = 12
+			L.Font = Enum.Font.Code
+			L.TextColor3 = Library.Scheme.FontColor
+			L.TextXAlignment = Enum.TextXAlignment.Left
+			L.Parent = Container
+			return L
 		end
 
-		local MenuWidth, ItemH, ItemPad, Count = 170, 26, 7, 3
-		local ContainerH = (Count * ItemH) + ((Count - 1) * ItemPad) + (ItemPad * 2)
+		local function MenuToggle(Text, Default, Callback)
+			local Row = Instance.new("TextButton")
+			Row.BackgroundTransparency = 1
+			Row.Size = UDim2.new(1, 0, 0, 20)
+			Row.AutoButtonColor = false
+			Row.Text = ""
+			Row.Parent = Container
+			local L = Instance.new("TextLabel")
+			L.BackgroundTransparency = 1
+			L.Size = UDim2.new(1, -36, 1, 0)
+			L.Text = Text
+			L.TextSize = 12
+			L.Font = Enum.Font.Code
+			L.TextColor3 = Library.Scheme.FontColor
+			L.TextXAlignment = Enum.TextXAlignment.Left
+			L.Parent = Row
+			local Pill = Instance.new("Frame")
+			Pill.AnchorPoint = Vector2.new(1, 0.5)
+			Pill.Position = UDim2.new(1, 0, 0.5, 0)
+			Pill.Size = UDim2.fromOffset(28, 16)
+			Pill.BackgroundColor3 = Library.Scheme.MainColor
+			Pill.Parent = Row
+			local PC = Instance.new("UICorner")
+			PC.CornerRadius = UDim.new(0, 8)
+			PC.Parent = Pill
+			local Knob = Instance.new("Frame")
+			Knob.Position = UDim2.fromOffset(2, 2)
+			Knob.Size = UDim2.fromOffset(12, 12)
+			Knob.BackgroundColor3 = Library.Scheme.FontColor
+			Knob.Parent = Pill
+			local KC = Instance.new("UICorner")
+			KC.CornerRadius = UDim.new(0, 6)
+			KC.Parent = Knob
+			local On = Default == true
+			local function Paint()
+				local PillColor = On and Library.Scheme.AccentColor or Library.Scheme.MainColor
+				local KnobPos = UDim2.fromOffset(On and 14 or 2, 2)
+				TS:Create(Pill, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundColor3 = PillColor }):Play()
+				TS:Create(Knob, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = KnobPos }):Play()
+			end
+			Pill.BackgroundColor3 = On and Library.Scheme.AccentColor or Library.Scheme.MainColor
+			Knob.Position = UDim2.fromOffset(On and 14 or 2, 2)
+			Row.MouseButton1Click:Connect(function()
+				On = not On
+				Paint()
+				if Callback then
+					Callback(On)
+				end
+			end)
+			return Row
+		end
 
-		Container.AutomaticSize = Enum.AutomaticSize.None
-		Container.Size = UDim2.fromOffset(MenuWidth, ContainerH)
-		Holder.AutomaticSize = Enum.AutomaticSize.None
-		Holder.Size = UDim2.fromOffset(MenuWidth, 35 + ContainerH)
+		MenuLabel("Quick toggle luar window:")
+		MenuToggle("Auto farm", true, function(Value)
+			SafeNotify({ Title = "Menu", Description = "auto farm = " .. tostring(Value), Time = 2 })
+		end)
+		MenuToggle("ESP player", false, function(Value)
+			SafeNotify({ Title = "Menu", Description = "esp player = " .. tostring(Value), Time = 2 })
+		end)
+		BuildMenuItem(Container, "Teleport ke spawn", Library.Scheme, function()
+			SafeNotify({ Title = "Menu", Description = "Teleport ke spawn!", Time = 2 })
+		end)
+		BuildMenuItem(Container, "Tutup menu ini", Library.Scheme, function()
+			Holder:Destroy()
+		end)
+
+		Container.AutomaticSize = Enum.AutomaticSize.Y
+		Container.Size = UDim2.new(1, 0, 0, 0)
+		Holder.AutomaticSize = Enum.AutomaticSize.Y
+		Holder.Size = UDim2.fromOffset(170, 0)
 	end)
 end)
 
