@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.33.1 loaded — FIX VISUAL PANEL dari bedah source Chilli: kenapa tile image Chilli bagus = imagenya duduk di plate hitam transparan 0.45 + ring stroke abu violet RGB(90,90,110) + corner + ScaleType Fit, jadi thumbnail keliatan kayak kartu ber-bingkai bukan stiker mentah; tile panel sekarang pakai resep sama (plate netral hitam, bukan MainColor berwarna yang bikin aneh); button aksi row diganti resep button Chilli: plate hitam transparan 0.35 + text tetep FontColor + stroke outline, hover = plate menerang 0.23, press 0.17 (bukan fill accent + text gelap yang norak); (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.34.0 loaded — PANEL v2 DNA CHILLI STYLE N3: bedah screenshot panel Chilli asli (Steal Panel) = header punya button aksi kanan, baris chip status ON/OFF berwarna, row kartu 3 baris text berwarna (judul putih / value hijau / meta biru) + button aksi besar berwarna + button icon kotak; semua pola itu masuk panel kita versi bahasa UI lu: Panel:SetHeaderButton(Text, Callback) = pill AccentColor text gelap di topbar kiri close; Panel:AddChip(Label, {Default, Callback}) = chip bar dibawah topbar (ON = fill AccentColor text gelap, OFF = plate gelap text FontColor, klik toggle + callback, baris auto-relayout); AddItem sekarang dukung Subtext warna default hijau locked + Meta warna default biru (dua baris info kayak Chilli), ButtonColor per item (default AccentColor fill text gelap = bahasa CTA lu), IconButton + IconButtonCallback = button kotak 26 plate gelap berisi icon lucide di kanan button aksi; row naik 56px buat 3 baris; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5905,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.33.1"
+	Library.N3V4Version = "4.34.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -15008,11 +15008,13 @@ function Library:CreatePanel(Info)
 	local Height = math.clamp(Info.Height or 380, 240, 720)
 	local TOP_H = 32
 	local TAB_H = 34
+	local CHIP_H = 26
 	local ZOFF = 60
 
 	local Panel = {
 		Title = TitleText,
 		Tabs = {},
+		Chips = {},
 		ActiveTab = nil,
 		Visible = true,
 		Destroyed = false,
@@ -15114,10 +15116,10 @@ function Library:CreatePanel(Info)
 		ZIndex = ZOFF + 2,
 		Parent = TopBar,
 	})
-	New("TextLabel", {
+	local TopTitle = New("TextLabel", {
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(38, 0),
-		Size = UDim2.new(1, -70, 1, 0),
+		Size = UDim2.new(1, -46, 1, 0),
 		Text = TitleText,
 		TextSize = 12,
 		Font = Enum.Font.GothamBold,
@@ -15135,6 +15137,71 @@ function Library:CreatePanel(Info)
 		ZIndex = ZOFF + 2,
 		Parent = TopBar,
 	})
+	local HdrBtn = New("TextButton", {
+		AutoButtonColor = false,
+		AnchorPoint = Vector2.new(1, 0.5),
+		BackgroundColor3 = "AccentColor",
+		Position = UDim2.new(1, -34, 0.5, 0),
+		Size = UDim2.fromOffset(60, 22),
+		Text = "",
+		Visible = false,
+		ZIndex = ZOFF + 2,
+		Parent = TopBar,
+	})
+	table.insert(Library.Corners, New("UICorner", {
+		CornerRadius = UDim.new(0, math.floor(Library.CornerRadius / 2)),
+		Parent = HdrBtn,
+	}))
+	New("UIStroke", {
+		Color = "OutlineColor",
+		Thickness = 1,
+		Parent = HdrBtn,
+	})
+	local HdrText = New("TextLabel", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 1, 0),
+		Text = "",
+		TextSize = 11,
+		Font = Enum.Font.GothamBold,
+		TextColor3 = Color3.fromRGB(20, 20, 20),
+		ZIndex = ZOFF + 3,
+		Parent = HdrBtn,
+	})
+	local HdrCallback = nil
+	HdrBtn.MouseEnter:Connect(function()
+		HdrBtn.BackgroundTransparency = 0.12
+	end)
+	HdrBtn.MouseLeave:Connect(function()
+		HdrBtn.BackgroundTransparency = 0
+	end)
+	HdrBtn.MouseButton1Down:Connect(function()
+		HdrBtn.BackgroundTransparency = 0.25
+	end)
+	HdrBtn.MouseButton1Up:Connect(function()
+		HdrBtn.BackgroundTransparency = 0.12
+	end)
+	HdrBtn.MouseButton1Click:Connect(function()
+		if HdrCallback then
+			Library:SafeCallback(HdrCallback)
+		end
+	end)
+
+	function Panel:SetHeaderButton(Text, Callback)
+		HdrCallback = Callback
+		if not Text then
+			HdrBtn.Visible = false
+			TopTitle.Size = UDim2.new(1, -46, 1, 0)
+			return
+		end
+		HdrText.Text = Text
+		HdrBtn.Size = UDim2.fromOffset(math.clamp(TextService:GetTextSize(Text, 11, Enum.Font.GothamBold, Vector2.new(10000, 10000)).X + 20, 60, 150), 22)
+		HdrBtn.Visible = true
+		TopTitle.Size = UDim2.new(1, -(HdrBtn.Size.X.Offset + 46), 1, 0)
+	end
+	if Info.HeaderButton then
+		Panel:SetHeaderButton(Info.HeaderButton.Text, Info.HeaderButton.Callback)
+	end
+
 	local CloseBtn = New("TextButton", {
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(1, 0.5),
@@ -15150,6 +15217,27 @@ function Library:CreatePanel(Info)
 	CloseBtn.MouseButton1Click:Connect(function()
 		Panel:SetVisible(false)
 	end)
+
+	local ChipBar = New("Frame", {
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0, 0, 0, TOP_H),
+		Size = UDim2.new(1, 0, 0, CHIP_H),
+		Visible = false,
+		ZIndex = ZOFF + 2,
+		Parent = WinFrame,
+	})
+	New("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 5),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = ChipBar,
+	})
+	New("UIPadding", {
+		PaddingLeft = UDim.new(0, 8),
+		PaddingRight = UDim.new(0, 8),
+		PaddingTop = UDim.new(0, 3),
+		Parent = ChipBar,
+	})
 
 	local TabScroll = New("ScrollingFrame", {
 		BackgroundTransparency = 1,
@@ -15175,7 +15263,7 @@ function Library:CreatePanel(Info)
 		PaddingTop = UDim.new(0, 5),
 		Parent = TabScroll,
 	})
-	New("Frame", {
+	local TabDivider = New("Frame", {
 		BackgroundColor3 = "OutlineColor",
 		BackgroundTransparency = 0.55,
 		Position = UDim2.new(0, 0, 0, TOP_H + TAB_H - 1),
@@ -15192,6 +15280,77 @@ function Library:CreatePanel(Info)
 		ZIndex = ZOFF + 2,
 		Parent = WinFrame,
 	})
+
+	local function Relayout()
+		local Off = ChipBar.Visible and CHIP_H or 0
+		TabScroll.Position = UDim2.new(0, 0, 0, TOP_H + Off)
+		TabDivider.Position = UDim2.new(0, 0, 0, TOP_H + Off + TAB_H - 1)
+		Body.Position = UDim2.new(0, 0, 0, TOP_H + Off + TAB_H)
+		Body.Size = UDim2.new(1, 0, 1, -(TOP_H + Off + TAB_H))
+	end
+	Relayout()
+
+	function Panel:AddChip(LabelText, ChipInfo)
+		ChipInfo = ChipInfo or {}
+		local State = ChipInfo.Default == true
+		local Chip = { Label = LabelText, State = State }
+		local Measured = TextService:GetTextSize(LabelText .. ": OFF", 11, Enum.Font.Code, Vector2.new(10000, 10000))
+		Chip.Button = New("TextButton", {
+			AutoButtonColor = false,
+			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+			BackgroundTransparency = 0.35,
+			Size = UDim2.fromOffset(Measured.X + 18, 20),
+			Text = "",
+			ZIndex = ZOFF + 3,
+			Parent = ChipBar,
+		})
+		table.insert(Library.Corners, New("UICorner", {
+			CornerRadius = UDim.new(0, math.floor(Library.CornerRadius / 2)),
+			Parent = Chip.Button,
+		}))
+		New("UIStroke", {
+			Color = "OutlineColor",
+			Thickness = 1,
+			Parent = Chip.Button,
+		})
+		Chip.Text = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 1, 0),
+			Text = "",
+			TextSize = 11,
+			Font = Enum.Font.Code,
+			TextColor3 = "FontColor",
+			ZIndex = ZOFF + 4,
+			Parent = Chip.Button,
+		})
+		local function Paint()
+			Chip.State = State
+			Chip.Text.Text = LabelText .. ": " .. (State and "ON" or "OFF")
+			FillInstance({
+				BackgroundColor3 = State and "AccentColor" or Color3.fromRGB(0, 0, 0),
+				BackgroundTransparency = State and 0 or 0.35,
+			}, Chip.Button)
+			FillInstance({
+				TextColor3 = State and Color3.fromRGB(20, 20, 20) or "FontColor",
+			}, Chip.Text)
+		end
+		Paint()
+		Chip.Button.MouseButton1Click:Connect(function()
+			State = not State
+			Paint()
+			if ChipInfo.Callback then
+				Library:SafeCallback(ChipInfo.Callback, State)
+			end
+		end)
+		function Chip:SetState(Value)
+			State = Value == true
+			Paint()
+		end
+		ChipBar.Visible = true
+		Relayout()
+		table.insert(Panel.Chips, Chip)
+		return Chip
+	end
 
 	function Panel:SetTab(Target)
 		for _, Tab in ipairs(Panel.Tabs) do
@@ -15294,7 +15453,7 @@ function Library:CreatePanel(Info)
 					return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
 				end,
 				BackgroundTransparency = 0.5,
-				Size = UDim2.new(1, 0, 0, 46),
+				Size = UDim2.new(1, 0, 0, 56),
 				ZIndex = ZOFF + 3,
 				Parent = Tab.Scroll,
 			})
@@ -15335,14 +15494,15 @@ function Library:CreatePanel(Info)
 				Parent = Tile,
 			})
 			local TextX = HasTile and 46 or 8
+			local IconW = ItemInfo.IconButton and 31 or 0
 			local BtnW = 0
 			if ItemInfo.ButtonText then
 				BtnW = math.clamp(TextService:GetTextSize(ItemInfo.ButtonText, 12, Enum.Font.Code, Vector2.new(10000, 10000)).X + 20, 44, 90)
 			end
 			New("TextLabel", {
 				BackgroundTransparency = 1,
-				Position = UDim2.fromOffset(TextX, 6),
-				Size = UDim2.new(1, -TextX - BtnW - 14, 0, 16),
+				Position = UDim2.fromOffset(TextX, 5),
+				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 15),
 				Text = ItemInfo.Text or "",
 				TextSize = 13,
 				Font = Enum.Font.Code,
@@ -15354,16 +15514,29 @@ function Library:CreatePanel(Info)
 			})
 			New("TextLabel", {
 				BackgroundTransparency = 1,
-				Position = UDim2.fromOffset(TextX, 24),
-				Size = UDim2.new(1, -TextX - BtnW - 14, 0, 14),
+				Position = UDim2.fromOffset(TextX, 21),
+				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 13),
 				Text = ItemInfo.Subtext or "",
 				TextSize = 11,
 				Font = Enum.Font.Code,
-				TextColor3 = "FontColor",
-				TextTransparency = 0.45,
+				TextColor3 = ItemInfo.SubtextColor or Color3.fromRGB(86, 197, 110),
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				Visible = ItemInfo.Subtext ~= nil,
+				ZIndex = ZOFF + 4,
+				Parent = Row,
+			})
+			New("TextLabel", {
+				BackgroundTransparency = 1,
+				Position = UDim2.fromOffset(TextX, 36),
+				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 13),
+				Text = ItemInfo.Meta or "",
+				TextSize = 11,
+				Font = Enum.Font.Code,
+				TextColor3 = ItemInfo.MetaColor or Color3.fromRGB(90, 140, 255),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				Visible = ItemInfo.Meta ~= nil,
 				ZIndex = ZOFF + 4,
 				Parent = Row,
 			})
@@ -15371,14 +15544,13 @@ function Library:CreatePanel(Info)
 				local Act = New("TextButton", {
 					AutoButtonColor = false,
 					AnchorPoint = Vector2.new(1, 0.5),
-					BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-					BackgroundTransparency = 0.35,
-					Position = UDim2.new(1, -7, 0.5, 0),
+					BackgroundColor3 = ItemInfo.ButtonColor or "AccentColor",
+					Position = UDim2.new(1, -7 - IconW, 0.5, 0),
 					Size = UDim2.fromOffset(BtnW, 24),
 					Text = ItemInfo.ButtonText,
 					TextSize = 12,
 					Font = Enum.Font.Code,
-					TextColor3 = "FontColor",
+					TextColor3 = Color3.fromRGB(20, 20, 20),
 					ZIndex = ZOFF + 4,
 					Parent = Row,
 				})
@@ -15392,20 +15564,68 @@ function Library:CreatePanel(Info)
 					Parent = Act,
 				})
 				Act.MouseEnter:Connect(function()
-					Act.BackgroundTransparency = 0.23
+					Act.BackgroundTransparency = 0.12
 				end)
 				Act.MouseLeave:Connect(function()
-					Act.BackgroundTransparency = 0.35
+					Act.BackgroundTransparency = 0
 				end)
 				Act.MouseButton1Down:Connect(function()
-					Act.BackgroundTransparency = 0.17
+					Act.BackgroundTransparency = 0.25
 				end)
 				Act.MouseButton1Up:Connect(function()
-					Act.BackgroundTransparency = 0.23
+					Act.BackgroundTransparency = 0.12
 				end)
 				Act.MouseButton1Click:Connect(function()
 					if ItemInfo.Callback then
 						Library:SafeCallback(ItemInfo.Callback, ItemInfo)
+					end
+				end)
+			end
+
+			if ItemInfo.IconButton then
+				local IBI = Library:GetCustomIcon(ItemInfo.IconButton)
+				local IB = New("TextButton", {
+					AutoButtonColor = false,
+					AnchorPoint = Vector2.new(1, 0.5),
+					BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+					BackgroundTransparency = 0.35,
+					Position = UDim2.new(1, -7, 0.5, 0),
+					Size = UDim2.fromOffset(26, 26),
+					Text = "",
+					ZIndex = ZOFF + 4,
+					Parent = Row,
+				})
+				table.insert(Library.Corners, New("UICorner", {
+					CornerRadius = UDim.new(0, math.floor(Library.CornerRadius / 2)),
+					Parent = IB,
+				}))
+				New("UIStroke", {
+					Color = "OutlineColor",
+					Thickness = 1,
+					Parent = IB,
+				})
+				New("ImageLabel", {
+					BackgroundTransparency = 1,
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Image = IBI and IBI.Url or "",
+					ImageRectOffset = IBI and IBI.ImageRectOffset or nil,
+					ImageRectSize = IBI and IBI.ImageRectSize or nil,
+					ImageColor3 = IBI and IBI.Custom and "WhiteColor" or "FontColor",
+					ScaleType = Enum.ScaleType.Fit,
+					Size = UDim2.fromOffset(13, 13),
+					ZIndex = ZOFF + 5,
+					Parent = IB,
+				})
+				IB.MouseEnter:Connect(function()
+					IB.BackgroundTransparency = 0.23
+				end)
+				IB.MouseLeave:Connect(function()
+					IB.BackgroundTransparency = 0.35
+				end)
+				IB.MouseButton1Click:Connect(function()
+					if ItemInfo.IconButtonCallback then
+						Library:SafeCallback(ItemInfo.IconButtonCallback, ItemInfo)
 					end
 				end)
 			end

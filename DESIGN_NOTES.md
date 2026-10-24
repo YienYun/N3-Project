@@ -2811,3 +2811,39 @@ player); yang mungkin = bedah source + port resep, dan itu yang
 dilakuin. Source leak obfuscated = jangan dijalanin di akun utama
 (risiko backdoor), cukup dibaca.
 Pins: ring color + press transparency. Versi 4.33.1. Gates 97/97.
+
+## v4.34.0 — PANEL v2: DNA Chilli asli (screenshot Steal Panel) versi style N3
+User kasih screenshot panel Chilli hidup di game + minta panel kita
+mirip itu tapi versi style UI dia, plus mode banding jalan berduaan.
+Bedah screenshot: header = judul + button aksi kanan; baris chip
+status ON/OFF berwarna (Auto Steal ON hijau / Halloween OFF merah /
+Eggs All biru); row kartu = thumbnail plate + 3 baris text berwarna
+(judul / value hijau / meta biru) + button aksi besar berwarna +
+button icon kotak (star); handle drawer kiri.
+Port ke LIB CreatePanel:
+- Panel:SetHeaderButton(Text, Callback): pill AccentColor text gelap
+  GothamBold 11 di topbar sebelah kiri close, lebar ukur text clamp
+  60-150, judul topbar auto-menyempit; SetHeaderButton(nil) sembunyi.
+  CreatePanel terima Info.HeaderButton = {Text, Callback}.
+- Panel:AddChip(Label, {Default, Callback}): ChipBar horizontal di
+  bawah topbar (auto-relayout tabbar/divider/body lewat Relayout());
+  chip ON = fill AccentColor text gelap (via FillInstance theme string
+  biar ikut ganti theme), OFF = plate hitam 0.35 text FontColor, stroke
+  OutlineColor, klik = toggle + SafeCallback; Chip:SetState(Value).
+- AddItem v2: row 56px, 3 baris: judul Code 13 FontColor; Subtext Code
+  11 warna ItemInfo.SubtextColor default hijau locked RGB(86,197,110);
+  Meta Code 11 warna ItemInfo.MetaColor default biru RGB(90,140,255);
+  ButtonColor per item default "AccentColor" fill + text gelap
+  RGB(20,20,20) (bahasa CTA lu = hover button menu), hover menerang
+  0.12 press 0.25; IconButton + IconButtonCallback = button kotak 26
+  plate gelap + icon lucide 13 di kanan button aksi (pola star Chilli).
+PRE: demo Shop Cepat pakai semua pola (header Sort: Nilai, chip Auto
+Steal/Halloween, meta $/s + weight, icon sparkles/key) + button
+"Banding: jendela ChiliSource": cari ModuleScript ChiliSource/
+ChilliSource/Chili di ReplicatedStorage/Workspace/ServerStorage,
+require pcall, adapter alias API (CreateWindow/CreateUI, AddTab/
+CreateTab string atau table, AddSection/CreateSection, AddToggle/
+AddSlider(Min/Max)/AddButton, Open/Toggle) semua pcall — kalau
+ChiliSource dia memang ada di Studio, jendela Chilli asli kebuka
+sebelah panel N3 buat banding live; kalau nggak ada = notify jelas.
+ApiBox +2 label cheat-sheet baru. Pins diperbarui. Gates 97/97.

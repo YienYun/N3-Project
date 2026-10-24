@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.33.1",
+	Footer = "N3V4 • UI Preview Kit v4.34.0",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -999,25 +999,51 @@ Try("Overlays: L4 Panel", function()
 			DemoPanel:Toggle()
 			return
 		end
-		DemoPanel = Library:CreatePanel({ Title = "Shop Cepat", Width = 290, Height = 380 })
+		DemoPanel = Library:CreatePanel({
+			Title = "Shop Cepat", Width = 290, Height = 380,
+			HeaderButton = {
+				Text = "Sort: Nilai",
+				Callback = function()
+					SafeNotify({ Title = "Panel", Description = "Mode sort diganti (demo)", Time = 2 })
+				end,
+			},
+		})
+		DemoPanel:AddChip("Auto Steal", {
+			Default = true,
+			Callback = function(State)
+				SafeNotify({ Title = "Panel", Description = "auto steal = " .. tostring(State), Time = 2 })
+			end,
+		})
+		DemoPanel:AddChip("Halloween", {
+			Default = false,
+			Callback = function(State)
+				SafeNotify({ Title = "Panel", Description = "halloween = " .. tostring(State), Time = 2 })
+			end,
+		})
 
 		local Pets = DemoPanel:AddTab("Pets", "sparkles")
 		Pets:AddItem({
-			Icon = "zap", Text = "Pet Kilat", Subtext = "Rare", ButtonText = "Beli",
+			Icon = "zap", Text = "Pet Kilat", Subtext = "$764.9K/s", Meta = "x0.98 · 9,541 Kg",
+			ButtonText = "Beli", IconButton = "sparkles",
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Beli Pet Kilat", Time = 2 }) end,
+			IconButtonCallback = function() SafeNotify({ Title = "Panel", Description = "Pet Kilat difavoritkan", Time = 2 }) end,
 		})
 		Pets:AddItem({
-			Icon = "droplets", Text = "Pet Air", Subtext = "Common", ButtonText = "Beli",
+			Icon = "droplets", Text = "Pet Air", Subtext = "$12.4K/s", Meta = "x1.02 · 1,204 Kg",
+			ButtonText = "Beli", IconButton = "sparkles",
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Beli Pet Air", Time = 2 }) end,
+			IconButtonCallback = function() SafeNotify({ Title = "Panel", Description = "Pet Air difavoritkan", Time = 2 }) end,
 		})
 		Pets:AddItem({
-			Icon = "sparkles", Text = "Pet Aura Senja", Subtext = "Epic", ButtonText = "Beli",
+			Icon = "sparkles", Text = "Pet Aura Senja", Subtext = "$362M/s", Meta = "x1.61 · Halloween",
+			ButtonText = "Beli",
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Beli Pet Aura Senja", Time = 2 }) end,
 		})
 
 		local Eggs = DemoPanel:AddTab("Eggs", "droplets")
 		Eggs:AddItem({
-			Icon = "sparkles", Text = "Telur Emas", Subtext = "Limited", ButtonText = "Buka",
+			Icon = "sparkles", Text = "Telur Emas", Subtext = "$1.2M/s", Meta = "Limited · Abyss",
+			ButtonText = "Buka",
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Buka Telur Emas", Time = 2 }) end,
 		})
 		Eggs:AddItem({
@@ -1026,15 +1052,18 @@ Try("Overlays: L4 Panel", function()
 		})
 		for Stock = 1, 6 do
 			Eggs:AddItem({
-				Icon = "image", Text = "Telur Stok " .. Stock, Subtext = "Common", ButtonText = "Buka",
+				Icon = "image", Text = "Telur Stok " .. Stock, Subtext = "$" .. Stock .. "00K/s", Meta = "Common · Gudang",
+				ButtonText = "Buka",
 				Callback = function() SafeNotify({ Title = "Panel", Description = "Buka Telur Stok " .. Stock, Time = 2 }) end,
 			})
 		end
 
 		local Gear = DemoPanel:AddTab("Gear", "settings-2")
 		Gear:AddItem({
-			Icon = "zap", Text = "Pedang Api", Subtext = "Epic", ButtonText = "Pakai",
+			Icon = "zap", Text = "Pedang Api", Subtext = "+45% dmg", Meta = "Epic · Slot 1",
+			ButtonText = "Pakai", IconButton = "key",
 			Callback = function() SafeNotify({ Title = "Panel", Description = "Pakai Pedang Api", Time = 2 }) end,
+			IconButtonCallback = function() SafeNotify({ Title = "Panel", Description = "Kunci slot Pedang Api", Time = 2 }) end,
 		})
 		Gear:AddItem({
 			Icon = "key", Text = "Kunci Gudang", Subtext = "Rare", ButtonText = "Pakai",
@@ -1042,11 +1071,75 @@ Try("Overlays: L4 Panel", function()
 		})
 	end)
 
+	Box:AddButton("Banding: jendela ChiliSource", function()
+		local Source = nil
+		for _, Root in ipairs({ game:GetService("ReplicatedStorage"), game:GetService("Workspace"), game:GetService("ServerStorage") }) do
+			for _, Desc in ipairs(Root:GetDescendants()) do
+				if Desc:IsA("ModuleScript") and (Desc.Name == "ChiliSource" or Desc.Name == "ChilliSource" or Desc.Name == "Chili") then
+					Source = Desc
+					break
+				end
+			end
+			if Source then
+				break
+			end
+		end
+		if not Source then
+			SafeNotify({ Title = "Banding", Description = "ModuleScript ChiliSource gak ketemu di ReplicatedStorage/Workspace/ServerStorage", Time = 4 })
+			return
+		end
+		local OkLib, Lib = pcall(require, Source)
+		if not OkLib or type(Lib) ~= "table" then
+			SafeNotify({ Title = "Banding", Description = "require ChiliSource gagal: " .. tostring(Lib), Time = 4 })
+			return
+		end
+		local function Call(Obj, Names, ...)
+			for _, FnName in ipairs(Names) do
+				if type(Obj[FnName]) == "function" then
+					return pcall(Obj[FnName], Obj, ...)
+				end
+			end
+			return false, nil
+		end
+		local OkWin, Win = pcall(function()
+			if type(Lib.CreateWindow) == "function" then
+				return Lib:CreateWindow({ Title = "Chilli (banding)" })
+			end
+			if type(Lib.CreateUI) == "function" then
+				return Lib:CreateUI({ Title = "Chilli (banding)" })
+			end
+			return nil
+		end)
+		if not OkWin or type(Win) ~= "table" then
+			SafeNotify({ Title = "Banding", Description = "CreateWindow ChiliSource gagal: " .. tostring(Win), Time = 4 })
+			return
+		end
+		local OkTab, Tab = Call(Win, { "AddTab", "CreateTab" }, "Banding")
+		if not OkTab or type(Tab) ~= "table" then
+			OkTab, Tab = Call(Win, { "AddTab", "CreateTab" }, { Name = "Banding" })
+		end
+		if OkTab and type(Tab) == "table" then
+			local OkSec, Sec = Call(Tab, { "AddSection", "CreateSection" }, { Name = "Pembanding" })
+			if not OkSec or type(Sec) ~= "table" then
+				OkSec, Sec = Call(Tab, { "AddSection", "CreateSection" }, "Pembanding")
+			end
+			if OkSec and type(Sec) == "table" then
+				Call(Sec, { "AddToggle", "CreateToggle" }, { Name = "Toggle contoh", Default = true, Callback = function() end })
+				Call(Sec, { "AddSlider", "CreateSlider" }, { Name = "Slider contoh", Default = 50, Min = 0, Max = 100, Callback = function() end })
+				Call(Sec, { "AddButton", "CreateButton" }, { Name = "Button contoh", Callback = function() end })
+			end
+		end
+		Call(Win, { "Open", "Toggle" })
+		SafeNotify({ Title = "Banding", Description = "Jendela Chilli dibuka — bandingin sebelah panel N3", Time = 3 })
+	end)
+
 	local ApiBox = OverlaysTab:AddRightGroupbox("Panel API", "table")
 	ApiBox:AddLabel("Library:CreatePanel({ Title, Width, Height, Position })", true)
 	ApiBox:AddLabel("Panel:AddTab(Name, Icon) -> Tab", true)
 	ApiBox:AddLabel("Tab:AddItem({ Image|Icon, Text, Subtext, ButtonText, Callback })", true)
 	ApiBox:AddLabel("Panel:SetTab / SetVisible / Toggle / Destroy, Tab:Clear", true)
+	ApiBox:AddLabel("AddChip(Label, {Default, Callback}) + HeaderButton di CreatePanel", true)
+	ApiBox:AddLabel("AddItem: Subtext/Meta berwarna, ButtonColor, IconButton", true)
 end)
 
 Try("Overlays: R1 Overlay panel (SetRow)", function()
