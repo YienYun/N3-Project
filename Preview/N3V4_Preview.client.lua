@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.31.3",
+	Footer = "N3V4 • UI Preview Kit v4.32.0",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -948,131 +948,39 @@ end)
 
 Try("Overlays: L3 Draggable menu", function()
 	local Box = OverlaysTab:AddLeftGroupbox("Draggable Menu", "menu")
-	Box:AddLabel("AddDraggableMenu nge-return (Holder, Container) — raw Instance.", true)
-	Box:AddLabel("Preview ngisi menu manual (label + toggle pill + button) pakai autosize — bahan lu nilai style.", true)
+	Box:AddLabel("AddDraggableMenu nge-return (Holder, Container, Menu) — Menu mewarisi class groupbox.", true)
+	Box:AddLabel("Menu nangkringin komponen ASLI library (AddToggle/AddButton/AddLabel) — style sedarah UI utama.", true)
 
 	Box:AddButton("Spawn draggable menu", function()
-		local Holder, Container = Library:AddDraggableMenu("Menu Cepat")
+		local Holder, Container, Menu = Library:AddDraggableMenu("Menu Cepat")
 		if typeof(Container) ~= "Instance" then return end
-		local TS = game:GetService("TweenService")
 
-		local function MenuLabel(Text)
-			local L = Instance.new("TextLabel")
-			L.BackgroundTransparency = 1
-			L.Transparency = 0
-			L.ZIndex = Container.ZIndex + 1
-			L.Size = UDim2.new(1, 0, 0, 16)
-			L.Text = Text
-			L.TextSize = 12
-			L.Font = Enum.Font.Code
-			L.TextColor3 = Library.Scheme.FontColor
-			L.TextXAlignment = Enum.TextXAlignment.Left
-			L.Parent = Container
-			return L
-		end
+		Menu:AddLabel("Quick toggle luar window:")
+		Menu:AddToggle("MF_ARM", {
+			Text = "Auto farm", Default = true,
+			Callback = function(Value)
+				SafeNotify({ Title = "Menu", Description = "auto farm = " .. tostring(Value), Time = 2 })
+			end,
+		})
+		Menu:AddToggle("MF_ESP", {
+			Text = "ESP player", Default = false,
+			Callback = function(Value)
+				SafeNotify({ Title = "Menu", Description = "esp player = " .. tostring(Value), Time = 2 })
+			end,
+		})
+		Menu:AddButton({
+			Text = "Teleport ke spawn",
+			Callback = function()
+				SafeNotify({ Title = "Menu", Description = "Teleport ke spawn!", Time = 2 })
+			end,
+		})
+		Menu:AddButton({
+			Text = "Tutup menu ini",
+			Callback = function()
+				Menu:Destroy()
+			end,
+		})
 
-		local function MenuToggle(Text, Default, Callback)
-			local Row = Instance.new("TextButton")
-			Row.BackgroundTransparency = 1
-			Row.Transparency = 0
-			Row.ZIndex = Container.ZIndex + 1
-			Row.Size = UDim2.new(1, 0, 0, 20)
-			Row.AutoButtonColor = false
-			Row.Text = ""
-			Row.Parent = Container
-			local L = Instance.new("TextLabel")
-			L.BackgroundTransparency = 1
-			L.Transparency = 0
-			L.ZIndex = Row.ZIndex + 1
-			L.Size = UDim2.new(1, -36, 1, 0)
-			L.Text = Text
-			L.TextSize = 12
-			L.Font = Enum.Font.Code
-			L.TextColor3 = Library.Scheme.FontColor
-			L.TextXAlignment = Enum.TextXAlignment.Left
-			L.Parent = Row
-			local Pill = Instance.new("Frame")
-			Pill.ZIndex = Row.ZIndex + 1
-			Pill.AnchorPoint = Vector2.new(1, 0.5)
-			Pill.Position = UDim2.new(1, 0, 0.5, 0)
-			Pill.Size = UDim2.fromOffset(28, 16)
-			Pill.BackgroundColor3 = Library.Scheme.MainColor
-			Pill.Parent = Row
-			local PC = Instance.new("UICorner")
-			PC.CornerRadius = UDim.new(0, 8)
-			PC.Parent = Pill
-			local Knob = Instance.new("Frame")
-			Knob.ZIndex = Pill.ZIndex + 1
-			Knob.Position = UDim2.fromOffset(2, 2)
-			Knob.Size = UDim2.fromOffset(12, 12)
-			Knob.BackgroundColor3 = Library.Scheme.FontColor
-			Knob.Parent = Pill
-			local KC = Instance.new("UICorner")
-			KC.CornerRadius = UDim.new(0, 6)
-			KC.Parent = Knob
-			local On = Default == true
-			local function Paint()
-				local PillColor = On and Library.Scheme.AccentColor or Library.Scheme.MainColor
-				local KnobPos = UDim2.fromOffset(On and 14 or 2, 2)
-				TS:Create(Pill, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundColor3 = PillColor }):Play()
-				TS:Create(Knob, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = KnobPos }):Play()
-			end
-			Pill.BackgroundColor3 = On and Library.Scheme.AccentColor or Library.Scheme.MainColor
-			Knob.Position = UDim2.fromOffset(On and 14 or 2, 2)
-			Row.MouseButton1Click:Connect(function()
-				On = not On
-				Paint()
-				if Callback then
-					Callback(On)
-				end
-			end)
-			return Row
-		end
-
-		MenuLabel("Quick toggle luar window:")
-		MenuToggle("Auto farm", true, function(Value)
-			SafeNotify({ Title = "Menu", Description = "auto farm = " .. tostring(Value), Time = 2 })
-		end)
-		MenuToggle("ESP player", false, function(Value)
-			SafeNotify({ Title = "Menu", Description = "esp player = " .. tostring(Value), Time = 2 })
-		end)
-		BuildMenuItem(Container, "Teleport ke spawn", Library.Scheme, function()
-			SafeNotify({ Title = "Menu", Description = "Teleport ke spawn!", Time = 2 })
-		end)
-		BuildMenuItem(Container, "Tutup menu ini", Library.Scheme, function()
-			Holder:Destroy()
-		end)
-
-		Container.AutomaticSize = Enum.AutomaticSize.Y
-		Container.Size = UDim2.new(1, 0, 0, 0)
-		Holder.AutomaticSize = Enum.AutomaticSize.Y
-		Holder.Size = UDim2.fromOffset(170, 0)
-
-		task.defer(function()
-			local Gui = {}
-			for _, C in ipairs(Container:GetChildren()) do
-				if C:IsA("GuiObject") then
-					table.insert(Gui, C)
-				end
-			end
-			local G0 = Gui[1]
-			local T = G0 and G0:FindFirstChildWhichIsA("TextLabel") or nil
-			print(string.format("[N3V4 PROBE MENU] gui=%d | Cont Abs=%s Pos=%s Trans=%s Vis=%s Z=%d | Holder Abs=%s Trans=%s Z=%d | Gui ZBehavior=%s",
-				#Gui, tostring(Container.AbsoluteSize), tostring(Container.AbsolutePosition),
-				tostring(Container.Transparency), tostring(Container.Visible), Container.ZIndex,
-				tostring(Holder.AbsoluteSize), tostring(Holder.Transparency), Holder.ZIndex,
-				tostring(Library.ScreenGui.ZIndexBehavior)))
-			if G0 then
-				print(string.format("[N3V4 PROBE MENU] G0=%s Abs=%s Pos=%s Trans=%s Vis=%s Z=%d Parent=%s",
-					G0.ClassName, tostring(G0.AbsoluteSize), tostring(G0.AbsolutePosition),
-					tostring(G0.Transparency), tostring(G0.Visible), G0.ZIndex, G0.Parent.Name))
-			end
-			if T then
-				print(string.format("[N3V4 PROBE MENU] label Text=%q TextTrans=%s Trans=%s Vis=%s Color=%s Abs=%s Z=%d",
-					T.Text, tostring(T.TextTransparency), tostring(T.Transparency), tostring(T.Visible),
-					tostring(T.TextColor3), tostring(T.AbsoluteSize), T.ZIndex))
-			end
-		end)
 	end)
 end)
 

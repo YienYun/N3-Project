@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.31.1 loaded — REVERT ROMBAKAN DRAGGABLE MENU: user kemarin itu NANYA bukan NYURUH — API Menu (AddToggle/AddButton/AddLabel) gue tarik balik, AddDraggableMenu balik nge-return (Holder, Container) raw persis semula supaya menu Keybinds internal + flow manual preview tetap utuh; dump setingan dashboard TETAP dibake (itu perintah user); menu cepat balik stabil tanpa overflow, rencana upgrade menu nunggu diskusi style dulu sama user (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.32.0 loaded — MENU CEPAT PAKAI KOMPONEN ASLI LIBRARY: sesuai verdict user (jangan bikin toggle/button tiruan), object Menu dari AddDraggableMenu sekarang mewarisi class groupbox (metatable BaseGroupbox -> Funcs) jadi Menu:AddToggle / AddButton / AddLabel / AddSlider / AddDropdown dll = KOMPONEN YANG SAMA PERSIS kayak di groupbox window utama (single implementation, nol clone, style otomatis sedarah UI termasuk theme strings + animasi); return jadi (Holder, Container, Menu), return lama tetep utuh buat menu Keybinds internal; preview langsung pakai komponen asli (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -3448,7 +3448,20 @@ function Library:AddDraggableMenu(Name: string)
 
 	PositionDraggable(Holder, Holder.Position)
 
-	return Holder, Container
+	local Menu = setmetatable({
+		Holder = Holder,
+		Container = Container,
+		Elements = {},
+		Destroyed = false,
+		Type = "DraggableMenu",
+	}, Library.__GroupboxClass or {})
+
+	function Menu:Destroy()
+		Menu.Destroyed = true
+		Holder:Destroy()
+	end
+
+	return Holder, Container, Menu
 end
 
 function Library:AddDraggableImageButton(...)
@@ -5877,7 +5890,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.31.1"
+	Library.N3V4Version = "4.32.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -10513,6 +10526,7 @@ do
 	end
 
 	BaseGroupbox.__index = Funcs
+	Library.__GroupboxClass = BaseGroupbox
 	BaseGroupbox.__namecall = function(_, Key, ...)
 		return Funcs[Key](...)
 	end

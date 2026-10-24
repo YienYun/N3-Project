@@ -2685,3 +2685,29 @@ Trans=1 anomali pada label; zero eksplisit menutup kemungkinan
 fade nyasar). Probe DIPERTAHANKAN satu putaran lagi buat konfirmasi
 (angka harapan: Z=11/12, Trans=0), lalu dicabut.
 Pin: Row.ZIndex/Btn.ZIndex frags. Footer 4.31.3. Gates 95/95.
+
+## v4.32.0 — MENU CEPAT NANGKRINGIN KOMPONEN ASLI LIBRARY (verdict user)
+User marah BENAR lagi: preview kemarin pakai toggle/pill/button
+TIRUAN buatan PRE yang beda muka dari UI asli ("harusnya pake toggle
+di script gue lah anj"). Prinsip single-implementation dilanggar oleh
+pendekatan clone — harusnya menu pakai komponen yang udah ada.
+Struktur library ternyata udah nyediain jalannya: semua komponen
+(AddToggle/AddButton/AddLabel/AddSlider/AddDropdown/dll) hidup di
+table `Funcs` yang di-attach lewat `BaseGroupbox.__index = Funcs`.
+Implementasi: AddDraggableMenu sekarang bikin object Menu =
+setmetatable({Holder, Container, Elements={}, Destroyed=false,
+Type="DraggableMenu"}, Library.__GroupboxClass) — satu baris expose
+`Library.__GroupboxClass = BaseGroupbox` ditambahkan tepat setelah
+BaseGroupbox.__index = Funcs (runtime-safe: AddDraggableMenu dipanggil
+post-load; guard `or {}` buat keamanan). Menu:Destroy() added.
+Return jadi (Holder, Container, Menu); return lama utuh (menu Keybinds
+internal aman). Konsekuensi: Menu otomatis punya SELURUH komponen
+groupbox (toggle asli + addon picker/keybind, button asli, label,
+slider, dropdown...) = nol kode clone, style/animasi/theme strings
+otomatis sedarah UI utama. ZIndex aman karena komponen dibangun via
+New() yang auto-inherit Z parent (environment Global).
+PRE: fake helper MenuToggle/MenuLabel + probe DICABUT; spawn menu
+pakai Menu:AddLabel/AddToggle("MF_ARM"/"MF_ESP")/AddButton asli;
+label groupbox update. Checker: pin __GroupboxClass + setmetatable +
+PRE Menu:AddToggle/AddButton + absence fake helper & probe + buang
+pin presence fake yang jadi kontradiktif. Versi 4.32.0. Gates 95/95.
