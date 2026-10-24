@@ -2343,3 +2343,16 @@ DS_OF px + print/copy; box kanan "Sample Dropshadow" frame live.
 Simetri T1 jadi 11/11.
 Checker: chk v4.26 (11 fragmen termasuk count-pin print/copy
 dropshadow -eq 2). Gates 88/88.
+
+## v4.26.1 — FIX CRASH: Color3 nggak punya operator kurang
+Dump user: N3V4Visuals:419 'attempt to perform arithmetic (sub) on
+Color3', spam per frame. Bug gue di v4.26.0: idle-check dropshadow
+nulis `(St.Color - Conf.Color).Magnitude` — Color3 di Luau TIDAK
+support sub (bukan Vector3). Lolos gate karena luau-analyze nonstrict
+buta soal operator metamethod (blind spot bekannt, sekarang punya
+contoh nyata).
+Fix: jarak warna dihitung manual per channel (dR²+dG²+dB² > 0.000016
+= equivalen magnitude 0.004 kuadrat). Pin absensi baru di chk v4.26:
+`! grep -qF '(St.Color - Conf.Color)' '$VIS'` biar pola ini ga bisa
+balik lagi. Versi bump 4.26.1 (marker + N3V4Version + footer).
+Gates 88/88.

@@ -416,7 +416,10 @@ local function EnsureTicker()
 				St.Trans = St.Trans + (Conf.Transparency - St.Trans) * math.min(1, dt)
 				local TargetV = Vector2.new(-Conf.Offset, Conf.Offset)
 				St.OffsetV = St.OffsetV:Lerp(TargetV, math.min(1, dt))
-				local Moving = (St.Color - Conf.Color).Magnitude > 0.004 or math.abs(St.Trans - Conf.Transparency) > 0.002 or (St.OffsetV - TargetV).Magnitude > 0.05
+				local dR = St.Color.R - Conf.Color.R
+				local dG = St.Color.G - Conf.Color.G
+				local dB = St.Color.B - Conf.Color.B
+				local Moving = dR * dR + dG * dG + dB * dB > 0.000016 or math.abs(St.Trans - Conf.Transparency) > 0.002 or (St.OffsetV - TargetV).Magnitude > 0.05
 				if Moving or not St.Painted then
 					St.Inst.BackgroundColor3 = St.Color
 					St.Inst.BackgroundTransparency = St.Trans

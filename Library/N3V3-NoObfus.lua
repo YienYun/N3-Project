@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.26.0 loaded — DROPSHADOW ANIMASI DARI SOURCE (penutup trilogi EasyVisual): engine Dropshadow.luau diporting — clone elemen di-offset ke belakang jadi bayangan, warna/transparansi/offset LUMER per-frame pakai lerp acceleration verbatim source; nempel di window + sample setingan; knob Enabled/Warna/Transparansi/Jarak; satu ticker bersama (gradient + stroke + shadow, nol koneksi baru); catatan jujur: source parent bayangan DI DALAM elemen (ga bakal ketampil belakang karena konten parent selalu render di bawah child di Roblox) — port gue parent sebagai sibling di belakang, mekanik lerp tetep verbatim (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.26.1 loaded — FIX CRASH DROPSHADOW: jarak warna idle-check dihitung manual per channel (Color3 di Luau TIDAK punya operator kurang — bug v4.26.0 line 419 attempt to perform arithmetic sub on Color3, lolos gate karena luau-analyze nonstrict buta operator metamethod); mekanik dropshadow lain tidak berubah (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5877,7 +5877,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.26.0"
+	Library.N3V4Version = "4.26.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
