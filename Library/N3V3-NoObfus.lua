@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.28.0 loaded — SHADOW MODERN + KLIK KARTU: dropshadow sekarang 4 layer lembut SIMETRIS (offset cuma ke bawah, tiap layer melebar 1px + transparansi pangkat 1/4 jadi falloff halus kayak shadow modern, nggak miring diagonal lagi); klik kartu stat/meter yang punya Details = popover rincian (label themed kiri, nilai putih kanan, fade+slide masuk, tutup via klik luar/klik kartu lagi/scroll/minimize); API baru Dash:SetDetails(Idx, Rows) live update pas popover kebuka; bonus fix SetTitle yang dulu cuma ganti variabel lokal tanpa nyentuh label (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.28.1 loaded — FIX SHADOW_LAYERS NIL: konstanta layer tadinya dideklarasin DI BAWAH ticker (baris 1055 vs pakai 433) = lexical scope Luau bikin nama itu nil di ticker -> spam div by nil tiap frame; konstanta sekarang duduk di atas EnsureTicker sebelahan sama ShadowActive; shadow 4 layer akhirnya beneran jalan lembut (kalau baris ini NGGAK ada di Output, ModuleScript yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5877,7 +5877,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.28.0"
+	Library.N3V4Version = "4.28.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,

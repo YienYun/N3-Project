@@ -330,6 +330,7 @@ end
 
 local Active = {}
 local ShadowActive = {}
+local SHADOW_LAYERS = 4
 local Ticker = nil
 
 local function EnsureTicker()
@@ -1051,8 +1052,6 @@ local function AttachGradient(Grad, GetConf)
 	EnsureTicker()
 	return St
 end
-
-local SHADOW_LAYERS = 4
 
 local function AttachDropshadow(Target, GetConf)
 	local Conf = GetConf()

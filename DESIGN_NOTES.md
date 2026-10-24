@@ -2456,3 +2456,16 @@ nyentuh label topbar → sekarang TopTitle.Text di-update.
 PRE demo: Cash + Eggs punya Details awal; loop live SetDetails tiap
 detik (Mythic/Rare/Epic + Session/Bank) biar popover kelihatan hidup.
 Checker: chk v4.28 (3 chk baru). Gates 92/92. Versi 4.28.0.
+
+## v4.28.1 — FIX SHADOW_LAYERS NIL (spam div by nil VIS:433)
+Dump user: 'N3V4Visuals:433: attempt to perform arithmetic (div) on
+number and nil' spam tiap frame. Root cause: `local SHADOW_LAYERS = 4`
+gue taruh tepat sebelum AttachDropshadow (baris 1055), padahal ticker
+yang pakai `1 / SHADOW_LAYERS` ada di baris 433 — lexical scope Luau:
+local belum dideklarasikan secara tekstual = nil di ticker (nonstrict
+analyze BUTA soal ini, sama kayak Color3 sub dulu). Fix: konstanta
+pindah ke atas, sebelahan `local ShadowActive = {}` (baris 332-333),
+sebelum EnsureTicker. Pin checker baru: urutan baris deklarasi
+SHADOW_LAYERS HARUS < baris EnsureTicker (order pin pakai grep -n +
+cut), biar konstansa nggak bisa kelewat turun lagi ke bawah.
+Versi 4.28.1. Gates 92/92.
