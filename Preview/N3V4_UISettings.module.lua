@@ -1015,8 +1015,8 @@ function Settings:Attach(Library, Window, Options)
 		if type(Library.PanelStyle) == "table" and type(Library.SetPanelStyle) == "function" then
 			local function DumpPanelStyle()
 				local S = Library.PanelStyle
-				return string.format("Library:SetPanelStyle({ RowHeight = %d, TileSize = %d, GlowTransparency = %s, PlateTransparency = %s, RowTransparency = %s, OverlayTransparency = %s, ChipHeight = %d, TabPillHeight = %d, Wallpaper = %s, GlowRing = %s })",
-					S.RowHeight, S.TileSize, tostring(S.GlowTransparency), tostring(S.PlateTransparency), tostring(S.RowTransparency), tostring(S.OverlayTransparency), S.ChipHeight, S.TabPillHeight, tostring(S.Wallpaper), tostring(S.GlowRing))
+				return string.format("Library:SetPanelStyle({ RowHeight = %d, TileSize = %d, GlowTransparency = %s, PlateTransparency = %s, RowTransparency = %s, OverlayTransparency = %s, ChipHeight = %d, TabPillHeight = %d, Wallpaper = %s, GlowRing = %s, BoldText = %s, TitleSize = %d, InfoSize = %d })",
+					S.RowHeight, S.TileSize, tostring(S.GlowTransparency), tostring(S.PlateTransparency), tostring(S.RowTransparency), tostring(S.OverlayTransparency), S.ChipHeight, S.TabPillHeight, tostring(S.Wallpaper), tostring(S.GlowRing), tostring(S.BoldText), S.TitleSize, S.InfoSize)
 			end
 			local function PrintPanelStyle()
 				print(DumpPanelStyle())
@@ -1080,6 +1080,24 @@ function Settings:Attach(Library, Window, Options)
 				Text = "Tinggi pill tab", Default = Library.PanelStyle.TabPillHeight, Min = 20, Max = 32, Rounding = 0, Suffix = "px",
 				Callback = function(Value)
 					Library:SetPanelStyle({ TabPillHeight = Value })
+				end,
+			})
+			Box:AddToggle("PS_BT", {
+				Text = "Text row bold", Default = Library.PanelStyle.BoldText,
+				Callback = function(Value)
+					Library:SetPanelStyle({ BoldText = Value })
+				end,
+			})
+			Box:AddSlider("PS_TSZ", {
+				Text = "Ukuran text judul", Default = Library.PanelStyle.TitleSize, Min = 12, Max = 20, Rounding = 0, Suffix = "px",
+				Callback = function(Value)
+					Library:SetPanelStyle({ TitleSize = Value })
+				end,
+			})
+			Box:AddSlider("PS_ISZ", {
+				Text = "Ukuran text info", Default = Library.PanelStyle.InfoSize, Min = 10, Max = 16, Rounding = 0, Suffix = "px",
+				Callback = function(Value)
+					Library:SetPanelStyle({ InfoSize = Value })
 				end,
 			})
 			Box:AddToggle("PS_WP", {

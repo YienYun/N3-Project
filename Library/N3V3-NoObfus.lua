@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.35.1 loaded — FIX CRASH UIStroke.Visible + ANTI-SAMAR: dump user nuduh persis — Restyle nganggep UIStroke punya Visible (padahal Enabled) = spam error tiap geser knob GlowRing; sekarang Rec.Ring.Enabled; akar keluhan samar/buta = wallpaper full terang di belakang row transparan tanpa peredam (window utama lu punya BackgroundOverlay, panel kemarin nggak): sekarang ada PanelOverlay frame hitam di atas wallpaper (di bawah konten) + knob baru OverlayTransparency default 0.45 = wallpaper keliatan tapi kalem, text kebaca; RowTransparency default turun 0.5 -> 0.35 (kartu row lebih solid); text row naik: judul 14, subtext 12, meta 12 biar nggak menyipit; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.35.2 loaded — BAKE DUMP USER + BOLD + TEXT SIZE KNOBS: dump setingan user (RowHeight 72, TileSize 48, Glow 0.65, Plate 0.35, Row 0.3, Overlay 0.38, Chip 28, TabPill 27) dibake VERBATIM jadi default PanelStyle baru — default lama kelewat kecil sampe dia narik knob mentok, itu verdict UX; text row sekarang BOLD default (GothamBold) + knob BoldText + knob TitleSize (12-20 default 15) + InfoSize (10-16 default 12) biar dia bisa opsi bold dll sesuka dia; image tile default 48 biar user game kebaca jelas; fix ikutan: offset X text row sekarang ikut TileSize (14+TileSize) bukan hardcode 46 yang ketimpa tile besar, IconW ikut BtnH; Restyle apply font/size/offset live; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5905,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.35.1"
+	Library.N3V4Version = "4.35.2"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -15002,16 +15002,19 @@ function Library:CreateDashboard(Info)
 end
 
 Library.PanelStyle = {
-	RowHeight = 56,
-	TileSize = 32,
-	GlowTransparency = 0.55,
+	RowHeight = 72,
+	TileSize = 48,
+	GlowTransparency = 0.65,
 	PlateTransparency = 0.35,
-	RowTransparency = 0.35,
-	OverlayTransparency = 0.45,
-	ChipHeight = 20,
-	TabPillHeight = 24,
+	RowTransparency = 0.3,
+	OverlayTransparency = 0.38,
+	ChipHeight = 28,
+	TabPillHeight = 27,
 	Wallpaper = true,
 	GlowRing = true,
+	BoldText = true,
+	TitleSize = 15,
+	InfoSize = 12,
 }
 Library.Panels = {}
 
@@ -15031,6 +15034,11 @@ function Library:SetPanelStyle(Info)
 	Num("OverlayTransparency", 0, 1)
 	Num("ChipHeight", 16, 28)
 	Num("TabPillHeight", 20, 32)
+	Num("TitleSize", 12, 20)
+	Num("InfoSize", 10, 16)
+	if Info.BoldText ~= nil then
+		S.BoldText = Info.BoldText == true
+	end
 	if Info.Wallpaper ~= nil then
 		S.Wallpaper = Info.Wallpaper == true
 	end
@@ -15629,8 +15637,8 @@ function Library:CreatePanel(Info)
 				Transparency = 0.35,
 				Parent = Tile,
 			})
-			local TextX = HasTile and 46 or 8
-			local IconW = ItemInfo.IconButton and 31 or 0
+			local TextX = HasTile and (14 + Library.PanelStyle.TileSize) or 8
+			local IconW = ItemInfo.IconButton and (math.clamp(Library.PanelStyle.RowHeight - 30, 20, 30) + 5) or 0
 			local Act, IB, RecAct, RecIB
 			local BtnW = 0
 			if ItemInfo.ButtonText then
@@ -15641,8 +15649,8 @@ function Library:CreatePanel(Info)
 				Position = UDim2.fromOffset(TextX, 5),
 				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 16),
 				Text = ItemInfo.Text or "",
-				TextSize = 14,
-				Font = Enum.Font.Code,
+				TextSize = Library.PanelStyle.TitleSize,
+				Font = Library.PanelStyle.BoldText and Enum.Font.GothamBold or Enum.Font.Code,
 				TextColor3 = "FontColor",
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
@@ -15654,8 +15662,8 @@ function Library:CreatePanel(Info)
 				Position = UDim2.fromOffset(TextX, 21),
 				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 13),
 				Text = ItemInfo.Subtext or "",
-				TextSize = 12,
-				Font = Enum.Font.Code,
+				TextSize = Library.PanelStyle.InfoSize,
+				Font = Library.PanelStyle.BoldText and Enum.Font.GothamBold or Enum.Font.Code,
 				TextColor3 = ItemInfo.SubtextColor or Color3.fromRGB(86, 197, 110),
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
@@ -15668,8 +15676,8 @@ function Library:CreatePanel(Info)
 				Position = UDim2.fromOffset(TextX, 36),
 				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 13),
 				Text = ItemInfo.Meta or "",
-				TextSize = 12,
-				Font = Enum.Font.Code,
+				TextSize = Library.PanelStyle.InfoSize,
+				Font = Library.PanelStyle.BoldText and Enum.Font.GothamBold or Enum.Font.Code,
 				TextColor3 = ItemInfo.MetaColor or Color3.fromRGB(90, 140, 255),
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
@@ -15784,6 +15792,7 @@ function Library:CreatePanel(Info)
 				Meta = MetaLab,
 				Act = RecAct,
 				IB = RecIB,
+				HasTile = HasTile,
 			})
 			return Row
 		end
@@ -15818,6 +15827,16 @@ function Library:CreatePanel(Info)
 				Rec.Row.Size = UDim2.new(1, 0, 0, S.RowHeight)
 				Rec.Row.BackgroundTransparency = S.RowTransparency
 				Rec.Tile.Size = UDim2.fromOffset(S.TileSize, S.TileSize)
+				local TX = Rec.HasTile and (14 + S.TileSize) or 8
+				Rec.Title.Position = UDim2.fromOffset(TX, Rec.Title.Position.Y.Offset)
+				Rec.Sub.Position = UDim2.fromOffset(TX, Rec.Sub.Position.Y.Offset)
+				Rec.Meta.Position = UDim2.fromOffset(TX, Rec.Meta.Position.Y.Offset)
+				Rec.Title.Font = S.BoldText and Enum.Font.GothamBold or Enum.Font.Code
+				Rec.Sub.Font = S.BoldText and Enum.Font.GothamBold or Enum.Font.Code
+				Rec.Meta.Font = S.BoldText and Enum.Font.GothamBold or Enum.Font.Code
+				Rec.Title.TextSize = S.TitleSize
+				Rec.Sub.TextSize = S.InfoSize
+				Rec.Meta.TextSize = S.InfoSize
 				Rec.Tile.BackgroundTransparency = S.GlowTransparency
 				Rec.Ring.Enabled = S.GlowRing
 				Rec.Sub.Position = UDim2.fromOffset(Rec.Sub.Position.X.Offset, math.floor(S.RowHeight * 0.375))

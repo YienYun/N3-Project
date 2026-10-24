@@ -2942,3 +2942,20 @@ biaya row kecil) + Restyle set live. RowTransparency default 0.5 ->
 subtext 11->12, meta 11->12. MOD: slider PS_OT + dump SetPanelStyle
 ikut OverlayTransparency. Pins: Ring.Enabled + PanelOverlay LIB +
 OverlayTransparency MOD. Versi 4.35.1. Gates 97/97.
+
+## v4.35.2 — BAKE DUMP USER VERBATIM + BOLD + KNOB UKURAN TEXT
+Dump user: SetPanelStyle({RowHeight 72, TileSize 48, Glow 0.65, Plate
+0.35, Row 0.3, Overlay 0.38, Chip 28, TabPill 27}) = dia narik knob
+mentok karena default lama kelewat kecil => itu verdict UX, jadi
+angka mentok itu dibake VERBATIM jadi default PanelStyle baru
+(aturan dump-bake standing). Tuntutan baru dia: text BOLD biar jelas
++ image besar biar user game kebaca + "kalo bisa nanti gue kasih opsi
+bold dll" => sekarang ada knob BoldText (default true, GothamBold vs
+Code), TitleSize (12-20 default 15), InfoSize (10-16 default 12);
+Restyle apply font+size live ke semua row kebuka; creation baca style
+biar panel baru langsung sedarah.
+Fix ikutan yang kebongkar oleh TileSize besar: offset X text row
+hardcode 46 ketimpa tile 48 => sekarang TextX = 14 + TileSize (creation
++ Restyle via rec.HasTile); IconW = BtnH + 5 ikut RowHeight.
+MOD: toggle PS_BT + slider PS_TSZ/PS_ISZ + dump 13 field. Pins:
+BoldText/TitleSize LIB. Versi 4.35.2. Gates 97/97.
