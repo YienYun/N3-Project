@@ -2609,3 +2609,26 @@ truth dan dia yang nangkep 2 SyntaxError PRE kali ini (kurung `}`
 nyasar di baris AddButton preview karena nyontek pola table).
 Pins: bake values + Menu API frags + PRE frags. Gates 95/95.
 Versi 4.31.0.
+
+## v4.31.1 — REVERT ROMBAKAN DRAGGABLE MENU (user: "gue nanya bukan nyuruh")
+User marah BENAR: pesan sebelumnya itu PERTANYAAN ("bisa add toggle
+ke situ kan? nanti kalo iya gue bisa mikirin style nya") — bukan
+perintah implementasi. Gue kebabalan langsung rombak + isi preview
+(standing discuss-first dilanggar). Akibat rombakan itu juga nabrak
+flow lama PRE: preview menu memang dibangun MANUAL (helper
+BuildMenuItem "Aksi 1-3") lalu ukuran Holder/Container di-HARDCODE
+pas 3 item (AutomaticSize dimatiin, Size fromOffset) — isi baru gue
+numpuk = overflow: background kepotong, button meluber keluar kotak.
+Screenshot user buktiin persis itu.
+Revert: API Menu (AddToggle/AddButton/AddLabel) DITARIK; AddDraggable
+Menu balik return (Holder, Container) raw persis semula (menu Keybinds
+internal aman); PRE balik ke flow manual lama + label deskripsi lama.
+Yang TETAP jalan: bake dump DashboardStyle user (v4.31.0) — itu emang
+perintah ("tuh bagus itu").
+Status fitur menu: RENCAH DISKUSI — jawaban atas pertanyaan user:
+YA bisa isi toggle/button/label ke draggable menu (pola API Menu tadi
+bisa balik kapan pun), TAPI nunggu arahan style dari user dulu
+(dia bilang mau mikirin style-nya). Jangan implementasi sebelum dia
+mutusin. Pelajaran: pertanyaan user = diskusi, bukan eksekusi.
+Pin: absence 'function Menu:AddToggle' + presence 'return Holder,
+Container'. Versi 4.31.1. Gates 95/95.

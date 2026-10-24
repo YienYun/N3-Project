@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.31.0",
+	Footer = "N3V4 • UI Preview Kit v4.31.1",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -946,17 +946,11 @@ end)
 
 Try("Overlays: L3 Draggable menu", function()
 	local Box = OverlaysTab:AddLeftGroupbox("Draggable Menu", "menu")
-	Box:AddLabel("AddDraggableMenu nge-return (Holder, Container, Menu) — Menu punya AddToggle / AddButton / AddLabel.", true)
+	Box:AddLabel("AddDraggableMenu nge-return (Holder, Container) — raw Instance.", true)
 	Box:AddLabel("Nggak ada method AddButton, isinya dibangun manual.", true)
 
 	Box:AddButton("Spawn draggable menu", function()
-		local Holder, Container, Menu = Library:AddDraggableMenu("Menu Cepat")
-		Menu:AddLabel("Menu cepat luar window — isi komponen live:")
-		Menu:AddToggle({ Text = "Auto farm", Default = true, Callback = function(Value) print("[N3V4 Preview] auto farm =", Value) end })
-		Menu:AddToggle({ Text = "ESP player", Default = false, Callback = function(Value) print("[N3V4 Preview] esp player =", Value) end })
-		Menu:AddToggle({ Text = "Kunci jam siang", Default = false, Callback = function(Value) print("[N3V4 Preview] kunci siang =", Value) end })
-		Menu:AddButton("Teleport ke spawn", function() print("[N3V4 Preview] teleport ke spawn!") end)
-		Menu:AddButton("Tutup menu ini", function() Holder:Destroy() end)
+		local Holder, Container = Library:AddDraggableMenu("Menu Cepat")
 		if typeof(Container) ~= "Instance" then return end
 
 		for i = 1, 3 do

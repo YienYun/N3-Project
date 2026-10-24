@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.31.0 loaded — DUMP USER DIBAKE + DRAGGABLE MENU ISI: default DashboardStyle sekarang persis dump user (StatHeight 25, DividerTransparency 0.5, HoverTransparency 0.65, TextSize 13, LabelColor putih); AddDraggableMenu sekarang nge-return nilai KETIGA = object Menu dengan API komponen beneran: AddToggle (pill mini + knob tween, accent pas ON, callback nilai), AddButton (row themed hover lembut), AddLabel (wrap + autosize) — return lama (Holder, Container) tetep utuh jadi menu Keybinds internal ga kesentuh; preview spawn menu sekarang langsung isi biar keliatan wujudnya (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.31.1 loaded — REVERT ROMBAKAN DRAGGABLE MENU: user kemarin itu NANYA bukan NYURUH — API Menu (AddToggle/AddButton/AddLabel) gue tarik balik, AddDraggableMenu balik nge-return (Holder, Container) raw persis semula supaya menu Keybinds internal + flow manual preview tetap utuh; dump setingan dashboard TETAP dibake (itu perintah user); menu cepat balik stabil tanpa overflow, rencana upgrade menu nunggu diskusi style dulu sama user (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -3448,125 +3448,7 @@ function Library:AddDraggableMenu(Name: string)
 
 	PositionDraggable(Holder, Holder.Position)
 
-	local Menu = {
-		Holder = Holder,
-		Container = Container,
-		Type = "DraggableMenu",
-	}
-
-	function Menu:AddLabel(Text)
-		local L = New("TextLabel", {
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, 16),
-			AutomaticSize = Enum.AutomaticSize.Y,
-			Text = Text or "",
-			TextSize = 12,
-			Font = Enum.Font.Gotham,
-			TextColor3 = "FontColor",
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextWrapped = true,
-			Parent = Container,
-		})
-		return L
-	end
-
-	function Menu:AddButton(Text, Callback)
-		local Btn = New("TextButton", {
-			BackgroundColor3 = "MainColor",
-			BackgroundTransparency = 0.4,
-			Size = UDim2.new(1, 0, 0, 24),
-			Text = Text or "Button",
-			TextSize = 12,
-			Font = Enum.Font.Gotham,
-			TextColor3 = "FontColor",
-			AutoButtonColor = false,
-			Parent = Container,
-		})
-		table.insert(Library.Corners, New("UICorner", {
-			CornerRadius = UDim.new(0, Library.CornerRadius),
-			Parent = Btn,
-		}))
-		Btn.MouseEnter:Connect(function()
-			TweenService:Create(Btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.15 }):Play()
-		end)
-		Btn.MouseLeave:Connect(function()
-			TweenService:Create(Btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.4 }):Play()
-		end)
-		Btn.MouseButton1Click:Connect(function()
-			Library:SafeCallback(Callback)
-		end)
-		return Btn
-	end
-
-	function Menu:AddToggle(Conf)
-		Conf = Conf or {}
-		local Row = New("TextButton", {
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, 20),
-			Text = "",
-			AutoButtonColor = false,
-			Parent = Container,
-		})
-		New("TextLabel", {
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, -36, 1, 0),
-			Text = Conf.Text or "Toggle",
-			TextSize = 12,
-			Font = Enum.Font.Gotham,
-			TextColor3 = "FontColor",
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextTruncate = Enum.TextTruncate.AtEnd,
-			Parent = Row,
-		})
-		local Pill = New("Frame", {
-			BackgroundColor3 = "MainColor",
-			AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, 0, 0.5, 0),
-			Size = UDim2.fromOffset(28, 16),
-			Parent = Row,
-		})
-		table.insert(Library.Corners, New("UICorner", {
-			CornerRadius = UDim.new(0, 8),
-			Parent = Pill,
-		}))
-		local Knob = New("Frame", {
-			BackgroundColor3 = "FontColor",
-			Position = UDim2.fromOffset(2, 2),
-			Size = UDim2.fromOffset(12, 12),
-			Parent = Pill,
-		})
-		table.insert(Library.Corners, New("UICorner", {
-			CornerRadius = UDim.new(0, 6),
-			Parent = Knob,
-		}))
-		local On = Conf.Default == true
-		local Obj = { Row = Row, Value = On }
-		local function Paint(Animate)
-			Obj.Value = On
-			local PillColor = On and Library.Scheme.AccentColor or Library.Scheme.MainColor
-			local KnobPos = UDim2.fromOffset(On and 14 or 2, 2)
-			if Animate then
-				TweenService:Create(Pill, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundColor3 = PillColor }):Play()
-				TweenService:Create(Knob, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = KnobPos }):Play()
-			else
-				Pill.BackgroundColor3 = PillColor
-				Knob.Position = KnobPos
-			end
-		end
-		Paint(false)
-		Row.MouseButton1Click:Connect(function()
-			On = not On
-			Paint(true)
-			Library:SafeCallback(Conf.Callback, On)
-		end)
-		function Obj:SetValue(Value)
-			On = Value == true
-			Paint(true)
-		end
-		return Obj
-	end
-
-	return Holder, Container, Menu
+	return Holder, Container
 end
 
 function Library:AddDraggableImageButton(...)
@@ -5995,7 +5877,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.31.0"
+	Library.N3V4Version = "4.31.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
