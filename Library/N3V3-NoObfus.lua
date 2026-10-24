@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.28.1 loaded — FIX SHADOW_LAYERS NIL: konstanta layer tadinya dideklarasin DI BAWAH ticker (baris 1055 vs pakai 433) = lexical scope Luau bikin nama itu nil di ticker -> spam div by nil tiap frame; konstanta sekarang duduk di atas EnsureTicker sebelahan sama ShadowActive; shadow 4 layer akhirnya beneran jalan lembut (kalau baris ini NGGAK ada di Output, ModuleScript yang ke-require masih lama)")
+print("[N3V4 Library] v4.29.0 loaded — DASHBOARD REDESIGN TOTAL SESUAİ PERMINTAAN: (1) dropshadow DIHAPUS dari dashboard (dashboard bukan window utama, bayangan cuma bikin kotor); (2) isi jadi LIST MINIMALIS satu kolom — baris ramping icon+label themed kiri + nilai putih kanan + garis pemisah tipis, BUKAN grid kartu besar; (3) klik baris = expand KE BAWAH inline kayak group/accordion (rincian text muncul dorong baris bawah, window auto-grow tween), popover melayang v4.28 DIHAPUS TOTAL; (4) chrome window sedarah window utama: bg GetBetterColor(BackgroundColor) sama kayak MainFrame, topbar transparan + divider 1px, radius locked, outline spin tetep, lebar bisa Info.Width default 260, tinggi auto dari jumlah baris (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5877,7 +5877,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.28.1"
+	Library.N3V4Version = "4.29.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -14416,16 +14416,21 @@ end
 function Library:CreateDashboard(Info)
 	Info = Info or {}
 	local TitleText = Info.Title or "N3 Dashboard"
-	local CARD_H = 64
-	local GAP = 8
-	local WIN_W = 320
+	local WIN_W = Info.Width or 260
+	local TOP_H = 32
+	local STAT_H = 24
+	local METER_H = 34
+	local GAP = 2
+	local PAD = 8
 	local ZOFF = 100
 
 	local WinFrame = New("Frame", {
 		Name = "Dashboard",
-		BackgroundColor3 = "MainColor",
+		BackgroundColor3 = function()
+			return Library:GetBetterColor(Library.Scheme.BackgroundColor, -1)
+		end,
 		Position = Info.Position or UDim2.new(0, 25, 0, 120),
-		Size = UDim2.fromOffset(WIN_W, 300),
+		Size = UDim2.fromOffset(WIN_W, 200),
 		Active = true,
 		ClipsDescendants = true,
 		ZIndex = ZOFF,
@@ -14441,12 +14446,10 @@ function Library:CreateDashboard(Info)
 		Parent = WinFrame,
 	})
 	Library:AddOutlineSpin(WinFrame)
-	Library:AddDropshadow(WinFrame)
 
 	local TopBar = New("Frame", {
-		BackgroundColor3 = "BackgroundColor",
-		BackgroundTransparency = 0.3,
-		Size = UDim2.new(1, 0, 0, 32),
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, TOP_H),
 		ZIndex = ZOFF + 1,
 		Parent = WinFrame,
 	})
@@ -14455,7 +14458,7 @@ function Library:CreateDashboard(Info)
 		Position = UDim2.fromOffset(8, 4),
 		Size = UDim2.fromOffset(24, 24),
 		Image = "rbxassetid://117688744510818",
-		ZIndex = ZOFF + 2,
+		ZIndex = ZOFF + 1,
 		Parent = TopBar,
 	})
 	local TopTitle = New("TextLabel", {
@@ -14468,7 +14471,15 @@ function Library:CreateDashboard(Info)
 		TextColor3 = Color3.fromRGB(240, 240, 245),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
-		ZIndex = ZOFF + 2,
+		ZIndex = ZOFF + 1,
+		Parent = TopBar,
+	})
+	New("Frame", {
+		BackgroundColor3 = "OutlineColor",
+		BackgroundTransparency = 0.55,
+		Position = UDim2.new(0, 0, 1, -1),
+		Size = UDim2.new(1, 0, 0, 1),
+		ZIndex = ZOFF + 1,
 		Parent = TopBar,
 	})
 	local MinBtn = New("TextButton", {
@@ -14480,7 +14491,7 @@ function Library:CreateDashboard(Info)
 		TextSize = 16,
 		Font = Enum.Font.GothamBold,
 		TextColor3 = Color3.fromRGB(180, 180, 190),
-		ZIndex = ZOFF + 2,
+		ZIndex = ZOFF + 1,
 		Parent = TopBar,
 	})
 	local CloseBtn = New("TextButton", {
@@ -14492,7 +14503,7 @@ function Library:CreateDashboard(Info)
 		TextSize = 14,
 		Font = Enum.Font.GothamBold,
 		TextColor3 = Color3.fromRGB(180, 180, 190),
-		ZIndex = ZOFF + 2,
+		ZIndex = ZOFF + 1,
 		Parent = TopBar,
 	})
 	for _, Btn in ipairs({ MinBtn, CloseBtn }) do
@@ -14533,17 +14544,16 @@ function Library:CreateDashboard(Info)
 
 	local Container = New("ScrollingFrame", {
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 32),
-		Size = UDim2.new(1, 0, 1, -32),
+		Position = UDim2.fromOffset(0, TOP_H),
+		Size = UDim2.new(1, 0, 1, -TOP_H),
 		ScrollBarThickness = 3,
 		ScrollBarImageColor3 = "OutlineColor",
 		CanvasSize = UDim2.new(0, 0, 0, 0),
 		ZIndex = ZOFF + 1,
 		Parent = WinFrame,
 	})
-	local Grid = New("UIGridLayout", {
-		CellPadding = UDim2.fromOffset(GAP, GAP),
-		CellSize = UDim2.new(0.5, -12, 0, CARD_H),
+	local List = New("UIListLayout", {
+		Padding = UDim.new(0, GAP),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = Container,
 	})
@@ -14554,8 +14564,8 @@ function Library:CreateDashboard(Info)
 		PaddingBottom = UDim.new(0, 8),
 		Parent = Container,
 	})
-	Grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		Container.CanvasSize = UDim2.fromOffset(0, Grid.AbsoluteContentSize.Y + 16)
+	List:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		Container.CanvasSize = UDim2.fromOffset(0, List.AbsoluteContentSize.Y + 16)
 	end)
 
 	local Dashboard = {
@@ -14565,234 +14575,205 @@ function Library:CreateDashboard(Info)
 		Cards = {},
 	}
 	local Order = 0
-	local FullSize = UDim2.fromOffset(WIN_W, 300)
+	local FullSize = UDim2.fromOffset(WIN_W, 200)
 	local IsMinimized = false
 
-	local function Resize()
+	local function Resize(Animate)
+		local Total = 0
 		local Count = 0
-		for _ in pairs(Dashboard.Cards) do
+		for _, CardData in pairs(Dashboard.Cards) do
 			Count += 1
+			Total += CardData.Height
+			if CardData.Open then
+				Total += CardData.ExpHeight + GAP
+			end
 		end
-		local Rows = math.max(1, math.ceil(Count / 2))
-		FullSize = UDim2.fromOffset(WIN_W, 32 + 16 + Rows * (CARD_H + GAP))
+		Total += math.max(0, Count - 1) * GAP + PAD * 2 + TOP_H
+		FullSize = UDim2.fromOffset(WIN_W, math.max(TOP_H + 16, Total))
 		if not IsMinimized then
-			WinFrame.Size = FullSize
+			if Animate then
+				TweenService:Create(WinFrame, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = FullSize }):Play()
+			else
+				WinFrame.Size = FullSize
+			end
 		end
 	end
 
-	local Pop, PopList, PopCard, PopConn
-
-	local function ClosePop()
-		if PopConn then
-			PopConn:Disconnect()
-			PopConn = nil
-		end
-		PopCard = nil
-		if Pop then
-			local Gone = Pop
-			Pop = nil
-			PopList = nil
-			TweenService:Create(Gone, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 1 }):Play()
-			task.delay(0.14, function()
-				if Gone.Parent then
-					Gone:Destroy()
-				end
-			end)
-		end
+	local function BuildRow(Height, TextH)
+		Order += 1
+		local RowOrder = Order * 2
+		local Row = New("TextButton", {
+			BackgroundTransparency = 1,
+			LayoutOrder = RowOrder,
+			Size = UDim2.new(1, 0, 0, Height),
+			Transparency = 1,
+			Text = "",
+			AutoButtonColor = false,
+			ZIndex = ZOFF + 1,
+			Parent = Container,
+		})
+		local HoverBg = New("Frame", {
+			BackgroundColor3 = "BackgroundColor",
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 1, 0),
+			ZIndex = ZOFF + 1,
+			Parent = Row,
+		})
+		table.insert(Library.Corners, New("UICorner", {
+			CornerRadius = UDim.new(0, Library.CornerRadius),
+			Parent = HoverBg,
+		}))
+		local Icon = New("ImageLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(8, (TextH - 14) / 2),
+			Size = UDim2.fromOffset(14, 14),
+			ImageColor3 = "AccentColor",
+			ZIndex = ZOFF + 2,
+			Parent = Row,
+		})
+		local Label = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(28, 0),
+			Size = UDim2.new(1, -36, 0, TextH),
+			Text = "",
+			TextSize = 12,
+			Font = Enum.Font.Gotham,
+			TextColor3 = "AccentColor",
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			ZIndex = ZOFF + 2,
+			Parent = Row,
+		})
+		local ValueLbl = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, -8, 0, TextH),
+			Text = "0",
+			TextSize = 12,
+			Font = Enum.Font.GothamBold,
+			TextColor3 = Color3.fromRGB(255, 255, 255),
+			TextXAlignment = Enum.TextXAlignment.Right,
+			ZIndex = ZOFF + 2,
+			Parent = Row,
+		})
+		New("Frame", {
+			BackgroundColor3 = "OutlineColor",
+			BackgroundTransparency = 0.6,
+			Position = UDim2.new(0, 8, 1, -1),
+			Size = UDim2.new(1, -16, 0, 1),
+			ZIndex = ZOFF + 1,
+			Parent = Row,
+		})
+		TweenService:Create(Row, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, Order * 0.03), { Transparency = 0 }):Play()
+		Row.MouseEnter:Connect(function()
+			TweenService:Create(HoverBg, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.55 }):Play()
+		end)
+		Row.MouseLeave:Connect(function()
+			TweenService:Create(HoverBg, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
+		end)
+		return Row, Icon, Label, ValueLbl, RowOrder
 	end
 
-	local function FillPopRows(CardData)
-		if not Pop or not PopList then
+	local function FillExp(CardData)
+		local ExpList = CardData.ExpList
+		if not ExpList then
 			return
 		end
-		for _, Kid in ipairs(PopList:GetChildren()) do
+		for _, Kid in ipairs(ExpList:GetChildren()) do
 			if Kid:IsA("Frame") then
 				Kid:Destroy()
 			end
 		end
 		local Rows = CardData.Details or {}
-		for i, Row in ipairs(Rows) do
+		for i, RowData in ipairs(Rows) do
 			local Line = New("Frame", {
 				BackgroundTransparency = 1,
 				LayoutOrder = i,
-				Size = UDim2.new(1, 0, 0, 17),
-				ZIndex = ZOFF + 9,
-				Parent = PopList,
+				Size = UDim2.new(1, 0, 0, 16),
+				ZIndex = ZOFF + 2,
+				Parent = ExpList,
 			})
 			New("TextLabel", {
 				BackgroundTransparency = 1,
-				Size = UDim2.new(0.58, 0, 1, 0),
-				Text = tostring(Row.Label),
+				Position = UDim2.fromOffset(28, 0),
+				Size = UDim2.new(0.55, -28, 1, 0),
+				Text = tostring(RowData.Label),
 				TextSize = 11,
 				Font = Enum.Font.Gotham,
 				TextColor3 = "AccentColor",
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
-				ZIndex = ZOFF + 10,
+				ZIndex = ZOFF + 2,
 				Parent = Line,
 			})
 			New("TextLabel", {
 				BackgroundTransparency = 1,
-				Position = UDim2.new(0.58, 0, 0, 0),
-				Size = UDim2.new(0.42, 0, 1, 0),
-				Text = tostring(Row.Value),
+				Size = UDim2.new(1, -8, 1, 0),
+				Text = tostring(RowData.Value),
 				TextSize = 11,
 				Font = Enum.Font.GothamBold,
-				TextColor3 = Color3.new(1, 1, 1),
+				TextColor3 = Color3.fromRGB(255, 255, 255),
 				TextXAlignment = Enum.TextXAlignment.Right,
 				TextTruncate = Enum.TextTruncate.AtEnd,
-				ZIndex = ZOFF + 10,
+				ZIndex = ZOFF + 2,
 				Parent = Line,
 			})
 		end
-		Pop.Size = UDim2.fromOffset(Pop.Size.X.Offset, 10 + #Rows * 17)
+		CardData.ExpHeight = 4 + #Rows * 17
 	end
 
-	local function OpenPop(CardData)
-		ClosePop()
-		local Rows = CardData.Details
-		if not Rows or #Rows == 0 then
-			return
-		end
-		local Card = CardData.Card
-		local P = New("Frame", {
-			Name = "Details",
-			BackgroundColor3 = "MainColor",
-			BackgroundTransparency = 0.08,
-			Size = UDim2.fromOffset(Card.AbsoluteSize.X, 10),
-			Transparency = 1,
-			ZIndex = ZOFF + 8,
-			Parent = WinFrame,
-		})
-		table.insert(Library.Corners, New("UICorner", {
-			CornerRadius = UDim.new(0, Library.CornerRadius),
-			Parent = P,
-		}))
-		New("UIStroke", {
-			Color = "OutlineColor",
-			Thickness = 1,
-			Parent = P,
-		})
-		local List = New("Frame", {
+	local function BuildExp(CardData)
+		local Exp = New("Frame", {
 			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(8, 5),
-			Size = UDim2.new(1, -16, 1, -10),
-			ZIndex = ZOFF + 9,
-			Parent = P,
-		})
-		New("UIListLayout", {
-			SortOrder = Enum.SortOrder.LayoutOrder,
-			Parent = List,
-		})
-		Pop = P
-		PopList = List
-		PopCard = CardData
-		FillPopRows(CardData)
-		local H = P.Size.Y.Offset
-		local X = Card.AbsolutePosition.X - WinFrame.AbsolutePosition.X
-		local BaseY = Card.AbsolutePosition.Y - WinFrame.AbsolutePosition.Y
-		local Y = BaseY + Card.AbsoluteSize.Y + 6
-		if Y + H > WinFrame.AbsoluteSize.Y - 6 then
-			Y = BaseY - 6 - H
-		end
-		P.Position = UDim2.fromOffset(X, Y - 4)
-		TweenService:Create(P, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 0, Position = UDim2.fromOffset(X, Y) }):Play()
-		PopConn = UserInputService.InputBegan:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-				local A = P.AbsolutePosition
-				local S = P.AbsoluteSize
-				local M = Input.Position
-				if M.X < A.X or M.X > A.X + S.X or M.Y < A.Y or M.Y > A.Y + S.Y then
-					ClosePop()
-				end
-			end
-		end)
-	end
-
-	Container:GetPropertyChangedSignal("CanvasPosition"):Connect(ClosePop)
-
-	local function BuildCard(Title, IconName)
-		Order += 1
-		local Cell = New("Frame", {
-			BackgroundTransparency = 1,
-			LayoutOrder = Order,
-			ZIndex = ZOFF + 2,
+			ClipsDescendants = true,
+			LayoutOrder = CardData.RowOrder + 1,
+			Size = UDim2.new(1, 0, 0, 0),
+			ZIndex = ZOFF + 1,
 			Parent = Container,
 		})
-		local Card = New("TextButton", {
-			BackgroundColor3 = "BackgroundColor",
-			BackgroundTransparency = 0.5,
-			Position = UDim2.fromOffset(1, 1),
-			Size = UDim2.new(1, -2, 1, -2),
-			Transparency = 1,
-			Text = "",
-			AutoButtonColor = false,
-			ZIndex = ZOFF + 3,
-			Parent = Cell,
-		})
-		table.insert(Library.Corners, New("UICorner", {
-			CornerRadius = UDim.new(0, Library.CornerRadius),
-			Parent = Card,
-		}))
-		local Stroke = New("UIStroke", {
-			Color = "OutlineColor",
-			Thickness = 1,
-			Parent = Card,
-		})
-		local Icon = New("ImageLabel", {
+		local Inner = New("Frame", {
 			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(8, 9),
-			Size = UDim2.fromOffset(16, 16),
-			ImageColor3 = "AccentColor",
-			ZIndex = ZOFF + 4,
-			Parent = Card,
+			Size = UDim2.new(1, 0, 0, 1000),
+			ZIndex = ZOFF + 1,
+			Parent = Exp,
 		})
-		local IconData = Library:GetCustomIcon(IconName or "gauge")
+		CardData.ExpList = New("UIListLayout", {
+			Padding = UDim.new(0, 1),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Parent = Inner,
+		})
+		CardData.Exp = Exp
+		FillExp(CardData)
+		return Exp
+	end
+
+	local function Toggle(CardData)
+		if not CardData.Details or #CardData.Details == 0 then
+			return
+		end
+		CardData.Open = not CardData.Open
+		if CardData.Open and not CardData.Exp then
+			BuildExp(CardData)
+		end
+		if CardData.Exp then
+			local Target = UDim2.new(1, 0, 0, 0)
+			if CardData.Open then
+				Target = UDim2.new(1, 0, 0, CardData.ExpHeight)
+			end
+			TweenService:Create(CardData.Exp, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Target }):Play()
+		end
+		Resize(true)
+	end
+
+	function Dashboard:AddStat(Idx, Conf)
+		Conf = Conf or {}
+		local Row, Icon, Label, ValueLbl, RowOrder = BuildRow(STAT_H, STAT_H)
+		Label.Text = Conf.Title or tostring(Idx)
+		local IconData = Library:GetCustomIcon(Conf.Icon or "gauge")
 		if IconData then
 			Icon.Image = IconData.Url
 			Icon.ImageRectOffset = IconData.ImageRectOffset
 			Icon.ImageRectSize = IconData.ImageRectSize
 		end
-		New("TextLabel", {
-			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(30, 9),
-			Size = UDim2.new(1, -38, 0, 16),
-			Text = Title,
-			TextSize = 11,
-			Font = Enum.Font.GothamBold,
-			TextColor3 = "AccentColor",
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextTruncate = Enum.TextTruncate.AtEnd,
-			ZIndex = ZOFF + 4,
-			Parent = Card,
-		})
-		local ValueLbl = New("TextLabel", {
-			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(8, 28),
-			Size = UDim2.new(1, -16, 0, 26),
-			Text = "0",
-			TextSize = 20,
-			Font = Enum.Font.GothamBold,
-			TextColor3 = Color3.fromRGB(255, 255, 255),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			ZIndex = ZOFF + 4,
-			Parent = Card,
-		})
-		TweenService:Create(Card, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, Order * 0.04), { Transparency = 0 }):Play()
-		Card.MouseEnter:Connect(function()
-			TweenService:Create(Card, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 1, 0) }):Play()
-			TweenService:Create(Stroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Color = Library.Scheme.AccentColor }):Play()
-		end)
-		Card.MouseLeave:Connect(function()
-			TweenService:Create(Card, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(1, 1), Size = UDim2.new(1, -2, 1, -2) }):Play()
-			TweenService:Create(Stroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Color = Library.Scheme.OutlineColor }):Play()
-		end)
-		return Card, ValueLbl
-	end
-
-	function Dashboard:AddStat(Idx, Conf)
-		Conf = Conf or {}
-		local Card, ValueLbl = BuildCard(Conf.Title or tostring(Idx), Conf.Icon)
 		local Suffix = Conf.Suffix or ""
 		local Dec = Conf.Decimals or 0
 		local Holder = Instance.new("NumberValue")
@@ -14802,52 +14783,52 @@ function Library:CreateDashboard(Info)
 		end
 		Paint()
 		Holder:GetPropertyChangedSignal("Value"):Connect(Paint)
-		local CardData = { Kind = "Stat", Holder = Holder, Card = Card, Details = Conf.Details }
+		local CardData = { Kind = "Stat", Holder = Holder, Height = STAT_H, RowOrder = RowOrder, Details = Conf.Details, Open = false, ExpHeight = 0 }
 		Dashboard.Cards[Idx] = CardData
-		Card.MouseButton1Click:Connect(function()
-			if PopCard == CardData then
-				ClosePop()
-			else
-				OpenPop(CardData)
-			end
+		Row.MouseButton1Click:Connect(function()
+			Toggle(CardData)
 		end)
 		Resize()
 	end
 
 	function Dashboard:SetStat(Idx, Value)
-		local Card = Dashboard.Cards[Idx]
-		if not Card or typeof(Value) ~= "number" then
+		local CardData = Dashboard.Cards[Idx]
+		if not CardData or typeof(Value) ~= "number" then
 			return
 		end
-		TweenService:Create(Card.Holder, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Value = Value }):Play()
+		TweenService:Create(CardData.Holder, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Value = Value }):Play()
 	end
 
 	function Dashboard:AddMeter(Idx, Conf)
 		Conf = Conf or {}
-		local Card, ValueLbl = BuildCard(Conf.Title or tostring(Idx), Conf.Icon)
-		ValueLbl.Position = UDim2.fromOffset(8, 26)
-		ValueLbl.Size = UDim2.new(1, -16, 0, 18)
-		ValueLbl.TextSize = 14
+		local Row, Icon, Label, ValueLbl, RowOrder = BuildRow(METER_H, 24)
+		Label.Text = Conf.Title or tostring(Idx)
+		local IconData = Library:GetCustomIcon(Conf.Icon or "gauge")
+		if IconData then
+			Icon.Image = IconData.Url
+			Icon.ImageRectOffset = IconData.ImageRectOffset
+			Icon.ImageRectSize = IconData.ImageRectSize
+		end
 		local Track = New("Frame", {
 			BackgroundColor3 = "MainColor",
 			BackgroundTransparency = 0.2,
-			Position = UDim2.fromOffset(8, 48),
-			Size = UDim2.new(1, -16, 0, 6),
-			ZIndex = ZOFF + 4,
-			Parent = Card,
+			Position = UDim2.fromOffset(28, 26),
+			Size = UDim2.new(1, -36, 0, 4),
+			ZIndex = ZOFF + 2,
+			Parent = Row,
 		})
 		table.insert(Library.Corners, New("UICorner", {
-			CornerRadius = UDim.new(0, 3),
+			CornerRadius = UDim.new(0, 2),
 			Parent = Track,
 		}))
 		local Fill = New("Frame", {
 			BackgroundColor3 = Color3.new(1, 1, 1),
 			Size = UDim2.new(0, 0, 1, 0),
-			ZIndex = ZOFF + 5,
+			ZIndex = ZOFF + 3,
 			Parent = Track,
 		})
 		table.insert(Library.Corners, New("UICorner", {
-			CornerRadius = UDim.new(0, 3),
+			CornerRadius = UDim.new(0, 2),
 			Parent = Fill,
 		}))
 		local FillGrad = New("UIGradient", {
@@ -14887,28 +14868,20 @@ function Library:CreateDashboard(Info)
 		end
 		Paint()
 		Holder:GetPropertyChangedSignal("Value"):Connect(Paint)
-		local CardData = { Kind = "Meter", Holder = Holder, Card = Card, Details = Conf.Details }
+		local CardData = { Kind = "Meter", Holder = Holder, Height = METER_H, RowOrder = RowOrder, Details = Conf.Details, Open = false, ExpHeight = 0 }
 		Dashboard.Cards[Idx] = CardData
-		Card.MouseButton1Click:Connect(function()
-			if PopCard == CardData then
-				ClosePop()
-			else
-				OpenPop(CardData)
-			end
+		Row.MouseButton1Click:Connect(function()
+			Toggle(CardData)
 		end)
 		Resize()
 	end
 
 	function Dashboard:SetMeter(Idx, Value)
-		local Card = Dashboard.Cards[Idx]
-		if not Card or typeof(Value) ~= "number" then
+		local CardData = Dashboard.Cards[Idx]
+		if not CardData or typeof(Value) ~= "number" then
 			return
 		end
-		TweenService:Create(Card.Holder, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Value = Value }):Play()
-	end
-
-	function Dashboard:SetMeterDetails(Idx, Rows)
-		return Dashboard:SetDetails(Idx, Rows)
+		TweenService:Create(CardData.Holder, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Value = Value }):Play()
 	end
 
 	function Dashboard:SetDetails(Idx, Rows)
@@ -14917,8 +14890,12 @@ function Library:CreateDashboard(Info)
 			return
 		end
 		CardData.Details = Rows
-		if PopCard == CardData then
-			FillPopRows(CardData)
+		if CardData.Exp then
+			FillExp(CardData)
+			if CardData.Open then
+				TweenService:Create(CardData.Exp, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(1, 0, 0, CardData.ExpHeight) }):Play()
+				Resize(true)
+			end
 		end
 	end
 
@@ -14930,7 +14907,6 @@ function Library:CreateDashboard(Info)
 	end
 
 	function Dashboard:Destroy()
-		ClosePop()
 		WinFrame:Destroy()
 		for i = #Library.OutlineSpinObjects, 1, -1 do
 			if not Library.OutlineSpinObjects[i].Grad.Parent then
@@ -14945,16 +14921,16 @@ function Library:CreateDashboard(Info)
 	end
 
 	MinBtn.MouseButton1Click:Connect(function()
-		ClosePop()
 		IsMinimized = not IsMinimized
 		if IsMinimized then
-			TweenService:Create(WinFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(WIN_W, 32) }):Play()
+			TweenService:Create(WinFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(WIN_W, TOP_H) }):Play()
 			MinBtn.Text = "+"
 		else
 			TweenService:Create(WinFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Size = FullSize }):Play()
 			MinBtn.Text = "-"
 		end
 	end)
+
 	CloseBtn.MouseButton1Click:Connect(function()
 		Dashboard:Destroy()
 	end)
@@ -14962,6 +14938,7 @@ function Library:CreateDashboard(Info)
 	Resize()
 	return Dashboard
 end
+
 function Library:CreateLoading(LoadingInfo)
 	if Library.ActiveLoading then
 		warn("Loading GUI already exists, you cannot create multiple Loading GUIs.")

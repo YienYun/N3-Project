@@ -2469,3 +2469,39 @@ sebelum EnsureTicker. Pin checker baru: urutan baris deklarasi
 SHADOW_LAYERS HARUS < baris EnsureTicker (order pin pakai grep -n +
 cut), biar konstansa nggak bisa kelewat turun lagi ke bawah.
 Versi 4.28.1. Gates 92/92.
+
+## v4.29.0 — DASHBOARD REDESIGN TOTAL (user REVERSE keputusan v4.27)
+User marah besar lewat screenshot + dump: popover melayang v4.28
+salah arah ("mirip group gitu cok! ke bawah!"), grid kartu 2 kolom
+v4.27 DITOLAK ("jangan card besar cok minimalis saja" + sketsa
+list satu kolom Player/Egg/Cash vs grid yang dia coret), dropshadow
+di dashboard DILARANG ("ngapain pake shadow sih? ini dashboard bro!"),
+window harus sedarah window utama ("kaku banget, lu hardcode").
+Keputusan lama v4.27.0 (grid 2 kolom simetris) resmi DIREVERSE oleh
+user — keputusan terbaru menang.
+Implementasi baru CreateDashboard:
+- TANPA AddDropshadow (bayangan cuma milik window utama; pin checker:
+  jumlah 'Library:AddDropshadow(' di LIB == 2 = definisi + MainFrame).
+- List minimalis SATU kolom: UIListLayout, baris ramping (stat 24px,
+  meter 34px) = icon lucide 14px accent + label themed kiri + nilai
+  putih kanan + separator 1px OutlineColor trans 0.6; hover = pill
+  highlight BackgroundColor fade (radius locked); entrance stagger
+  fade per baris; meter = bar 4px di bawah text tetep nempel gradient
+  engine kartu (AttachGradient, Rotation 0).
+- Klik baris = ACCORDION ke bawah inline (mirip group): frame Exp
+  ClipsDescendants di dalam list (LayoutOrder baris*2+1) tween tinggi
+  0->H 0.18s, isi baris text label accent + nilai putih 11px; window
+  auto-grow tween bareng (Resize(true)); toggle ulang = nutup; tanpa
+  Details = klik no-op. Popover melayang v4.28 (OpenPop/ClosePop/
+  FillPopRows) DIHAPUS TOTAL.
+- Chrome sedarah MainFrame: bg = Library:GetBetterColor(Scheme.
+  BackgroundColor, -1) persis window utama, topbar transparan +
+  divider 1px, stroke 1.2, outline spin tetep nempel, radius locked.
+- Anti-hardcode: Info.Width (default 260), tinggi window 100% derivasi
+  jumlah baris + expand state; SetTitle beneran ganti label.
+- API tetap: AddStat/AddMeter/SetStat/SetMeter/SetDetails/SetTitle/
+  Destroy (+ Conf.Details awal). PRE demo nggak butuh perubahan API.
+Checker: chk v4.29 (2 chk: count AddDropshadow == 2 pakai 'test N -eq 2'
+BEBAS kutip setelah dua percobaan quoting byte-level gagal; accordion
+frags) + chk v4.28 LIB di-retarget ke FillExp/Toggle. Gates 94/94.
+Versi 4.29.0 (marker + N3V4Version + footer).
