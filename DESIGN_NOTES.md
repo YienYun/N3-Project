@@ -2389,3 +2389,12 @@ PRE: demo R2 sekarang bikin 3 stat + 3 meter + loop live 1 detik
 (task.spawn while Frame.Parent). Checker: chk v4.27 (10 fragmen,
 absensi pakai signature penuh karena marker menyebut nama lama).
 Gates 89/89, symmetry 11/11, 0 SyntaxError.
+
+## v4.27.1 — FIX UIPadding dashboard: UDim bukan UDim2
+Dump user: 'Unable to assign property PaddingTop. UDim expected, got
+UDim2' di CreateDashboard — New() UIPadding gue isi UDim2.fromOffset
+(kepleset nyontek pola CellPadding UIGridLayout yang emang UDim2;
+UIPadding maunya UDim). Dashboard mati sebelum render apa pun.
+Fix: empat Padding* = UDim.new(0, 8). Pin checker baru:
+'PaddingTop = UDim.new(0, 8)' di chk v4.27 biar tipe salah ga balik.
+Versi 4.27.1 (marker + N3V4Version + footer). Gates 89/89.

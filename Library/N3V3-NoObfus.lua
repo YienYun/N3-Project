@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.27.0 loaded — DASHBOARD BARU BERSIH: CreateDashboardWindow lama DIHAPUS TOTAL (radius 6 hardcode, tumpukan kaku, nilai snap — semua lenyap); ganti Library:CreateDashboard = bahasa desain window utama (radius locked, theme strings, outline-spin + dropshadow nempel otomatis); grid 2 kolom SIMETRIS kartu stat+meter (icon lucide themed, nilai putih count-up tween, bar meter isi gradient metal live ikut preset kartu lu); entrance stagger, hover zoom per kartu, minimize/close tween, drag topbar; API: AddStat/SetStat/AddMeter/SetMeter/SetTitle/Destroy (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.27.1 loaded — FIX UIPadding dashboard: Padding* itu tipe UDim bukan UDim2 (bug v4.27.0 bikin CreateDashboard mati di baris pertama New UIPadding; CellPadding UIGridLayout emang UDim2, kepleset nyontek dari situ); dashboard sekarang kebuka bener (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5877,7 +5877,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.27.0"
+	Library.N3V4Version = "4.27.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -14540,10 +14540,10 @@ function Library:CreateDashboard(Info)
 		Parent = Container,
 	})
 	New("UIPadding", {
-		PaddingLeft = UDim2.fromOffset(8),
-		PaddingRight = UDim2.fromOffset(8),
-		PaddingTop = UDim2.fromOffset(8),
-		PaddingBottom = UDim2.fromOffset(8),
+		PaddingLeft = UDim.new(0, 8),
+		PaddingRight = UDim.new(0, 8),
+		PaddingTop = UDim.new(0, 8),
+		PaddingBottom = UDim.new(0, 8),
 		Parent = Container,
 	})
 	Grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
