@@ -2266,3 +2266,20 @@ byte-identik resep lama termasuk Tween spin; style branch attach
 state per Obj.GState, fallback statik kalo module VIS ilang).
 MOD: dropdown OS_PRE (19 nilai) + dump/print bawa Preset.
 Checker: chk v4.24 (10 fragmen). Gates 86/86.
+
+## v4.24.1 — DEFAULT UI DIBAKE DARI DUMP USER (verbatim)
+User ngetes v4.24.0, suka dua kombinasi, dump Print-nya disuruh
+jadiin default permanen:
+- outline: SetOutlineSpin({ Enabled = true, Preset = "RainbowOutline",
+  Speed = 8.5, ColorA 255,255,255, ColorB 193,193,193 })
+- background kartu: SetCardGradient({ Enabled = true, Preset = "Chrome",
+  Rotation = -90, OffsetSpeed = 0.1, RotationSpeed = 2, ColorTop
+  38,38,44 / ColorMiddle 110,110,122 / ColorBottom 38,38,44 })
+Dibake ke state default Library (OutlineSpin.Speed/Preset +
+CardGradient.Preset/OffsetSpeed/RotationSpeed) — satu sumber
+kebenaran, semua knob MOD otomatis nunjukin nilai baru karena
+Default-nya baca dari state (ga ada hardcode kedua).
+Checker: 6 pin nilai di-update (Preset Custom->Chrome di chk v4.19,
+OffsetSpeed 0.35->0.1 + RotationSpeed 0->2 di chk v4.22 [dua-duanya
+-qF bukan -q — pelajaran repeat: cek flag grep pin sebelum replace],
+Speed 5.5->8.5 di chk v4.16) + pin versi v4.24.1. Gates 86/86.

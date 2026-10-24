@@ -1526,10 +1526,10 @@ end
 
 Library.OutlineSpin = {
 	Enabled = true,
-	Speed = 5.5,
+	Speed = 8.5,
 	ColorA = Color3.fromRGB(255, 255, 255),
 	ColorB = Color3.fromRGB(193, 193, 193),
-	Preset = "Classic",
+	Preset = "RainbowOutline",
 }
 
 Library.StrokeStyles = {
@@ -1740,10 +1740,10 @@ end
 
 Library.CardGradient = {
 	Enabled = true,
-	Preset = "Custom",
+	Preset = "Chrome",
 	Rotation = -90,
-	OffsetSpeed = 0.35,
-	RotationSpeed = 0,
+	OffsetSpeed = 0.1,
+	RotationSpeed = 2,
 	ColorTop = Color3.fromRGB(38, 38, 44),
 	ColorMiddle = Color3.fromRGB(110, 110, 122),
 	ColorBottom = Color3.fromRGB(38, 38, 44),
@@ -2070,7 +2070,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.24.0 loaded — STROKE PRESETS DARI SOURCE EASYVISUAL: outline spin punya dropdown style (Classic = resep locked default + 18 style stroke verbatim dari folder Presets/: Chrome, Gold, Silver, Fire, Ice, Neon, Death, Galaxy, Electric, Sunset, Rainbow, Lava, Oceanic, Ghost, Wave, GreenOutline, RainbowOutline, ShineOutline); rotasi stroke + multiplier flow/spin = angka persis source, digerakkan ticker gradient yang sama bukan koneksi baru; Shine/Wave dibangun dari Warna pita lu; osilasi sin Electric/Sunset diratain (catatan DESIGN_NOTES) (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.24.1 loaded — DEFAULT UI DIBAKE DARI DUMP USER: outline spin default = Preset RainbowOutline Speed 8.5; gradient kartu default = Preset Chrome Rotation -90 OffsetSpeed 0.1 RotationSpeed 2 (dua dump Print user dibake verbatim jadi state default Library, bukan hardcode tersebar); semua knob setingan otomatis nunjukin default baru karena baca dari state (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5817,7 +5817,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.24.0"
+	Library.N3V4Version = "4.24.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
