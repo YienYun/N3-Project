@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.34.2",
+	Footer = "N3V4 • UI Preview Kit v4.35.0",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",

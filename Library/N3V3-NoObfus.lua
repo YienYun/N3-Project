@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.34.2 loaded — VENDOR CHILLI + VERDICT BANDING: forensik penuh tarball repo spicy = file ChilliLibraryEngine/Engine2 = VM Luraph v15 obfuscated, Core/Core2 = closure factory, patch = function checksum; magic table 1129531443 + string checksum 45 char NGGAK ADA di file mana pun (grep seluruh tarball kosong) = perakitnya hidup cuma di dalam bytecode VM; kesimpulan: standalone ModuleScript Chilli mustahil dirakit dari file leak, jadi Vendor/Chilli di repo isi part mentah buat referensi/copy user + README forensik, dan notify mode banding sekarang jujur soal verdict itu serta rute banding live = payload executor in-game + preview Studio berdampingan; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.35.0 loaded — PANEL v3 HASIL RONDE MANUAL + PANELSTYLE SETTINGS: semua koreksi manual user masuk library: (1) wallpaper asset window utama rbxassetid://111593326989465 tint 148 stretch + corner sendiri di layer belakang panel, ikut Library.Scheme.BackgroundImage kalau user set; (2) close button = plate gelap ber-frame simetris 22x22 + ring + corner + glyph silang sprite sheet2 rect(450,100) 12px centered, BUKAN text x; (3) semua text CTA di atas accent = putih FontColor (header, button aksi, chip); (4) ChipBar jadi ScrollingFrame horizontal AutomaticCanvasSize X scrollbar 2px = tahan N chip multi-game tanpa rompak geometri; plus Library.PanelStyle + SetPanelStyle/ApplyPanelStyle + registry Library.Panels + Panel:Restyle() = setingan lengkap bagian penting (RowHeight, TileSize, GlowTransparency, PlateTransparency, RowTransparency, ChipHeight, TabPillHeight, Wallpaper, GlowRing) clamp aman, restyle LIVE semua panel kebuka lewat record per-row; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5905,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.34.2"
+	Library.N3V4Version = "4.35.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -15001,6 +15001,51 @@ function Library:CreateDashboard(Info)
 	return Dashboard
 end
 
+Library.PanelStyle = {
+	RowHeight = 56,
+	TileSize = 32,
+	GlowTransparency = 0.55,
+	PlateTransparency = 0.35,
+	RowTransparency = 0.5,
+	ChipHeight = 20,
+	TabPillHeight = 24,
+	Wallpaper = true,
+	GlowRing = true,
+}
+Library.Panels = {}
+
+function Library:SetPanelStyle(Info)
+	Info = Info or {}
+	local S = Library.PanelStyle
+	local function Num(Key, Lo, Hi)
+		if typeof(Info[Key]) == "number" then
+			S[Key] = math.clamp(Info[Key], Lo, Hi)
+		end
+	end
+	Num("RowHeight", 48, 72)
+	Num("TileSize", 24, 48)
+	Num("GlowTransparency", 0, 1)
+	Num("PlateTransparency", 0, 1)
+	Num("RowTransparency", 0, 1)
+	Num("ChipHeight", 16, 28)
+	Num("TabPillHeight", 20, 32)
+	if Info.Wallpaper ~= nil then
+		S.Wallpaper = Info.Wallpaper == true
+	end
+	if Info.GlowRing ~= nil then
+		S.GlowRing = Info.GlowRing == true
+	end
+	Library:ApplyPanelStyle()
+end
+
+function Library:ApplyPanelStyle()
+	for _, P in ipairs(Library.Panels) do
+		if not P.Destroyed and type(P.Restyle) == "function" then
+			P:Restyle()
+		end
+	end
+end
+
 function Library:CreatePanel(Info)
 	Info = Info or {}
 	local TitleText = Info.Title or "Panel"
@@ -15110,6 +15155,31 @@ function Library:CreatePanel(Info)
 	})
 	Library:AddOutlineSpin(WinFrame)
 
+	local Wallpaper = New("ImageLabel", {
+		Name = "PanelWallpaper",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromScale(0, 0),
+		Size = UDim2.fromScale(1, 1),
+		Image = function()
+			local Bg = Library.Scheme.BackgroundImage
+			if typeof(Bg) == "number" then
+				return string.format("rbxassetid://%d", Bg)
+			end
+			if typeof(Bg) == "string" and Bg ~= "" then
+				return Bg
+			end
+			return "rbxassetid://111593326989465"
+		end,
+		ScaleType = Enum.ScaleType.Stretch,
+		ImageColor3 = Color3.fromRGB(148, 148, 148),
+		ZIndex = ZOFF + 1,
+		Parent = WinFrame,
+	})
+	table.insert(Library.Corners, New("UICorner", {
+		CornerRadius = UDim.new(0, Library.CornerRadius),
+		Parent = Wallpaper,
+	}))
+
 	local TopBar = New("Frame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, 0, 0, TOP_H),
@@ -15172,7 +15242,7 @@ function Library:CreatePanel(Info)
 		Text = "",
 		TextSize = 11,
 		Font = Enum.Font.GothamBold,
-		TextColor3 = Color3.fromRGB(20, 20, 20),
+		TextColor3 = "FontColor",
 		ZIndex = ZOFF + 3,
 		Parent = HdrBtn,
 	})
@@ -15212,25 +15282,60 @@ function Library:CreatePanel(Info)
 	end
 
 	local CloseBtn = New("TextButton", {
-		BackgroundTransparency = 1,
+		AutoButtonColor = false,
 		AnchorPoint = Vector2.new(1, 0.5),
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		BackgroundTransparency = Library.PanelStyle.PlateTransparency,
 		Position = UDim2.new(1, -8, 0.5, 0),
 		Size = UDim2.fromOffset(22, 22),
-		Text = "x",
-		TextSize = 14,
-		Font = Enum.Font.GothamBold,
-		TextColor3 = Color3.fromRGB(180, 180, 190),
+		Text = "",
 		ZIndex = ZOFF + 2,
 		Parent = TopBar,
 	})
+	local ClosePlate = CloseBtn
+	table.insert(Library.Corners, New("UICorner", {
+		CornerRadius = UDim.new(0, math.floor(Library.CornerRadius / 2)),
+		Parent = CloseBtn,
+	}))
+	New("UIStroke", {
+		Color = "OutlineColor",
+		Thickness = 1,
+		Parent = CloseBtn,
+	})
+	New("ImageLabel", {
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Image = "rbxassetid://135883070486325",
+		ImageRectOffset = Vector2.new(450, 100),
+		ImageRectSize = Vector2.new(24, 24),
+		ScaleType = Enum.ScaleType.Fit,
+		Size = UDim2.fromOffset(12, 12),
+		ImageColor3 = Color3.fromRGB(180, 180, 190),
+		ZIndex = ZOFF + 3,
+		Parent = CloseBtn,
+	})
+	CloseBtn.MouseEnter:Connect(function()
+		CloseBtn.BackgroundTransparency = math.max(0, Library.PanelStyle.PlateTransparency - 0.12)
+	end)
+	CloseBtn.MouseLeave:Connect(function()
+		CloseBtn.BackgroundTransparency = Library.PanelStyle.PlateTransparency
+	end)
 	CloseBtn.MouseButton1Click:Connect(function()
 		Panel:SetVisible(false)
 	end)
 
-	local ChipBar = New("Frame", {
+	local ChipBar = New("ScrollingFrame", {
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0, 0, 0, TOP_H),
 		Size = UDim2.new(1, 0, 0, CHIP_H),
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		ScrollBarThickness = 2,
+		ScrollBarImageColor3 = "OutlineColor",
+		ScrollBarImageTransparency = 0.6,
+		ClipsDescendants = true,
 		Visible = false,
 		ZIndex = ZOFF + 2,
 		Parent = WinFrame,
@@ -15291,7 +15396,7 @@ function Library:CreatePanel(Info)
 	})
 
 	local function Relayout()
-		local Off = ChipBar.Visible and CHIP_H or 0
+		local Off = ChipBar.Visible and (Library.PanelStyle.ChipHeight + 6) or 0
 		TabScroll.Position = UDim2.new(0, 0, 0, TOP_H + Off)
 		TabDivider.Position = UDim2.new(0, 0, 0, TOP_H + Off + TAB_H - 1)
 		Body.Position = UDim2.new(0, 0, 0, TOP_H + Off + TAB_H)
@@ -15308,7 +15413,7 @@ function Library:CreatePanel(Info)
 			AutoButtonColor = false,
 			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 			BackgroundTransparency = 0.35,
-			Size = UDim2.fromOffset(Measured.X + 18, 20),
+			Size = UDim2.fromOffset(Measured.X + 18, Library.PanelStyle.ChipHeight),
 			Text = "",
 			ZIndex = ZOFF + 3,
 			Parent = ChipBar,
@@ -15338,13 +15443,11 @@ function Library:CreatePanel(Info)
 			Chip.Text.Text = LabelText .. ": " .. (State and "ON" or "OFF")
 			FillInstance({
 				BackgroundColor3 = State and "AccentColor" or Color3.fromRGB(0, 0, 0),
-				BackgroundTransparency = State and 0 or 0.35,
+				BackgroundTransparency = State and 0 or Library.PanelStyle.PlateTransparency,
 			}, Chip.Button)
-			FillInstance({
-				TextColor3 = State and Color3.fromRGB(20, 20, 20) or "FontColor",
-			}, Chip.Text)
 		end
 		Paint()
+		Chip.Repaint = Paint
 		Chip.Button.MouseButton1Click:Connect(function()
 			State = not State
 			Paint()
@@ -15383,7 +15486,7 @@ function Library:CreatePanel(Info)
 			AutoButtonColor = false,
 			BackgroundColor3 = "MainColor",
 			BackgroundTransparency = 1,
-			Size = UDim2.fromOffset(Measured.X + (Icon and 36 or 18), 24),
+			Size = UDim2.fromOffset(Measured.X + (Icon and 36 or 18), Library.PanelStyle.TabPillHeight),
 			Text = "",
 			Parent = TabScroll,
 		})
@@ -15395,7 +15498,8 @@ function Library:CreatePanel(Info)
 		if Icon then
 			Tab.Icon = New("ImageLabel", {
 				BackgroundTransparency = 1,
-				Position = UDim2.fromOffset(9, 5),
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new(0, 9, 0.5, 0),
 				Size = UDim2.fromOffset(14, 14),
 				Image = Icon.Url,
 				ImageColor3 = Icon.Custom and "WhiteColor" or "AccentColor",
@@ -15503,7 +15607,7 @@ function Library:CreatePanel(Info)
 				Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(75, 75, 95)),
 				Parent = Tile,
 			})
-			New("UIStroke", {
+			local Ring = New("UIStroke", {
 				Color = Glow,
 				Thickness = 1,
 				Transparency = 0.35,
@@ -15511,11 +15615,12 @@ function Library:CreatePanel(Info)
 			})
 			local TextX = HasTile and 46 or 8
 			local IconW = ItemInfo.IconButton and 31 or 0
+			local Act, IB, RecAct, RecIB
 			local BtnW = 0
 			if ItemInfo.ButtonText then
 				BtnW = math.clamp(TextService:GetTextSize(ItemInfo.ButtonText, 12, Enum.Font.Code, Vector2.new(10000, 10000)).X + 20, 44, 90)
 			end
-			New("TextLabel", {
+			local TitleLab = New("TextLabel", {
 				BackgroundTransparency = 1,
 				Position = UDim2.fromOffset(TextX, 5),
 				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 15),
@@ -15528,7 +15633,7 @@ function Library:CreatePanel(Info)
 				ZIndex = ZOFF + 4,
 				Parent = Row,
 			})
-			New("TextLabel", {
+			local SubLab = New("TextLabel", {
 				BackgroundTransparency = 1,
 				Position = UDim2.fromOffset(TextX, 21),
 				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 13),
@@ -15542,7 +15647,7 @@ function Library:CreatePanel(Info)
 				ZIndex = ZOFF + 4,
 				Parent = Row,
 			})
-			New("TextLabel", {
+			local MetaLab = New("TextLabel", {
 				BackgroundTransparency = 1,
 				Position = UDim2.fromOffset(TextX, 36),
 				Size = UDim2.new(1, -TextX - BtnW - IconW - 14, 0, 13),
@@ -15557,7 +15662,7 @@ function Library:CreatePanel(Info)
 				Parent = Row,
 			})
 			if ItemInfo.ButtonText then
-				local Act = New("TextButton", {
+				Act = New("TextButton", {
 					AutoButtonColor = false,
 					AnchorPoint = Vector2.new(1, 0.5),
 					BackgroundColor3 = ItemInfo.ButtonColor or "AccentColor",
@@ -15566,7 +15671,7 @@ function Library:CreatePanel(Info)
 					Text = ItemInfo.ButtonText,
 					TextSize = 12,
 					Font = Enum.Font.Code,
-					TextColor3 = Color3.fromRGB(20, 20, 20),
+					TextColor3 = "FontColor",
 					ZIndex = ZOFF + 4,
 					Parent = Row,
 				})
@@ -15580,6 +15685,7 @@ function Library:CreatePanel(Info)
 					Parent = Act,
 				})
 				AddLight(Act)
+				RecAct = Act
 				Act.MouseEnter:Connect(function()
 					Act.BackgroundTransparency = 0.12
 				end)
@@ -15601,7 +15707,7 @@ function Library:CreatePanel(Info)
 
 			if ItemInfo.IconButton then
 				local IBI = Library:GetCustomIcon(ItemInfo.IconButton)
-				local IB = New("TextButton", {
+				IB = New("TextButton", {
 					AutoButtonColor = false,
 					AnchorPoint = Vector2.new(1, 0.5),
 					BackgroundColor3 = Color3.fromRGB(0, 0, 0),
@@ -15634,6 +15740,7 @@ function Library:CreatePanel(Info)
 					ZIndex = ZOFF + 5,
 					Parent = IB,
 				})
+				RecIB = IB
 				IB.MouseEnter:Connect(function()
 					IB.BackgroundTransparency = 0.23
 				end)
@@ -15652,13 +15759,22 @@ function Library:CreatePanel(Info)
 			Row.MouseLeave:Connect(function()
 				TweenService:Create(Row, Library.TweenInfo, { BackgroundTransparency = 0.5 }):Play()
 			end)
-			table.insert(Tab.Items, Row)
+			table.insert(Tab.Items, {
+				Row = Row,
+				Tile = Tile,
+				Ring = Ring,
+				Title = TitleLab,
+				Sub = SubLab,
+				Meta = MetaLab,
+				Act = RecAct,
+				IB = RecIB,
+			})
 			return Row
 		end
 
 		function Tab:Clear()
-			for _, Row in ipairs(Tab.Items) do
-				Row:Destroy()
+			for _, Rec in ipairs(Tab.Items) do
+				Rec.Row:Destroy()
 			end
 			table.clear(Tab.Items)
 		end
@@ -15668,6 +15784,38 @@ function Library:CreatePanel(Info)
 			Panel:SetTab(Tab)
 		end
 		return Tab
+	end
+
+	function Panel:Restyle()
+		local S = Library.PanelStyle
+		Wallpaper.Visible = S.Wallpaper
+		ChipBar.Size = UDim2.new(1, 0, 0, S.ChipHeight + 6)
+		ClosePlate.BackgroundTransparency = S.PlateTransparency
+		for _, Chip in ipairs(Panel.Chips) do
+			Chip.Button.Size = UDim2.fromOffset(Chip.Button.Size.X.Offset, S.ChipHeight)
+			Chip.Repaint()
+		end
+		for _, Tab in ipairs(Panel.Tabs) do
+			Tab.Button.Size = UDim2.fromOffset(Tab.Button.Size.X.Offset, S.TabPillHeight)
+			for _, Rec in ipairs(Tab.Items) do
+				Rec.Row.Size = UDim2.new(1, 0, 0, S.RowHeight)
+				Rec.Row.BackgroundTransparency = S.RowTransparency
+				Rec.Tile.Size = UDim2.fromOffset(S.TileSize, S.TileSize)
+				Rec.Tile.BackgroundTransparency = S.GlowTransparency
+				Rec.Ring.Visible = S.GlowRing
+				Rec.Sub.Position = UDim2.fromOffset(Rec.Sub.Position.X.Offset, math.floor(S.RowHeight * 0.375))
+				Rec.Meta.Position = UDim2.fromOffset(Rec.Meta.Position.X.Offset, math.floor(S.RowHeight * 0.64))
+				local BtnH = math.clamp(S.RowHeight - 30, 20, 30)
+				if Rec.Act then
+					Rec.Act.Size = UDim2.fromOffset(Rec.Act.Size.X.Offset, BtnH)
+				end
+				if Rec.IB then
+					Rec.IB.Size = UDim2.fromOffset(BtnH, BtnH)
+					Rec.IB.BackgroundTransparency = S.PlateTransparency
+				end
+			end
+		end
+		Relayout()
 	end
 
 	function Panel:SetVisible(State)
@@ -15683,9 +15831,15 @@ function Library:CreatePanel(Info)
 
 	function Panel:Destroy()
 		Panel.Destroyed = true
+		for Index = #Library.Panels, 1, -1 do
+			if Library.Panels[Index] == Panel then
+				table.remove(Library.Panels, Index)
+			end
+		end
 		Wrapper:Destroy()
 	end
 
+	table.insert(Library.Panels, Panel)
 	return Panel
 end
 

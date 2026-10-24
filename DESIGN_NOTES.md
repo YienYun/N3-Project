@@ -2892,3 +2892,36 @@ referensi visual + copy user) + README forensik (isi file, verdict,
 rute banding live = payload executor in-game berdampingan preview
 Studio, warning akun alt). PRE notify mode banding kasus function
 sekarang jujur soal verdict + rute itu. LIB marker 4.34.2. Gates 97/97.
+
+## v4.35.0 — PANEL v3: hasil ronde manual + PanelStyle settings lengkap
+Ronde manual StarterGui (langkah 1-3d) user approve lalu minta code.
+Semua koreksi manual masuk library permanen:
+1. Wallpaper window utama di panel: ImageLabel layer belakang
+   (ZIndex ZOFF+1) Image = function binding ke Library.Scheme.BackgroundImage
+   fallback rbxassetid://111593326989465, tint 148,148,148, Stretch,
+   UICorner radius terdaftar — panel = window utama versi mini.
+2. Close button: plate gelap 22x22 simetris (PlateTransparency) +
+   corner 5 + ring OutlineColor + glyph silang sprite sheet2
+   rbxassetid://135883070486325 rect(450,100) 24x24 Fit 12px centered;
+   hover plate menerang; text "x" HAPUS.
+3. Text CTA di atas accent = putih FontColor semua: HdrText, Act
+   button row, chip (Paint OFF cuma ganti bg, text tetap FontColor).
+4. ChipBar = ScrollingFrame horizontal (AutomaticCanvasSize X,
+   scrollbar 2px OutlineColor 0.6, ClipsDescendants) = tahan N chip
+   multi-game, geometri panel diam; koreksi kasus 5 chip user.
+Baru: Library.PanelStyle {RowHeight 56, TileSize 32, GlowTransparency
+0.55, PlateTransparency 0.35, RowTransparency 0.5, ChipHeight 20,
+TabPillHeight 24, Wallpaper true, GlowRing true} + SetPanelStyle
+(clamp 48-72/24-48/0-1/0-1/0-1/16-28/20-32 + bool) + ApplyPanelStyle
+loop registry Library.Panels + Panel:Restyle() via record per-row
+{Row,Tile,Ring,Title,Sub,Meta,Act,IB} disimpan di Tab.Items (Clear
+destroy rec.Row); posisi Sub/Meta rasio 0.375/0.64 RowHeight; BtnH =
+clamp(RowHeight-30,20,30); icon tab anchor tengah biar pill height
+bebas; Relayout baca ChipHeight live.
+MOD settings: groupbox pair T1 "Panel Style" (7 slider + 2 toggle +
+Print/Copy dump satu baris Library:SetPanelStyle) + "Sample Panel"
+(label live + button buka sample panel 2 item 1 chip + Print/Copy
+sama), guard versi lama print peringatan. Pola sedarah Dashboard
+settings v4.30.0.
+Pins: PanelStyle/Restyle/wallpaper asset/close rect LIB + count 2
+'Print setingan panel' MOD. Versi 4.35.0. Gates 97/97.

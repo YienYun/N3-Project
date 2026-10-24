@@ -1012,6 +1012,115 @@ function Settings:Attach(Library, Window, Options)
 			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (DashboardStyle / SetDashboardStyle ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.30.0 biar box Dashboard + Sample Dashboard muncul")
 		end
 
+		if type(Library.PanelStyle) == "table" and type(Library.SetPanelStyle) == "function" then
+			local function DumpPanelStyle()
+				local S = Library.PanelStyle
+				return string.format("Library:SetPanelStyle({ RowHeight = %d, TileSize = %d, GlowTransparency = %s, PlateTransparency = %s, RowTransparency = %s, ChipHeight = %d, TabPillHeight = %d, Wallpaper = %s, GlowRing = %s })",
+					S.RowHeight, S.TileSize, tostring(S.GlowTransparency), tostring(S.PlateTransparency), tostring(S.RowTransparency), S.ChipHeight, S.TabPillHeight, tostring(S.Wallpaper), tostring(S.GlowRing))
+			end
+			local function PrintPanelStyle()
+				print(DumpPanelStyle())
+				SafeNotify({ Title = "Panel", Description = "Cek Output.", Icon = "info", Time = 3 })
+			end
+			local function CopyPanelStyle()
+				local Dump = DumpPanelStyle()
+				print(Dump)
+				if setclipboard then
+					setclipboard(Dump)
+					SafeNotify({ Title = "Panel", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
+				else
+					SafeNotify({ Title = "Panel", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+				end
+			end
+
+			local Box = T1:AddLeftGroupbox("Panel Style", "layout-dashboard")
+			Box:AddSlider("PS_RH", {
+				Text = "Tinggi baris item", Default = Library.PanelStyle.RowHeight, Min = 48, Max = 72, Rounding = 0, Suffix = "px",
+				Callback = function(Value)
+					Library:SetPanelStyle({ RowHeight = Value })
+				end,
+			})
+			Box:AddSlider("PS_TS", {
+				Text = "Ukuran tile image", Default = Library.PanelStyle.TileSize, Min = 24, Max = 48, Rounding = 0, Suffix = "px",
+				Callback = function(Value)
+					Library:SetPanelStyle({ TileSize = Value })
+				end,
+			})
+			Box:AddSlider("PS_GT", {
+				Text = "Transparansi glow tile", Default = Library.PanelStyle.GlowTransparency, Min = 0, Max = 1, Rounding = 2,
+				Callback = function(Value)
+					Library:SetPanelStyle({ GlowTransparency = Value })
+				end,
+			})
+			Box:AddSlider("PS_PT", {
+				Text = "Transparansi plate button", Default = Library.PanelStyle.PlateTransparency, Min = 0, Max = 1, Rounding = 2,
+				Callback = function(Value)
+					Library:SetPanelStyle({ PlateTransparency = Value })
+				end,
+			})
+			Box:AddSlider("PS_RT", {
+				Text = "Transparansi kartu row", Default = Library.PanelStyle.RowTransparency, Min = 0, Max = 1, Rounding = 2,
+				Callback = function(Value)
+					Library:SetPanelStyle({ RowTransparency = Value })
+				end,
+			})
+			Box:AddSlider("PS_CH", {
+				Text = "Tinggi chip", Default = Library.PanelStyle.ChipHeight, Min = 16, Max = 28, Rounding = 0, Suffix = "px",
+				Callback = function(Value)
+					Library:SetPanelStyle({ ChipHeight = Value })
+				end,
+			})
+			Box:AddSlider("PS_TP", {
+				Text = "Tinggi pill tab", Default = Library.PanelStyle.TabPillHeight, Min = 20, Max = 32, Rounding = 0, Suffix = "px",
+				Callback = function(Value)
+					Library:SetPanelStyle({ TabPillHeight = Value })
+				end,
+			})
+			Box:AddToggle("PS_WP", {
+				Text = "Wallpaper panel", Default = Library.PanelStyle.Wallpaper,
+				Callback = function(Value)
+					Library:SetPanelStyle({ Wallpaper = Value })
+				end,
+			})
+			Box:AddToggle("PS_GR", {
+				Text = "Ring glow tile", Default = Library.PanelStyle.GlowRing,
+				Callback = function(Value)
+					Library:SetPanelStyle({ GlowRing = Value })
+				end,
+			})
+			Box:AddButton("Print setingan panel", PrintPanelStyle)
+			Box:AddButton("Copy setingan panel", CopyPanelStyle)
+
+			local SampleBox = T1:AddRightGroupbox("Sample Panel", "layout-dashboard")
+			SampleBox:AddLabel("Knob kiri ngaruh LIVE ke semua panel yang lagi kebuka (Shop Cepat di Overlays termasuk).", true)
+			SampleBox:AddLabel("Dump print/copy = satu baris Library:SetPanelStyle lengkap, bake verbatim ke script game lu.", true)
+			local SamplePanel
+			SampleBox:AddButton("Buka sample panel", function()
+				if SamplePanel and not SamplePanel.Destroyed then
+					SamplePanel:Toggle()
+					return
+				end
+				SamplePanel = Library:CreatePanel({ Title = "Sample Panel", Width = 260, Height = 300 })
+				local ItemTab = SamplePanel:AddTab("Item", "sparkles")
+				ItemTab:AddItem({
+					Icon = "zap", Text = "Item Uji", Subtext = "$100K/s", Meta = "x1.00 · 100 Kg",
+					GlowColor = Color3.fromRGB(120, 220, 140), ButtonText = "Beli", IconButton = "sparkles",
+					Callback = function() end,
+					IconButtonCallback = function() end,
+				})
+				ItemTab:AddItem({
+					Icon = "droplets", Text = "Item Uji Dua", Subtext = "$200K/s", Meta = "x1.20 · 220 Kg",
+					GlowColor = Color3.fromRGB(90, 160, 255), ButtonText = "Beli",
+					Callback = function() end,
+				})
+				SamplePanel:AddChip("Chip Uji", { Default = true, Callback = function() end })
+			end)
+			SampleBox:AddButton("Print setingan panel", PrintPanelStyle)
+			SampleBox:AddButton("Copy setingan panel", CopyPanelStyle)
+		else
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (PanelStyle / SetPanelStyle ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.35.0 biar box Panel Style + Sample Panel muncul")
+		end
+
 		if type(Library.CardPanels) == "table" and type(Library.SetCardPanels) == "function" then
 			local function DumpPanels()
 				local P = Library.CardPanels
