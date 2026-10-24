@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.37.0",
+	Footer = "N3V4 • UI Preview Kit v4.38.0",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -1079,76 +1079,6 @@ Try("Overlays: L4 Panel", function()
 		})
 	end)
 
-	Box:AddButton("Banding: jendela ChiliSource", function()
-		local Source = nil
-		for _, Root in ipairs({ game:GetService("ReplicatedStorage"), game:GetService("Workspace"), game:GetService("ServerStorage") }) do
-			for _, Desc in ipairs(Root:GetDescendants()) do
-				if Desc:IsA("ModuleScript") and (Desc.Name == "ChiliSource" or Desc.Name == "ChilliSource" or Desc.Name == "Chili") then
-					Source = Desc
-					break
-				end
-			end
-			if Source then
-				break
-			end
-		end
-		if not Source then
-			SafeNotify({ Title = "Banding", Description = "ModuleScript ChiliSource gak ketemu di ReplicatedStorage/Workspace/ServerStorage", Time = 4 })
-			return
-		end
-		local OkLib, Lib = pcall(require, Source)
-		if not OkLib then
-			SafeNotify({ Title = "Banding", Description = "require ChiliSource error: " .. tostring(Lib), Time = 4 })
-			return
-		end
-		if type(Lib) == "function" then
-			SafeNotify({ Title = "Banding", Description = "ChiliSource isinya function patch Chilli. Perakit engine+core+patch (magic table + string checksum 45 char) terkunci di dalam VM Luraph obfuscated — nggak ada sebagai source plain di repo mana pun, jadi standalone ModuleScript Chilli nggak bisa dirakit. Banding live = jalanin payload Chilli in-game via executor bareng preview Studio ini.", Time = 8 })
-			return
-		end
-		if type(Lib) ~= "table" then
-			SafeNotify({ Title = "Banding", Description = "ChiliSource return tipe aneh: " .. type(Lib), Time = 4 })
-			return
-		end
-		local function Call(Obj, Names, ...)
-			for _, FnName in ipairs(Names) do
-				if type(Obj[FnName]) == "function" then
-					return pcall(Obj[FnName], Obj, ...)
-				end
-			end
-			return false, nil
-		end
-		local OkWin, Win = pcall(function()
-			if type(Lib.CreateWindow) == "function" then
-				return Lib:CreateWindow({ Title = "Chilli (banding)" })
-			end
-			if type(Lib.CreateUI) == "function" then
-				return Lib:CreateUI({ Title = "Chilli (banding)" })
-			end
-			return nil
-		end)
-		if not OkWin or type(Win) ~= "table" then
-			SafeNotify({ Title = "Banding", Description = "CreateWindow ChiliSource gagal: " .. tostring(Win), Time = 4 })
-			return
-		end
-		local OkTab, Tab = Call(Win, { "AddTab", "CreateTab" }, "Banding")
-		if not OkTab or type(Tab) ~= "table" then
-			OkTab, Tab = Call(Win, { "AddTab", "CreateTab" }, { Name = "Banding" })
-		end
-		if OkTab and type(Tab) == "table" then
-			local OkSec, Sec = Call(Tab, { "AddSection", "CreateSection" }, { Name = "Pembanding" })
-			if not OkSec or type(Sec) ~= "table" then
-				OkSec, Sec = Call(Tab, { "AddSection", "CreateSection" }, "Pembanding")
-			end
-			if OkSec and type(Sec) == "table" then
-				Call(Sec, { "AddToggle", "CreateToggle" }, { Name = "Toggle contoh", Default = true, Callback = function() end })
-				Call(Sec, { "AddSlider", "CreateSlider" }, { Name = "Slider contoh", Default = 50, Min = 0, Max = 100, Callback = function() end })
-				Call(Sec, { "AddButton", "CreateButton" }, { Name = "Button contoh", Callback = function() end })
-			end
-		end
-		Call(Win, { "Open", "Toggle" })
-		SafeNotify({ Title = "Banding", Description = "Jendela Chilli dibuka — bandingin sebelah panel N3", Time = 3 })
-	end)
-
 	local ApiBox = OverlaysTab:AddRightGroupbox("Panel API", "table")
 	ApiBox:AddLabel("Library:CreatePanel({ Title, Width, Height, Position })", true)
 	ApiBox:AddLabel("Panel:AddTab(Name, Icon) -> Tab", true)
@@ -1157,6 +1087,7 @@ Try("Overlays: L4 Panel", function()
 	ApiBox:AddLabel("AddChip(Label, {Default, Callback}) + HeaderButton di CreatePanel", true)
 	ApiBox:AddLabel("AddItem: Subtext/Meta berwarna, ButtonColor, IconButton", true)
 	ApiBox:AddLabel("GlowColor per item = cahaya rarity di tile image", true)
+	ApiBox:AddLabel("AddItem return handle: SetText/SetSubtext/SetMeta/SetGlow/SetTextColor/Destroy", true)
 end)
 
 Try("Overlays: R1 Overlay panel (SetRow)", function()

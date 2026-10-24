@@ -3005,3 +3005,21 @@ Implementasi:
   pakai PanelRarity (Rare/Common/Mythic) + subtext uang.
 Pins: PanelRarity + MetallicHeader + Wallpaper false LIB + dump MOD.
 Versi 4.37.0. Gates 97/97.
+
+## v4.38.0 — ALUR BARU (repo ini dapur, game live lab) + HANDLE UPDATE LIVE
+Putusan user: Studio manual tutup buku; testing/tune rasa pindah ke
+game live lewat executor patch script; alur = gue edit repo ini ->
+dia copy ke repo utama/patch script -> dump/angka balik -> gue bake.
+Repo ini tetep sumber kebenaran structural (gates check.sh + luau
+analyze jalan di sini sebelum dia copy).
+Bersih Studio: adapter "Banding: jendela ChiliSource" di PRE DIHAPUS
+(berburu ModuleScript ReplicatedStorage/Workspace = konsep Studio,
+mati sejak verdict Luraph v4.34.2); pin-nya ikut dibuang.
+Fitur "text ngikutin game langsung": Tab:AddItem sekarang return
+HANDLE table {Row, SetText, SetSubtext, SetMeta, SetGlow, SetTextColor,
+Destroy} — patch script update row existing tiap detik tanpa rebuild:
+SetMeta(nil/"") sembunyiin baris meta, SetTextColor restart pulse
+rarity otomatis, Destroy cancel pulse + buang record dari Tab.Items
+rapi. Return lama (Row instance) diganti handle; demo PRE/MOD nggak
+pakai return value jadi aman.
+Pins: Handle presence LIB + absence Banding PRE. Versi 4.38.0. 97/97.

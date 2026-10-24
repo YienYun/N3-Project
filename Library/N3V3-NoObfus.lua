@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.37.0 loaded — HEADER METALIK BERGERAK + TEXT RARITY BERANIMASI + WALLPAPER MATI: referensi user = foto panel game lain: header bar metalik gradasi hitam-putih BERGERAK + nama item berwarna rarity + value uang hijau animasi; wallpaper anime DIHAPUS default (Wallpaper false, overlay ikut sembunyi bareng wallpaper); TopBar sekarang punya MetallicBar: plate perak + UIGradient Rotation 90 tiga stop gelap-terang-gelap + tween Offset loop -0.6..0.6 2.4s Linear InOut infinite autoreverse = kilau metal jalan terus, judul jadi hitam di atas perak kayak foto; Library.PanelRarity = Common abu-putih(205,205,210) / Rare biru-putih(120,160,255) / Mythic merah(255,70,70) / Money hijau(70,190,100); AddItem TextColor = warna nama rarity, kalau diset nama pulse animasi base->GetBetterColor(+18) loop Sine 1.2s autoreverse, subtext uang SELALU pulse hijau tua-muda; knob MetallicHeader + AnimateText; stroke row diterangin trans 0.25 biar kartu kebaca kayak foto; pulse di-cancel rapi di Clear/Destroy/Restyle; (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.38.0 loaded — HANDLE UPDATE LIVE + BERSIH STUDIO: alur baru user = gue edit repo ini, dia copy ke repo utama/patch script, tune rasa langsung di game lewat executor, dump balik ke gue buat dibake; Studio manual tutup buku; adapter Banding ChiliSource (konsep Studio berburu ModuleScript) DIHAPUS dari preview; fitur baru biar text panel ngikutin game langsung: Tab:AddItem sekarang return HANDLE {Row, SetText, SetSubtext, SetMeta, SetGlow, SetTextColor, Destroy} — patch script bisa update nama/duit/meta/warna rarity row yang udah ada tiap detik tanpa rebuild (SetTextColor restart pulse animasi otomatis, SetMeta nil/string kosong = baris meta sembunyi, Destroy cancel pulse + buang record rapi); (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5905,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.37.0"
+	Library.N3V4Version = "4.38.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -15897,7 +15897,42 @@ function Library:CreatePanel(Info)
 			end
 			StartPulses()
 			Rec.StartPulses = StartPulses
-			return Row
+
+			local Handle = {
+				Row = Row,
+				SetText = function(Value)
+					TitleLab.Text = tostring(Value)
+				end,
+				SetSubtext = function(Value)
+					SubLab.Text = tostring(Value)
+				end,
+				SetMeta = function(Value)
+					MetaLab.Text = tostring(Value)
+					MetaLab.Visible = Value ~= nil and Value ~= ""
+				end,
+				SetGlow = function(Color)
+					Tile.BackgroundColor3 = Color
+					Ring.Color = Color
+				end,
+				SetTextColor = function(Color)
+					NameColor = Color
+					Rec.NameColor = Color
+					TitleLab.TextColor3 = Color
+					StartPulses()
+				end,
+				Destroy = function()
+					for _, Tw in ipairs(Rec.Pulses) do
+						Tw:Cancel()
+					end
+					for Index = #Tab.Items, 1, -1 do
+						if Tab.Items[Index] == Rec then
+							table.remove(Tab.Items, Index)
+						end
+					end
+					Row:Destroy()
+				end,
+			}
+			return Handle
 		end
 
 		function Tab:Clear()
