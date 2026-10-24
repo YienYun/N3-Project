@@ -96,7 +96,7 @@ chk "v4.7.0: print LENGKAP include RESEP TAB (BuildTab)" \
 chk "v4.7.1: stale-paste detector LIBRARY (warn di Attach + report preview)" \
 	"grep -q 'LIBRARY LAMA terdeteksi' '$MOD' && grep -q 'LIBRARY LAMA: SetTabAppearance' '$PREV'"
 chk "v4.7.2: library print versi sendiri + tombol TEST efek keliatan" \
-	"grep -q 'N3V4 Library] v4.29.0 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
+	"grep -q 'N3V4 Library] v4.30.0 loaded' '$LIB' && grep -q 'TEST: bikin efek KELIATAN' '$MOD'"
 chk "v4.7.3: scope TabRec bener (local di luar do-block) + card icon + DEBUG dump" \
 	"! grep -q 'local TabRec = {' '$LIB' && grep -q 'TabIconCard' '$LIB' && grep -q 'DEBUG: dump tab visuals' '$MOD'"
 chk "v4.7.4: gate zoom nil-safe + auto-apply CreateWindow + preview kirim TabHoverZoom" \
@@ -176,7 +176,7 @@ chk "v4.12.5: komentar sampah dibersihkan (LIB <=149 baris asli, MOD/PRE nol)" \
 chk "v4.12.4: module bersih dari sampah section settings" \
 	"! grep -q 'AddSlider(\"SD_BT\"' '$MOD' && ! grep -q 'AddRightGroupbox(\"Divider Presets\"' '$MOD' && ! grep -q 'local function BuildSection' '$MOD' && ! grep -q '^\\tSection = {' '$MOD'"
 chk "v4.12.6: transparansi divider bisa diatur user (API LIB + knob MOD + sample live)" \
-	"grep -q 'Library.DividerAppearance = {' '$LIB' && grep -q 'function Library:SetDividerTransparency' '$LIB' && grep -q 'function Library:ApplyDividerAppearance' '$LIB' && grep -qF 'LineFrames[2] = SafeLine({' '$LIB' && grep -q 'Stroke.Transparency = Library.DividerAppearance.LineTransparency' '$LIB' && grep -q 'table.insert(Library.DividerInstances, Divider)' '$LIB' && grep -q 'AddSlider(\"SD_LT\"' '$MOD' && grep -q 'AddSlider(\"SD_TT\"' '$MOD' && grep -q 'AddDivider(\"Contoh garis\")' '$MOD' && grep -q 'AddDivider(\"Contoh text\")' '$MOD' && grep -q 'type(Library.SetDividerTransparency) == \"function\"' '$MOD' && grep -q 'Library.N3V4Version = \"4.29.0\"' '$LIB' && grep -q 'local function SafeLine(Properties)' '$LIB' && grep -q 'pcall(New, \"Frame\", Properties)' '$LIB' && grep -q 'pcall(Library.ApplyDividerAppearance, Library)' '$LIB'"
+	"grep -q 'Library.DividerAppearance = {' '$LIB' && grep -q 'function Library:SetDividerTransparency' '$LIB' && grep -q 'function Library:ApplyDividerAppearance' '$LIB' && grep -qF 'LineFrames[2] = SafeLine({' '$LIB' && grep -q 'Stroke.Transparency = Library.DividerAppearance.LineTransparency' '$LIB' && grep -q 'table.insert(Library.DividerInstances, Divider)' '$LIB' && grep -q 'AddSlider(\"SD_LT\"' '$MOD' && grep -q 'AddSlider(\"SD_TT\"' '$MOD' && grep -q 'AddDivider(\"Contoh garis\")' '$MOD' && grep -q 'AddDivider(\"Contoh text\")' '$MOD' && grep -q 'type(Library.SetDividerTransparency) == \"function\"' '$MOD' && grep -q 'Library.N3V4Version = \"4.30.0\"' '$LIB' && grep -q 'local function SafeLine(Properties)' '$LIB' && grep -q 'pcall(New, \"Frame\", Properties)' '$LIB' && grep -q 'pcall(Library.ApplyDividerAppearance, Library)' '$LIB'"
 chk "v4.13.0: centang hijau kanan di dropdown v1+v2, dot lama hapus" \
 	"grep -q 'local SelectedCheckColor = Color3.fromRGB(86, 197, 110)' '$LIB' && grep -qF 'Rec.Check.Visible = On' '$LIB' && grep -qF 'Check.Visible = not not Selected' '$LIB' && ! grep -q 'Rec.Dot.Visible' '$LIB' && ! grep -q 'Dot = Dot' '$LIB' && [ \"\$(grep -c 'ImageColor3 = SelectedCheckColor' '$LIB')\" -eq 2 ]"
 chk "v4.13.2: slider arrows hapus bersih, ga ada sisa up/down" \
@@ -185,7 +185,7 @@ chk "v4.14.0: gradient 3D semua button + knob + sample + print/copy" \
 	"grep -q 'Library.ButtonGradient = {' '$LIB' && grep -qF 'Gradient.Rotation = G.Rotation' '$LIB' && grep -qF 'if Gradient.Parent then' '$LIB' && grep -q 'AddSlider(\"BG_ROT\"' '$MOD' && grep -q 'AddSlider(\"BG_POS\"' '$MOD' && grep -q 'AddSlider(\"BG_TR\"' '$MOD' && grep -q 'AddSlider(\"BG_OFF\"' '$MOD' && grep -q 'AddColorPicker(\"BG_C1\"' '$MOD' && grep -q 'AddColorPicker(\"BG_C2\"' '$MOD' && grep -q 'AddColorPicker(\"BG_C3\"' '$MOD' && ! grep -q 'MiddleDark' '$LIB' '$MOD' && [ \"\$(grep -c 'Print setingan gradient\", PrintGrad' '$MOD')\" -eq 2 ] && [ \"\$(grep -c 'Copy setingan gradient\", CopyGrad' '$MOD')\" -eq 2 ] && grep -q 'local function PrintGrad()' '$MOD'"
 chk "v4.15.0: gradient bake verbatim + merata slider/input/dropdown, satu state sync" \
 	"grep -q 'local function MakeGradient(Parent)' '$LIB' && grep -q 'Offset = 0.01,' '$LIB' && grep -q 'Color3.fromRGB(85, 85, 85)' '$LIB' && grep -q 'Color3.fromRGB(224, 224, 224)' '$LIB' && grep -q 'MakeGradient(Bar)' '$LIB' && grep -q 'MakeGradient(Box)' '$LIB' && grep -q 'MakeGradient(MenuTable.Menu)' '$LIB' && grep -q 'PopupGradient = MakeGradient(PopupFrame)' '$LIB' && grep -q 'MakeGradient(SearchFrame)' '$LIB' && grep -q 'MakeGradient(Card)' '$LIB' && grep -q $'^local function MakeGradient(Parent)' '$LIB' && ! grep -q $'^\\tlocal function MakeGradient' '$LIB' && grep -q 'AddSlider(\"BG_SAMPLE_SL\"' '$MOD' && [ \"\$(grep -c 'MakeGradient(' '$LIB')\" -ge 8 ]"
-chk "footer v4.29.0" "grep -q 'Preview Kit v4.29.0' '$PRE'"
+chk "footer v4.30.0" "grep -q 'Preview Kit v4.30.0' '$PRE'"
 chk "v4.19.0: card gradient per-kartu + global (static)" \
 	"grep -q 'Preset = \\\"Chrome\",' '$LIB' && grep -q 'Rotation = -90,' '$LIB' && grep -q 'function Library:SetCardGradient(Info)' '$LIB' && grep -q 'function Library:ApplyCardGradient()' '$LIB' && grep -q 'not Card.GradientConf' '$LIB' && grep -q 'function CardObj:SetImageGradient(' '$VIS' && grep -q 'function CardObj:ApplyImageGradient()' '$VIS' && grep -q 'function CardObj:ClearImageGradient()' '$VIS' && grep -q 'GradientConf = table.clone(Env.Library.CardGradient)' '$VIS'"
 chk "v4.20.0: modular visuals — komponen pindah ModuleScript N3V4Visuals" \
@@ -200,10 +200,10 @@ chk "v4.24.0: stroke presets source — dropdown style + ticker bersama" \
 	"grep -qF 'Library.StrokeStyles = {' '$LIB' && grep -qF 'ShineOutline = {' '$LIB' && grep -qF 'Visuals.AttachGradient(' '$LIB' && grep -qF 'Preset = ' '$LIB' && grep -qF 'local function AttachGradient' '$VIS' && grep -qF 'AttachGradient = AttachGradient' '$VIS' && grep -qF 'if Conf.Sequence then' '$VIS' && grep -qF 'Wave = NumberSequence.new' '$VIS' && grep -q 'AddDropdown(\\\"OS_PRE\\\"' '$MOD' && grep -qF 'Style stroke (source EasyVisual)' '$MOD'"
 chk "v4.25.0: fidelitas 100% source — osilasi sin + transparency-offset + pulse stroke" \
 	"grep -qF 'local function EvalNumberSequence' '$VIS' && grep -qF 'local function TrueNumberSequence' '$VIS' && grep -qF 'TransparencySpeed' '$VIS' && grep -qF 'OscAmp' '$VIS' && grep -qF 'PulseAmp' '$VIS' && grep -qF 'Osc = -30' '$LIB' && grep -qF 'Osc = -20' '$LIB' && grep -qF 'TransFlow = -0.9' '$LIB' && grep -qF 'TransFlow = 0.9' '$LIB' && grep -qF 'Pulse = true' '$LIB'"
-chk "v4.26.0: dropshadow animasi dari source — trilogi EasyVisual tutup" \
-	"grep -qF 'local function AttachDropshadow' '$VIS' && grep -qF 'AttachDropshadow = AttachDropshadow' '$VIS' && grep -qF 'ShadowActive' '$VIS' && ! grep -qF '(St.Color - Conf.Color)' '$VIS' && grep -qF 'Library.Dropshadow = {' '$LIB' && grep -qF 'function Library:AddDropshadow(Target)' '$LIB' && grep -qF 'function Library:SetDropshadow(Info)' '$LIB' && grep -qF 'Library:AddDropshadow(MainFrame)' '$LIB' && grep -q 'AddToggle(\\\"DS_ON\\\"' '$MOD' && grep -qF 'Sample Dropshadow' '$MOD' && [ \"\$(grep -c 'Print setingan dropshadow' '$MOD')\" -eq 2 ] && [ \"\$(grep -c 'Copy setingan dropshadow' '$MOD')\" -eq 2 ]"
+chk "v4.30.0: sistem bayangan DIHAPUS total dari library" \
+	"! grep -qF 'function Library:AddDropshadow' '$LIB' && ! grep -qF 'AttachDropshadow' '$VIS' && ! grep -qF 'Library.Dropshadow = {' '$LIB' && ! grep -qF 'ShadowActive' '$VIS' && ! grep -qF 'DS_ON' '$MOD' && ! grep -qF 'Sample Dropshadow' '$MOD'"
 chk "v4.27.0: dashboard baru — lama hapus total, grid simetris stat+meter" \
-	"grep -qF 'function Library:CreateDashboard(Info)' '$LIB' && ! grep -qF 'function Library:CreateDashboardWindow' '$LIB' && ! grep -qF 'CreateDashboardWindow(' '$PRE' && grep -qF 'function Dashboard:AddStat(' '$LIB' && grep -qF 'function Dashboard:AddMeter(' '$LIB' && grep -qF 'function Dashboard:SetMeter(' '$LIB' && grep -qF 'SortOrder = Enum.SortOrder.LayoutOrder' '$LIB' && grep -qF 'PaddingTop = UDim.new(0, 8)' '$LIB' && grep -qF 'local ZOFF = 100' '$LIB' && grep -qF 'local STAT_H = 24' '$LIB' && grep -qF 'Library:CreateDashboard({' '$PRE' && grep -qF 'Dash:AddStat(' '$PRE' && grep -qF 'Dash:AddMeter(' '$PRE'"
+	"grep -qF 'function Library:CreateDashboard(Info)' '$LIB' && ! grep -qF 'function Library:CreateDashboardWindow' '$LIB' && ! grep -qF 'CreateDashboardWindow(' '$PRE' && grep -qF 'function Dashboard:AddStat(' '$LIB' && grep -qF 'function Dashboard:AddMeter(' '$LIB' && grep -qF 'function Dashboard:SetMeter(' '$LIB' && grep -qF 'SortOrder = Enum.SortOrder.LayoutOrder' '$LIB' && grep -qF 'PaddingTop = UDim.new(0, 8)' '$LIB' && grep -qF 'local ZOFF = 100' '$LIB' && grep -qF 'local TOP_H = 32' '$LIB' && grep -qF 'Library:CreateDashboard({' '$PRE' && grep -qF 'Dash:AddStat(' '$PRE' && grep -qF 'Dash:AddMeter(' '$PRE'"
 chk "v4.18.0: spotlight card dua panel ber-frame + lines/bind/notext + knob panels" \
 	"grep -q 'function CardObj:Relayout()' '$VIS' && grep -q 'function CardObj:SetLines(' '$VIS' && grep -q 'function CardObj:BindLabel(' '$VIS' && grep -q 'table.insert(Env.Library.SpotlightCards, CardObj)' '$VIS' && grep -q 'Name = \\\"ImagePanel\\\"' '$VIS' && grep -q 'Name = \\\"TextPanel\\\"' '$VIS' && grep -q 'AddSlider(\\\"CP_GAP\\\"' '$MOD' && grep -q 'AddSlider(\\\"CP_WID\\\"' '$MOD' && grep -q 'AddToggle(\\\"CP_OUT\\\"' '$MOD' && grep -q 'AddSlider(\\\"CP_TR\\\"' '$MOD' && grep -q 'AddSlider(\\\"CP_TS\\\"' '$MOD' && grep -q 'AddSpotlightCard(\\\"CP_SAMPLE\\\"' '$MOD' && grep -q 'local function PrintPanels()' '$MOD' && [ \"\$(grep -c 'Print setingan gradient kartu' '$MOD')\" -eq 2 ] && [ \"\$(grep -c 'Copy setingan gradient kartu' '$MOD')\" -eq 2 ] && grep -q 'NoText = true' '$PRE' && grep -q ':SetLines(' '$PRE' && grep -q ':BindLabel(' '$MOD'"
 chk "v4.17.1: viewport 3D — jarak kamera konstan + orbit spherical + putar klik kanan" \
@@ -219,8 +219,8 @@ chk "Games/*.lua identik dengan baseline ec0f3a1" \
 
 echo
 echo "== chk v4.28: shadow modern 4 layer + popover details =="
-chk "shadow 4 layer lembut simetris (VIS)" \
-	"grep -qF 'local SHADOW_LAYERS = 4' '$VIS' && grep -qF 'math.pow(math.clamp(St.Trans, 0, 1), 1 / SHADOW_LAYERS)' '$VIS' && grep -qF 'local LayerTrans =' '$VIS' && [ \"\$(grep -n 'local SHADOW_LAYERS' '$VIS' | cut -d: -f1)\" -lt \"\$(grep -n 'local function EnsureTicker' '$VIS' | cut -d: -f1)\" ]"
+chk "engine bayangan 4 layer ikut terhapus (VIS)" \
+	"! grep -qF 'SHADOW_LAYERS' '$VIS' && ! grep -qF 'local LayerTrans =' '$VIS'"
 chk "kartu dashboard klikabel + popover details (LIB)" \
 	"grep -qF 'AutoButtonColor = false' '$LIB' && grep -qF 'function Dashboard:SetDetails' '$LIB' && grep -qF 'local function FillExp(CardData)' '$LIB' && grep -qF 'local function Toggle(CardData)' '$LIB'"
 chk "PRE demo details live" \
@@ -229,9 +229,14 @@ chk "PRE demo details live" \
 echo
 echo "== chk v4.29: dashboard list minimalis + accordion ke bawah, tanpa dropshadow =="
 chk "dashboard tanpa dropshadow + popover melayang hapus" \
-	"test \$(grep -c 'Library:AddDropshadow(' '$LIB') -eq 2 && ! grep -qF 'local function OpenPop' '$LIB' && ! grep -qF 'local function ClosePop()' '$LIB'"
+	"! grep -qF 'Library:AddDropshadow(' '$LIB' && ! grep -qF 'local function OpenPop' '$LIB' && ! grep -qF 'local function ClosePop()' '$LIB'"
 chk "list satu kolom + accordion inline" \
-	"grep -qF 'local function BuildRow(' '$LIB' && grep -qF 'local METER_H = 34' '$LIB' && grep -qF 'CardData.Open = not CardData.Open' '$LIB' && grep -qF 'local function FillExp(CardData)' '$LIB' && grep -qF 'local function BuildExp(CardData)' '$LIB'"
+	"grep -qF 'local function BuildRow(' '$LIB' && grep -qF 'Sep = Sep, Track = Track' '$LIB' && grep -qF 'CardData.Open = not CardData.Open' '$LIB' && grep -qF 'local function FillExp(CardData)' '$LIB' && grep -qF 'local function BuildExp(CardData)' '$LIB'"
+
+echo
+echo "== chk v4.30: setingan dashboard lengkap =="
+chk "setingan dashboard LIB + MOD + print/copy" \
+	"grep -qF 'Library.DashboardStyle = {' '$LIB' && grep -qF 'function Library:SetDashboardStyle' '$LIB' && grep -qF 'function Library:ApplyDashboardStyle' '$LIB' && grep -qF 'function Dashboard:Restyle()' '$LIB' && grep -qF 'DB_SH' '$MOD' && grep -qF 'DB_LC' '$MOD' && grep -qF 'DB_C1' '$MOD' && test \$(grep -c 'Print setingan dashboard' '$MOD') -eq 2 && test \$(grep -c 'Copy setingan dashboard' '$MOD') -eq 2 && grep -qF 'Buka sample dashboard' '$MOD'"
 
 echo
 echo "HASIL: $PASS lolos, $FAIL gagal"

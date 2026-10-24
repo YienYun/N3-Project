@@ -2505,3 +2505,38 @@ Checker: chk v4.29 (2 chk: count AddDropshadow == 2 pakai 'test N -eq 2'
 BEBAS kutip setelah dua percobaan quoting byte-level gagal; accordion
 frags) + chk v4.28 LIB di-retarget ke FillExp/Toggle. Gates 94/94.
 Versi 4.29.0 (marker + N3V4Version + footer).
+
+## v4.30.0 — BAYANGAN DIHAPUS TOTAL + SETINGAN DASHBOARD LENGKAP
+Verdict user (marah): "hapus drop shadow cok! bikin ui gue jelek dan
+bug" + "dashboard ga ada text setingan color dll?". Dua mandate:
+(1) sistem dropshadow DIHAPUS SELURUHNYA dari library — bukan cuma
+dashboard; (2) dashboard wajib punya groupbox setingan kayak
+komponen lain (standing rule print+copy+sample).
+Eksekusi hapus bersih: VIS (ShadowActive, loop ticker shadow,
+AttachDropshadow + export, kondisi disconnect ticker balik ke
+'#Active == 0'); LIB (config Library.Dropshadow, DropshadowObjects,
+AddDropshadow/ApplyDropshadow/SetDropshadow, call di MainFrame,
+prune registry di Dashboard:Destroy); MOD (groupbox Dropshadow +
+Sample Dropshadow + Print/CopyShadow lenyap). Kelas bug bayangan
+(Color3 sub v4.26.1, shadow ketinggalan v4.27.2, SHADOW_LAYERS nil
+v4.28.1) tutup buku permanen — kode penyebabnya udah nggak ada.
+Fitur setingan dashboard: Library.DashboardStyle = { StatHeight 24,
+MeterHeight 34, DividerTransparency 0.6, HoverTransparency 0.55,
+TextSize 12, CustomLabelColor false, LabelColor } + registry
+Library.Dashboards + Library:ApplyDashboardStyle() + Library:
+SetDashboardStyle(Info) clamp semua field; Dashboard:Restyle()
+per-dashboard (tinggi baris, posisi icon/track, ukuran text,
+transparansi divider) lalu Resize(); warna label pakai binding
+function live (CustomLabelColor ? LabelColor : Scheme.AccentColor)
+jadi toggle picker nggak memutus theme-follow; hover transparency
+dibaca live di closure MouseEnter. CreateDashboard sekarang baca
+style saat build (konstanta STAT_H/METERH hapus). MOD: groupbox
+"Dashboard" (kiri) = 5 slider (DB_SH/DB_MH/DB_DT/DB_HV/DB_TS) +
+toggle DB_LC + picker addon DB_C1 + tombol "Buka sample dashboard"
++ Print/Copy setingan dashboard; groupbox kanan "Sample Dashboard"
+= label penjelasan + print/copy (sample live = dashboard beneran
+yang reaksi ke semua knob). Dump: Library:SetDashboardStyle({...}).
+Checker: chk v4.26 diganti absence-pin bayangan (signature-level,
+marker text aman), chk v4.28 VIS jadi absence SHADOW_LAYERS, chk
+v4.29 count-pin jadi absence, chk v4.30 baru (style LIB+MOD+count
+print/copy == 2). Gates 95/95. Versi 4.30.0.

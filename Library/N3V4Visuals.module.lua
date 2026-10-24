@@ -329,8 +329,6 @@ local function TargetSequence(Conf)
 end
 
 local Active = {}
-local ShadowActive = {}
-local SHADOW_LAYERS = 4
 local Ticker = nil
 
 local function EnsureTicker()
@@ -405,48 +403,7 @@ local function EnsureTicker()
 				end
 			end
 		end
-		for i = #ShadowActive, 1, -1 do
-			local St = ShadowActive[i]
-			local Conf = St.GetConf()
-			local Alive = not St.Dead and St.Target.Parent ~= nil and Conf.Enabled
-			if Alive then
-				for _, L in ipairs(St.Layers) do
-					if not L.Inst.Parent then
-						Alive = false
-						break
-					end
-				end
-			end
-			if not Alive then
-				St.Dead = true
-				for _, L in ipairs(St.Layers) do
-					L.Inst:Destroy()
-				end
-				table.remove(ShadowActive, i)
-			else
-				St.Color = St.Color:Lerp(Conf.Color, math.min(1, dt))
-				St.Trans = St.Trans + (Conf.Transparency - St.Trans) * math.min(1, dt)
-				St.Depth = St.Depth + (Conf.Offset - St.Depth) * math.min(1, dt)
-				local dR = St.Color.R - Conf.Color.R
-				local dG = St.Color.G - Conf.Color.G
-				local dB = St.Color.B - Conf.Color.B
-				local Moving = dR * dR + dG * dG + dB * dB > 0.000016 or math.abs(St.Trans - Conf.Transparency) > 0.002 or math.abs(St.Depth - Conf.Offset) > 0.05
-				local LayerTrans = math.pow(math.clamp(St.Trans, 0, 1), 1 / SHADOW_LAYERS)
-				for _, L in ipairs(St.Layers) do
-					if Moving or not St.Painted then
-						L.Inst.BackgroundColor3 = St.Color
-						L.Inst.BackgroundTransparency = LayerTrans
-					end
-					local E = L.Expand
-					local D = St.Depth * (E / SHADOW_LAYERS)
-					L.Inst.Position = St.Target.Position + UDim2.new(0, -E, 0, D - E)
-					L.Inst.Size = St.Target.Size + UDim2.new(0, 2 * E, 0, 2 * E)
-					L.Inst.ZIndex = St.Target.ZIndex - 1
-				end
-				St.Painted = not Moving
-			end
-		end
-		if #Active == 0 and #ShadowActive == 0 then
+		if #Active == 0 then
 			Ticker:Disconnect()
 			Ticker = nil
 		end
@@ -1053,51 +1010,11 @@ local function AttachGradient(Grad, GetConf)
 	return St
 end
 
-local function AttachDropshadow(Target, GetConf)
-	local Conf = GetConf()
-	local Radius = nil
-	local SrcCorner = Target:FindFirstChildWhichIsA("UICorner")
-	if SrcCorner then
-		Radius = SrcCorner.CornerRadius
-	end
-	local Layers = {}
-	for i = 1, SHADOW_LAYERS do
-		local Inst = Target:Clone()
-		Inst:ClearAllChildren()
-		Inst.Name = "Dropshadow" .. i
-		if Radius then
-			local Corner = Instance.new("UICorner")
-			Corner.CornerRadius = UDim.new(Radius.Scale, Radius.Offset + i)
-			Corner.Parent = Inst
-		end
-		Inst.BackgroundColor3 = Conf.Color
-		Inst.BackgroundTransparency = 1
-		Inst.ZIndex = Target.ZIndex - 1
-		Inst.Size = Target.Size + UDim2.new(0, 2 * i, 0, 2 * i)
-		Inst.Position = Target.Position + UDim2.new(0, -i, 0, Conf.Offset * (i / SHADOW_LAYERS) - i)
-		Inst.Parent = Target.Parent
-		table.insert(Layers, { Inst = Inst, Expand = i })
-	end
-	local St = {
-		Layers = Layers,
-		Target = Target,
-		GetConf = GetConf,
-		Color = Conf.Color,
-		Trans = Conf.Transparency,
-		Depth = Conf.Offset,
-		Painted = false,
-		Dead = false,
-	}
-	table.insert(ShadowActive, St)
-	EnsureTicker()
-	return St
-end
 
 return {
 	Presets = Presets,
 	SampleSequence = EvalColorSequence,
 	AttachGradient = AttachGradient,
-	AttachDropshadow = AttachDropshadow,
 	AddViewport = AddViewport,
 	AddSpotlightCard = AddSpotlightCard,
 }

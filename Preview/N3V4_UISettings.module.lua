@@ -925,77 +925,91 @@ function Settings:Attach(Library, Window, Options)
 			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (OutlineSpin / SetOutlineSpin ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.16.0 biar box Outline Muter + Sample Outline Muter muncul")
 		end
 
-		if type(Library.Dropshadow) == "table" and type(Library.SetDropshadow) == "function" then
+		if type(Library.DashboardStyle) == "table" and type(Library.SetDashboardStyle) == "function" then
 			local function RGB3(C)
 				return math.floor(C.R * 255 + 0.5), math.floor(C.G * 255 + 0.5), math.floor(C.B * 255 + 0.5)
 			end
-			local function DumpShadow()
-				local D = Library.Dropshadow
-				local R, G, B = RGB3(D.Color)
-				return string.format("Library:SetDropshadow({ Enabled = %s, Color = Color3.fromRGB(%d, %d, %d), Transparency = %s, Offset = %s })",
-					tostring(D.Enabled), R, G, B, D.Transparency, D.Offset)
+			local function DumpDash()
+				local S = Library.DashboardStyle
+				local R, G, B = RGB3(S.LabelColor)
+				return string.format("Library:SetDashboardStyle({ StatHeight = %d, MeterHeight = %d, DividerTransparency = %s, HoverTransparency = %s, TextSize = %d, CustomLabelColor = %s, LabelColor = Color3.fromRGB(%d, %d, %d) })",
+					S.StatHeight, S.MeterHeight, S.DividerTransparency, S.HoverTransparency, S.TextSize, tostring(S.CustomLabelColor), R, G, B)
 			end
-			local function PrintShadow()
-				local D = Library.Dropshadow
-				local R, G, B = RGB3(D.Color)
-				print(string.format("[N3V4 DROPSHADOW] Enabled = %s | Color = %d,%d,%d | Transparency = %s | Offset = %s",
-					tostring(D.Enabled), R, G, B, D.Transparency, D.Offset))
-				SafeNotify({ Title = "Dropshadow", Description = "Cek Output.", Icon = "info", Time = 3 })
+			local function PrintDash()
+				local S = Library.DashboardStyle
+				local R, G, B = RGB3(S.LabelColor)
+				print(string.format("[N3V4 DASHBOARD] StatHeight = %d | MeterHeight = %d | DividerTransparency = %s | HoverTransparency = %s | TextSize = %d | CustomLabelColor = %s | LabelColor = %d,%d,%d",
+					S.StatHeight, S.MeterHeight, S.DividerTransparency, S.HoverTransparency, S.TextSize, tostring(S.CustomLabelColor), R, G, B))
+				SafeNotify({ Title = "Dashboard", Description = "Cek Output.", Icon = "info", Time = 3 })
 			end
-			local function CopyShadow()
-				local Text = DumpShadow()
+			local function CopyDash()
+				local Text = DumpDash()
 				if CopyClip(Text) then
-					SafeNotify({ Title = "Dropshadow", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
+					SafeNotify({ Title = "Dashboard", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
 				else
-					print("[N3V4 DROPSHADOW] paste ini balik:\n" .. Text)
-					SafeNotify({ Title = "Dropshadow", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
+					print("[N3V4 DASHBOARD] paste ini balik:\n" .. Text)
+					SafeNotify({ Title = "Dashboard", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
 				end
 			end
 
-			local Box = T1:AddLeftGroupbox("Dropshadow", "droplets")
-			local TogShadow = Box:AddToggle("DS_ON", {
-				Text = "Bayangan lembut di belakang window", Default = Library.Dropshadow.Enabled,
+			local Box = T1:AddLeftGroupbox("Dashboard", "layout-dashboard")
+			Box:AddSlider("DB_SH", {
+				Text = "Tinggi baris stat", Default = Library.DashboardStyle.StatHeight, Min = 16, Max = 48, Rounding = 0, Suffix = "px",
 				Callback = function(Value)
-					Library:SetDropshadow({ Enabled = Value })
+					Library:SetDashboardStyle({ StatHeight = Value })
 				end,
 			})
-			TogShadow:AddColorPicker("DS_C1", {
-				Title = "Warna bayangan", Default = Library.Dropshadow.Color,
+			Box:AddSlider("DB_MH", {
+				Text = "Tinggi baris meter", Default = Library.DashboardStyle.MeterHeight, Min = 24, Max = 60, Rounding = 0, Suffix = "px",
+				Callback = function(Value)
+					Library:SetDashboardStyle({ MeterHeight = Value })
+				end,
+			})
+			Box:AddSlider("DB_DT", {
+				Text = "Transparansi garis pemisah", Default = math.floor(Library.DashboardStyle.DividerTransparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetDashboardStyle({ DividerTransparency = Value / 100 })
+				end,
+			})
+			Box:AddSlider("DB_HV", {
+				Text = "Transparansi hover baris", Default = math.floor(Library.DashboardStyle.HoverTransparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+				Callback = function(Value)
+					Library:SetDashboardStyle({ HoverTransparency = Value / 100 })
+				end,
+			})
+			Box:AddSlider("DB_TS", {
+				Text = "Ukuran text baris", Default = Library.DashboardStyle.TextSize, Min = 9, Max = 20, Rounding = 0, Suffix = "px",
+				Callback = function(Value)
+					Library:SetDashboardStyle({ TextSize = Value })
+				end,
+			})
+			local TogLabel = Box:AddToggle("DB_LC", {
+				Text = "Warna label custom", Default = Library.DashboardStyle.CustomLabelColor,
+				Callback = function(Value)
+					Library:SetDashboardStyle({ CustomLabelColor = Value })
+				end,
+			})
+			TogLabel:AddColorPicker("DB_C1", {
+				Title = "Warna label baris", Default = Library.DashboardStyle.LabelColor,
 				Callback = function(Color)
-					Library:SetDropshadow({ Color = Color })
+					Library:SetDashboardStyle({ LabelColor = Color })
 				end,
 			})
-			Box:AddSlider("DS_TR", {
-				Text = "Transparansi bayangan", Default = math.floor(Library.Dropshadow.Transparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
-				Callback = function(Value)
-					Library:SetDropshadow({ Transparency = Value / 100 })
-				end,
-			})
-			Box:AddSlider("DS_OF", {
-				Text = "Jarak geser bayangan", Default = Library.Dropshadow.Offset, Min = 0, Max = 16, Rounding = 0, Suffix = "px",
-				Callback = function(Value)
-					Library:SetDropshadow({ Offset = Value })
-				end,
-			})
-			Box:AddButton("Print setingan dropshadow", PrintShadow)
-			Box:AddButton("Copy setingan dropshadow", CopyShadow)
+			Box:AddButton("Buka sample dashboard", function()
+				local Dash = Library:CreateDashboard({ Title = "Sample Dashboard", Position = UDim2.fromOffset(320, 170), Width = 240 })
+				Dash:AddStat("Player", { Title = "Player", Icon = "list", Default = 12, Details = { { Label = "Admin", Value = 2 }, { Label = "Member", Value = 10 } } })
+				Dash:AddMeter("Egg", { Title = "Eggs", Icon = "image", Min = 0, Max = 500, Default = 128, Suffix = "/500", Details = { { Label = "Mythic", Value = 12 }, { Label = "Rare", Value = 84 } } })
+			end)
+			Box:AddButton("Print setingan dashboard", PrintDash)
+			Box:AddButton("Copy setingan dashboard", CopyDash)
 
-			local Box = T1:AddRightGroupbox("Sample Dropshadow", "droplets")
-			local SampleShadow = Instance.new("Frame")
-			SampleShadow.BackgroundColor3 = (Library.Scheme and Library.Scheme.MainColor) or Color3.fromRGB(36, 36, 36)
-			SampleShadow.BorderSizePixel = 0
-			SampleShadow.Size = UDim2.new(1, -16, 0, 90)
-			SampleShadow.Position = UDim2.new(0, 8, 0, 8)
-			SampleShadow.Parent = Box.Container
-			local SampleShadowCorner = Instance.new("UICorner")
-			SampleShadowCorner.CornerRadius = UDim.new(0, 10)
-			SampleShadowCorner.Parent = SampleShadow
-			Library:AddDropshadow(SampleShadow)
-			Box:AddLabel("Frame di atas = dropshadow lumer beneran.", true)
-			Box:AddButton("Print setingan dropshadow", PrintShadow)
-			Box:AddButton("Copy setingan dropshadow", CopyShadow)
+			local Box = T1:AddRightGroupbox("Sample Dashboard", "layout-dashboard")
+			Box:AddLabel("Knob di kiri ngaruh LIVE ke semua dashboard yang lagi kebuka.", true)
+			Box:AddLabel("Buka sample lewat tombol di box kiri, lalu geser knob — baris, garis, hover, text, warna label semua gerak bareng.", true)
+			Box:AddButton("Print setingan dashboard", PrintDash)
+			Box:AddButton("Copy setingan dashboard", CopyDash)
 		else
-			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (Dropshadow / SetDropshadow ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.26.0 biar box Dropshadow + Sample Dropshadow muncul")
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (DashboardStyle / SetDashboardStyle ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.30.0 biar box Dashboard + Sample Dashboard muncul")
 		end
 
 		if type(Library.CardPanels) == "table" and type(Library.SetCardPanels) == "function" then

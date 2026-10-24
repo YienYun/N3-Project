@@ -1708,53 +1708,53 @@ function Library:SetOutlineSpin(Info)
 	Library:ApplyOutlineSpin()
 end
 
-Library.Dropshadow = {
-	Enabled = true,
-	Color = Color3.new(0, 0, 0),
-	Transparency = 0.55,
-	Offset = 4,
+Library.DashboardStyle = {
+	StatHeight = 24,
+	MeterHeight = 34,
+	DividerTransparency = 0.6,
+	HoverTransparency = 0.55,
+	TextSize = 12,
+	CustomLabelColor = false,
+	LabelColor = Color3.fromRGB(198, 120, 255),
 }
 
-Library.DropshadowObjects = {}
+Library.Dashboards = {}
 
-function Library:AddDropshadow(Target)
-	table.insert(Library.DropshadowObjects, { Target = Target, State = nil })
-	Library:ApplyDropshadow()
-end
-
-function Library:ApplyDropshadow()
-	local D = Library.Dropshadow
-	for _, Obj in ipairs(Library.DropshadowObjects) do
-		if Obj.Target.Parent then
-			if D.Enabled and Visuals and type(Visuals.AttachDropshadow) == "function" then
-				if not Obj.State or Obj.State.Dead then
-					Obj.State = Visuals.AttachDropshadow(Obj.Target, function()
-						return Library.Dropshadow
-					end)
-				end
-			end
+function Library:ApplyDashboardStyle()
+	for _, Dash in ipairs(Library.Dashboards) do
+		if Dash.Frame.Parent and type(Dash.Restyle) == "function" then
+			Dash:Restyle()
 		end
 	end
 end
 
-function Library:SetDropshadow(Info)
+function Library:SetDashboardStyle(Info)
 	if typeof(Info) ~= "table" then
 		return
 	end
-	local D = Library.Dropshadow
-	if typeof(Info.Enabled) == "boolean" then
-		D.Enabled = Info.Enabled
+	local S = Library.DashboardStyle
+	if typeof(Info.StatHeight) == "number" then
+		S.StatHeight = math.clamp(math.floor(Info.StatHeight), 16, 48)
 	end
-	if typeof(Info.Color) == "Color3" then
-		D.Color = Info.Color
+	if typeof(Info.MeterHeight) == "number" then
+		S.MeterHeight = math.clamp(math.floor(Info.MeterHeight), 24, 60)
 	end
-	if typeof(Info.Transparency) == "number" then
-		D.Transparency = math.clamp(Info.Transparency, 0, 1)
+	if typeof(Info.DividerTransparency) == "number" then
+		S.DividerTransparency = math.clamp(Info.DividerTransparency, 0, 1)
 	end
-	if typeof(Info.Offset) == "number" then
-		D.Offset = math.clamp(Info.Offset, 0, 16)
+	if typeof(Info.HoverTransparency) == "number" then
+		S.HoverTransparency = math.clamp(Info.HoverTransparency, 0, 1)
 	end
-	Library:ApplyDropshadow()
+	if typeof(Info.TextSize) == "number" then
+		S.TextSize = math.clamp(math.floor(Info.TextSize), 9, 20)
+	end
+	if typeof(Info.CustomLabelColor) == "boolean" then
+		S.CustomLabelColor = Info.CustomLabelColor
+	end
+	if typeof(Info.LabelColor) == "Color3" then
+		S.LabelColor = Info.LabelColor
+	end
+	Library:ApplyDashboardStyle()
 end
 
 Library.CardPanels = {
@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.29.0 loaded — DASHBOARD REDESIGN TOTAL SESUAİ PERMINTAAN: (1) dropshadow DIHAPUS dari dashboard (dashboard bukan window utama, bayangan cuma bikin kotor); (2) isi jadi LIST MINIMALIS satu kolom — baris ramping icon+label themed kiri + nilai putih kanan + garis pemisah tipis, BUKAN grid kartu besar; (3) klik baris = expand KE BAWAH inline kayak group/accordion (rincian text muncul dorong baris bawah, window auto-grow tween), popover melayang v4.28 DIHAPUS TOTAL; (4) chrome window sedarah window utama: bg GetBetterColor(BackgroundColor) sama kayak MainFrame, topbar transparan + divider 1px, radius locked, outline spin tetep, lebar bisa Info.Width default 260, tinggi auto dari jumlah baris (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.30.0 loaded — BAYANGAN DIHAPUS TOTAL + SETINGAN DASHBOARD: seluruh sistem bayangan belakang window dibuang bersih dari library (engine di VIS, config, API, groupbox setingan, sample) sesuai verdict user — UI balik clean tanpa bayangan, dan kelas bug bayangan tutup buku permanen; dashboard sekarang PUNYA groupbox setingan lengkap di tab Visuals: tinggi baris stat/meter, transparansi garis pemisah, transparansi hover, ukuran text, toggle warna label custom + color picker (addon), tombol buka sample dashboard yang reaksi LIVE ke semua knob lewat Library:ApplyDashboardStyle; dump Library:SetDashboardStyle({...}) print+copy siap bake (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5877,7 +5877,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.29.0"
+	Library.N3V4Version = "4.30.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11149,7 +11149,6 @@ function Library:CreateWindow(WindowInfo)
 		end
 
 		Library:AddOutlineSpin(MainFrame)
-		Library:AddDropshadow(MainFrame)
 
 		--// 3. FLUID LERP ENGINE: SATU ALIRAN PENUH TANPA JEDA & TANPA KEJUT \\--
 		local PulseGeneration = 0
@@ -14418,8 +14417,6 @@ function Library:CreateDashboard(Info)
 	local TitleText = Info.Title or "N3 Dashboard"
 	local WIN_W = Info.Width or 260
 	local TOP_H = 32
-	local STAT_H = 24
-	local METER_H = 34
 	local GAP = 2
 	local PAD = 8
 	local ZOFF = 100
@@ -14636,9 +14633,15 @@ function Library:CreateDashboard(Info)
 			Position = UDim2.fromOffset(28, 0),
 			Size = UDim2.new(1, -36, 0, TextH),
 			Text = "",
-			TextSize = 12,
+			TextSize = Library.DashboardStyle.TextSize,
 			Font = Enum.Font.Gotham,
-			TextColor3 = "AccentColor",
+			TextColor3 = function()
+				local St = Library.DashboardStyle
+				if St.CustomLabelColor then
+					return St.LabelColor
+				end
+				return Library.Scheme.AccentColor
+			end,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			ZIndex = ZOFF + 2,
@@ -14648,16 +14651,16 @@ function Library:CreateDashboard(Info)
 			BackgroundTransparency = 1,
 			Size = UDim2.new(1, -8, 0, TextH),
 			Text = "0",
-			TextSize = 12,
+			TextSize = Library.DashboardStyle.TextSize,
 			Font = Enum.Font.GothamBold,
 			TextColor3 = Color3.fromRGB(255, 255, 255),
 			TextXAlignment = Enum.TextXAlignment.Right,
 			ZIndex = ZOFF + 2,
 			Parent = Row,
 		})
-		New("Frame", {
+		local Sep = New("Frame", {
 			BackgroundColor3 = "OutlineColor",
-			BackgroundTransparency = 0.6,
+			BackgroundTransparency = Library.DashboardStyle.DividerTransparency,
 			Position = UDim2.new(0, 8, 1, -1),
 			Size = UDim2.new(1, -16, 0, 1),
 			ZIndex = ZOFF + 1,
@@ -14665,12 +14668,12 @@ function Library:CreateDashboard(Info)
 		})
 		TweenService:Create(Row, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, Order * 0.03), { Transparency = 0 }):Play()
 		Row.MouseEnter:Connect(function()
-			TweenService:Create(HoverBg, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.55 }):Play()
+			TweenService:Create(HoverBg, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = Library.DashboardStyle.HoverTransparency }):Play()
 		end)
 		Row.MouseLeave:Connect(function()
 			TweenService:Create(HoverBg, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
 		end)
-		return Row, Icon, Label, ValueLbl, RowOrder
+		return Row, Icon, Label, ValueLbl, Sep, RowOrder
 	end
 
 	local function FillExp(CardData)
@@ -14766,7 +14769,8 @@ function Library:CreateDashboard(Info)
 
 	function Dashboard:AddStat(Idx, Conf)
 		Conf = Conf or {}
-		local Row, Icon, Label, ValueLbl, RowOrder = BuildRow(STAT_H, STAT_H)
+		local Style = Library.DashboardStyle
+		local Row, Icon, Label, ValueLbl, Sep, RowOrder = BuildRow(Style.StatHeight, Style.StatHeight)
 		Label.Text = Conf.Title or tostring(Idx)
 		local IconData = Library:GetCustomIcon(Conf.Icon or "gauge")
 		if IconData then
@@ -14783,7 +14787,7 @@ function Library:CreateDashboard(Info)
 		end
 		Paint()
 		Holder:GetPropertyChangedSignal("Value"):Connect(Paint)
-		local CardData = { Kind = "Stat", Holder = Holder, Height = STAT_H, RowOrder = RowOrder, Details = Conf.Details, Open = false, ExpHeight = 0 }
+		local CardData = { Kind = "Stat", Holder = Holder, Height = Style.StatHeight, RowOrder = RowOrder, Details = Conf.Details, Open = false, ExpHeight = 0, Row = Row, Icon = Icon, Label = Label, ValueLbl = ValueLbl, Sep = Sep }
 		Dashboard.Cards[Idx] = CardData
 		Row.MouseButton1Click:Connect(function()
 			Toggle(CardData)
@@ -14801,7 +14805,8 @@ function Library:CreateDashboard(Info)
 
 	function Dashboard:AddMeter(Idx, Conf)
 		Conf = Conf or {}
-		local Row, Icon, Label, ValueLbl, RowOrder = BuildRow(METER_H, 24)
+		local Style = Library.DashboardStyle
+		local Row, Icon, Label, ValueLbl, Sep, RowOrder = BuildRow(Style.MeterHeight, math.min(24, Style.MeterHeight - 10))
 		Label.Text = Conf.Title or tostring(Idx)
 		local IconData = Library:GetCustomIcon(Conf.Icon or "gauge")
 		if IconData then
@@ -14812,7 +14817,7 @@ function Library:CreateDashboard(Info)
 		local Track = New("Frame", {
 			BackgroundColor3 = "MainColor",
 			BackgroundTransparency = 0.2,
-			Position = UDim2.fromOffset(28, 26),
+			Position = UDim2.fromOffset(28, Style.MeterHeight - 8),
 			Size = UDim2.new(1, -36, 0, 4),
 			ZIndex = ZOFF + 2,
 			Parent = Row,
@@ -14868,7 +14873,7 @@ function Library:CreateDashboard(Info)
 		end
 		Paint()
 		Holder:GetPropertyChangedSignal("Value"):Connect(Paint)
-		local CardData = { Kind = "Meter", Holder = Holder, Height = METER_H, RowOrder = RowOrder, Details = Conf.Details, Open = false, ExpHeight = 0 }
+		local CardData = { Kind = "Meter", Holder = Holder, Height = Style.MeterHeight, RowOrder = RowOrder, Details = Conf.Details, Open = false, ExpHeight = 0, Row = Row, Icon = Icon, Label = Label, ValueLbl = ValueLbl, Sep = Sep, Track = Track }
 		Dashboard.Cards[Idx] = CardData
 		Row.MouseButton1Click:Connect(function()
 			Toggle(CardData)
@@ -14899,6 +14904,28 @@ function Library:CreateDashboard(Info)
 		end
 	end
 
+	function Dashboard:Restyle()
+		local S = Library.DashboardStyle
+		for _, CardData in pairs(Dashboard.Cards) do
+			local IsMeter = CardData.Kind == "Meter"
+			CardData.Height = IsMeter and S.MeterHeight or S.StatHeight
+			local TextH = IsMeter and math.min(24, S.MeterHeight - 10) or S.StatHeight
+			CardData.Row.Size = UDim2.new(1, 0, 0, CardData.Height)
+			CardData.Icon.Position = UDim2.fromOffset(8, (TextH - 14) / 2)
+			CardData.Label.Size = UDim2.new(1, -36, 0, TextH)
+			CardData.Label.TextSize = S.TextSize
+			CardData.ValueLbl.Size = UDim2.new(1, -8, 0, TextH)
+			CardData.ValueLbl.TextSize = S.TextSize
+			CardData.Sep.BackgroundTransparency = S.DividerTransparency
+			if CardData.Track then
+				CardData.Track.Position = UDim2.fromOffset(28, S.MeterHeight - 8)
+			end
+		end
+		Resize()
+	end
+
+	table.insert(Library.Dashboards, Dashboard)
+
 	function Dashboard:SetTitle(Text)
 		if typeof(Text) == "string" then
 			TitleText = Text
@@ -14907,15 +14934,15 @@ function Library:CreateDashboard(Info)
 	end
 
 	function Dashboard:Destroy()
+		for i = #Library.Dashboards, 1, -1 do
+			if Library.Dashboards[i] == Dashboard then
+				table.remove(Library.Dashboards, i)
+			end
+		end
 		WinFrame:Destroy()
 		for i = #Library.OutlineSpinObjects, 1, -1 do
 			if not Library.OutlineSpinObjects[i].Grad.Parent then
 				table.remove(Library.OutlineSpinObjects, i)
-			end
-		end
-		for i = #Library.DropshadowObjects, 1, -1 do
-			if not Library.DropshadowObjects[i].Target.Parent then
-				table.remove(Library.DropshadowObjects, i)
 			end
 		end
 	end
