@@ -2786,3 +2786,28 @@ PRE: demo "Shop Cepat" 3 tab (Pets/Eggs/Gear) 13 item (Eggs 8 item
 buat bukti scroll), button buka/tutup di groupbox Overlays kiri +
 groupbox kanan pasangan simetri berisi cheat-sheet API panel.
 Pins: 3 signature LIB + 2 fragment PRE. Gates 97/97.
+
+## v4.33.1 — VISUAL PANEL: resep tile+button port dari bedah source Chilli
+User nanya kenapa tile image panel Chilli bagus + complain button
+panel kita aneh. Source Chilli (repo github tienkhanh1/spicy, file
+ChilliLibraryCore2) ditarik via api.github.com ke /tmp/chilli/core2.lua
+(luar repo, nggak masuk git) lalu dibedah:
+- Resep tile Chilli (newRow @~9051 + canvasCreateImage @~10437):
+  ImageLabel icon duduk di PLATE hitam transparan 0.45 (netral, bukan
+  warna theme), ScaleType Fit, UICorner, + RING stroke fixed
+  RGB(90,90,110) (DEFAULT_IMAGE_COLOR @8387, makeFixedStroke @8611),
+  corner default 0.3*unit. Itu sebabnya thumbnail keliatan kartu
+  ber-bingkai, bukan stiker mentah.
+- Resep button Chilli (canvasCreateButton @10334): plate hitam
+  transparan 0.35, text PUTIH (FontColor), stroke border, hover =
+  transparency base-0.12 (plate menerang), press base-0.18, disabled
+  +0.25 — BUKAN fill warna solid + text gelap.
+Port ke Tab:AddItem panel kita: Tile BackgroundColor3 hitam trans
+0.45 (dua mode image/icon) + UIStroke RGB(90,90,110) thickness 1;
+button aksi row: plate hitam trans 0.35, text FontColor, hover 0.23,
+press 0.17, leave 0.35 (stroke OutlineColor tetep bahasa kita).
+Catatan: preview hidup Chilli nggak mungkin di sandbox (butuh Roblox
+player); yang mungkin = bedah source + port resep, dan itu yang
+dilakuin. Source leak obfuscated = jangan dijalanin di akun utama
+(risiko backdoor), cukup dibaca.
+Pins: ring color + press transparency. Versi 4.33.1. Gates 97/97.

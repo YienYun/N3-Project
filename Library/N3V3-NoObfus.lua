@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.33.0 loaded — FITUR BARU PANEL: Library:CreatePanel({Title, Width, Height, Position}) = window drawer di kanan layar sedarah desain UI (resep window dashboard: corner locked, stroke outline spin, topbar icon+judul+close); navbar TAB horizontal icon+text di atas (aktif = fill MainColor, hover trans 0.6, overflow di-scroll); list item SCROLL per tab via Tab:AddItem({Image|Icon, Text, Subtext, ButtonText, Callback}) = baris kartu image-tile kiri + judul/subtext + button aksi kanan sedarah button menu; handle tab di tepi kiri panel = button munculin/sembunyiin, slide tween 0.25s kayak toggle window utama; close x di topbar juga sembunyiin; API: Panel:AddTab/SetTab/SetVisible/Toggle/Destroy, Tab:AddItem/Clear (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.33.1 loaded — FIX VISUAL PANEL dari bedah source Chilli: kenapa tile image Chilli bagus = imagenya duduk di plate hitam transparan 0.45 + ring stroke abu violet RGB(90,90,110) + corner + ScaleType Fit, jadi thumbnail keliatan kayak kartu ber-bingkai bukan stiker mentah; tile panel sekarang pakai resep sama (plate netral hitam, bukan MainColor berwarna yang bikin aneh); button aksi row diganti resep button Chilli: plate hitam transparan 0.35 + text tetep FontColor + stroke outline, hover = plate menerang 0.23, press 0.17 (bukan fill accent + text gelap yang norak); (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5905,7 +5905,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.33.0"
+	Library.N3V4Version = "4.33.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -15312,8 +15312,8 @@ function Library:CreatePanel(Info)
 			local HasTile = ItemInfo.Image ~= nil or TileIcon ~= nil
 			local Tile = New("ImageLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				BackgroundColor3 = "MainColor",
-				BackgroundTransparency = ItemInfo.Image and 1 or 0.55,
+				BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+				BackgroundTransparency = 0.45,
 				Position = UDim2.new(0, 7, 0.5, 0),
 				Size = UDim2.fromOffset(32, 32),
 				Image = ItemInfo.Image or (TileIcon and TileIcon.Url or ""),
@@ -15327,6 +15327,11 @@ function Library:CreatePanel(Info)
 			})
 			New("UICorner", {
 				CornerRadius = UDim.new(0, 8),
+				Parent = Tile,
+			})
+			New("UIStroke", {
+				Color = Color3.fromRGB(90, 90, 110),
+				Thickness = 1,
 				Parent = Tile,
 			})
 			local TextX = HasTile and 46 or 8
@@ -15366,7 +15371,8 @@ function Library:CreatePanel(Info)
 				local Act = New("TextButton", {
 					AutoButtonColor = false,
 					AnchorPoint = Vector2.new(1, 0.5),
-					BackgroundColor3 = "MainColor",
+					BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+					BackgroundTransparency = 0.35,
 					Position = UDim2.new(1, -7, 0.5, 0),
 					Size = UDim2.fromOffset(BtnW, 24),
 					Text = ItemInfo.ButtonText,
@@ -15386,12 +15392,16 @@ function Library:CreatePanel(Info)
 					Parent = Act,
 				})
 				Act.MouseEnter:Connect(function()
-					Act.BackgroundColor3 = Library.Scheme.AccentColor
-					Act.TextColor3 = Color3.fromRGB(20, 20, 20)
+					Act.BackgroundTransparency = 0.23
 				end)
 				Act.MouseLeave:Connect(function()
-					Act.BackgroundColor3 = Library.Scheme.MainColor
-					Act.TextColor3 = Library.Scheme.FontColor
+					Act.BackgroundTransparency = 0.35
+				end)
+				Act.MouseButton1Down:Connect(function()
+					Act.BackgroundTransparency = 0.17
+				end)
+				Act.MouseButton1Up:Connect(function()
+					Act.BackgroundTransparency = 0.23
 				end)
 				Act.MouseButton1Click:Connect(function()
 					if ItemInfo.Callback then
