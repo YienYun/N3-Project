@@ -11,21 +11,445 @@ local GuiService: GuiService = cloneref(game:GetService("GuiService"))
 local TextService: TextService = cloneref(game:GetService("TextService"))
 local Teams: Teams = cloneref(game:GetService("Teams"))
 local TweenService: TweenService = cloneref(game:GetService("TweenService"))
-local Visuals = nil
-local VisualsMissing = "[N3V4] ModuleScript N3V4Visuals ga ketemu — fitur viewport 3D + spotlight card MATI. Bikin ModuleScript bernama N3V4Visuals SEBELAH ModuleScript N3V4 di ReplicatedStorage, isinya dari file Library/N3V4Visuals.module.lua, lalu Play ulang."
-do
-	local Found = script.Parent and script.Parent:FindFirstChild("N3V4Visuals")
-	if Found then
-		local Ok, Mod = pcall(require, Found)
-		if Ok and type(Mod) == "table" and type(Mod.AddViewport) == "function" and type(Mod.AddSpotlightCard) == "function" then
-			Visuals = Mod
-		else
-			print(VisualsMissing)
+local function C3(r, g, b)
+	return Color3.new(r, g, b)
+end
+
+local Presets = {
+	Order = { "Custom", "Gold", "Silver", "Chrome", "Rainbow", "Neon", "Sunset", "Oceanic", "Lava", "Fire", "Ice", "Electric", "Galaxy", "Matrix", "Zebra", "Death", "Ghost", "Bubblegum", "Green" },
+	Sequence = {
+		Gold = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, C3(0.8353, 0.6824, 0.2196)),
+			ColorSequenceKeypoint.new(0.2205, C3(0.8353, 0.6824, 0.2196)),
+			ColorSequenceKeypoint.new(0.3681, C3(0.7804, 0.5961, 0.0471)),
+			ColorSequenceKeypoint.new(0.4983, C3(0.851, 0.698, 0.0118)),
+			ColorSequenceKeypoint.new(0.5035, C3(1, 0.9255, 0.5059)),
+			ColorSequenceKeypoint.new(0.6927, C3(0.8353, 0.6824, 0.2196)),
+			ColorSequenceKeypoint.new(0.7917, C3(0.8353, 0.6824, 0.2196)),
+			ColorSequenceKeypoint.new(1, C3(0.8353, 0.6824, 0.2196)),
+		}),
+		Silver = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, C3(0.8353, 0.8353, 0.8353)),
+			ColorSequenceKeypoint.new(0.2847, C3(0.7333, 0.7843, 0.8353)),
+			ColorSequenceKeypoint.new(0.4983, C3(0.3333, 0.3333, 0.4392)),
+			ColorSequenceKeypoint.new(0.5035, C3(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.7153, C3(0.7333, 0.7843, 0.8353)),
+			ColorSequenceKeypoint.new(1, C3(0.8353, 0.8353, 0.8353)),
+		}),
+		Chrome = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, C3(0, 0.0627, 0.3529)),
+			ColorSequenceKeypoint.new(0.0677, C3(0.6863, 0.7882, 0.8353)),
+			ColorSequenceKeypoint.new(0.1719, C3(0.8784, 0.9412, 1)),
+			ColorSequenceKeypoint.new(0.3177, C3(1, 0.7059, 1)),
+			ColorSequenceKeypoint.new(0.467, C3(0.2667, 0, 0.498)),
+			ColorSequenceKeypoint.new(0.4983, C3(0.0196, 0.0039, 0.0353)),
+			ColorSequenceKeypoint.new(0.5035, C3(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.7188, C3(0.7059, 1, 0.9529)),
+			ColorSequenceKeypoint.new(0.941, C3(0.152, 0.6227, 0.6861)),
+			ColorSequenceKeypoint.new(1, C3(0, 0.0627, 0.3529)),
+		}),
+		Rainbow = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, C3(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.151, C3(0.6157, 0, 1)),
+			ColorSequenceKeypoint.new(0.3073, C3(0.0667, 0, 1)),
+			ColorSequenceKeypoint.new(0.4965, C3(0, 1, 1)),
+			ColorSequenceKeypoint.new(0.6649, C3(0.0157, 1, 0)),
+			ColorSequenceKeypoint.new(0.8385, C3(1, 1, 0)),
+			ColorSequenceKeypoint.new(1, C3(1, 0, 0)),
+		}),
+		Neon = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, C3(1, 0, 1)),
+			ColorSequenceKeypoint.new(0.2, C3(0, 1, 1)),
+			ColorSequenceKeypoint.new(0.4, C3(1, 0, 1)),
+			ColorSequenceKeypoint.new(0.6, C3(1, 0, 0.5882)),
+			ColorSequenceKeypoint.new(0.8, C3(0, 1, 1)),
+			ColorSequenceKeypoint.new(1, C3(1, 0, 1)),
+		}),
+		Sunset = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, C3(1, 0.3686, 0.302)),
+			ColorSequenceKeypoint.new(0.25, C3(1, 0.6039, 0)),
+			ColorSequenceKeypoint.new(0.5, C3(1, 0.7529, 0.7961)),
+			ColorSequenceKeypoint.new(0.75, C3(1, 0.0784, 0.5765)),
+			ColorSequenceKeypoint.new(1, C3(1, 0.3686, 0.302)),
+		}),
+		Oceanic = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, C3(0, 0.451, 1)),
+			ColorSequenceKeypoint.new(0.125, C3(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.2552, C3(0, 0.451, 1)),
+			ColorSequenceKeypoint.new(0.3767, C3(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.5, C3(0, 0.451, 1)),
+			ColorSequenceKeypoint.new(0.6198, C3(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.7375, C3(0, 0.451, 1)),
+			ColorSequenceKeypoint.new(0.8681, C3(1, 0, 0)),
+			ColorSequenceKeypoint.new(1, C3(0, 0.451, 1)),
+		}),
+		Lava = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, C3(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.125, C3(1, 0.7843, 0)),
+			ColorSequenceKeypoint.new(0.2552, C3(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.3767, C3(1, 0.7843, 0)),
+			ColorSequenceKeypoint.new(0.5, C3(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.6198, C3(1, 0.7843, 0)),
+			ColorSequenceKeypoint.new(0.7378, C3(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.8681, C3(1, 0.7843, 0)),
+			ColorSequenceKeypoint.new(1, C3(1, 0, 0)),
+		}),
+		Fire = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(1, 0.917647, 0)),
+			ColorSequenceKeypoint.new(0.1510416716337204, Color3.new(1, 0.917647, 0)),
+			ColorSequenceKeypoint.new(0.3072916567325592, Color3.new(1, 0.6, 0)),
+			ColorSequenceKeypoint.new(0.4965277910232544, Color3.new(0.545098, 0.368627, 0.035294)),
+			ColorSequenceKeypoint.new(0.6649305820465088, Color3.new(1, 0.666666, 0)),
+			ColorSequenceKeypoint.new(0.8385416865348816, Color3.new(0.678431, 0.490196, 0.113725)),
+			ColorSequenceKeypoint.new(1, Color3.new(1, 0.917647, 0)),
+		}),
+		Ice = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(109, 210, 212)),
+			ColorSequenceKeypoint.new(0.171875, Color3.new(0.8784313797950745, 0.9411764740943909, 1)),
+			ColorSequenceKeypoint.new(0.3177083432674408, Color3.fromRGB(140, 208, 209)),
+			ColorSequenceKeypoint.new(0.4670138955116272, Color3.fromRGB(109, 210, 212)),
+			ColorSequenceKeypoint.new(0.4982638955116272, Color3.fromRGB(109, 210, 212)),
+			ColorSequenceKeypoint.new(0.5034722089767456, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.71875, Color3.new(0.7058823704719543, 1, 0.9529411792755127)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(109, 210, 212)),
+		}),
+		Electric = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 150, 255)),
+			ColorSequenceKeypoint.new(0.15, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.3, Color3.fromRGB(100, 200, 255)),
+			ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 200, 255)),
+			ColorSequenceKeypoint.new(0.75, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.9, Color3.fromRGB(50, 150, 255)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 150, 255)),
+		}),
+		Galaxy = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(75, 0, 130)),
+			ColorSequenceKeypoint.new(0.25, Color3.fromRGB(138, 43, 226)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(25, 25, 112)),
+			ColorSequenceKeypoint.new(0.75, Color3.fromRGB(72, 61, 139)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(75, 0, 130)),
+		}),
+		Matrix = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.015625, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.1458333283662796, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.2482638955116272, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.3559027910232544, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.4970000088214874, Color3.new(0.243137, 0.937254, 0.007843)),
+			ColorSequenceKeypoint.new(0.503000020980835, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.647569477558136, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.7829861044883728, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.890625, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.9774305820465088, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0)),
+		}),
+		Zebra = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.015625, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.1458333283662796, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.2482638955116272, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.3559027910232544, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.4970000088214874, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.503000020980835, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.647569477558136, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.7829861044883728, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.890625, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.9774305820465088, Color3.new(0, 0, 0)),
+			ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0)),
+		}),
+		Death = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(0.6, 0, 0)),
+			ColorSequenceKeypoint.new(0.125, Color3.new(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.2552083432674408, Color3.new(0.411764, 0, 0)),
+			ColorSequenceKeypoint.new(0.3767361044883728, Color3.new(0.3, 0, 0)),
+			ColorSequenceKeypoint.new(0.5, Color3.new(0.690196, 0, 0)),
+			ColorSequenceKeypoint.new(0.6197916865348816, Color3.new(0.3, 0, 0)),
+			ColorSequenceKeypoint.new(0.7378472089767456, Color3.new(1, 0, 0)),
+			ColorSequenceKeypoint.new(0.8680555820465088, Color3.new(0.3, 0, 0)),
+			ColorSequenceKeypoint.new(1, Color3.new(0.6, 0, 0)),
+		}),
+		Ghost = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.5, Color3.new(0.7098039388656616, 0.7215686440467834, 0.7372549176216125)),
+			ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+		}),
+		Bubblegum = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(0.9529411792755127, 0.3960784375667572, 0.6941176652908325)),
+			ColorSequenceKeypoint.new(0.5, Color3.new(1, 0.6549019813537598, 0.8901960849761963)),
+			ColorSequenceKeypoint.new(1, Color3.new(0.9529411792755127, 0.3960784375667572, 0.6941176652908325)),
+		}),
+		Green = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 0)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 0)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 0)),
+		}),
+	},
+	Transparency = {
+		Ghost = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.09894459694623947, 0),
+			NumberSequenceKeypoint.new(0.5, 1),
+			NumberSequenceKeypoint.new(0.8997361660003662, 0),
+			NumberSequenceKeypoint.new(1, 0),
+		}),
+		Bubblegum = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.09894459694623947, 0),
+			NumberSequenceKeypoint.new(0.5, 1),
+			NumberSequenceKeypoint.new(0.8997361660003662, 0),
+			NumberSequenceKeypoint.new(1, 0),
+		}),
+		Green = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.7, 1),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Wave = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.25, 1),
+			NumberSequenceKeypoint.new(0.5, 1),
+			NumberSequenceKeypoint.new(0.75, 1),
+			NumberSequenceKeypoint.new(1, 0),
+		}),
+	},
+	Solid = NumberSequence.new(0),
+}
+
+--// GENERIC 3D VIEWPORT COMPONENT (RICH ORBIT + MANUAL DRAG)
+local BLEND_TIME = 0.5
+
+local function EvalColorSequence(keypoints, time)
+	local sequence = {}
+	time += 1
+	for x = 0, 2 do
+		for i = 1, #keypoints do
+			table.insert(sequence, { Time = keypoints[i].Time + x, Value = keypoints[i].Value })
+		end
+	end
+	for i = 1, #sequence - 1 do
+		local thisKeypoint = sequence[i]
+		local nextKeypoint = sequence[i + 1]
+		if time >= thisKeypoint.Time and time < nextKeypoint.Time then
+			local alpha = (time - thisKeypoint.Time) / (nextKeypoint.Time - thisKeypoint.Time)
+			return Color3.new(
+				(nextKeypoint.Value.R - thisKeypoint.Value.R) * alpha + thisKeypoint.Value.R,
+				(nextKeypoint.Value.G - thisKeypoint.Value.G) * alpha + thisKeypoint.Value.G,
+				(nextKeypoint.Value.B - thisKeypoint.Value.B) * alpha + thisKeypoint.Value.B
+			)
+		end
+	end
+	return keypoints[#keypoints].Value
+end
+
+local function TrueSequence(Sequence, Offset)
+	if Offset == 0 then
+		return Sequence
+	end
+	local shifted = {}
+	for i, v in ipairs(Sequence.Keypoints) do
+		local t = v.Time + Offset
+		if t > 1 or t < 0 then
+			t = t % 1
+		end
+		shifted[i] = ColorSequenceKeypoint.new(t, v.Value)
+	end
+	table.sort(shifted, function(a, b)
+		return a.Time < b.Time
+	end)
+	if shifted[1].Time ~= 0 then
+		table.insert(shifted, 1, ColorSequenceKeypoint.new(0, EvalColorSequence(shifted, 0)))
+	end
+	if shifted[#shifted].Time ~= 1 then
+		table.insert(shifted, ColorSequenceKeypoint.new(1, EvalColorSequence(shifted, 1)))
+	end
+	return ColorSequence.new(shifted)
+end
+
+local function EvalNumberSequence(keypoints, time)
+	local sequence = {}
+	time += 1
+	for x = 0, 2 do
+		for i = 1, #keypoints do
+			table.insert(sequence, { Time = keypoints[i].Time + x, Value = keypoints[i].Value })
+		end
+	end
+	for i = 1, #sequence - 1 do
+		local thisKeypoint = sequence[i]
+		local nextKeypoint = sequence[i + 1]
+		if time >= thisKeypoint.Time and time < nextKeypoint.Time then
+			local alpha = (time - thisKeypoint.Time) / (nextKeypoint.Time - thisKeypoint.Time)
+			return thisKeypoint.Value + (nextKeypoint.Value - thisKeypoint.Value) * alpha
+		end
+	end
+	return keypoints[#keypoints].Value
+end
+
+local function TrueNumberSequence(Sequence, Offset)
+	if Offset == 0 then
+		return Sequence
+	end
+	local shifted = {}
+	for i, v in ipairs(Sequence.Keypoints) do
+		local t = v.Time + Offset
+		if t > 1 or t < 0 then
+			t = t % 1
+		end
+		shifted[i] = NumberSequenceKeypoint.new(t, v.Value)
+	end
+	table.sort(shifted, function(a, b)
+		return a.Time < b.Time
+	end)
+	if shifted[1].Time ~= 0 then
+		table.insert(shifted, 1, NumberSequenceKeypoint.new(0, EvalNumberSequence(shifted, 0)))
+	end
+	if shifted[#shifted].Time ~= 1 then
+		table.insert(shifted, NumberSequenceKeypoint.new(1, EvalNumberSequence(shifted, 1)))
+	end
+	return NumberSequence.new(shifted)
+end
+
+local function BlendSequences(From, To, Alpha)
+	local kpA = To.Keypoints
+	local kpB = From.Keypoints
+	local newkeypoints = {}
+	if #kpA ~= #kpB then
+		for i, v in ipairs(kpA) do
+			newkeypoints[i] = ColorSequenceKeypoint.new(v.Time, EvalColorSequence(kpB, v.Time))
 		end
 	else
-		print(VisualsMissing)
+		for i, v in ipairs(kpA) do
+			local sample = EvalColorSequence(kpB, v.Time)
+			newkeypoints[i] = ColorSequenceKeypoint.new(v.Time, sample:Lerp(v.Value, Alpha))
+		end
 	end
+	return ColorSequence.new(newkeypoints)
 end
+
+local function TargetSequence(Conf)
+	if Conf.Sequence then
+		return Conf.Sequence
+	end
+	if Conf.Preset == "Custom" then
+		return ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Conf.ColorTop),
+			ColorSequenceKeypoint.new(0.5, Conf.ColorMiddle),
+			ColorSequenceKeypoint.new(1, Conf.ColorBottom),
+		})
+	end
+	return Presets.Sequence[Conf.Preset] or Presets.Sequence.Gold
+end
+
+local GradActive = {}
+local Ticker = nil
+
+local function EnsureTicker()
+	if Ticker then
+		return
+	end
+	Ticker = RunService.Heartbeat:Connect(function(dt)
+		for i = #GradActive, 1, -1 do
+			local St = GradActive[i]
+			if St.Dead or not St.Grad.Parent then
+				table.remove(GradActive, i)
+			else
+				local Conf = St.GetConf()
+				if not Conf.Enabled then
+					St.Dead = true
+					table.remove(GradActive, i)
+				else
+					if St.BlendT < 1 then
+						St.BlendT = math.min(1, St.BlendT + dt / BLEND_TIME)
+						if St.BlendT >= 1 then
+							St.Current = St.Target
+						else
+							St.Current = BlendSequences(St.Current, St.Target, St.BlendT)
+						end
+					end
+					St.Speed = St.Speed + (Conf.OffsetSpeed - St.Speed) * dt
+					if Conf.OffsetSpeed == 0 and math.abs(St.Speed) < 0.002 then
+						St.Speed = 0
+					end
+					St.Offset += St.Speed * dt
+					if St.Offset > 1 or St.Offset < -1 then
+						St.Offset = St.Offset % 1
+					end
+					if Conf.RotationSpeed ~= 0 then
+						St.Spin = (St.Spin + Conf.RotationSpeed * dt) % 360
+					end
+					local TSpeed = Conf.TransparencySpeed or 0
+					local TransOn = TSpeed ~= 0 and Conf.Transparency ~= nil
+					if TransOn then
+						St.TransOffset += TSpeed * dt
+						if St.TransOffset > 1 or St.TransOffset < -1 then
+							St.TransOffset = St.TransOffset % 1
+						end
+					end
+					local OscAmp = Conf.OscAmp or 0
+					if OscAmp ~= 0 then
+						St.OscPhase += (Conf.OscRate or 0) * dt
+					end
+					local Pulsing = (Conf.PulseAmp or 0) ~= 0
+					if Pulsing then
+						St.PulsePhase += (Conf.PulseRate or 0) * dt
+					end
+					local Moving = St.Speed ~= 0 or Conf.RotationSpeed ~= 0 or St.BlendT < 1 or TransOn or OscAmp ~= 0 or Pulsing
+					if Moving or not St.Painted then
+						St.Grad.Color = TrueSequence(St.Current, St.Offset)
+						local Rot = Conf.Rotation + St.Spin
+						if OscAmp ~= 0 then
+							Rot = Rot + math.sin(St.OscPhase) * OscAmp
+						end
+						St.Grad.Rotation = Rot
+						if TransOn then
+							St.Grad.Transparency = TrueNumberSequence(Conf.Transparency, St.TransOffset)
+						end
+						if Pulsing then
+							local Par = St.Grad.Parent
+							if Par and Par:IsA("UIStroke") then
+								Par.Thickness = Conf.PulseBase * (1 + Conf.PulseAmp * (math.sin(St.PulsePhase) * 0.5 + 0.5))
+							end
+						end
+						St.Painted = not Moving
+					end
+				end
+			end
+		end
+		if #GradActive == 0 then
+			Ticker:Disconnect()
+			Ticker = nil
+		end
+	end)
+end
+
+local function AttachGradient(Grad, GetConf)
+	local Conf = GetConf()
+	local Target = TargetSequence(Conf)
+	local St = {
+		Grad = Grad,
+		GetConf = GetConf,
+		Current = Target,
+		Target = Target,
+		BlendT = 1,
+		Offset = 0,
+		Speed = 0,
+		Spin = 0,
+		TransOffset = 0,
+		OscPhase = 0,
+		PulsePhase = 0,
+		Painted = false,
+		Dead = false,
+	}
+	table.insert(GradActive, St)
+	EnsureTicker()
+	return St
+end
+
+local Visuals = {
+	Presets = Presets,
+	SampleSequence = EvalColorSequence,
+	AttachGradient = AttachGradient,
+}
 
 local getgenv = getgenv or function()
 	return shared
@@ -1237,132 +1661,7 @@ for _, SourceURL in LucideSources do
 	end
 end
 
-local OfflineLucideSheets = {
-	[1] = "rbxassetid://136111683851629",
-	[2] = "rbxassetid://135883070486325",
-}
-
-local OfflineLucideIcons = {
-	["activity"] = { 1, 25, 25 },
-	["bell"] = { 1, 100, 325 },
-	["bell-ring"] = { 1, 125, 300 },
-	["book-open"] = { 1, 25, 450 },
-	["bookmark"] = { 1, 175, 325 },
-	["box"] = { 1, 0, 500 },
-	["bug"] = { 1, 500, 50 },
-	["calendar"] = { 1, 300, 275 },
-	["chart-column"] = { 1, 525, 100 },
-	["check"] = { 1, 175, 450 },
-	["chevron-down"] = { 1, 625, 25 },
-	["chevron-left"] = { 1, 550, 100 },
-	["chevron-right"] = { 1, 525, 125 },
-	["chevron-up"] = { 1, 500, 150 },
-	["chevrons-up-down"] = { 1, 300, 350 },
-	["circle-check"] = { 1, 625, 50 },
-	["circle-user"] = { 1, 475, 225 },
-	["circle-x"] = { 1, 450, 250 },
-	["clock"] = { 1, 200, 525 },
-	["cloud"] = { 1, 450, 300 },
-	["coins"] = { 1, 250, 500 },
-	["compass"] = { 1, 75, 675 },
-	["copy"] = { 1, 450, 325 },
-	["cpu"] = { 1, 175, 600 },
-	["crosshair"] = { 1, 725, 75 },
-	["crown"] = { 1, 700, 100 },
-	["database"] = { 1, 300, 500 },
-	["dollar-sign"] = { 1, 475, 350 },
-	["download"] = { 1, 225, 600 },
-	["droplets"] = { 1, 50, 775 },
-	["dumbbell"] = { 1, 850, 0 },
-	["egg"] = { 1, 650, 200 },
-	["eye"] = { 1, 175, 675 },
-	["eye-off"] = { 1, 200, 650 },
-	["file-text"] = { 1, 500, 400 },
-	["flag"] = { 1, 900, 25 },
-	["flame"] = { 1, 850, 75 },
-	["flower-2"] = { 1, 700, 225 },
-	["folder"] = { 1, 800, 150 },
-	["folder-tree"] = { 1, 875, 75 },
-	["frame"] = { 1, 650, 300 },
-	["gauge"] = { 1, 225, 725 },
-	["gem"] = { 1, 175, 775 },
-	["gift"] = { 1, 50, 900 },
-	["git-branch"] = { 1, 975, 0 },
-	["git-merge"] = { 1, 775, 200 },
-	["globe"] = { 1, 425, 550 },
-	["heart"] = { 1, 50, 950 },
-	["hourglass"] = { 1, 775, 250 },
-	["house"] = { 1, 625, 400 },
-	["image"] = { 1, 300, 725 },
-	["info"] = { 1, 150, 875 },
-	["keyboard"] = { 1, 700, 350 },
-	["layers"] = { 1, 125, 925 },
-	["layout-dashboard"] = { 1, 975, 100 },
-	["list"] = { 1, 550, 550 },
-	["list-ordered"] = { 1, 800, 300 },
-	["loader"] = { 1, 475, 625 },
-	["lock"] = { 1, 300, 800 },
-	["lock-open"] = { 1, 325, 775 },
-	["map-pin"] = { 1, 325, 800 },
-	["menu"] = { 1, 850, 300 },
-	["message-square"] = { 1, 900, 275 },
-	["messages-square"] = { 1, 850, 325 },
-	["minus"] = { 1, 450, 725 },
-	["moon"] = { 1, 775, 425 },
-	["mouse-pointer-click"] = { 1, 475, 725 },
-	["move"] = { 1, 775, 450 },
-	["package"] = { 1, 550, 700 },
-	["package-open"] = { 1, 650, 600 },
-	["palette"] = { 1, 425, 825 },
-	["pause"] = { 1, 400, 875 },
-	["paw-print"] = { 1, 375, 900 },
-	["pencil"] = { 1, 825, 475 },
-	["picture-in-picture"] = { 1, 400, 900 },
-	["play"] = { 1, 675, 650 },
-	["plus"] = { 1, 500, 825 },
-	["refresh-cw"] = { 1, 400, 975 },
-	["repeat"] = { 1, 825, 575 },
-	["rocket"] = { 1, 575, 825 },
-	["rotate-3d"] = { 1, 475, 925 },
-	["rss"] = { 1, 675, 750 },
-	["ruler"] = { 1, 600, 825 },
-	["scan"] = { 1, 475, 975 },
-	["search"] = { 1, 650, 825 },
-	["settings"] = { 1, 825, 675 },
-	["settings-2"] = { 1, 850, 650 },
-	["shapes"] = { 1, 800, 700 },
-	["shield"] = { 1, 750, 775 },
-	["shopping-cart"] = { 1, 975, 575 },
-	["sliders-horizontal"] = { 1, 800, 775 },
-	["sparkles"] = { 1, 850, 750 },
-	["square-check"] = { 1, 700, 950 },
-	["star"] = { 1, 950, 925 },
-	["sun"] = { 2, 0, 100 },
-	["swords"] = { 2, 125, 25 },
-	["tag"] = { 2, 175, 25 },
-	["terminal"] = { 2, 125, 100 },
-	["toggle-right"] = { 2, 75, 225 },
-	["trash"] = { 2, 250, 100 },
-	["trending-down"] = { 2, 125, 225 },
-	["trending-up"] = { 2, 75, 275 },
-	["triangle-alert"] = { 2, 50, 300 },
-	["type"] = { 2, 25, 350 },
-	["upload"] = { 2, 100, 300 },
-	["user"] = { 2, 375, 75 },
-	["users"] = { 2, 325, 125 },
-	["utensils"] = { 2, 275, 175 },
-	["video"] = { 2, 425, 50 },
-	["wand-sparkles"] = { 2, 0, 475 },
-	["webhook"] = { 2, 150, 350 },
-	["wifi"] = { 2, 275, 250 },
-	["wifi-off"] = { 2, 375, 150 },
-	["wind"] = { 2, 200, 325 },
-	["wrench"] = { 2, 50, 475 },
-	["x"] = { 2, 450, 100 },
-	["zap"] = { 2, 400, 150 },
-}
-
-local OfflineLucideAliases = {
+local LucideAliases = {
 	["alert-triangle"] = "triangle-alert",
 	["bar-chart-2"] = "chart-column",
 	["chat"] = "message-square",
@@ -1378,34 +1677,18 @@ local OfflineLucideAliases = {
 	["x-circle"] = "circle-x",
 }
 
-local function GetOfflineLucideIcon(IconName: any)
-	if typeof(IconName) ~= "string" then
-		return nil
-	end
-
-	local Resolved = OfflineLucideAliases[IconName] or IconName
-	local Entry = OfflineLucideIcons[Resolved]
-	if not Entry then
-		return nil
-	end
-
-	return {
-		IconName = Resolved,
-		Url = OfflineLucideSheets[Entry[1]],
-		ImageRectSize = Vector2.new(24, 24),
-		ImageRectOffset = Vector2.new(Entry[2], Entry[3]),
-	}
-end
-
 function Library:GetIcon(IconName: string)
-	if FetchIcons and Icons then
-		local Success, Icon = pcall(Icons.GetAsset, IconName)
-		if Success and Icon then
-			return Icon
-		end
+	if typeof(IconName) ~= "string" or not (FetchIcons and Icons) then
+		return nil
 	end
 
-	return GetOfflineLucideIcon(IconName)
+	local Resolved = LucideAliases[IconName] or IconName
+	local Success, Icon = pcall(Icons.GetAsset, Resolved)
+	if Success and Icon then
+		return Icon
+	end
+
+	return nil
 end
 
 function Library:GetCustomIcon(IconName: string): any
@@ -1757,47 +2040,6 @@ function Library:SetDashboardStyle(Info)
 	Library:ApplyDashboardStyle()
 end
 
-Library.CardPanels = {
-	Gap = 8,
-	ImageWidth = 40,
-	Outline = true,
-	FrameTransparency = 0.7,
-	TextSize = 14,
-}
-
-Library.SpotlightCards = {}
-
-function Library:ApplyCardPanels()
-	for _, Card in ipairs(Library.SpotlightCards) do
-		if Card.Frame.Parent then
-			Card:Relayout()
-		end
-	end
-end
-
-function Library:SetCardPanels(Info)
-	if typeof(Info) ~= "table" then
-		return
-	end
-	local P = Library.CardPanels
-	if typeof(Info.Gap) == "number" then
-		P.Gap = math.clamp(Info.Gap, 0, 24)
-	end
-	if typeof(Info.ImageWidth) == "number" then
-		P.ImageWidth = math.clamp(Info.ImageWidth, 20, 70)
-	end
-	if typeof(Info.Outline) == "boolean" then
-		P.Outline = Info.Outline
-	end
-	if typeof(Info.FrameTransparency) == "number" then
-		P.FrameTransparency = math.clamp(Info.FrameTransparency, 0, 1)
-	end
-	if typeof(Info.TextSize) == "number" then
-		P.TextSize = math.clamp(Info.TextSize, 8, 20)
-	end
-	Library:ApplyCardPanels()
-end
-
 Library.CardGradient = {
 	Enabled = true,
 	Preset = "Chrome",
@@ -1808,14 +2050,6 @@ Library.CardGradient = {
 	ColorMiddle = Color3.fromRGB(110, 110, 122),
 	ColorBottom = Color3.fromRGB(38, 38, 44),
 }
-
-function Library:ApplyCardGradient()
-	for _, Card in ipairs(Library.SpotlightCards) do
-		if Card.Frame.Parent and not Card.GradientConf then
-			Card:ApplyImageGradient()
-		end
-	end
-end
 
 function Library:SetCardGradient(Info)
 	if typeof(Info) ~= "table" then
@@ -1846,7 +2080,6 @@ function Library:SetCardGradient(Info)
 	if typeof(Info.ColorBottom) == "Color3" then
 		G.ColorBottom = Info.ColorBottom
 	end
-	Library:ApplyCardGradient()
 end
 
 function Library:SampleCardGradient(Preset)
@@ -2130,7 +2363,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.38.0 loaded — HANDLE UPDATE LIVE + BERSIH STUDIO: alur baru user = gue edit repo ini, dia copy ke repo utama/patch script, tune rasa langsung di game lewat executor, dump balik ke gue buat dibake; Studio manual tutup buku; adapter Banding ChiliSource (konsep Studio berburu ModuleScript) DIHAPUS dari preview; fitur baru biar text panel ngikutin game langsung: Tab:AddItem sekarang return HANDLE {Row, SetText, SetSubtext, SetMeta, SetGlow, SetTextColor, Destroy} — patch script bisa update nama/duit/meta/warna rarity row yang udah ada tiap detik tanpa rebuild (SetTextColor restart pulse animasi otomatis, SetMeta nil/string kosong = baris meta sembunyi, Destroy cancel pulse + buang record rapi); (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.39.0 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5723,29 +5956,6 @@ local BaseGroupbox = {}
 do
 	local Funcs = {}
 
-	--// VISUAL DELEGATES: component bodies live in ModuleScript N3V4Visuals (modular, lean LIB)
-	function Funcs:AddViewport(Idx, Info)
-		if self.Destroyed then
-			return nil
-		end
-		if not Visuals then
-			print(VisualsMissing)
-			return nil
-		end
-		return Visuals.AddViewport({ New = New, Library = Library, Options = Options }, self, Idx, Info)
-	end
-
-	function Funcs:AddSpotlightCard(Idx, Info)
-		if self.Destroyed then
-			return nil
-		end
-		if not Visuals then
-			print(VisualsMissing)
-			return nil
-		end
-		return Visuals.AddSpotlightCard({ New = New, Library = Library, Options = Options }, self, Idx, Info)
-	end
-
 	--// COMPONENT: Clean 2-Line Scroll Feed (Persis Chilli Asli: Anti-Bocor & Lega)
 	function Funcs:AddScrollFeed(Idx, Info)
 		if self.Destroyed then
@@ -5905,7 +6115,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.38.0"
+	Library.N3V4Version = "4.39.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -9487,8 +9697,6 @@ do
 		return Dropdown
 	end
 
-	local RichAddViewport = Funcs.AddViewport
-
 	function Funcs:AddViewport(Idx, Info)
 		if self.Destroyed then
 			return nil
@@ -9496,8 +9704,8 @@ do
 
 		Info = Library:Validate(Info, Templates.Viewport)
 
-		if not Info.Object and RichAddViewport then
-			return RichAddViewport(self, Idx, Info)
+		if not Info.Object then
+			return nil
 		end
 
 		local Groupbox = self
@@ -15363,13 +15571,14 @@ function Library:CreatePanel(Info)
 		Thickness = 1,
 		Parent = CloseBtn,
 	})
+	local XIcon = Library:GetIcon("x")
 	New("ImageLabel", {
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Image = "rbxassetid://135883070486325",
-		ImageRectOffset = Vector2.new(450, 100),
-		ImageRectSize = Vector2.new(24, 24),
+		Image = XIcon and XIcon.Url or "",
+		ImageRectOffset = XIcon and XIcon.ImageRectOffset or Vector2.zero,
+		ImageRectSize = XIcon and XIcon.ImageRectSize or Vector2.zero,
 		ScaleType = Enum.ScaleType.Fit,
 		Size = UDim2.fromOffset(12, 12),
 		ImageColor3 = Color3.fromRGB(180, 180, 190),
@@ -15514,13 +15723,14 @@ function Library:CreatePanel(Info)
 			Thickness = 1,
 			Parent = ChipBox,
 		})
+		local ChipCheck = Library:GetIcon("check")
 		local CheckIcon = New("ImageLabel", {
 			BackgroundTransparency = 1,
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
-			Image = "rbxassetid://136111683851629",
-			ImageRectOffset = Vector2.new(175, 450),
-			ImageRectSize = Vector2.new(24, 24),
+			Image = ChipCheck and ChipCheck.Url or "",
+			ImageRectOffset = ChipCheck and ChipCheck.ImageRectOffset or Vector2.zero,
+			ImageRectSize = ChipCheck and ChipCheck.ImageRectSize or Vector2.zero,
 			ScaleType = Enum.ScaleType.Fit,
 			Size = UDim2.fromOffset(BoxSize() - 8, BoxSize() - 8),
 			ImageColor3 = Color3.fromRGB(86, 197, 110),

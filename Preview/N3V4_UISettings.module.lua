@@ -54,7 +54,7 @@ function Settings:Attach(Library, Window, Options)
 	shared.N3V4_UISettings_Attached = true
 
 	if type(Library.SetTabAppearance) ~= "function" or type(Library.TabAppearance) ~= "table" or Library.TabAppearance.IconCardEnabled == nil then
-		warn("[N3V4 Settings] LIBRARY LAMA terdeteksi (SetTabAppearance/TabAppearance/knob IconCard nil)! Paste ulang Library/N3V3-NoObfus.lua ke ModuleScript N3V4 di ReplicatedStorage, kalau nggak knob Tab Card/Bg/Zoom nggak akan ngaruh.")
+		warn("[N3V4 Settings] LIBRARY LAMA terdeteksi (SetTabAppearance/TabAppearance/knob IconCard nil)! Paste ulang Library/N3V3-NoObfus.lua v4.39.0+, kalau nggak knob Tab Card/Bg/Zoom nggak akan ngaruh.")
 	end
 
 	Options = Options or {}
@@ -1127,120 +1127,15 @@ function Settings:Attach(Library, Window, Options)
 			Box:AddButton("Print setingan panel", PrintPanelStyle)
 			Box:AddButton("Copy setingan panel", CopyPanelStyle)
 
-			local SampleBox = T1:AddRightGroupbox("Sample Panel", "layout-dashboard")
-			SampleBox:AddLabel("Knob kiri ngaruh LIVE ke semua panel yang lagi kebuka (Shop Cepat di Overlays termasuk).", true)
-			SampleBox:AddLabel("Dump print/copy = satu baris Library:SetPanelStyle lengkap, bake verbatim ke script game lu.", true)
-			local SamplePanel
-			SampleBox:AddButton("Buka sample panel", function()
-				if SamplePanel and not SamplePanel.Destroyed then
-					SamplePanel:Toggle()
-					return
-				end
-				SamplePanel = Library:CreatePanel({ Title = "Sample Panel", Width = 260, Height = 300 })
-				local ItemTab = SamplePanel:AddTab("Item", "sparkles")
-				ItemTab:AddItem({
-					Icon = "zap", Text = "Item Uji", Subtext = "$100K/s", Meta = "x1.00 · 100 Kg",
-					GlowColor = Color3.fromRGB(120, 220, 140), ButtonText = "Beli", IconButton = "sparkles",
-					Callback = function() end,
-					IconButtonCallback = function() end,
-				})
-				ItemTab:AddItem({
-					Icon = "droplets", Text = "Item Uji Dua", Subtext = "$200K/s", Meta = "x1.20 · 220 Kg",
-					GlowColor = Color3.fromRGB(90, 160, 255), ButtonText = "Beli",
-					Callback = function() end,
-				})
-				SamplePanel:AddChip("Chip Uji", { Default = true, Callback = function() end })
-			end)
-			SampleBox:AddButton("Print setingan panel", PrintPanelStyle)
-			SampleBox:AddButton("Copy setingan panel", CopyPanelStyle)
+			local Box = T1:AddRightGroupbox("Resep Panel", "copy")
+			Box:AddLabel("Knob kiri ngaruh LIVE ke semua panel yang lagi kebuka.", true)
+			Box:AddLabel("Dump = satu baris Library:SetPanelStyle lengkap, bake verbatim ke script game.", true)
+			Box:AddButton("Print setingan panel", PrintPanelStyle)
+			Box:AddButton("Copy setingan panel", CopyPanelStyle)
 		else
-			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (PanelStyle / SetPanelStyle ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.35.0 biar box Panel Style + Sample Panel muncul")
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (PanelStyle / SetPanelStyle ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.35.0 biar box Panel Style muncul")
 		end
 
-		if type(Library.CardPanels) == "table" and type(Library.SetCardPanels) == "function" then
-			local function DumpPanels()
-				local P = Library.CardPanels
-				return string.format("Library:SetCardPanels({ Gap = %s, ImageWidth = %s, Outline = %s, FrameTransparency = %s, TextSize = %s })",
-					P.Gap, P.ImageWidth, tostring(P.Outline), P.FrameTransparency, P.TextSize)
-			end
-			local function PrintPanels()
-				local P = Library.CardPanels
-				print(string.format("[N3V4 CARD PANELS] Gap = %s | ImageWidth = %s | Outline = %s | FrameTransparency = %s | TextSize = %s",
-					P.Gap, P.ImageWidth, tostring(P.Outline), P.FrameTransparency, P.TextSize))
-				SafeNotify({ Title = "Kartu media", Description = "Cek Output.", Icon = "info", Time = 3 })
-			end
-			local function CopyPanels()
-				local Text = DumpPanels()
-				if CopyClip(Text) then
-					SafeNotify({ Title = "Kartu media", Description = "Copied ke clipboard.", Icon = "copy", Time = 3 })
-				else
-					print("[N3V4 CARD PANELS] paste ini balik:\n" .. Text)
-					SafeNotify({ Title = "Kartu media", Description = "setclipboard ga ada — cek Output.", Icon = "copy", Time = 3 })
-				end
-			end
-
-			local Box = T1:AddLeftGroupbox("Kartu Media", "layout-dashboard")
-			Box:AddSlider("CP_GAP", {
-				Text = "Gap cut antar panel", Default = Library.CardPanels.Gap, Min = 0, Max = 24, Rounding = 0, Suffix = "px",
-				Callback = function(Value)
-					Library:SetCardPanels({ Gap = Value })
-				end,
-			})
-			Box:AddSlider("CP_WID", {
-				Text = "Lebar sisi gambar", Default = Library.CardPanels.ImageWidth, Min = 20, Max = 70, Rounding = 0, Suffix = "%",
-				Callback = function(Value)
-					Library:SetCardPanels({ ImageWidth = Value })
-				end,
-			})
-			Box:AddToggle("CP_OUT", {
-				Text = "Outline frame panel", Default = Library.CardPanels.Outline,
-				Callback = function(Value)
-					Library:SetCardPanels({ Outline = Value })
-				end,
-			})
-			Box:AddSlider("CP_TR", {
-				Text = "Transparansi frame", Default = math.floor(Library.CardPanels.FrameTransparency * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
-				Callback = function(Value)
-					Library:SetCardPanels({ FrameTransparency = Value / 100 })
-				end,
-			})
-			Box:AddSlider("CP_TS", {
-				Text = "Ukuran text panel", Default = Library.CardPanels.TextSize, Min = 8, Max = 20, Rounding = 0, Suffix = "px",
-				Callback = function(Value)
-					Library:SetCardPanels({ TextSize = Value })
-				end,
-			})
-			Box:AddButton("Print setingan kartu media", PrintPanels)
-			Box:AddButton("Copy setingan kartu media", CopyPanels)
-
-			local Box = T1:AddRightGroupbox("Sample Kartu", "list")
-			local SampleCard = Box:AddSpotlightCard("CP_SAMPLE", {
-				Height = 118,
-				Title = "Sample Item",
-				Lines = {
-					{ Label = "Rarity", Value = "Mythic", Color = Color3.fromRGB(255, 210, 30) },
-					{ Label = "Status", Value = "Equipped", Color = Color3.fromRGB(86, 197, 110) },
-				},
-			})
-			local LiveSrc = Instance.new("TextLabel")
-			LiveSrc.Text = "Bind live: detik 0"
-			task.spawn(function()
-				local n = 0
-				while true do
-					task.wait(1)
-					n += 1
-					LiveSrc.Text = "Bind live: detik " .. n
-				end
-			end)
-			if SampleCard then
-				SampleCard:BindLabel(LiveSrc)
-			end
-			Box:AddLabel("Frame gambar + frame text pisah, gap = cut.", true)
-			Box:AddButton("Print setingan kartu media", PrintPanels)
-			Box:AddButton("Copy setingan kartu media", CopyPanels)
-		else
-			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (CardPanels / SetCardPanels ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.18.0 biar box Kartu Media + Sample Kartu muncul")
-		end
 
 		if type(Library.CardGradient) == "table" and type(Library.SetCardGradient) == "function" then
 			local function RGBCG(C)
@@ -1357,16 +1252,12 @@ function Settings:Attach(Library, Window, Options)
 			Box:AddButton("Print setingan gradient kartu", PrintCardGrad)
 			Box:AddButton("Copy setingan gradient kartu", CopyCardGrad)
 
-			local Box = T1:AddRightGroupbox("Sample Gradient Kartu", "wand-sparkles")
-			Box:AddSpotlightCard("CG_SAMPLE", {
-				Height = 96,
-				NoText = true,
-			})
-			Box:AddLabel("Background panel gambar = gradient global live.", true)
+			local Box = T1:AddRightGroupbox("Resep Gradient Kartu", "copy")
+			Box:AddLabel("Dump = satu baris Library:SetCardGradient lengkap, bake verbatim ke script game.", true)
 			Box:AddButton("Print setingan gradient kartu", PrintCardGrad)
 			Box:AddButton("Copy setingan gradient kartu", CopyCardGrad)
 		else
-			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (CardGradient / SetCardGradient ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.19.0 biar box Gradient Kartu + Sample Gradient Kartu muncul")
+			print("[N3V4 UI SETTINGS] Library yang ke-require MASIH VERSI LAMA (CardGradient / SetCardGradient ga ada, N3V4Version = " .. tostring(Library.N3V4Version) .. ") — paste ulang Library/N3V3-NoObfus.lua v4.19.0 biar box Gradient Kartu muncul")
 		end
 
 		local Box = T1:AddRightGroupbox("Tab Aktif & Zoom", "zap")
@@ -1423,58 +1314,6 @@ function Settings:Attach(Library, Window, Options)
 				end
 			end,
 		})
-		Box:AddButton("TEST: bikin efek KELIATAN", function()
-			pcall(function()
-				Library:SetTabAppearance({
-					IconCardEnabled = true,
-					IconCardThickness = 1.5,
-					IconCardTransparency = 0,
-					TabBackgroundTransparency = 0.35,
-					ActiveBackgroundTransparency = 0.45,
-					HoverZoom = 1.25,
-					ActiveZoom = 1.15,
-				})
-			end)
-			pcall(function()
-				if Library.Animations then
-					Library.Animations.TabHoverZoom = true
-				end
-			end)
-			pcall(function() CardTog:SetValue(true) end)
-			pcall(function() ActiveTog:SetValue(true) end)
-			pcall(function() Sl_CardT:SetValue(1.5) end)
-			pcall(function() Sl_CardTr:SetValue(0) end)
-			pcall(function() Sl_BgAll:SetValue(35) end)
-			pcall(function() Sl_BgAct:SetValue(45) end)
-			pcall(function() Sl_ZoomH:SetValue(125) end)
-			pcall(function() Sl_ZoomA:SetValue(115) end)
-			pcall(function()
-				Library:Notify({ Title = "TEST tab", Description = "Nilai diset KELIATAN: card 1.5px pekat, bg 35%/45%, zoom 125%/115%. Sekarang hover tab sidebar!", Time = 4 })
-			end)
-		end)
-		Box:AddButton("DEBUG: dump tab visuals", function()
-			local TV = Library.TabVisuals or {}
-			print(string.format("[N3V4 DEBUG TAB] rec=%d activeTab=%s", #TV, tostring(Library.ActiveTab ~= nil)))
-			for I, Rec in ipairs(TV) do
-				local Icon = Rec.Icon
-				local Cd = Rec.Card
-				local St = Cd and Cd:FindFirstChildOfClass("UIStroke")
-				print(string.format(
-					"  tab%d | icon size=%s z=%s | card=%s size=%s vis=%s | stroke transp=%s thick=%s | isActive=%s",
-					I,
-					tostring(Icon and Icon.Size), tostring(Icon and Icon.ZIndex),
-					tostring(Cd and Cd.Name or "NIL"),
-					tostring(Cd and Cd.Size), tostring(Cd and Cd.Visible),
-					tostring(St and St.Transparency), tostring(St and St.Thickness),
-					tostring(Rec.Tab ~= nil and Library.ActiveTab == Rec.Tab)
-				))
-				if I >= 4 then
-					print("  ... (" .. (#TV - 4) .. " lagi)")
-					break
-				end
-			end
-		end)
-
 	local T2 = Window:AddTab("Wallpaper & Surface", "image", "Wallpaper, warna, transparansi")
 
 	Try("WP: source", function()

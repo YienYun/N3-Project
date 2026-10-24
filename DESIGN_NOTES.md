@@ -3023,3 +3023,50 @@ rarity otomatis, Destroy cancel pulse + buang record dari Tab.Items
 rapi. Return lama (Row instance) diganti handle; demo PRE/MOD nggak
 pakai return value jadi aman.
 Pins: Handle presence LIB + absence Banding PRE. Versi 4.38.0. 97/97.
+
+## v4.39.0 — LIB standalone satu file + ikon URL git + SAE load dari project ini (era Studio TUTUP TOTAL)
+
+Perintah user: "kita udah ga di roblox studio, hapus yang masih manggil replica,
+icons kan udah pake url icons git, gue males up di zedfu — sementara library
+manggil di project ini di games SAE gue."
+LIB: module N3V4Visuals DIPUTUS — engine gradient (ticker bersama,
+BlendSequences, preset ColorSequence 18 biji verbatim EasyVisual,
+AttachGradient, SampleSequence) di-INLINE ke file ini (Active di-rename
+GradActive anti-tabrakan); Library/N3V4Visuals.module.lua dihapus dari repo.
+Delegate visual dicabut: AddSpotlightCard HILANG, AddViewport tinggal versi
+native dan WAJIB Info.Object (auto-scene tanpa Object = konsep Studio).
+Runtime LIB: nol ReplicatedStorage, nol dependensi eksternal, satu file.
+Ikon: peta sheet offline era debugging Studio (136111683851629 +
+135883070486325 + rect map) DIHAPUS TOTAL — ikon lucide 100% di-fetch dari
+URL git (lucide-roblox-direct: gitlab upio, fallback github notpoiu —
+mekanisme persis N3V3.luau produksi). Alias nama lama (home→house,
+trash-2→trash, dll) tetep dinormalkan di GetIcon. Rect hardcode tombol X
+panel + check chip diganti GetIcon("x")/GetIcon("check") — visual identik,
+atlas sama, resolve live.
+Sisa spotlight: CardPanels/SetCardPanels/SpotlightCards/ApplyCardPanels/
+ApplyCardGradient dihapus; CardGradient/SetCardGradient/SampleCardGradient
+KEPAKE hidup (gradient background panel) — dipertahankan.
+SAE: Games/N3-SAE.luau ditarik dari origin/main (2801f64) — SATU baris edit
+atas perintah: URL library dari ZedFu3/N3-Hub/N3V3.luau ke raw URL project
+ini branch arena (Library/N3V3-NoObfus.lua). Audit API surface SAE:
+CreateLoading + SetMessage/SetDescription/SetCurrentStep ada, CreateWindow
+ada, Notify x4 ada, OnUnload x12 ada — kompatibel penuh. Requires
+ReplicatedStorage di SAE (EggState/Save/Assets/Network dll) = pipeline data
+live GAME, teritori patch user — TIDAK disentuh (bukan sisa Studio; justru
+di game hidup data itu adanya di situ).
+MOD: box Sample Panel, blok Kartu Media + Sample Kartu, box Sample Gradient
+Kartu (semua manggil AddSpotlightCard yang udah dicabut), tombol TEST efek +
+DEBUG dump tab visuals (sisa debugging Studio) DIHAPUS; teks warn versi
+library nggak nyebut ReplicatedStorage lagi; box kanan Resep Panel + Resep
+Gradient Kartu ditambah (simetri T1 balik 11/11, print+copy per groupbox
+setingan tetep).
+PRE: REWRITE TOTAL jadi harness slim — LIB + MOD di-fetch dari raw URL git
+(nol ReplicatedStorage, nol FindModule, nol require, nol wait-loop), 3 tab
+(API/Panel/Overlay) isinya groupbox LABEL cheat-sheet API doang (1 kiri 1
+kanan per tab), footer v4.39.0, MOD attach via URL. 30 section demo Try()
+(Shop Cepat, menu/overlay/dashboard demo, loading intro, dsb) HILANG semua.
+check.sh: 27 pin direkonstruksi — pin engine migrasi $VIS→$LIB, pin
+spotlight/viewport/demo dibalik jadi pin ABSENCE, pin SAE = URL project ini
++ numstat 1-add/1-del vs origin/main, pin loader PRE = HttpGet URL, pin ikon
+= LucideSources + nol sheet id. Jumlah tetep 97 check: 97/97 hijau,
+luau-analyze 0 SyntaxError (LIB/MOD/PRE). Versi 4.39.0.
