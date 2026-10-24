@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.26.1 loaded — FIX CRASH DROPSHADOW: jarak warna idle-check dihitung manual per channel (Color3 di Luau TIDAK punya operator kurang — bug v4.26.0 line 419 attempt to perform arithmetic sub on Color3, lolos gate karena luau-analyze nonstrict buta operator metamethod); mekanik dropshadow lain tidak berubah (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.27.0 loaded — DASHBOARD BARU BERSIH: CreateDashboardWindow lama DIHAPUS TOTAL (radius 6 hardcode, tumpukan kaku, nilai snap — semua lenyap); ganti Library:CreateDashboard = bahasa desain window utama (radius locked, theme strings, outline-spin + dropshadow nempel otomatis); grid 2 kolom SIMETRIS kartu stat+meter (icon lucide themed, nilai putih count-up tween, bar meter isi gradient metal live ikut preset kartu lu); entrance stagger, hover zoom per kartu, minimize/close tween, drag topbar; API: AddStat/SetStat/AddMeter/SetMeter/SetTitle/Destroy (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5877,7 +5877,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.26.1"
+	Library.N3V4Version = "4.27.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -14413,109 +14413,94 @@ function Library:CreateWindow(WindowInfo)
 end
 
 --// SECONDARY COMPANION WINDOW: N3 LIVE DASHBOARD (IDENTIK DENGAN WINDOW UTAMA)
-function Library:CreateDashboardWindow(Info)
+function Library:CreateDashboard(Info)
 	Info = Info or {}
-	local TitleText = Info.Title or "N3 Live Dashboard"
+	local TitleText = Info.Title or "N3 Dashboard"
+	local CARD_H = 64
+	local GAP = 8
+	local WIN_W = 320
 
-	-- WINDOW UTAMA KEDUA DENGAN STYLE OBSIDIAN
 	local WinFrame = New("Frame", {
+		Name = "Dashboard",
 		BackgroundColor3 = "MainColor",
-		BackgroundTransparency = 0.1,
 		Position = Info.Position or UDim2.new(0, 25, 0, 120),
-		Size = UDim2.fromOffset(290, 420),
+		Size = UDim2.fromOffset(WIN_W, 300),
 		Active = true,
 		ClipsDescendants = true,
 		Parent = Library.ScreenGui or Library.LocalPlayer:WaitForChild("PlayerGui"),
 	})
-	table.insert(
-		Library.Corners,
-		New("UICorner", {
-			CornerRadius = UDim.new(0, Library.CornerRadius),
-			Parent = WinFrame,
-		})
-	)
+	table.insert(Library.Corners, New("UICorner", {
+		CornerRadius = UDim.new(0, Library.CornerRadius),
+		Parent = WinFrame,
+	}))
 	New("UIStroke", {
 		Color = "OutlineColor",
 		Thickness = 1.2,
 		Parent = WinFrame,
 	})
+	Library:AddOutlineSpin(WinFrame)
+	Library:AddDropshadow(WinFrame)
 
-	-- TOPBAR DENGAN AKSEN ICON N3 & DRAG HANDLE
 	local TopBar = New("Frame", {
 		BackgroundColor3 = "BackgroundColor",
 		BackgroundTransparency = 0.3,
 		Size = UDim2.new(1, 0, 0, 32),
 		Parent = WinFrame,
 	})
-
-	local IconImg = New("ImageLabel", {
+	New("ImageLabel", {
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(8, 4),
 		Size = UDim2.fromOffset(24, 24),
-		Image = "rbxassetid://117688744510818", -- Icon resmi N3 Hub
+		Image = "rbxassetid://117688744510818",
 		Parent = TopBar,
 	})
-
-	local TitleLbl = New("TextLabel", {
+	New("TextLabel", {
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(38, 0),
-		Size = UDim2.new(1, -80, 1, 0),
+		Size = UDim2.new(1, -104, 1, 0),
 		Text = TitleText,
 		TextSize = 12,
 		Font = Enum.Font.GothamBold,
 		TextColor3 = Color3.fromRGB(240, 240, 245),
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
 		Parent = TopBar,
 	})
-
 	local MinBtn = New("TextButton", {
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -8, 0.5, 0),
+		Position = UDim2.new(1, -30, 0.5, 0),
 		Size = UDim2.fromOffset(22, 22),
-		Text = "−",
+		Text = "-",
 		TextSize = 16,
 		Font = Enum.Font.GothamBold,
 		TextColor3 = Color3.fromRGB(180, 180, 190),
 		Parent = TopBar,
 	})
-
-	-- CONTAINER SCROLL UTAMA DI BAWAH TOPBAR
-	local Container = New("ScrollingFrame", {
+	local CloseBtn = New("TextButton", {
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 32),
-		Size = UDim2.new(1, 0, 1, -32),
-		CanvasSize = UDim2.new(0, 0, 0, 0),
-		ScrollBarThickness = 3,
-		ScrollBarImageColor3 = "OutlineColor",
-		Parent = WinFrame,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -8, 0.5, 0),
+		Size = UDim2.fromOffset(22, 22),
+		Text = "x",
+		TextSize = 14,
+		Font = Enum.Font.GothamBold,
+		TextColor3 = Color3.fromRGB(180, 180, 190),
+		Parent = TopBar,
 	})
-	local ContentLayout = New("UIListLayout", {
-		FillDirection = Enum.FillDirection.Vertical,
-		Padding = UDim.new(0, 7),
-		Parent = Container,
-	})
-	New("UIPadding", {
-		PaddingLeft = UDim.new(0, 8),
-		PaddingRight = UDim.new(0, 8),
-		PaddingTop = UDim.new(0, 8),
-		PaddingBottom = UDim.new(0, 8),
-		Parent = Container,
-	})
-
-	local function UpdateCanvas()
-		Container.CanvasSize = UDim2.fromOffset(0, ContentLayout.AbsoluteContentSize.Y + 16)
+	for _, Btn in ipairs({ MinBtn, CloseBtn }) do
+		Btn.MouseEnter:Connect(function()
+			TweenService:Create(Btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextColor3 = Library.Scheme.AccentColor }):Play()
+		end)
+		Btn.MouseLeave:Connect(function()
+			TweenService:Create(Btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextColor3 = Color3.fromRGB(180, 180, 190) }):Play()
+		end)
 	end
-	ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
 
-	-- DRAGGING LOGIC RESMI
 	do
 		local Dragging, DragInput, DragStart, StartPos
 		TopBar.InputBegan:Connect(function(input)
-			if
-				input.UserInputType == Enum.UserInputType.MouseButton1
-				or input.UserInputType == Enum.UserInputType.Touch
-			then
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 				Dragging = true
 				DragStart = input.Position
 				StartPos = WinFrame.Position
@@ -14527,396 +14512,274 @@ function Library:CreateDashboardWindow(Info)
 			end
 		end)
 		TopBar.InputChanged:Connect(function(input)
-			if
-				input.UserInputType == Enum.UserInputType.MouseMovement
-				or input.UserInputType == Enum.UserInputType.Touch
-			then
+			if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
 				DragInput = input
 			end
 		end)
-		game:GetService("UserInputService").InputChanged:Connect(function(input)
+		UserInputService.InputChanged:Connect(function(input)
 			if input == DragInput and Dragging then
 				local delta = input.Position - DragStart
-				WinFrame.Position = UDim2.new(
-					StartPos.X.Scale,
-					StartPos.X.Offset + delta.X,
-					StartPos.Y.Scale,
-					StartPos.Y.Offset + delta.Y
-				)
+				WinFrame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + delta.X, StartPos.Y.Scale, StartPos.Y.Offset + delta.Y)
 			end
 		end)
 	end
 
-	-- TOGGLE MINIMIZE
-	local IsMinimized = false
-	MinBtn.MouseButton1Click:Connect(function()
-		IsMinimized = not IsMinimized
-		if IsMinimized then
-			WinFrame:TweenSize(UDim2.fromOffset(290, 32), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.25, true)
-			MinBtn.Text = "+"
-		else
-			WinFrame:TweenSize(UDim2.fromOffset(290, 420), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.25, true)
-			MinBtn.Text = "−"
-		end
-	end)
-
-	-- =================================================================
-	-- 1. KOTAK TARGET PREVIEW ATAS (3D VIEWPORT + INFO BERTINGKAT)
-	-- =================================================================
-	local TargetCard = New("Frame", {
-		BackgroundColor3 = "BackgroundColor",
-		BackgroundTransparency = 0.35,
-		Size = UDim2.new(1, 0, 0, 78),
+	local Container = New("ScrollingFrame", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(0, 32),
+		Size = UDim2.new(1, 0, 1, -32),
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = "OutlineColor",
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		Parent = WinFrame,
+	})
+	local Grid = New("UIGridLayout", {
+		CellPadding = UDim2.fromOffset(GAP, GAP),
+		CellSize = UDim2.new(0.5, -12, 0, CARD_H),
+		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = Container,
 	})
-	table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, 6), Parent = TargetCard }))
-	New("UIStroke", { Color = "OutlineColor", Thickness = 1, Parent = TargetCard })
-
-	local Viewport3D = New("ViewportFrame", {
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(6, 6),
-		Size = UDim2.fromOffset(66, 66),
-		LightColor = Color3.fromRGB(255, 255, 255),
-		Ambient = Color3.fromRGB(190, 190, 190),
-		LightDirection = Vector3.new(-1, 2, -1),
-		Parent = TargetCard,
+	New("UIPadding", {
+		PaddingLeft = UDim2.fromOffset(8),
+		PaddingRight = UDim2.fromOffset(8),
+		PaddingTop = UDim2.fromOffset(8),
+		PaddingBottom = UDim2.fromOffset(8),
+		Parent = Container,
 	})
-	local Cam3D = Instance.new("Camera")
-	Cam3D.FieldOfView = 50
-	Cam3D.Parent = Viewport3D
-	Viewport3D.CurrentCamera = Cam3D
-	local World3D = Instance.new("WorldModel")
-	World3D.Parent = Viewport3D
-
-	local TargetInfoBox = New("Frame", {
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(78, 6),
-		Size = UDim2.new(1, -84, 1, -12),
-		Parent = TargetCard,
-	})
-	New(
-		"UIListLayout",
-		{ FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 1), Parent = TargetInfoBox }
-	)
-
-	local TxtName = New("TextLabel", {
-		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 16),
-		Text = "No Target Active",
-		TextSize = 13,
-		RichText = true,
-		Font = Enum.Font.GothamBold,
-		TextColor3 = Color3.fromRGB(255, 255, 255),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextTruncate = Enum.TextTruncate.AtEnd,
-		Parent = TargetInfoBox,
-	})
-	local TxtIncome = New("TextLabel", {
-		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 14),
-		Text = '<font color="#57F287"><b>+$0/s</b></font>',
-		TextSize = 11,
-		RichText = true,
-		Font = Enum.Font.GothamBold,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = TargetInfoBox,
-	})
-	local TxtStats = New("TextLabel", {
-		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 14),
-		Text = "1.00x · 0 Kg",
-		TextSize = 10,
-		RichText = true,
-		TextColor3 = Color3.fromRGB(205, 230, 255),
-		Font = Enum.Font.Gotham,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = TargetInfoBox,
-	})
-	local TxtDist = New("TextLabel", {
-		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 14),
-		Text = "Standby (Idle)",
-		TextSize = 10,
-		RichText = true,
-		TextColor3 = Color3.fromRGB(160, 160, 180),
-		Font = Enum.Font.Gotham,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = TargetInfoBox,
-	})
-
-	-- ROTASI 3D VIEWPORT OTOMATIS
-	local CurAngle = 0
-	game:GetService("RunService").RenderStepped:Connect(function(dt)
-		local petModel = World3D:FindFirstChildWhichIsA("Model") or World3D:FindFirstChildWhichIsA("BasePart")
-		if WinFrame.Visible and not IsMinimized and petModel then
-			CurAngle = (CurAngle + dt * 45) % 360
-			local cf, size
-			if petModel:IsA("Model") then
-				cf, size = petModel:GetBoundingBox()
-			else
-				cf, size = petModel.CFrame, petModel.Size
-			end
-			local maxDim = math.max(size.X, size.Y, size.Z)
-			local dist = maxDim / (2 * math.tan(math.rad(Cam3D.FieldOfView / 2))) * 1.35
-			local rad = math.rad(CurAngle)
-			Cam3D.CFrame = CFrame.new(
-				cf.Position + Vector3.new(math.sin(rad) * dist, dist * 0.25, math.cos(rad) * dist),
-				cf.Position
-			)
-		end
+	Grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		Container.CanvasSize = UDim2.fromOffset(0, Grid.AbsoluteContentSize.Y + 16)
 	end)
 
-	-- =================================================================
-	-- 2. HELPER BIKIN SECTION DIVIDER DENGAN TEKS PUTIH RESMI
-	-- =================================================================
-	local function AddSectionDivider(text)
-		local Div = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), Parent = Container })
-		local L1 = New("Frame", {
-			BackgroundColor3 = "OutlineColor",
-			BorderSizePixel = 0,
-			Position = UDim2.new(0, 0, 0.5, 0),
-			Size = UDim2.new(0.2, 0, 0, 1),
-			Parent = Div,
-		})
-		local Lbl = New("TextLabel", {
-			BackgroundTransparency = 1,
-			Position = UDim2.new(0.2, 0, 0, 0),
-			Size = UDim2.new(0.6, 0, 1, 0),
-			Text = string.upper(text),
-			TextSize = 10,
-			Font = Enum.Font.GothamBold,
-			TextColor3 = Color3.fromRGB(240, 240, 240),
-			Parent = Div,
-		})
-		local L2 = New("Frame", {
-			BackgroundColor3 = "OutlineColor",
-			BorderSizePixel = 0,
-			Position = UDim2.new(0.8, 0, 0.5, 0),
-			Size = UDim2.new(0.2, 0, 0, 1),
-			Parent = Div,
-		})
-	end
-
-	-- =================================================================
-	-- 3. SECTION STATUS AKSI (STEALING, PLACING, HATCHING, TRAINING)
-	-- =================================================================
-	AddSectionDivider("LIVE BOT ACTIONS")
-	local ActionGrid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), Parent = Container })
-	New(
-		"UIGridLayout",
-		{ CellPadding = UDim2.fromOffset(6, 4), CellSize = UDim2.new(0.5, -3, 0, 16), Parent = ActionGrid }
-	)
-
-	local ActionLabels = {}
-	for _, actName in ipairs({ "Stealing", "Placing", "Hatching", "Training" }) do
-		local actLbl = New("TextLabel", {
-			BackgroundColor3 = "BackgroundColor",
-			BackgroundTransparency = 0.5,
-			Size = UDim2.new(1, 0, 1, 0),
-			Text = "• " .. actName,
-			TextSize = 10,
-			Font = Enum.Font.GothamBold,
-			TextColor3 = Color3.fromRGB(160, 160, 170),
-			Parent = ActionGrid,
-		})
-		table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, 4), Parent = actLbl }))
-		ActionLabels[actName] = actLbl
-	end
-
-	-- =================================================================
-	-- 4. SECTION PROGRES & STATS (CASH, TOTAL EGGS, SPEED)
-	-- =================================================================
-	AddSectionDivider("PLAYER STATS")
-	local StatsGrid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 42), Parent = Container })
-	New(
-		"UIGridLayout",
-		{ CellPadding = UDim2.fromOffset(6, 0), CellSize = UDim2.new(0.333, -4, 1, 0), Parent = StatsGrid }
-	)
-
-	local function CreateStatCard(title, defaultVal, colorVal)
-		local Card =
-			New("Frame", { BackgroundColor3 = "BackgroundColor", BackgroundTransparency = 0.4, Parent = StatsGrid })
-		table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, 5), Parent = Card }))
-		New("UIStroke", { Color = "OutlineColor", Thickness = 1, Parent = Card })
-		New("TextLabel", {
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, 16),
-			Text = title,
-			TextSize = 9,
-			Font = Enum.Font.GothamBold,
-			TextColor3 = Color3.fromRGB(170, 170, 185),
-			Parent = Card,
-		})
-		local ValLbl = New("TextLabel", {
-			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(0, 16),
-			Size = UDim2.new(1, 0, 1, -16),
-			Text = defaultVal,
-			TextSize = 12,
-			Font = Enum.Font.GothamBold,
-			TextColor3 = colorVal or Color3.fromRGB(255, 255, 255),
-			Parent = Card,
-		})
-		return ValLbl
-	end
-
-	local StatCash = CreateStatCard("MONEY", "$0", Color3.fromRGB(87, 242, 135))
-	local StatEggs = CreateStatCard("EGGS", "0", Color3.fromRGB(255, 170, 0))
-	local StatSpeed = CreateStatCard("SPEED", "16", Color3.fromRGB(79, 224, 255))
-
-	-- =================================================================
-	-- 5. SECTION QUICK TOGGLES (BERUPA BUTTON CARD BISA DI-KLIK LANGSUNG!)
-	-- =================================================================
-	AddSectionDivider("QUICK FEATURE TOGGLES")
-	local TogglesGrid = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 78), Parent = Container })
-	New(
-		"UIGridLayout",
-		{ CellPadding = UDim2.fromOffset(6, 6), CellSize = UDim2.new(0.5, -3, 0, 22), Parent = TogglesGrid }
-	)
-
-	local RegisteredToggles = {}
-
-	-- OBJECT CONTROLLER DASHBOARD
 	local Dashboard = {
 		Frame = WinFrame,
 		Container = Container,
-		Type = "DashboardWindow",
+		Type = "Dashboard",
+		Cards = {},
 	}
+	local Order = 0
+	local FullSize = UDim2.fromOffset(WIN_W, 300)
+	local IsMinimized = false
 
-	function Dashboard:AddQuickToggle(name, getStateFunc, onToggleFunc)
-		local Btn = New("TextButton", {
-			BackgroundColor3 = "BackgroundColor",
-			BackgroundTransparency = 0.3,
-			Text = name .. " [OFF]",
-			TextSize = 10,
-			Font = Enum.Font.GothamBold,
-			TextColor3 = Color3.fromRGB(160, 160, 170),
-			Parent = TogglesGrid,
-		})
-		table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, 5), Parent = Btn }))
-		local Stroke = New("UIStroke", { Color = "OutlineColor", Thickness = 1, Parent = Btn })
-
-		Btn.MouseButton1Click:Connect(function()
-			local curState = getStateFunc()
-			onToggleFunc(not curState)
-			Dashboard:RefreshToggles()
-		end)
-
-		table.insert(RegisteredToggles, {
-			Name = name,
-			Button = Btn,
-			Stroke = Stroke,
-			GetState = getStateFunc,
-		})
-
-		TogglesGrid.Size = UDim2.new(1, 0, 0, math.ceil(#RegisteredToggles / 2) * 28)
-		UpdateCanvas()
-	end
-
-	function Dashboard:RefreshToggles()
-		for _, tog in ipairs(RegisteredToggles) do
-			local isOn = tog.GetState()
-			if isOn then
-				tog.Button.Text = tog.Name .. " [ON]"
-				tog.Button.TextColor3 = Color3.fromRGB(87, 242, 135)
-				tog.Stroke.Color = Color3.fromRGB(87, 242, 135)
-			else
-				tog.Button.Text = tog.Name .. " [OFF]"
-				tog.Button.TextColor3 = Color3.fromRGB(160, 160, 170)
-				tog.Stroke.Color = Library.Colors.OutlineColor or Color3.fromRGB(50, 50, 60)
-			end
+	local function Resize()
+		local Count = 0
+		for _ in pairs(Dashboard.Cards) do
+			Count += 1
+		end
+		local Rows = math.max(1, math.ceil(Count / 2))
+		FullSize = UDim2.fromOffset(WIN_W, 32 + 16 + Rows * (CARD_H + GAP))
+		if not IsMinimized then
+			WinFrame.Size = FullSize
 		end
 	end
 
-	function Dashboard:UpdateTarget(targetData, model3D)
-		if not targetData then
-			TxtName.Text = '<font color="#8A8AA2">No Target Active</font>'
-			TxtIncome.Text = '<font color="#57F287">$0/s</font>'
-			TxtStats.Text = "Standby"
-			TxtDist.Text = "Status: Idle"
-			World3D:ClearAllChildren()
+	local function BuildCard(Title, IconName)
+		Order += 1
+		local Cell = New("Frame", {
+			BackgroundTransparency = 1,
+			LayoutOrder = Order,
+			Parent = Container,
+		})
+		local Card = New("Frame", {
+			BackgroundColor3 = "BackgroundColor",
+			BackgroundTransparency = 0.5,
+			Position = UDim2.fromOffset(1, 1),
+			Size = UDim2.new(1, -2, 1, -2),
+			Transparency = 1,
+			Parent = Cell,
+		})
+		table.insert(Library.Corners, New("UICorner", {
+			CornerRadius = UDim.new(0, Library.CornerRadius),
+			Parent = Card,
+		}))
+		local Stroke = New("UIStroke", {
+			Color = "OutlineColor",
+			Thickness = 1,
+			Parent = Card,
+		})
+		local Icon = New("ImageLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(8, 9),
+			Size = UDim2.fromOffset(16, 16),
+			ImageColor3 = "AccentColor",
+			Parent = Card,
+		})
+		local IconData = Library:GetCustomIcon(IconName or "gauge")
+		if IconData then
+			Icon.Image = IconData.Url
+			Icon.ImageRectOffset = IconData.ImageRectOffset
+			Icon.ImageRectSize = IconData.ImageRectSize
+		end
+		New("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(30, 9),
+			Size = UDim2.new(1, -38, 0, 16),
+			Text = Title,
+			TextSize = 11,
+			Font = Enum.Font.GothamBold,
+			TextColor3 = "AccentColor",
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Parent = Card,
+		})
+		local ValueLbl = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(8, 28),
+			Size = UDim2.new(1, -16, 0, 26),
+			Text = "0",
+			TextSize = 20,
+			Font = Enum.Font.GothamBold,
+			TextColor3 = Color3.fromRGB(255, 255, 255),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = Card,
+		})
+		TweenService:Create(Card, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, Order * 0.04), { Transparency = 0 }):Play()
+		Card.MouseEnter:Connect(function()
+			TweenService:Create(Card, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 1, 0) }):Play()
+			TweenService:Create(Stroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Color = Library.Scheme.AccentColor }):Play()
+		end)
+		Card.MouseLeave:Connect(function()
+			TweenService:Create(Card, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(1, 1), Size = UDim2.new(1, -2, 1, -2) }):Play()
+			TweenService:Create(Stroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Color = Library.Scheme.OutlineColor }):Play()
+		end)
+		return Card, ValueLbl
+	end
+
+	function Dashboard:AddStat(Idx, Conf)
+		Conf = Conf or {}
+		local _, ValueLbl = BuildCard(Conf.Title or tostring(Idx), Conf.Icon)
+		local Suffix = Conf.Suffix or ""
+		local Dec = Conf.Decimals or 0
+		local Holder = Instance.new("NumberValue")
+		Holder.Value = Conf.Default or 0
+		local function Paint()
+			ValueLbl.Text = string.format("%." .. Dec .. "f", Holder.Value) .. Suffix
+		end
+		Paint()
+		Holder:GetPropertyChangedSignal("Value"):Connect(Paint)
+		Dashboard.Cards[Idx] = { Kind = "Stat", Holder = Holder }
+		Resize()
+	end
+
+	function Dashboard:SetStat(Idx, Value)
+		local Card = Dashboard.Cards[Idx]
+		if not Card or typeof(Value) ~= "number" then
 			return
 		end
-
-		local hex = targetData.Hex or "#FFFFFF"
-		TxtName.Text = string.format(
-			'<b>%s</b>  <font color="%s"><b>%s</b></font>',
-			targetData.Name or "Egg",
-			hex,
-			string.upper(targetData.Rarity or "")
-		)
-		TxtIncome.Text = string.format('<font color="#57F287"><b>+$%s/s</b></font>', targetData.Income or "0")
-
-		local mutTag = (targetData.Mutation and targetData.Mutation ~= "")
-				and (' · <font color="#FFAA00">' .. targetData.Mutation .. "</font>")
-			or ""
-		TxtStats.Text =
-			string.format("%.2fx · %s Kg%s", targetData.Scale or 1, tostring(targetData.Weight or 0), mutTag)
-		TxtDist.Text = targetData.Distance and string.format("Target: %d studs away", math.floor(targetData.Distance))
-			or "Locked on target"
-
-		if model3D then
-			World3D:ClearAllChildren()
-			local clone = model3D:Clone()
-			if clone:IsA("Folder") then
-				local tempM = Instance.new("Model")
-				for _, ch in ipairs(clone:GetChildren()) do
-					if ch:IsA("BasePart") or ch:IsA("Model") then
-						ch:Clone().Parent = tempM
-					end
-				end
-				clone:Destroy()
-				clone = tempM
-			end
-			for _, desc in ipairs(clone:GetDescendants()) do
-				if desc:IsA("BasePart") then
-					desc.Anchored = true
-					desc.CanCollide = false
-				end
-				if desc:IsA("LuaSourceContainer") or desc:IsA("Sound") then
-					desc:Destroy()
-				end
-			end
-			if clone:IsA("BasePart") then
-				clone.Anchored = true
-			end
-			clone.Parent = World3D
-		end
+		TweenService:Create(Card.Holder, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Value = Value }):Play()
 	end
 
-	function Dashboard:UpdateActions(actionsMap)
-		-- actionsMap = { Stealing = true/false, Placing = true/false, Hatching = true/false, Training = true/false }
-		for actName, isRunning in pairs(actionsMap) do
-			local lbl = ActionLabels[actName]
-			if lbl then
-				if isRunning then
-					lbl.TextColor3 = Color3.fromRGB(87, 242, 135) -- HIJAU TEBAL KALAU LAGI JALAN
-					lbl.Text = "✔ " .. actName
+	function Dashboard:AddMeter(Idx, Conf)
+		Conf = Conf or {}
+		local Card, ValueLbl = BuildCard(Conf.Title or tostring(Idx), Conf.Icon)
+		ValueLbl.Position = UDim2.fromOffset(8, 26)
+		ValueLbl.Size = UDim2.new(1, -16, 0, 18)
+		ValueLbl.TextSize = 14
+		local Track = New("Frame", {
+			BackgroundColor3 = "MainColor",
+			BackgroundTransparency = 0.2,
+			Position = UDim2.fromOffset(8, 48),
+			Size = UDim2.new(1, -16, 0, 6),
+			Parent = Card,
+		})
+		table.insert(Library.Corners, New("UICorner", {
+			CornerRadius = UDim.new(0, 3),
+			Parent = Track,
+		}))
+		local Fill = New("Frame", {
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			Size = UDim2.new(0, 0, 1, 0),
+			Parent = Track,
+		})
+		table.insert(Library.Corners, New("UICorner", {
+			CornerRadius = UDim.new(0, 3),
+			Parent = Fill,
+		}))
+		local FillGrad = New("UIGradient", {
+			Parent = Fill,
+		})
+		if Visuals and type(Visuals.AttachGradient) == "function" then
+			Visuals.AttachGradient(FillGrad, function()
+				local G = Library.CardGradient
+				local Seq = nil
+				if G.Preset == "Custom" then
+					Seq = ColorSequence.new({
+						ColorSequenceKeypoint.new(0, G.ColorTop),
+						ColorSequenceKeypoint.new(0.5, G.ColorMiddle),
+						ColorSequenceKeypoint.new(1, G.ColorBottom),
+					})
 				else
-					lbl.TextColor3 = Color3.fromRGB(160, 160, 170) -- PUTIH/ABU STANDAR KALAU MATI
-					lbl.Text = "• " .. actName
+					Seq = Visuals.Presets.Sequence[G.Preset]
 				end
+				return {
+					Enabled = true,
+					Sequence = Seq or Visuals.Presets.Sequence.Gold,
+					Rotation = 0,
+					OffsetSpeed = G.OffsetSpeed,
+					RotationSpeed = 0,
+				}
+			end)
+		end
+		local Min = Conf.Min or 0
+		local Max = Conf.Max or 100
+		local Suffix = Conf.Suffix or "%"
+		local Holder = Instance.new("NumberValue")
+		Holder.Value = Conf.Default or Min
+		local function Paint()
+			local T = math.clamp((Holder.Value - Min) / (Max - Min), 0, 1)
+			Fill.Size = UDim2.new(T, 0, 1, 0)
+			ValueLbl.Text = string.format("%.0f", Holder.Value) .. Suffix
+		end
+		Paint()
+		Holder:GetPropertyChangedSignal("Value"):Connect(Paint)
+		Dashboard.Cards[Idx] = { Kind = "Meter", Holder = Holder }
+		Resize()
+	end
+
+	function Dashboard:SetMeter(Idx, Value)
+		local Card = Dashboard.Cards[Idx]
+		if not Card or typeof(Value) ~= "number" then
+			return
+		end
+		TweenService:Create(Card.Holder, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Value = Value }):Play()
+	end
+
+	function Dashboard:SetTitle(Text)
+		if typeof(Text) == "string" then
+			TitleText = Text
+		end
+	end
+
+	function Dashboard:Destroy()
+		WinFrame:Destroy()
+		for i = #Library.OutlineSpinObjects, 1, -1 do
+			if not Library.OutlineSpinObjects[i].Grad.Parent then
+				table.remove(Library.OutlineSpinObjects, i)
+			end
+		end
+		for i = #Library.DropshadowObjects, 1, -1 do
+			if not Library.DropshadowObjects[i].Target.Parent then
+				table.remove(Library.DropshadowObjects, i)
 			end
 		end
 	end
 
-	function Dashboard:UpdateStats(statsMap)
-		-- statsMap = { Cash = "$1.3Qa", Eggs = "4 (2/2)", Speed = "350" }
-		if statsMap.Cash then
-			StatCash.Text = statsMap.Cash
+	MinBtn.MouseButton1Click:Connect(function()
+		IsMinimized = not IsMinimized
+		if IsMinimized then
+			TweenService:Create(WinFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(WIN_W, 32) }):Play()
+			MinBtn.Text = "+"
+		else
+			TweenService:Create(WinFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Size = FullSize }):Play()
+			MinBtn.Text = "-"
 		end
-		if statsMap.Eggs then
-			StatEggs.Text = statsMap.Eggs
-		end
-		if statsMap.Speed then
-			StatSpeed.Text = statsMap.Speed
-		end
-	end
+	end)
+	CloseBtn.MouseButton1Click:Connect(function()
+		Dashboard:Destroy()
+	end)
 
-	UpdateCanvas()
+	Resize()
 	return Dashboard
 end
-
 function Library:CreateLoading(LoadingInfo)
 	if Library.ActiveLoading then
 		warn("Loading GUI already exists, you cannot create multiple Loading GUIs.")

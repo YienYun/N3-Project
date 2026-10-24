@@ -14,7 +14,7 @@ local CONFIG = {
 	ModuleName = "N3V4",
 
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.26.1",
+	Footer = "N3V4 • UI Preview Kit v4.27.0",
 	Icon = "rbxassetid://117688744510818",
 
 	ImageAsset = "rbxassetid://117688744510818",
@@ -1019,15 +1019,26 @@ Try("Overlays: R2 Dashboard + Loading states", function()
 	local Box = OverlaysTab:AddRightGroupbox("Dashboard & Loading", "gauge")
 
 	Box:AddButton("Buka Dashboard window", function()
-		local Dash = Library:CreateDashboardWindow({
+		local Dash = Library:CreateDashboard({
 			Title = "N3 Live Dashboard",
 			Position = UDim2.fromOffset(25, 120),
 		})
-		if typeof(Dash) == "table" and Dash.SetRow then
-			Dash:SetRow("Status", "FARMING", Color3.fromRGB(140, 255, 170))
-			Dash:SetRow("Zone", "Forest", Color3.fromRGB(140, 230, 255))
-			Dash:SetRow("Collected", "128 eggs")
-		end
+		Dash:AddStat("Fps", { Title = "FPS", Icon = "gauge", Suffix = " fps", Default = 60 })
+		Dash:AddStat("Player", { Title = "Players", Icon = "list", Default = 12 })
+		Dash:AddStat("Cash", { Title = "Cash", Icon = "sparkles", Suffix = " k", Default = 128 })
+		Dash:AddMeter("Cpu", { Title = "CPU", Icon = "zap", Default = 35 })
+		Dash:AddMeter("Mem", { Title = "Memory", Icon = "droplets", Default = 62 })
+		Dash:AddMeter("Egg", { Title = "Eggs", Icon = "image", Min = 0, Max = 500, Default = 128, Suffix = "/500" })
+		task.spawn(function()
+			while Dash.Frame.Parent do
+				task.wait(1)
+				Dash:SetStat("Fps", 55 + math.random(0, 10))
+				Dash:SetStat("Cash", 128 + math.random(0, 40))
+				Dash:SetMeter("Cpu", 20 + math.random(0, 60))
+				Dash:SetMeter("Mem", 40 + math.random(0, 50))
+				Dash:SetMeter("Egg", math.min(500, 128 + math.random(0, 60)))
+			end
+		end)
 	end)
 
 	Box:AddDivider({ Text = "Loading", Margin = 4 })

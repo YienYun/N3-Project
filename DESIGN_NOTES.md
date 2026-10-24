@@ -2356,3 +2356,36 @@ Fix: jarak warna dihitung manual per channel (dR²+dG²+dB² > 0.000016
 `! grep -qF '(St.Color - Conf.Color)' '$VIS'` biar pola ini ga bisa
 balik lagi. Versi bump 4.26.1 (marker + N3V4Version + footer).
 Gates 88/88.
+
+## v4.27.0 — DASHBOARD BARU: lama dihapus total, CreateDashboard lahir
+User: dashboard lama "jelek banget ga sama kayak ui desainya, terlalu
+kaku" → hapus bersih + bikin jauh lebih bagus. Diskusi dikunci via
+pilihan: isi = stat + meter; layout = grid 2 kolom simetris; API =
+nama BARU CreateDashboard (yang lama lenyap termasuk namanya).
+Diagnosa kekakuan lama (dari kode, disebut di reply): radius 6 vs
+locked 10, warna sebagian hardcode, tumpukan UIListLayout vertikal
+tinggi hardcode, lebar fixed 290, animasi cuma tween minimize, nilai
+snap, ~370 baris inline tanpa API per-stat.
+Baru: frame radius locked + theme strings + AddOutlineSpin +
+AddDropshadow otomatis (ikut family EasyVisual user); topbar logo N3
++ judul + minimize/close hover-accent; drag topbar; ScrollingFrame +
+UIGridLayout CellSize (0.5,-12) + UIPadding 8 = grid 2 kolom simetris,
+canvas auto; kartu = shell radius locked bg BackgroundColor 0.5 +
+stroke OutlineColor, icon lucide GetCustomIcon ImageColor3 AccentColor
+(prefix themed), judul AccentColor, nilai putih GothamBold; stat =
+count-up via NumberValue + TweenService 0.25s (SetStat); meter = bar
+track 6px + fill UIGradient yang DI-ATTACH ke engine gradient kita
+(conf getter live baca Library.CardGradient: preset/flow user ikut ke
+bar meter, Rotation 0 horizontal) + fill size tween lewat Holder 0.35s
+(SetMeter) = lumer; entrance stagger Transparency tween delay
+Order*0.04; hover zoom = tween Position/Size kartu di dalam cell wrapper
+(grid ga rusak) + stroke lumer ke AccentColor; tinggi window auto dari
+jumlah kartu (Rows = ceil(n/2)); minimize tween 32px, close = Destroy +
+bersihin registry OutlineSpin/Dropshadow dari entry yatim.
+API: CreateDashboard({Title, Position}) -> AddStat(Idx,{Title,Icon,
+Suffix,Decimals,Default}) / SetStat / AddMeter(Idx,{...,Min,Max}) /
+SetMeter / SetTitle / Destroy.
+PRE: demo R2 sekarang bikin 3 stat + 3 meter + loop live 1 detik
+(task.spawn while Frame.Parent). Checker: chk v4.27 (10 fragmen,
+absensi pakai signature penuh karena marker menyebut nama lama).
+Gates 89/89, symmetry 11/11, 0 SyntaxError.
