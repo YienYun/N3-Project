@@ -2398,3 +2398,23 @@ UIPadding maunya UDim). Dashboard mati sebelum render apa pun.
 Fix: empat Padding* = UDim.new(0, 8). Pin checker baru:
 'PaddingTop = UDim.new(0, 8)' di chk v4.27 biar tipe salah ga balik.
 Versi 4.27.1 (marker + N3V4Version + footer). Gates 89/89.
+
+## v4.27.2 — FIX DRAG SHADOW KETINGGALAN + ZINDEX DASHBOARD
+Screenshot user: dashboard bagus TAPI (1) kotak bayangan ketinggalan
+pas window digeser, (2) icon navbar window utama nembus di atas
+dashboard di area overlap ("tembus, geser ke tengah enggak").
+Root cause 1: ticker dropshadow nulis Position/Size/ZIndex DI DALAM
+gate Moving (konvergensi lerp warna/transparansi) — pas drag, lerp
+udah konvergen jadi Moving=false dan bayangan DIEM di posisi lama.
+Fix: tiga write struktural itu keluar gate (tiap frame), write warna/
+transparansi tetep di gate (idle zero-write warna dipertahanin).
+Root cause 2: dashboard WinFrame ZIndex default 1 = seri/kalah sama
+subtree window utama di area overlap (render order tie nggak jaminan
+insertion order). Fix: basis ZIndex subtree dashboard = ZOFF 100
+(window 100, topbar+container 101, topbar-isi 102, cell 102, kartu
+103, isi kartu 104, fill meter 105) — di atas semua elemen window
+utama (Z <= ~10) tapi di bawah popup 9100 / notifikasi / cursor
+11000, jadi toast tetep di atas dashboard. Bayangan otomatis ikut
+naik ke Target.ZIndex-1 = 99 (di bawah dashboard, di atas window
+utama = benar secara visual).
+Checker: pin ZOFF + ZOFF+5. Gates 89/89. Versi 4.27.2.

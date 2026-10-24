@@ -423,11 +423,11 @@ local function EnsureTicker()
 				if Moving or not St.Painted then
 					St.Inst.BackgroundColor3 = St.Color
 					St.Inst.BackgroundTransparency = St.Trans
-					St.Inst.Position = St.Target.Position + UDim2.new(0, St.OffsetV.X, 0, St.OffsetV.Y)
-					St.Inst.Size = St.Target.Size
-					St.Inst.ZIndex = St.Target.ZIndex - 1
 					St.Painted = not Moving
 				end
+				St.Inst.Position = St.Target.Position + UDim2.new(0, St.OffsetV.X, 0, St.OffsetV.Y)
+				St.Inst.Size = St.Target.Size
+				St.Inst.ZIndex = St.Target.ZIndex - 1
 			end
 		end
 		if #Active == 0 and #ShadowActive == 0 then

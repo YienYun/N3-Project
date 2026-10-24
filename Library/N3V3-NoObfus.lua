@@ -2130,7 +2130,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.27.1 loaded — FIX UIPadding dashboard: Padding* itu tipe UDim bukan UDim2 (bug v4.27.0 bikin CreateDashboard mati di baris pertama New UIPadding; CellPadding UIGridLayout emang UDim2, kepleset nyontek dari situ); dashboard sekarang kebuka bener (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
+print("[N3V4 Library] v4.27.2 loaded — FIX DASHBOARD DRAG + ZINDEX: bayangan dropshadow sekarang NGIKUT window tiap frame (position/size/zindex ditulis di luar gateMoving — bug v4.27.1 bayangan ketinggalan pas drag karena cuma ditulis pas warna/transparansi lumer); subtree dashboard pakai ZIndex basis 100 (window 100, topbar 101, kartu 103, isi 104-105) biar icon navbar window utama ga nembus di area overlap — render order UI ini global, default ZIndex 1 kalah sama elemen navbar (kalau baris ini NGGAK ada di Output, ModuleScript N3V4 yang ke-require masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5877,7 +5877,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.27.1"
+	Library.N3V4Version = "4.27.2"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -14419,6 +14419,7 @@ function Library:CreateDashboard(Info)
 	local CARD_H = 64
 	local GAP = 8
 	local WIN_W = 320
+	local ZOFF = 100
 
 	local WinFrame = New("Frame", {
 		Name = "Dashboard",
@@ -14427,6 +14428,7 @@ function Library:CreateDashboard(Info)
 		Size = UDim2.fromOffset(WIN_W, 300),
 		Active = true,
 		ClipsDescendants = true,
+		ZIndex = ZOFF,
 		Parent = Library.ScreenGui or Library.LocalPlayer:WaitForChild("PlayerGui"),
 	})
 	table.insert(Library.Corners, New("UICorner", {
@@ -14445,6 +14447,7 @@ function Library:CreateDashboard(Info)
 		BackgroundColor3 = "BackgroundColor",
 		BackgroundTransparency = 0.3,
 		Size = UDim2.new(1, 0, 0, 32),
+		ZIndex = ZOFF + 1,
 		Parent = WinFrame,
 	})
 	New("ImageLabel", {
@@ -14452,6 +14455,7 @@ function Library:CreateDashboard(Info)
 		Position = UDim2.fromOffset(8, 4),
 		Size = UDim2.fromOffset(24, 24),
 		Image = "rbxassetid://117688744510818",
+		ZIndex = ZOFF + 2,
 		Parent = TopBar,
 	})
 	New("TextLabel", {
@@ -14464,6 +14468,7 @@ function Library:CreateDashboard(Info)
 		TextColor3 = Color3.fromRGB(240, 240, 245),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
+		ZIndex = ZOFF + 2,
 		Parent = TopBar,
 	})
 	local MinBtn = New("TextButton", {
@@ -14475,6 +14480,7 @@ function Library:CreateDashboard(Info)
 		TextSize = 16,
 		Font = Enum.Font.GothamBold,
 		TextColor3 = Color3.fromRGB(180, 180, 190),
+		ZIndex = ZOFF + 2,
 		Parent = TopBar,
 	})
 	local CloseBtn = New("TextButton", {
@@ -14486,6 +14492,7 @@ function Library:CreateDashboard(Info)
 		TextSize = 14,
 		Font = Enum.Font.GothamBold,
 		TextColor3 = Color3.fromRGB(180, 180, 190),
+		ZIndex = ZOFF + 2,
 		Parent = TopBar,
 	})
 	for _, Btn in ipairs({ MinBtn, CloseBtn }) do
@@ -14531,6 +14538,7 @@ function Library:CreateDashboard(Info)
 		ScrollBarThickness = 3,
 		ScrollBarImageColor3 = "OutlineColor",
 		CanvasSize = UDim2.new(0, 0, 0, 0),
+		ZIndex = ZOFF + 1,
 		Parent = WinFrame,
 	})
 	local Grid = New("UIGridLayout", {
@@ -14577,6 +14585,7 @@ function Library:CreateDashboard(Info)
 		local Cell = New("Frame", {
 			BackgroundTransparency = 1,
 			LayoutOrder = Order,
+			ZIndex = ZOFF + 2,
 			Parent = Container,
 		})
 		local Card = New("Frame", {
@@ -14585,6 +14594,7 @@ function Library:CreateDashboard(Info)
 			Position = UDim2.fromOffset(1, 1),
 			Size = UDim2.new(1, -2, 1, -2),
 			Transparency = 1,
+			ZIndex = ZOFF + 3,
 			Parent = Cell,
 		})
 		table.insert(Library.Corners, New("UICorner", {
@@ -14601,6 +14611,7 @@ function Library:CreateDashboard(Info)
 			Position = UDim2.fromOffset(8, 9),
 			Size = UDim2.fromOffset(16, 16),
 			ImageColor3 = "AccentColor",
+			ZIndex = ZOFF + 4,
 			Parent = Card,
 		})
 		local IconData = Library:GetCustomIcon(IconName or "gauge")
@@ -14619,6 +14630,7 @@ function Library:CreateDashboard(Info)
 			TextColor3 = "AccentColor",
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextTruncate = Enum.TextTruncate.AtEnd,
+			ZIndex = ZOFF + 4,
 			Parent = Card,
 		})
 		local ValueLbl = New("TextLabel", {
@@ -14630,6 +14642,7 @@ function Library:CreateDashboard(Info)
 			Font = Enum.Font.GothamBold,
 			TextColor3 = Color3.fromRGB(255, 255, 255),
 			TextXAlignment = Enum.TextXAlignment.Left,
+			ZIndex = ZOFF + 4,
 			Parent = Card,
 		})
 		TweenService:Create(Card, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, Order * 0.04), { Transparency = 0 }):Play()
@@ -14679,6 +14692,7 @@ function Library:CreateDashboard(Info)
 			BackgroundTransparency = 0.2,
 			Position = UDim2.fromOffset(8, 48),
 			Size = UDim2.new(1, -16, 0, 6),
+			ZIndex = ZOFF + 4,
 			Parent = Card,
 		})
 		table.insert(Library.Corners, New("UICorner", {
@@ -14688,6 +14702,7 @@ function Library:CreateDashboard(Info)
 		local Fill = New("Frame", {
 			BackgroundColor3 = Color3.new(1, 1, 1),
 			Size = UDim2.new(0, 0, 1, 0),
+			ZIndex = ZOFF + 5,
 			Parent = Track,
 		})
 		table.insert(Library.Corners, New("UICorner", {
