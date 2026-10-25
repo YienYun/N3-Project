@@ -3286,3 +3286,15 @@ Saklar: Library:SetIconGlow(Enabled, {Image,Transparency,Scale}) apply
 ke semua rec di Library.IconGlows; default ON ("bisa no background dan
 ber-background"). Knob MOD groupbox Tab Card & Bg: TB_GlowOn/TB_GlowTr/
 TB_GlowSc; print resep tab nyeretak baris IconGlow. Versi 4.41.0.
+
+## v4.41.1 — kotak gelap icon kartu DIHAPUS biar sinar game kebaca
+
+User confirm asset sinar = rbxassetid://109516122757226 (sama persis
+sama yang kebake v4.41.0). Masalah visual: icon kartu masih punya
+kotak BackgroundColor3 Background @0.4 yang nutupin sinar di belakang
+→ sinar gak kebaca kayak game. Di game icon pet = PNG transparan tanpa
+kotak, langsung di atas Glow. Fix: BackgroundTransparency icon kartu =
+1 (kotak hapus), Crop scale tetep, sinar ZIndex 0 di belakangnya =
+look source game persis. Row feed emang udah tanpa kotak. Versi 4.41.1.
+Pelajaran pin: fragmen grep di check.sh gak boleh bawa kutip ganda di
+dalam string chk ber-quote-double (nusuk shell) — pakai fragmen polos.
