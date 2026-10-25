@@ -3070,3 +3070,25 @@ spotlight/viewport/demo dibalik jadi pin ABSENCE, pin SAE = URL project ini
 + numstat 1-add/1-del vs origin/main, pin loader PRE = HttpGet URL, pin ikon
 = LucideSources + nol sheet id. Jumlah tetep 97 check: 97/97 hijau,
 luau-analyze 0 SyntaxError (LIB/MOD/PRE). Versi 4.39.0.
+
+## v4.39.1 — compat API surface SAE (bug: loading stuck 4/5)
+
+Report user: SAE stuck di loading step 4/5 ("Building the window, tabs &
+all N3 Hub features"), handshake v4.39.0 muncul + window ready print muncul.
+Root cause: SAE (patch produksi) manggil API surface N3V3 produksi yang
+gak ada di LIB gue: AddSpotlightCard (1x, Egg Predictor — object-nya harus
+punya field Title/Desc/Icon + method SetData(title, desc, image, modelSource)),
+AddGroupbox({Name, IconName, Side, Collapsed}) 6x, plus update label lewat
+assign langsung `.Text =` (wrapper AddLabel gue cuma sinkron via :SetText).
+AddTabbox/AddTabbox:AddTab, AddButton table+chain, AddScrollFeed AddItem
+{Icon,Title,Detail,RightTag,OnClick} ternyata udah kompatibel — diaudit satu-satu.
+Fix (LIB): AddGroupbox = alias Side 1/2 → AddLeft/RightGroupbox; AddSpotlightCard
+di-INLINE (bukan module): frame kartu + icon square + Title/Desc + ViewportFrame
+WorldModel buat modelSource (kamera auto-focus bounding box, clone model),
+SetData sesuai signature SAE termasuk wrapper-safe (field .Title/.Desc/.Icon
+instance asli); Label wrapper sekarang sembunyiin key Text di balik
+__index/__newindex (_Text) jadi assign `.Text =` dari script game sinkron
+live ke TextLabel + Display + Resize. Templates.SpotlightCard ditambah.
+Versi 4.39.1 (print handshake + N3V4Version + footer PRE). Pin: presence
+compat trio + absence sample lama di MOD/PRE tetep. 98 check: lolos semua,
+luau-analyze 0 SyntaxError.

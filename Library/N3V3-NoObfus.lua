@@ -750,6 +750,7 @@ else
 end
 
 local Templates = {
+	SpotlightCard = { Height = 110, Title = "", Description = "", Image = "" },
 	--// UI \\--
 	Frame = {
 		BorderSizePixel = 0,
@@ -2363,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.39.0 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.39.1 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -5957,6 +5958,179 @@ do
 	local Funcs = {}
 
 	--// COMPONENT: Clean 2-Line Scroll Feed (Persis Chilli Asli: Anti-Bocor & Lega)
+	function Funcs:AddGroupbox(Info)
+		if self.Destroyed then
+			return nil
+		end
+		if typeof(Info) ~= "table" then
+			return nil
+		end
+		if Info.Side == 2 then
+			return self:AddRightGroupbox(Info.Name or "", Info.IconName)
+		end
+		return self:AddLeftGroupbox(Info.Name or "", Info.IconName)
+	end
+
+	function Funcs:AddSpotlightCard(Idx, Info)
+		if self.Destroyed then
+			return nil
+		end
+
+		Info = Library:Validate(Info, Templates.SpotlightCard)
+
+		local Groupbox = self
+		local Container = Groupbox.Container
+		local Height = Info.Height
+
+		local Card = New("Frame", {
+			BackgroundColor3 = "MainColor",
+			BackgroundTransparency = 0.3,
+			Size = UDim2.new(1, 0, 0, Height),
+			Parent = Container,
+		})
+		table.insert(
+			Library.Corners,
+			New("UICorner", {
+				CornerRadius = UDim.new(0, Library.CornerRadius),
+				Parent = Card,
+			})
+		)
+		New("UIStroke", {
+			Color = "OutlineColor",
+			Thickness = 1,
+			Parent = Card,
+		})
+
+		local BoxSize = Height - 16
+		local Icon = New("ImageLabel", {
+			BackgroundColor3 = "BackgroundColor",
+			BackgroundTransparency = 0.4,
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 8, 0.5, 0),
+			Size = UDim2.new(0, BoxSize, 0, BoxSize),
+			Image = Info.Image or "",
+			ScaleType = Enum.ScaleType.Fit,
+			Parent = Card,
+		})
+		table.insert(
+			Library.Corners,
+			New("UICorner", {
+				CornerRadius = UDim.new(0, 6),
+				Parent = Icon,
+			})
+		)
+
+		local Viewport = New("ViewportFrame", {
+			BackgroundColor3 = "BackgroundColor",
+			BackgroundTransparency = 0.4,
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 8, 0.5, 0),
+			Size = UDim2.new(0, BoxSize, 0, BoxSize),
+			Visible = false,
+			Parent = Card,
+		})
+		table.insert(
+			Library.Corners,
+			New("UICorner", {
+				CornerRadius = UDim.new(0, 6),
+				Parent = Viewport,
+			})
+		)
+		local World = New("WorldModel", {
+			Parent = Viewport,
+		})
+		local CardCamera = Instance.new("Camera")
+		CardCamera.Parent = Viewport
+		Viewport.CurrentCamera = CardCamera
+
+		local Title = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, BoxSize + 16, 0, 8),
+			Size = UDim2.new(1, -BoxSize - 24, 0, 16),
+			Text = Info.Title or "",
+			TextColor3 = "FontColor",
+			TextSize = 14,
+			Font = Enum.Font.GothamBold,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Parent = Card,
+		})
+		local Desc = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, BoxSize + 16, 0, 26),
+			Size = UDim2.new(1, -BoxSize - 24, 1, -34),
+			Text = Info.Description or "",
+			TextColor3 = "FontColor",
+			TextTransparency = 0.25,
+			TextSize = 12,
+			Font = Enum.Font.Gotham,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			TextWrapped = true,
+			Parent = Card,
+		})
+
+		local CardObj = {
+			Frame = Card,
+			Title = Title,
+			Desc = Desc,
+			Icon = Icon,
+			Viewport = Viewport,
+			ModelSource = nil,
+			Destroyed = false,
+			Type = "SpotlightCard",
+		}
+
+		function CardObj:SetData(TitleText, DescText, ImageAsset, ModelSource)
+			if self.Destroyed then
+				return
+			end
+			if TitleText then
+				Title.Text = TitleText
+			end
+			if DescText then
+				Desc.Text = DescText
+			end
+			if ImageAsset and ImageAsset ~= "" then
+				Icon.Image = ImageAsset
+			end
+			if ModelSource == self.ModelSource then
+				return
+			end
+			self.ModelSource = ModelSource
+			World:ClearAllChildren()
+			if typeof(ModelSource) == "Instance" then
+				local Clone = ModelSource:Clone()
+				Clone.Parent = World
+				local CF, Size = World:GetBoundingBox()
+				local MaxDim = math.max(Size.X, Size.Y, Size.Z, 0.1)
+				local Dist = MaxDim * 2.4
+				CardCamera.CFrame = CFrame.lookAt(CF.Position + Vector3.new(Dist * 0.7, Dist * 0.5, Dist * 0.9), CF.Position)
+				Viewport.Visible = true
+				Icon.Visible = false
+			else
+				Viewport.Visible = false
+				Icon.Visible = true
+			end
+		end
+
+		function CardObj:Destroy()
+			self.Destroyed = true
+			Card:Destroy()
+			local ElemIdx = table.find(Groupbox.Elements, Card)
+			if ElemIdx then
+				table.remove(Groupbox.Elements, ElemIdx)
+			end
+			Groupbox:Resize()
+			Options[Idx] = nil
+		end
+
+		table.insert(Groupbox.Elements, Card)
+		Groupbox:Resize()
+		Options[Idx] = CardObj
+		return CardObj
+	end
+
 	function Funcs:AddScrollFeed(Idx, Info)
 		if self.Destroyed then
 			return nil
@@ -6115,7 +6289,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.39.0"
+	Library.N3V4Version = "4.39.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -6432,6 +6606,27 @@ do
 			Label:Display()
 			Groupbox:Resize()
 		end
+
+		Label._Text = Label.Text
+		Label.Text = nil
+		setmetatable(Label, {
+			__index = function(T, Key)
+				if Key == "Text" then
+					return rawget(T, "_Text")
+				end
+				return nil
+			end,
+			__newindex = function(T, Key, Value)
+				if Key == "Text" then
+					rawset(T, "_Text", Value)
+					TextLabel.Text = Value
+					T:Display()
+					Groupbox:Resize()
+					return
+				end
+				rawset(T, Key, Value)
+			end,
+		})
 
 		if Label.DoesWrap then
 			Label:Display()
