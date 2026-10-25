@@ -3467,3 +3467,20 @@ executor blok .Source: Dex manual → Client + Shared +
 TopbarPlusReference.
 Bake v4.44.0 nunggu hasil: font asset UI + style cash topbar asli
 (ganti gradient Cash interim Ready).
+
+## v4.43.0+ — [N3DUMP5] mati: executor blok baca .Source; pivot tunjuk-file
+
+[N3DUMP5] hasil: SCAN CODE 2019 module tapi FONT/CASH/RARITY semua 0
+baris. Mustahil kalau source kebaca (Packages/TopbarPlus pasti nyebut
+Font/Cash) → kesimpulan: executor user blok/ngosongkan properti
+.Source. Lubang desain gue: snippet gak nge-report jumlah source yang
+berhasil dibaca, jadi bukti gagalipun tipis. STOP bikin snippet scan
+runtime/source buat font+cash.
+Workflow baru (skema user, dia yang nawarin): gue TUNJUK file spesifik
+di Explorer game, dia buka di Dex Explorer, paste source/nama anak.
+Ronde 1 tunjukan: (a) paste source utuh: ReplicatedStorage.
+TopbarPlusReference, .Value, .Api; (b) paste nama anak folder:
+ReplicatedStorage.Client, .Shared, .Packages. Ronde 2: gue tunjuk
+module theme/font/rarity persis dari list nama itu. v4.44.0 bake font
+UI + cash topbar asli nunggu ronde 2 selesai; interim Rate = gradient
+Ready hijau (dump2).
