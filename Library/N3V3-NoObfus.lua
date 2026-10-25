@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.39.3 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.39.4 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6061,6 +6061,18 @@ do
 			Parent = Card,
 		})
 
+		local ViewportStub = setmetatable({}, {
+			__index = function(t, k)
+				local Noop = function()
+				end
+				rawset(t, k, Noop)
+				return Noop
+			end,
+			__newindex = rawset,
+			__call = function()
+			end,
+		})
+
 		local CardObj = {
 			Frame = Card,
 			Title = Title,
@@ -6069,6 +6081,8 @@ do
 			Rarity = Rarity,
 			RarityColor = nil,
 			RarityTween = nil,
+			Viewport = ViewportStub,
+			ModelSource = nil,
 			Destroyed = false,
 			Type = "SpotlightCard",
 		}
@@ -6117,6 +6131,7 @@ do
 			if typeof(ImageAsset) == "string" and ImageAsset ~= "" then
 				Icon.Image = ImageAsset
 			end
+			self.ModelSource = ModelSource
 		end
 
 		function CardObj:Destroy()
@@ -6297,7 +6312,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.39.3"
+	Library.N3V4Version = "4.39.4"
 
 	Library.ButtonGradient = {
 		Enabled = true,

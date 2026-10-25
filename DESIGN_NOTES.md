@@ -3126,3 +3126,17 @@ Hardening sisi LIB (nol perubahan perilaku): SetRarity tostring(Text)
 sebelum assign ke TextLabel.Text (number/table tadi = runtime type error),
 SetData tostring(TitleText/DescText) + typeof(ImageAsset) == "string"
 sebelum Icon.Image. Versi 4.39.3. Pin: presence tostring guard.
+
+## v4.39.4 — ViewportStub: field compat kartu biar wiring lama gak crash
+
+Gejala: stuck 4/5 terus di 4.39.2/4.39.3 padahal window ready kebPrint;
+run 4.39.1 sebelumnya lolos. Diff 4.39.1→4.39.2 = field CardObj.Viewport +
+ModelSource DICABUT bareng 3D. Kode lokal user (fitur EggToolDisplay baru,
+print "Attached egg tool display" gak ada di SAE main) hampir pasti masih
+nyentuh Spotlight.Viewport → index nil → thread build mati di tengah tab.
+Fix: CardObj.Viewport = stub table no-op (metatable __index auto-noop
+function + rawset cache, __newindex rawset, __call noop) — wiring lama
+(method call / property set / truthy check) gak bisa crash; instance
+ViewportFrame tetep gak dibikin (3D tetep hapus, pin absence ViewportFrame).
+CardObj.ModelSource balik: SetData simpen arg modelSource ke self.ModelSource.
+Versi 4.39.4. Pin: presence ViewportStub + absence ViewportFrame.
