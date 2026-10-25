@@ -3378,3 +3378,26 @@ numstat 0/26637, pin merah). Recovery: cp 5 file edited ke /tmp, fetch
 origin (ref pulih), reset --hard origin/arena tip 1ef3719, restore cp,
 gates hijau, commit. Tidak ada konten hilang.
 Versi 4.42.0.
+
+## v4.42.0+ — dump3 (tools/dump_game_text2.lua): 4 lubang dump2
+
+User marah: v4.42.0 belum cukup — (1) font game = FontFace custom,
+dump2 cuma nangkep Font=Unknown tanpa ID asset; (2) cash topbar game
+("1.6B"/"57.4Qa" tanpa $) lolos scan CASH; (3) style label nama rarity
+(SECRET/COSMIC/RAINBOW sebagai text terpisah, "SECRET harus hitam
+putih") belum ketangkep; (4) layout card pet game (baris nama+rarity /
+mutasi / cash / scale+berat) belum ada referensinya. Spec user utk
+kartu kita: 4 baris persis: "Mutant Shark Secret" / "Rainbow" /
+"26M/s" / "x0.99 57,451 kg"; feed row = style row game; cash = style
+counter game; font = asset font game; referensi visual = Chilli Hub
+yang pakai style asli game.
+dump3 [N3DUMP3] 4 seksi: FONT ASSETS (Font.Family/Weight/Style distint
+sePlayerGui, exclude GUI kita via ancestor match N3/Obsidian), CASH
+TOPBAR (Text pola angka+suffix KMBTQa atau Name Cash/Money/Coin/
+Value: style lengkap stroke+gradient+font), RARITY/MUTATION NAME
+LABELS (Text upper exact di set SECRET..HALLOWEEN: style lengkap),
+GAME PET/EGG CARD UI TREE (ScreenGui game ber-name Egg/Pet/Boost/
+Fuse/Card/Popup/Preview: tree depth 4 style text+image).
+Round bake berikutnya (v4.43.0): rework layout kartu 4 baris spec
+user + font asset game + cash style game + rarity name text style +
+feed row restyle. JANGAN bake setengah-setengah lagi.
