@@ -3316,3 +3316,13 @@ game. Fix:
   ganda di dalam string chk double-quote (nusuk shell) -> diganti
   fragmen polos 'local Glow = New('. Gates sebelum push, bukan sesudah.
 Versi 4.41.2. Gates 100/100 sebelum commit.
+
+## v4.41.3 — kartu clip descendants biar sinar gak luber keluar groupbox
+
+Feedback user v4.41.2: glow row feed (ke-clip RowBtn) = "bagus banget";
+glow kartu luber sampe keluar groupbox karena Card Frame gak clip
+(rayo 3.5x icon ~343px vs tinggi kartu 110px). Fix: Card.ClipsDescendants
+= true → rayo penuh DI DALAM kartu, estetika sama kayak row yang dia
+puji. Scale glow tetep 3.5 biar konsisten kartu vs row. Semua anak
+kartu (Icon/Glow/Title/Desc/Rarity) emang di dalam boundary → clip aman.
+Versi 4.41.3.
