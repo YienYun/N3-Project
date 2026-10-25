@@ -3750,3 +3750,49 @@ FormatRate/FormatWeight metode chili (v4.45.4), crash-catcher.
   print handshake + return function noop biar loadstring(...)() sah).
 - Gate: chk numstat/fragmen SAE dibuang; chk baru jaga SAE absent +
   stub ada.
+
+## v0.2.0 — FASE 1: tab Farm / group Farm Egg (logika chili, rewrite clean)
+
+Peta logika chili (ChiliSourceV5.luau) yang jadi sumber rewrite:
+- SafeRequire module game (11800): ReplicatedStorage.Client.EggState,
+  .Data.Assets, .Data.HalloweenPets, .Shared.Types.AreaEggs, .Data.Guards.
+- Katalog area (14040-14073): fallback 13 area + augment live dari
+  EggState.ReadFieldEggs().Records[].AreaId.
+- Katalog rarity (14076-14100): Assets.Directory[].Rarity.RarityNumber/
+  DisplayName; fallback 10 tier.
+- Value egg (30744-30747): EarningRate * (scale^1.85; scale>5 ->
+  (scale/5)^1.2 * 19.637875755794113).
+- Drop point safezone (30708-30716): part "SafeZone", clamp local space
+  minus inset 6, Y egg.
+- Sisi aman (16540-16546): World/__OBJECTS > Areas > SeparationLine,
+  X > line.Position.X (default 552).
+- Teleport executor (16548-16565): PivotTo(CFrame.new(p)*rot), gap>3 ->
+  root.CFrame, zero velocity, snap part nyasar >12.
+- Guard (16621-16627, 18295-18301): Workspace.GuardAreas/*/Guard,
+  atribut GuardState ~= "Sleeping" + jarak <60 = pause (Busy).
+- Carry state: atribut karakter "HalloweenCarrying"; uid egg field via
+  atribut HalloweenEggUid/PreparedSourceName/Zone (30722).
+- UI state chili (14454-15380): priority modes 5, tween % 50-120 d100,
+  carry % 80-120 d100, V2 tween 3000-4500 d3300, steps 1-6 d3,
+  zones default {Titan Temple, Light Dark, Enchanted Forest}.
+
+Mapping 16 item user -> komponen LIB (urutan persis):
+1 Target Areas=Dropdown multi · 2 Target Rarity=Dropdown ·
+3 Min Steal Value=Slider prefix $ compact · 4 Target Spesifik Egg=
+Dropdown multi · 5 Steal priority=Dropdown · 6 Tween Speed=Slider
+3000-4500 (V2) · 7 Carry Speed=Slider 80-120% · 8 Auto Steal=Toggle ·
+9 Instan Steal=Toggle · 10 Instan Steal V2=Toggle di DependencyBox
+(muncul cuma saat #9 on) · 11 Teleport To Egg=Toggle ·
+12 Steal Method=Dropdown {Teleport,Step} (renama Move To Egg) ·
+13 Tween Speed=Slider 50-120% · 14 Target Zone=Dropdown multi (renama
+Instant Steal Zones) · 15 Drop Egg At Safe Zone=Toggle ·
+16 Anti Guard Panel=Toggle -> group kanan "Guard Status" (label live
++ toggle Anti Guard Enabled; chili punya enable sebagai state window).
+
+Adaptasi tercatat (bukan logika baru): steps instant fixed 3 (default
+chili, gak di-expose karena不在 list user); Fast Delivery toggle chili
+dilebur ke V2 (V2 = fast tween itu sendiri); deliver tanpa DropAtSafe
+& tanpa instant = tahan egg kalau udah sisi aman (chili LeaveFilter
+semantik). Lapisan file: [0]Config [1]SafeBoot [2]GAMEBRIDGE(kode game)
+[3]FARMCONTROLLER(logika) [4]UIBRIDGE(kode LIB, paling bawah).
+Versi hub 0.2.0; handshake "[N3-Steal-An-Egg] v0.2.0 loaded".
