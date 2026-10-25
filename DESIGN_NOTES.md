@@ -3443,3 +3443,27 @@ PlayerGui). Read-only, hasil auto-clipboard.
 BELUM (nunggu [N3DUMP4]): asset id font game (Font.new) + verifikasi/
 ganti gradient Cash interim ke style topbar hijau asli → v4.44.0.
 Versi 4.43.0. Gates 105/105.
+
+## v4.43.0+ — [N3DUMP4] hasil + pivot ke baca code ([N3DUMP5])
+
+User protes (bener): scan instance runtime buat font/cash itu jalur
+panjang & buang waktu — dump4 cuma nangkep default Roblox (hotbar,
+RobloxGui) + signage dunia. Dua temuan dump4 yang kepake: font asset
+game di signage dunia = rbxassetid://12187365977 (Bold + Italic:
+"TRAILS SHOP", speed sign) + keluarga GothamSSm utk title dunia
+(GothamBold/Black/ExtraBold/Medium); UI font utama BELUM konfirmasi.
+Screenshot Dex user: ReplicatedStorage game punya folder Client,
+Shared, Packages, TopbarPlusReference, Value, Api → cash topbar game
+= icon TopbarPlus, style-nya ada di code client, bukan object yang
+bisa di-scan PlayerGui.
+Pivot: tools/dump_code.lua [N3DUMP5] = grep SOURCE module
+(LuaSourceContainer.Source) se-ReplicatedStorage+StarterGui+
+StarterPack+StarterPlayer, 3 seksi: FONT CODE (Font.new/rbxassetid/
+FontFace/Weight/nama keluarga font), CASH/TOPBAR CODE (baris match +
+3 baris konteks: Topbar/Cash/Money/Balance/Coins), RARITY CODE (baris
+yang punya kata rarity DAN token warna/gradient). Read-only, cap baris
+per seksi biar paste gak gedenya, auto-clipboard. Fallback kalau
+executor blok .Source: Dex manual → Client + Shared +
+TopbarPlusReference.
+Bake v4.44.0 nunggu hasil: font asset UI + style cash topbar asli
+(ganti gradient Cash interim Ready).
