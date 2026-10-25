@@ -3244,3 +3244,25 @@ ANOMALI: semua UIStroke.Thickness dump fractional (0.01-0.12) — dicurigai
   Rencana bake: ketebalan diterjemahkan 1px di scale LIB, warna/transparansi/
   gradient/texture bake verbatim. Font game = FontFace custom (Enum.Unknown);
   LIB tetep Gotham sesuai lock lama kecuali user minta ganti.
+
+## v4.40.0 — pattern background game jadi default LIB + saklar (scope pangkas user)
+
+User pangkas scope tabel mapping: "abaikan text gue, cuma butuh background
+dari image saja sebagai background default; gue bisa no background dan
+ber-background". Jadi ronde ini HANYA:
+- Library.PatternBackground = { Enabled = true, Image = rbxassetid://
+  90325592797235 (pattern tile dump ActivePets), TileSize = 75,
+  Transparency = 0.75 } — nilai verbatim dari dump N3DUMP.
+- CreateWindow: ImageLabel PatternBG di MainFrame (ZIndex 0 = di bawah
+  semua konten, di atas bg frame; ke-clip UICorner window), ScaleType
+  Tile, terdaftar di Library.PatternOverlays.
+- Library:SetPatternBackground(Enabled, Options{Image,TileSize,
+  Transparency}) = saklar runtime: no background / ber-background,
+  apply ke semua overlay terdaftar.
+- MOD groupbox "Tab Card & Bg": toggle TB_PatOn + slider TB_PatTr
+  (transparansi %) + TB_PatTile (24-160px); print resep tab sekarang
+  ikut nyeretak baris PatternBackground.
+RESEP lain dari dump (outline rarity gradient, gradient emas header,
+tombol green/red game, glow sprite, decor shine) TETEP di section RESEP
+GAME PANEL sebagai kandidat bake berikutnya, BUKAN ronde ini.
+Versi 4.40.0. Gates 100 check.

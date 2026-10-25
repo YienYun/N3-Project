@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.39.5 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.40.0 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6312,7 +6312,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.39.5"
+	Library.N3V4Version = "4.40.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11377,6 +11377,41 @@ function Library:Notify(...)
 end
 
 
+Library.PatternBackground = {
+	Enabled = true,
+	Image = "rbxassetid://90325592797235",
+	TileSize = 75,
+	Transparency = 0.75,
+}
+Library.PatternOverlays = {}
+
+function Library:SetPatternBackground(Enabled, Options)
+	local PB = Library.PatternBackground
+	if Enabled ~= nil then
+		PB.Enabled = not not Enabled
+	end
+	if type(Options) == "table" then
+		if typeof(Options.Image) == "string" and Options.Image ~= "" then
+			PB.Image = Options.Image
+		end
+		if type(Options.TileSize) == "number" then
+			PB.TileSize = math.clamp(Options.TileSize, 16, 256)
+		end
+		if type(Options.Transparency) == "number" then
+			PB.Transparency = math.clamp(Options.Transparency, 0, 1)
+		end
+	end
+	for _, Overlay in ipairs(Library.PatternOverlays) do
+		pcall(function()
+			Overlay.Visible = PB.Enabled
+			Overlay.Image = PB.Image
+			Overlay.ImageTransparency = PB.Transparency
+			Overlay.TileSize = UDim2.new(0, PB.TileSize, 0, PB.TileSize)
+		end)
+	end
+	return PB.Enabled
+end
+
 function Library:CreateWindow(WindowInfo)
 	local RawWindowT = WindowInfo and WindowInfo.WindowTransparency
 	local RawContentT = WindowInfo and WindowInfo.ContentTransparency
@@ -11501,6 +11536,20 @@ function Library:CreateWindow(WindowInfo)
 				Parent = MainFrame,
 			})
 		)
+		local PatternBG = New("ImageLabel", {
+			Name = "PatternBG",
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 1, 0),
+			Image = Library.PatternBackground.Image,
+			ImageColor3 = Color3.new(1, 1, 1),
+			ImageTransparency = Library.PatternBackground.Transparency,
+			ScaleType = Enum.ScaleType.Tile,
+			TileSize = UDim2.new(0, Library.PatternBackground.TileSize, 0, Library.PatternBackground.TileSize),
+			Visible = Library.PatternBackground.Enabled,
+			ZIndex = 0,
+			Parent = MainFrame,
+		})
+		table.insert(Library.PatternOverlays, PatternBG)
 		Library:AddOutline(MainFrame)
 
 		--// 1. NEON BORDER WINDOW LUAR (KETEBALAN KONSTAN 1.8px) \\--
