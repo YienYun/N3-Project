@@ -3675,3 +3675,21 @@ Protes kedua: mutation kosong ninggalin gap (baris 3-4 tetep y40/57).
 Fix LayoutLines: Mutation.Visible false -> Rate y24, Scale/Desc y40;
 true -> 40/57. LayoutWeight dilebur ke LayoutLines.
 Versi 4.45.2.
+
+## v4.45.3 — crash enum + teori final kotak hitam
+
+CRASH v4.45.2: `Enum.ApplyStrokeMode.Outline` TIDAK EXIST (item enum
+cuma Border + Contextual) — gue ngarang, BUILD CRASH di SAE. Dicabut
+4 tempat.
+Teori final kotak hitam (match semua screenshot): executor user
+render UIStroke parent TextLabel sebagai BORDER persegi apapun
+mode-nya; thickness 1.5/1.2 = kotak tebal kelihatan (baris-1 kartu,
+pill feed, "blob" v4.45 = kotak ketat nempel text kecil), thickness
+0.07 = kotak invisible = bersih. Stroke tebal parent Frame (window,
+shadow, handle) sah karena emang border.
+Maka v4.45.3: semua stroke parent TEXT di kartu/feed jadi hairline
+0.07 (Title 1.5->0.07, fallback Rarity 1.5->0.07, fallback RowTitle
+1.2->0.07, ApplyGameText tetep 0.07). Outline glyph gak bisa direpro
+di executor dia tanpa kotak — hairline = kompromi persis topbar game
+(yang emang 0.07).
+Versi 4.45.3.
