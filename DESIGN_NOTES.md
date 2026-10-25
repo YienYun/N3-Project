@@ -3153,3 +3153,16 @@ Spotlight:SetRarity(rarity, warna) pakai warna asli game
 `if Spotlight.SetRarity then` biar SAE tetep jalan di LIB lama.
 Numstat Games vs origin/main jadi 7/1 → pin check.sh di-update + pin
 presence 'Spotlight:SetRarity('. Analisis SAE 0 SyntaxError.
+
+## v4.39.4++ — crash catcher di SAE (stuck 4/5 tanpa red line yang ke-paste)
+
+Stuck 4/5 berulang: thread build MATI = visualnya identik sama hang, dan
+red line console gak pernah ke-paste lengkap. Region build = satu fungsi
+raksasa Tasks.BuildMainInterface() (dipanggil baris 26478) → error di
+mana pun di dalamnya = spinner muter selamanya tanpa pesan.
+Patch SAE: bungkus panggilan itu pcall; kalau crash → warn
+"[N3 SAE] BUILD CRASH: <file:line: pesan>" ke Output + SetMessage/
+SetDescription loading screen jadi teks error (sub 90 char) + rethrow.
+Run berikutnya, satu baris warn itu nunjuk pelaku exact (LIB kartu vs
+SAE vs game). Numstat Games vs main jadi 17/2 → pin update + pin
+presence 'BUILD CRASH'.

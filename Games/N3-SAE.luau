@@ -26475,7 +26475,16 @@ end
 -- END HALLOWEEN CONTROLLER
 
 
-Tasks.BuildMainInterface()
+do
+	local buildOk, buildErr = pcall(Tasks.BuildMainInterface)
+	if not buildOk then
+		local errText = tostring(buildErr)
+		warn("[N3 SAE] BUILD CRASH: " .. errText)
+		Tasks.Loading:SetMessage("BUILD CRASH - lihat Output")
+		Tasks.Loading:SetDescription(string.sub(errText, 1, 90))
+		error(buildErr, 0)
+	end
+end
 Tasks.Loading:SetMessage("Verifying")
 Tasks.Loading:SetCurrentStep(5)
 Tasks.Loading:SetDescription("Verifying the engine, remotes & final configuration...")
