@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.45.1 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.45.2 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6052,6 +6052,7 @@ do
 			Name = "N3GameStroke",
 			Color = Color3.new(0, 0, 0),
 			Thickness = 1.5,
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Outline,
 			Parent = Title,
 		})
 		local Rarity = New("TextLabel", {
@@ -6124,11 +6125,15 @@ do
 				Rarity.Position = UDim2.fromOffset(BoxSize + 14 + Title.TextBounds.X + 6, 7)
 			end
 		end
-		local function LayoutWeight()
+		local function LayoutLines()
+			local yRate = Mutation.Visible and 40 or 24
+			local yMeta = Mutation.Visible and 57 or 40
+			Rate.Position = UDim2.fromOffset(BoxSize + 14, yRate)
+			ScaleLbl.Position = UDim2.fromOffset(BoxSize + 14, yMeta)
 			if ScaleLbl.Visible then
-				Desc.Position = UDim2.fromOffset(BoxSize + 14 + ScaleLbl.TextBounds.X + 6, 57)
+				Desc.Position = UDim2.fromOffset(BoxSize + 14 + ScaleLbl.TextBounds.X + 6, yMeta)
 			else
-				Desc.Position = UDim2.fromOffset(BoxSize + 14, 57)
+				Desc.Position = UDim2.fromOffset(BoxSize + 14, yMeta)
 			end
 		end
 
@@ -6202,6 +6207,7 @@ do
 						Name = "N3GameStroke",
 						Color = Library.GameText.StrokeColor,
 						Thickness = 1.5,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Outline,
 						Parent = Rarity,
 					})
 				end
@@ -6260,7 +6266,7 @@ do
 				ScaleLbl.Visible = false
 				Desc.Text = tostring(Fields.Meta)
 			end
-			LayoutWeight()
+			LayoutLines()
 		end
 
 		function CardObj:SetData(TitleText, DescText, ImageAsset, ModelSource)
@@ -6434,6 +6440,7 @@ do
 						Name = "N3GameStroke",
 						Color = Color3.new(0, 0, 0),
 						Thickness = 1.2,
+						ApplyStrokeMode = Enum.ApplyStrokeMode.Outline,
 						Parent = RowTitle,
 					})
 					RowTitle.TextColor3 = Color3.new(1, 1, 1)
@@ -6488,7 +6495,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.45.1"
+	Library.N3V4Version = "4.45.2"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11746,6 +11753,7 @@ function Library:ApplyGameText(Label, Name, Options)
 		if not Stroke then
 			Stroke = New("UIStroke", {
 				Name = "N3GameStroke",
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Outline,
 				Parent = Label,
 			})
 		end

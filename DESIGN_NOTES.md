@@ -3659,3 +3659,19 @@ stroke RowDetail feed dicabut (putih 12px gak butuh). Jawaban
 "hardcode?": nol nilai hardcode — angka rate/scale/berat live dari
 field egg (Income/Scale/Weight), style dari dump; 57,351 vs 57,467 =
 egg instance beda, bukan diketik.
+
+## v4.45.2 — kotak hitam = UIStroke mode Border + baris naik kalau mutation kosong
+
+Screenshot user v4.45.1: persegi hitam melingkupi SATU baris penuh
+(Title+Rarity) = UIStroke Title render sebagai Border (outline kotak
+label), bukan Outline glyph — executor/client dia pakai mode default
+Contextual yang jatuh ke Border buat TextLabel background transparan
+(di client game asli mungkin beda). Fix: semua N3GameStroke (Title,
+ApplyGameText, fallback SetRarity, fallback RowTitle) dipaksa
+ApplyStrokeMode = Enum.ApplyStrokeMode.Outline. Ini juga jawaban
+akhir teka-teki "garis hitam" sejak v4.44: bukan thickness, bukan
+fraksional — MODE stroke-nya.
+Protes kedua: mutation kosong ninggalin gap (baris 3-4 tetep y40/57).
+Fix LayoutLines: Mutation.Visible false -> Rate y24, Scale/Desc y40;
+true -> 40/57. LayoutWeight dilebur ke LayoutLines.
+Versi 4.45.2.
