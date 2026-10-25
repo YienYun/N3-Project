@@ -24,3 +24,9 @@
 	  [4] UiBridge      — jembatan ke UI (keputusan diskusi: LIB / UI sendiri)
 	  [5+] Controllers  — Farm, Predictor, Inventory, Server, Misc, dst per fase
 ]]
+
+print("[N3-Steal-An-Egg] v0.1.0 kerangka loaded — logika masuk per fase atas perintah user")
+
+return function()
+	-- Entry point hub: diisi fase pertama begitu user nunjuk feature/tab mana dulu.
+end

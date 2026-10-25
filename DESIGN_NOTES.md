@@ -3738,3 +3738,15 @@ vs kalkulasi sendiri), nasib N3-SAE.luau lama (freeze/delete).
 Asset proven yang layak migrasi sebagai referensi logika (bukan
 copas deobfus): kalkulasi income predictor (verified 5/5 vs game),
 FormatRate/FormatWeight metode chili (v4.45.4), crash-catcher.
+
+## KEPUTUSAN DISKUSI RESET (jawab ask_user)
+- UI hub baru = WAJIB library lama (N3V4 LIB / N3V3-NoObfus.lua);
+  file baru N3-Steal-An-Egg.luau = lapisan logika di atas LIB.
+- Urutan fase = USER yang nyuruh satu per satu sesuai tab/nama;
+  agent gak boleh milih urutan sendiri.
+- Sumber data game (live require vs fallback) = urusan belakangan.
+- N3-SAE.luau = DIHAPUS SEKARANG (pilihan user delete_now); runner
+  lama mati; runner baru = Games/N3-Steal-An-Egg.luau (stub v0.1.0
+  print handshake + return function noop biar loadstring(...)() sah).
+- Gate: chk numstat/fragmen SAE dibuang; chk baru jaga SAE absent +
+  stub ada.

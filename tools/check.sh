@@ -215,8 +215,8 @@ chk "v4.16.0: outline spin — pita gradient muter di outline window + knob + sa
 	"grep -q 'Library.OutlineSpin = {' '$LIB' && grep -q 'function Library:AddOutlineSpin(Parent)' '$LIB' && grep -q 'function Library:ApplyOutlineSpin()' '$LIB' && grep -q 'function Library:SetOutlineSpin(Info)' '$LIB' && grep -q 'Library:AddOutlineSpin(MainFrame)' '$LIB' && grep -qF 'Color3.fromRGB(193, 193, 193)' '$LIB' && grep -q 'Speed = 8.5,' '$LIB' && grep -qF 'ColorSequenceKeypoint.new(0.35, S.ColorB)' '$LIB' && grep -qF 'NumberSequenceKeypoint.new(0.15, 0)' '$LIB' && grep -qF 'NumberSequenceKeypoint.new(0.35, 1)' '$LIB' && grep -qF '{ Rotation = 360 }' '$LIB' && grep -qF 'Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1' '$LIB' && grep -q 'Outline Muter' '$MOD' && grep -q 'Sample Outline Muter' '$MOD' && grep -q 'OS_ON' '$MOD' && grep -q 'AddSlider(\"OS_SPD\"' '$MOD' && grep -q 'AddColorPicker(\"OS_C1\"' '$MOD' && grep -q 'AddColorPicker(\"OS_C2\"' '$MOD' && grep -q 'Library:AddOutlineSpin(SampleWin)' '$MOD' && [ \"\$(grep -c 'Print setingan outline muter' '$MOD')\" -eq 2 ] && [ \"\$(grep -c 'Copy setingan outline muter' '$MOD')\" -eq 2 ] && grep -q 'local function PrintSpin()' '$MOD'"
 
 echo "== 5. GAME SCRIPTS (patch user — edit cuma URL library, atas perintah) =="
-chk "Games/N3-SAE.luau = patch user dari main — edit: URL LIB ke project ini + wiring SetRarity kartu" \
-	"test -f '$ROOT/Games/N3-SAE.luau' && git -C '$ROOT' diff --numstat origin/main -- Games/N3-SAE.luau | grep -qE '^67[[:space:]]+61[[:space:]]' && grep -qF 'refs/heads/arena/86b8116d-n3-project/Library/N3V3-NoObfus.lua' '$ROOT/Games/N3-SAE.luau' && ! grep -qF 'ZedFu3/N3-Hub/refs/heads/main/Library/N3V3.luau' '$ROOT/Games/N3-SAE.luau' && grep -qF 'Spotlight:SetFields({' '$ROOT/Games/N3-SAE.luau' && grep -qF 'BUILD CRASH' '$ROOT/Games/N3-SAE.luau'"
+chk "N3-SAE.luau DIHAPUS atas perintah user (reset v4.46: hub baru N3-Steal-An-Egg gantiin, UI tetep N3V4 LIB)" \
+	"test ! -f '$ROOT/Games/N3-SAE.luau' && test -f '$ROOT/Games/N3-Steal-An-Egg.luau' && grep -qF 'kerangka loaded' '$ROOT/Games/N3-Steal-An-Egg.luau'"
 echo
 echo "== chk v4.28: shadow modern 4 layer + popover details =="
 chk "engine bayangan 4 layer ikut terhapus (VIS)" \
@@ -247,15 +247,15 @@ chk "tools/dump_game_ui.lua = snippet dump read-only (prefix N3DUMP, nol Instanc
 chk "N3-Steal-An-Egg.luau = kerangka hub baru (banner KERANGKA ada, logika nyusul pasca-diskusi)" \
 	"test -f '$ROOT/Games/N3-Steal-An-Egg.luau' && grep -qF 'KERANGKA' '$ROOT/Games/N3-Steal-An-Egg.luau' && grep -qF 'ChiliSourceV5' '$ROOT/Games/N3-Steal-An-Egg.luau'"
 chk "v4.45.4: metode chili — FormatRate 2 desimal + FormatWeight koma verbatim + warna solidIncome/Weight + feed rich-text" \
-	"grep -qF 'local function FormatRate' '$ROOT/Games/N3-SAE.luau' && grep -qF '%.2fM/s' '$ROOT/Games/N3-SAE.luau' && grep -qF '#4DFF7A' '$ROOT/Games/N3-SAE.luau' && grep -qF '#4DFF7A' '$LIB' && grep -qF '#CDE7FF' '$LIB'"
+	"grep -qF '#4DFF7A' '$LIB' && grep -qF '#CDE7FF' '$LIB' && grep -qF 'ClearGameText(Rate)' '$LIB'"
 chk "v4.45.3: enum Outline NGAWUR dibuang + stroke text hairline 0.07 + baris naik kalau mutation kosong" \
 	"! grep -qF 'ApplyStrokeMode.Outline' '$LIB' && grep -qF 'Thickness = 0.07,' '$LIB' && grep -qF 'local function LayoutLines' '$LIB' && grep -qF 'Mutation.Visible and 40 or 24' '$LIB'"
 chk "v4.45.0: rarity nempel nama + Scale kuning gradient + berat koma + stroke Rate integer + feed row konsisten" \
-	"grep -qF 'Scale = {' '$LIB' && grep -qF 'local function LayoutRarity' '$LIB' && grep -qF 'AutomaticSize = Enum.AutomaticSize.X' '$LIB' && grep -qF 'Options.StrokeThickness or 0.07' '$LIB' && grep -qF 'local function FormatWeight' '$ROOT/Games/N3-SAE.luau' && grep -qF 'Weight = FormatWeight' '$ROOT/Games/N3-SAE.luau'"
+	"grep -qF 'Scale = {' '$LIB' && grep -qF 'local function LayoutRarity' '$LIB' && grep -qF 'AutomaticSize = Enum.AutomaticSize.X' '$LIB' && grep -qF 'Options.StrokeThickness or 0.07' '$LIB'"
 chk "v4.44.0: font UI game GothamSSm ExtraBold + Cash gradient Rot0 hijau topbar verbatim [N3DUMP8]" \
 	"grep -qF 'GothamSSm.json' '$LIB' && grep -qF 'function Library:ApplyGameFont' '$LIB' && grep -qF '{ 0, 26, 255, 0 }, { 1, 0, 255, 0 }' '$LIB' && grep -qF 'ApplyGameFont(RowTitle)' '$LIB'"
 chk "v4.43.0: kartu 4 baris spec user + rarity name gradient dari dump RARNAME + feed row game style + SAE SetFields + wrapper mati" \
-	"grep -qF 'function CardObj:SetFields(' '$LIB' && grep -qF 'Legendary = {' '$LIB' && grep -qF 'Mythic = {' '$LIB' && grep -qF 'Cosmic = {' '$LIB' && grep -qF 'Secret = {' '$LIB' && grep -qF 'Eternal = {' '$LIB' && grep -qF 'Cash = {' '$LIB' && grep -qF 'N3GameStroke' '$LIB' && grep -qF 'SetFields({' '$ROOT/Games/N3-SAE.luau' && grep -qF 'Rarity = egg.Rarity,' '$ROOT/Games/N3-SAE.luau' && ! grep -qF 'RawSetData' '$ROOT/Games/N3-SAE.luau' && ! grep -qF 'local eggTitle' '$ROOT/Games/N3-SAE.luau' && ! grep -qF 'local rHex' '$ROOT/Games/N3-SAE.luau'"
+	"grep -qF 'function CardObj:SetFields(' '$LIB' && grep -qF 'Legendary = {' '$LIB' && grep -qF 'Mythic = {' '$LIB' && grep -qF 'Cosmic = {' '$LIB' && grep -qF 'Secret = {' '$LIB' && grep -qF 'Eternal = {' '$LIB' && grep -qF 'Cash = {' '$LIB' && grep -qF 'N3GameStroke' '$LIB'"
 chk "tools/dump_hud.lua [N3DUMP8]: dump tertarget HUD/TopbarStandard/SakuraCrystalCounter + read-only" \
 	"test -f '$ROOT/tools/dump_hud.lua' && grep -qF '[N3DUMP8]' '$ROOT/tools/dump_hud.lua' && grep -qF 'TopbarStandard' '$ROOT/tools/dump_hud.lua' && grep -qF 'FontFace' '$ROOT/tools/dump_hud.lua' && ! grep -qF 'Instance.new' '$ROOT/tools/dump_hud.lua' && ! grep -qF '.Source' '$ROOT/tools/dump_hud.lua'"
 chk "tools/dump_tree2.lua [N3DUMP7]: scope 4 folder penting + nama doang + read-only" \
