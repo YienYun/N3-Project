@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.41.1 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.41.2 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6009,6 +6009,7 @@ do
 			Size = UDim2.new(0, BoxSize, 0, BoxSize),
 			Image = Info.Image or "",
 			ScaleType = Enum.ScaleType.Crop,
+			ZIndex = 2,
 			Parent = Card,
 		})
 		table.insert(
@@ -6029,7 +6030,7 @@ do
 			ImageTransparency = Library.IconGlow.Transparency,
 			ScaleType = Enum.ScaleType.Stretch,
 			Visible = Library.IconGlow.Enabled,
-			ZIndex = 0,
+			ZIndex = 1,
 			Parent = Card,
 		})
 		table.insert(Library.IconGlows, { Inst = Glow, Base = BoxSize })
@@ -6264,6 +6265,7 @@ do
 				Size = UDim2.fromOffset(34, 34),
 				Image = itemData.Icon or "",
 				ScaleType = Enum.ScaleType.Fit,
+				ZIndex = 2,
 				Parent = RowBtn,
 			})
 			local RowGlow = New("ImageLabel", {
@@ -6277,7 +6279,7 @@ do
 				ImageTransparency = Library.IconGlow.Transparency,
 				ScaleType = Enum.ScaleType.Stretch,
 				Visible = Library.IconGlow.Enabled,
-				ZIndex = 0,
+				ZIndex = 1,
 				Parent = RowBtn,
 			})
 			table.insert(Library.IconGlows, { Inst = RowGlow, Base = 34 })
@@ -6341,7 +6343,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.41.1"
+	Library.N3V4Version = "4.41.2"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11409,8 +11411,8 @@ end
 Library.IconGlow = {
 	Enabled = true,
 	Image = "rbxassetid://109516122757226",
-	Transparency = 0.42,
-	Scale = 3,
+	Transparency = 0.3,
+	Scale = 3.5,
 }
 Library.IconGlows = {}
 

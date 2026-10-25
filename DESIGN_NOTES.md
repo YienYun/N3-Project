@@ -3298,3 +3298,21 @@ kotak, langsung di atas Glow. Fix: BackgroundTransparency icon kartu =
 look source game persis. Row feed emang udah tanpa kotak. Versi 4.41.1.
 Pelajaran pin: fragmen grep di check.sh gak boleh bawa kutip ganda di
 dalam string chk ber-quote-double (nusuk shell) — pakai fragmen polos.
+
+## v4.41.2 — layering + intensitas sinar (user: "di atas frame hitam, belakang icon, kurang jelas")
+
+Screenshot user v4.41.x: glow ada tapi kusam. Arahan: glow DI ATAS
+permukaan frame hitam, DI BELAKANG icon pet, dan lebih jelas kayak
+game. Fix:
+- ZIndex: Glow = 1 (di atas bg card/row + sisa permukaan gelap),
+  Icon/RowIcon = 2 (pet tetep paling atas). Sebelumnya glow ZIndex 0
+  = keselek di bawah lapisan frame.
+- Intensitas default dinaikin dari dump murni biar kebaca di bg gelap
+  hub: Transparency 0.42 -> 0.3, Scale 3 -> 3.5 (rayo selebar game
+  ~3.5x icon). Knob MOD + SetIconGlow tetep buat tuning realtime.
+- Box hitam icon kartu udah hapus sejak 4.41.1 (kalau user masih
+  lihat box berarti run-nya pre-4.41.1 -> cek handshake).
+- Pin check.sh v4.41.1 yang MERAH kemarin = fragmen grep bawa kutip
+  ganda di dalam string chk double-quote (nusuk shell) -> diganti
+  fragmen polos 'local Glow = New('. Gates sebelum push, bukan sesudah.
+Versi 4.41.2. Gates 100/100 sebelum commit.
