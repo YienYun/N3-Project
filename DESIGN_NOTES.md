@@ -3540,3 +3540,34 @@ Tunjukan ronde 2 (user buka di Dex, paste source verbatim):
 5) Shared/Globals/Constants (konstanta font/warna)
 Abis paste: bake v4.44.0 = Font.new(asset game) di label kartu/feed +
 ganti gradient Cash interim ke style topbar asli.
+
+## v4.43.0+ — ronde 2 Dex masuk (5 file) + PR #1 closed (salah pencet)
+
+PR #1 ke-create lalu user bilang salah pencet → gh pr close 1 (bukan
+merge; branch tetep). JANGAN bikin PR lagi tanpa perintah eksplisit.
+Isi 5 file decompile:
+1) MoneyUpdateController: cash label = Hud.Get("Money") (frame) +
+   Hud.Every("MoneyValue") (label, anak "Shadow" ikut di-set .Text).
+   Code CUMA nulis .Text — format: n>99999 → "$"..FormatNumber.Simple
+   .FormatCompact(round(n), ".#"), else "$"..AddCommas(round(n)).
+   Warna/stroke/font = property instance ScreenGui HUD (StarterGui),
+   BUKAN di code. Floating "+$X" = clone ReplicatedStorage.Assets.
+   MoneyChange: Label + UIStroke + UIScale + Icon, UIGradient anak
+   "More" (enable saat positif) / "Less" (negatif), tween transparency.
+2) IconController + Icons: map asset id image buat ImageLabel bertag
+   CollectionService "ICON" (attribute IconId); Icons.Main cuma
+   boss-tokens dari Data.Currency.Configs.BossTokens.Icon. Bukan
+   topbar cash.
+3) Client/GUI: registry accessor PlayerGui — nama screen penting:
+   HUD=true, TopBarStandard="TopbarStandard", SakuraCrystalCounter,
+   TrailShop, AutoSell, Backpack="BackpackGui", Shop="RobuxShop",
+   GrowingEggs, SellPrompt. Nol info font.
+4) Constants: nol font (isi balance/config id).
+Kesimpulan: font asset UI + style hijau cash = property instance di
+StarterGui HUD / TopbarStandard → dump tertarget [N3DUMP8]
+tools/dump_hud.lua: per text label di PlayerGui.HUD + .TopbarStandard
++ .SakuraCrystalCounter (pembanding): path rel, text, size, color,
+transparency, FontFace family+weight + legacy Font, UIStroke (color/
+thickness/transparency + gradient stroke), UIGradient label. Cap 40/
+target, read-only, clipboard.
+v4.44.0 bake nunggu [N3DUMP8]: Font.new(asset) + ganti Cash interim.
