@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.45.3 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.45.4 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6248,7 +6248,8 @@ do
 			end
 			if Fields.Rate then
 				Rate.Text = tostring(Fields.Rate)
-				Library:ApplyGameText(Rate, "Cash")
+				Library:ClearGameText(Rate)
+				Rate.TextColor3 = Color3.fromHex("#4DFF7A")
 			end
 			if Fields.Scale then
 				ScaleLbl.Visible = true
@@ -6259,7 +6260,8 @@ do
 			end
 			if Fields.Weight then
 				Desc.Text = tostring(Fields.Weight)
-				Desc.TextTransparency = 0.25
+				Desc.TextTransparency = 0
+				Desc.TextColor3 = Color3.fromHex("#CDE7FF")
 			elseif Fields.Meta then
 				ScaleLbl.Visible = false
 				Desc.Text = tostring(Fields.Meta)
@@ -6492,7 +6494,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.45.3"
+	Library.N3V4Version = "4.45.4"
 
 	Library.ButtonGradient = {
 		Enabled = true,

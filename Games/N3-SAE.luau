@@ -748,12 +748,32 @@ local function FormatCash(n: number): string
 end
 local function FormatWeight(n: number): string
 	n = tonumber(n) or 0
-	if n > 99999 then
-		return FormatCash(n)
+	local base = n >= 1000 and string.format("%.0f", n) or string.format("%.2f", n)
+	local intPart, decPart = string.match(base, "^(%-?%d+)(%.%d+)$")
+	local src = intPart or base
+	while true do
+		local swapped: number
+		base, swapped = string.gsub(src, "^(%-?%d+)(%d%d%d)", "%1,%2")
+		if swapped == 0 then
+			src = base
+			break
+		end
+		src = base
 	end
-	local s = ("%d"):format(math.floor(n + 0.5))
-	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
-	return out:gsub("^,", "")
+	return src .. (decPart or "") .. " Kg"
+end
+local function FormatRate(n: number): string
+	n = tonumber(n) or 0
+	if n >= 1000000000000 then
+		return string.format("%.2fT/s", n / 1000000000000)
+	elseif n >= 1000000000 then
+		return string.format("%.2fB/s", n / 1000000000)
+	elseif n >= 1000000 then
+		return string.format("%.2fM/s", n / 1000000)
+	elseif n >= 1000 then
+		return string.format("%.1fK/s", n / 1000)
+	end
+	return string.format("%d/s", math.floor(n))
 end
 local function ColorToHex(c: Color3): string
 	return string.format(
@@ -14134,9 +14154,9 @@ function Tasks.BuildMainInterface()
 								Name = focus.Name,
 								Rarity = focus.Rarity,
 								Mutation = focus.Mutation or "",
-								Rate = FormatCash(focus.Income or 0) .. "/s",
+								Rate = FormatRate(focus.Income or 0),
 								Scale = string.format("x%.2f", tonumber(focus.Scale) or 1),
-								Weight = FormatWeight(focus.Weight or 0) .. " Kg",
+								Weight = FormatWeight(focus.Weight or 0),
 							})
 						end
 					end
@@ -14160,10 +14180,10 @@ function Tasks.BuildMainInterface()
 							SingleEggFeed:Clear()
 							for _, egg in ipairs(filtered) do
 								local detailLine = string.format(
-									"%s/s · %.2fx · %s Kg",
-									FormatCash(egg.Income),
-									egg.Scale or 1,
-									FormatCash(egg.Weight)
+									'<font color="#4DFF7A">%s</font><font color="#7A8CC0">  •  </font><font color="#FFDF8A">x%.2f</font><font color="#7A8CC0">  •  </font><font color="#CDE7FF">%s</font>',
+									FormatRate(egg.Income or 0),
+									tonumber(egg.Scale) or 1,
+									FormatWeight(egg.Weight or 0)
 								)
 								local rightTagText = ""
 								if isGrowingCategory then
@@ -14187,9 +14207,9 @@ function Tasks.BuildMainInterface()
 												Name = egg.Name,
 												Rarity = egg.Rarity,
 												Mutation = egg.Mutation or "",
-												Rate = FormatCash(egg.Income or 0) .. "/s",
+												Rate = FormatRate(egg.Income or 0),
 												Scale = string.format("x%.2f", tonumber(egg.Scale) or 1),
-												Weight = FormatWeight(egg.Weight or 0) .. " Kg",
+												Weight = FormatWeight(egg.Weight or 0),
 											})
 										end
 									end,

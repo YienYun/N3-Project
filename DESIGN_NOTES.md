@@ -3693,3 +3693,28 @@ Maka v4.45.3: semua stroke parent TEXT di kartu/feed jadi hairline
 di executor dia tanpa kotak — hairline = kompromi persis topbar game
 (yang emang 0.07).
 Versi 4.45.3.
+
+## v4.45.4 — metode Chili (bedah Games/Source/StealAnEgg/ChiliSourceV5.luau)
+
+Jawaban "kenapa chili pinter": (1) dia require katalog module game
+langsung — record rarity udah bawa field .Gradient/.Color jadi warna
+selalu exact & tahan update game; (2) text role pakai warna SOLID hex
+lewat rich text (bukan gradient di text tipis) = kontras tinggi mudah
+dibaca; (3) format angka tier desimal tetap (M/B/T = 2 desimal) jadi
+informasi gak kebuang ("732.83M" bukan "732M").
+Yang diadopsi verbatim dari ChiliSourceV5 baris 38752-38773:
+- FormatRate: >=1e12 %.2fT/s, >=1e9 %.2fB/s, >=1e6 %.2fM/s,
+  >=1e3 %.1fK/s, else %d/s.
+- FormatWeight: >=1000 %.0f else %.2f, koma 3-digit loop gsub,
+  desimal dipertahankan, suffix " Kg" (call site gak nambah " Kg").
+- Palet semantic: Income #4DFF7A, Scale #FFDF8A, Weight #CDE7FF,
+  Separator #7A8CC0.
+Implementasi kita: SAE kirim Rate=FormatRate, Weight=FormatWeight;
+feed detailLine jadi rich-text 3 warna + separator bullet; LIB
+SetFields Rate = ClearGameText + TextColor3 #4DFF7A solid (gradient
+Cash dicabut), Desc/Weight = #CDE7FF transparency 0. ScaleLbl tetep
+gradient kuning (mandat v4.45 user). RowDetail udah RichText=true.
+Beda arsitektur tetep: chili monolit 49k baris UI+logic jadi satu;
+kita LIB standalone + SAE wiring tipis — milik kita lebih mudah
+diaudit, milik dia lebih tahan update game soal warna.
+Versi 4.45.4. numstat SAE vs origin/main: 67/61.
