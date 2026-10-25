@@ -3181,3 +3181,21 @@ transparan asset kebuang, icon keliatan besar). Satu-satunya pemakaian
 Pelajaran bake: enum Roblox diverifikasi lawan daftar member, bukan
 intuisi nama dari CSS/engine lain; crash catcher SAE tetep dipertahankan
 sebagai jaring pengaman permanen.
+
+## v4.39.5+ — tools/dump_game_ui.lua: snippet dump style game (user request)
+
+Hub lolos 5/5 di v4.39.5 (icon Crop besar + rarity Secret merah napas).
+User minta background LIB permanen ngikutin style game Steal an Egg
+(panel ActivePets: frame/stroke/corner/row/glow/icon/decor + image
+background + warna rarity), nyebut Chilli hub dulu pakai style panel
+game yang sama (cocok sama forensik lama: wallpaper asset Chilli =
+asset game). Karena gue gak bisa masuk server dia, user yang run
+snippet dump read-only di executor: tools/dump_game_ui.lua — print
+prefix [N3DUMP], 5 seksi: TREE ActivePets (depth 7, cap 420 baris),
+IMAGE SCAN PlayerGui (80 ImageLabel pertama: ID image + tint +
+transparency + ScaleType + AbsoluteSize), RARITY PROBE (require module
+game Shared.Util.EggRecords/AssetItems/AssetEarnings + Client.EggState,
+scan Color3 depth 2), TEXTLABEL SCAN ActivePets, HEADER/END.
+Read-only dibuktiin pin: nol Instance.new, nol write .Parent.
+Alur: user paste Output [N3DUMP] ke sini → nilai di-BAKE VERBATIM jadi
+preset theme/background permanen LIB (mandate dump-bake), knob tetep.
