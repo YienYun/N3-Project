@@ -2,7 +2,7 @@
 --[[
 	[N3DUMP6] — print NAMA doang, nol baca isi/source.
 	Workflow: list nama ke-print -> user buka file yang ditunjuk via Dex -> paste isinya.
-	READ-ONLY: cuma Name/ClassName/Parent, nol instance baru, nol tulis, nol .Source.
+	READ-ONLY: cuma Name/ClassName/Parent, nol instance baru, nol tulis, nol baca source.
 	Packages dibates 2 level biar paste gak ribuan baris.
 	Paste hasil Output apa adanya ke chat, jangan diringkas.
 ]]
