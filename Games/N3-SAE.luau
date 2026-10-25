@@ -6,7 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local LocalPlayer = Players.LocalPlayer
 local LibraryLoader =
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/YienYun/N3-Project/refs/heads/arena/c5a10c06-n3-project/Library/N3V3-NoObfus.lua"))()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/YienYun/N3-Project/refs/heads/arena/86b8116d-n3-project/Library/N3V3-NoObfus.lua"))()
 if not LibraryLoader then
 	return
 end

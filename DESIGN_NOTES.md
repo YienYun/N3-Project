@@ -3606,3 +3606,17 @@ pakai flag binary PATH yang salah (silent fail). Fix: glob ditambah
 Games/*.luau; SAE dibenerin (buang end yatim). Pelajaran: slice pakai
 anchor multiline eksplisit, jangan substring 'end'; dan pastikan glob
 gate nutup semua ekstensi yang dipush.
+
+## v4.44.0+ — ghost N3-SAE.lua dihapus + URL LIB di SAE ke branch baru
+
+Ghost Games/N3-SAE.lua (18659 baris, snapshot pre-rename, load LIB
+dari ZedFu3/N3-Hub) = artefak base branch lama yang kebawa carry-over;
+di main file ini udah gak ada sejak commit user 2801f64 (rename .lua
+-> .luau). User konfirmasi file fitur dia = .luau. Ghost di-git rm
+dari branch session biar executor gak salah file; konten lama tetap
+ada di history branch lama kalau perlu.
+URL LIB di dalam SAE (baris 9) + pin check.sh di-rewire ke
+refs/heads/arena/86b8116d-n3-project — runner user WAJIB pakai URL
+branch baru: .../arena/86b8116d-n3-project/Games/N3-SAE.luau (error
+14184 yang dia lihat berulang = runner masih nembak branch lama yang
+berisi SAE pre-hotfix).

@@ -216,7 +216,7 @@ chk "v4.16.0: outline spin — pita gradient muter di outline window + knob + sa
 
 echo "== 5. GAME SCRIPTS (patch user — edit cuma URL library, atas perintah) =="
 chk "Games/N3-SAE.luau = patch user dari main — edit: URL LIB ke project ini + wiring SetRarity kartu" \
-	"test -f '$ROOT/Games/N3-SAE.luau' && git -C '$ROOT' diff --numstat origin/main -- Games/N3-SAE.luau | grep -qE '^34[[:space:]]+59[[:space:]]' && grep -qF 'refs/heads/arena/c5a10c06-n3-project/Library/N3V3-NoObfus.lua' '$ROOT/Games/N3-SAE.luau' && ! grep -qF 'ZedFu3/N3-Hub/refs/heads/main/Library/N3V3.luau' '$ROOT/Games/N3-SAE.luau' && grep -qF 'Spotlight:SetFields({' '$ROOT/Games/N3-SAE.luau' && grep -qF 'BUILD CRASH' '$ROOT/Games/N3-SAE.luau'"
+	"test -f '$ROOT/Games/N3-SAE.luau' && git -C '$ROOT' diff --numstat origin/main -- Games/N3-SAE.luau | grep -qE '^34[[:space:]]+59[[:space:]]' && grep -qF 'refs/heads/arena/86b8116d-n3-project/Library/N3V3-NoObfus.lua' '$ROOT/Games/N3-SAE.luau' && ! grep -qF 'ZedFu3/N3-Hub/refs/heads/main/Library/N3V3.luau' '$ROOT/Games/N3-SAE.luau' && grep -qF 'Spotlight:SetFields({' '$ROOT/Games/N3-SAE.luau' && grep -qF 'BUILD CRASH' '$ROOT/Games/N3-SAE.luau'"
 echo
 echo "== chk v4.28: shadow modern 4 layer + popover details =="
 chk "engine bayangan 4 layer ikut terhapus (VIS)" \
