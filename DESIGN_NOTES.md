@@ -3114,3 +3114,15 @@ Spotlight:SetRarity(namaRarity, warnaRarityGame) abis SetData.
 Versi 4.39.2 (handshake print + N3V4Version + footer PRE). Pin compat
 v4.39.1 di-update: WorldModel/CardCamera jadi absence, SetRarity + Fill
 presence. 98 check lolos semua, luau-analyze 0 SyntaxError.
+
+## v4.39.3 — hardening tipe card (report stuck loading kedua)
+
+Report user: stuck loading lagi di v4.39.2, print terakhir
+"EggToolDisplay: [Debug] Attached egg tool display for <uid>" — print itu
+NGGAK ADA di Games/N3-SAE.luau origin/main = kode baru dari edit lokal user
+(wiring SetRarity / fitur tool display-nya sendiri). Lokasi crash = setelah
+print itu: wiring lokal dia atau argumen tipe aneh masuk card.
+Hardening sisi LIB (nol perubahan perilaku): SetRarity tostring(Text)
+sebelum assign ke TextLabel.Text (number/table tadi = runtime type error),
+SetData tostring(TitleText/DescText) + typeof(ImageAsset) == "string"
+sebelum Icon.Image. Versi 4.39.3. Pin: presence tostring guard.

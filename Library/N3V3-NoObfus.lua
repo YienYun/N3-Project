@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.39.2 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.39.3 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6086,6 +6086,7 @@ do
 				self.RarityColor = nil
 				return
 			end
+			Text = tostring(Text)
 			local Base = Color
 			if typeof(Base) ~= "Color3" then
 				Base = Library.PanelRarity[Text] or Library.Scheme.AccentColor
@@ -6108,12 +6109,12 @@ do
 				return
 			end
 			if TitleText then
-				Title.Text = TitleText
+				Title.Text = tostring(TitleText)
 			end
 			if DescText then
-				Desc.Text = DescText
+				Desc.Text = tostring(DescText)
 			end
-			if ImageAsset and ImageAsset ~= "" then
+			if typeof(ImageAsset) == "string" and ImageAsset ~= "" then
 				Icon.Image = ImageAsset
 			end
 		end
@@ -6296,7 +6297,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.39.2"
+	Library.N3V4Version = "4.39.3"
 
 	Library.ButtonGradient = {
 		Enabled = true,

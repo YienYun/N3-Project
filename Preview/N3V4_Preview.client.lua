@@ -11,7 +11,7 @@ print(string.format("[N3V4 Preview] LIB v%s loaded dari URL git.", tostring(Libr
 
 local Window = Library:CreateWindow({
 	Title = "N3 HUB",
-	Footer = "N3V4 • UI Preview Kit v4.39.2",
+	Footer = "N3V4 • UI Preview Kit v4.39.3",
 	Icon = "rbxassetid://117688744510818",
 	AutoShow = true,
 	Center = true,
@@ -92,4 +92,4 @@ else
 	print("[N3V4 Preview] MOD settings gagal di-fetch dari URL — knob settings ga muncul.")
 end
 
-print("[N3V4 Preview] v4.39.2 siap | LIB standalone satu file | ikon via URL git | nol replica")
+print("[N3V4 Preview] v4.39.3 siap | LIB standalone satu file | ikon via URL git | nol replica")
