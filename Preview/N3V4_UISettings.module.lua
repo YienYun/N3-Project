@@ -475,27 +475,27 @@ function Settings:Attach(Library, Window, Options)
 				Library:SetTabAppearance({ TabBackgroundTransparency = Value / 100 })
 			end,
 		})
-		local PB0 = Library.PatternBackground or {}
-		Box:AddToggle("TB_PatOn", {
-			Text = "Pattern background game", Default = PB0.Enabled ~= false,
+		local IG0 = Library.IconGlow or {}
+		Box:AddToggle("TB_GlowOn", {
+			Text = "Sinar icon pet (style game)", Default = IG0.Enabled ~= false,
 			Callback = function(On)
-				Library:SetPatternBackground(On)
+				Library:SetIconGlow(On)
 			end,
 		})
-		Box:AddSlider("TB_PatTr", {
-			Text = "Pattern transparency (100% = ILANG)", Default = math.floor((PB0.Transparency or 0.75) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
+		Box:AddSlider("TB_GlowTr", {
+			Text = "Sinar transparency (100% = ILANG)", Default = math.floor((IG0.Transparency or 0.42) * 100 + 0.5), Min = 0, Max = 100, Rounding = 0, Suffix = "%",
 			Callback = function(Value)
-				Library:SetPatternBackground(nil, { Transparency = Value / 100 })
+				Library:SetIconGlow(nil, { Transparency = Value / 100 })
 			end,
 		})
-		Box:AddSlider("TB_PatTile", {
-			Text = "Pattern tile size", Default = PB0.TileSize or 75, Min = 24, Max = 160, Rounding = 0, Suffix = "px",
+		Box:AddSlider("TB_GlowSc", {
+			Text = "Sinar scale vs icon", Default = IG0.Scale or 3, Min = 1, Max = 6, Rounding = 1, Suffix = "x",
 			Callback = function(Value)
-				Library:SetPatternBackground(nil, { TileSize = Value })
+				Library:SetIconGlow(nil, { Scale = Value })
 			end,
 		})
 		Box:AddButton("Print resep tab", function()
-			print("[N3V4 RESEP TAB] paste ini balik:\n" .. BuildTab() .. string.format("\nPatternBackground = { Enabled = %s, Image = %q, TileSize = %d, Transparency = %.2f }", tostring(Library.PatternBackground.Enabled), Library.PatternBackground.Image, Library.PatternBackground.TileSize, Library.PatternBackground.Transparency))
+			print("[N3V4 RESEP TAB] paste ini balik:\n" .. BuildTab() .. string.format("\nIconGlow = { Enabled = %s, Image = %q, Transparency = %.2f, Scale = %d }", tostring(Library.IconGlow.Enabled), Library.IconGlow.Image, Library.IconGlow.Transparency, Library.IconGlow.Scale))
 			SafeNotify({ Title = "Resep tab", Description = "Cek Output.", Icon = "copy", Time = 3 })
 		end)
 		Box:AddButton("Copy resep tab", function()

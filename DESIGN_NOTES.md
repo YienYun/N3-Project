@@ -3266,3 +3266,23 @@ RESEP lain dari dump (outline rarity gradient, gradient emas header,
 tombol green/red game, glow sprite, decor shine) TETEP di section RESEP
 GAME PANEL sebagai kandidat bake berikutnya, BUKAN ronde ini.
 Versi 4.40.0. Gates 100 check.
+
+## v4.41.0 — REVERT pattern window v4.40.0 + sinar icon pet (maksud user sebenarnya)
+
+User marah: maksud "background dari image" dari awal = BACKGROUND DI
+BELAKANG IMAGE PET = sprite sinar/glow kayak row ActivePets game, BUKAN
+pattern tile di window. Gue salah tangkep di v4.40.0; diakui polos.
+v4.40.0 DI-REVERT TOTAL (PatternBG overlay, PatternBackground,
+SetPatternBackground, knob MOD, baris print) — pin absence PatternBG/
+SetPatternBackground jaga biar gak balik lagi.
+v4.41.0 = fitur sebenarnya, nilai verbatim dump N3DUMP (row ActivePets
+> Spacer > Glow): Image rbxassetid://109516122757226, ImageTransparency
+0.42, ScaleType Stretch, putih; ukuran di game ~3.1-3.5x icon (spill
+keluar row) → Library.IconGlow.Scale default 3.
+Pasang di: (1) icon kartu spotlight (Card gak clip → sinar spill kayak
+game), (2) icon row AddScrollFeed (RowBtn ClipsDescendants → sinar
+ke-crop rapi se-row). ZIndex 0 = di belakang icon, di atas bg row/card.
+Saklar: Library:SetIconGlow(Enabled, {Image,Transparency,Scale}) apply
+ke semua rec di Library.IconGlows; default ON ("bisa no background dan
+ber-background"). Knob MOD groupbox Tab Card & Bg: TB_GlowOn/TB_GlowTr/
+TB_GlowSc; print resep tab nyeretak baris IconGlow. Versi 4.41.0.
