@@ -6,7 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local LocalPlayer = Players.LocalPlayer
 local LibraryLoader =
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/ZedFu3/N3-Hub/refs/heads/main/Library/N3V3.luau"))()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/YienYun/N3-Project/refs/heads/arena/c5a10c06-n3-project/Library/N3V3-NoObfus.lua"))()
 if not LibraryLoader then
 	return
 end
@@ -13976,27 +13976,6 @@ function Tasks.BuildMainInterface()
 		Description = "Reading inventory...",
 		Image = "",
 	})
-	do
-		local RawSetData = Spotlight.SetData
-		local LastModelSource = nil
-		Spotlight.SetData = function(self, titleText, descText, imageAsset, modelSource)
-			local modeChanged = (modelSource == nil) ~= (LastModelSource == nil)
-			if (modelSource ~= nil and modelSource ~= LastModelSource) or modeChanged then
-				LastModelSource = modelSource
-				RawSetData(self, titleText, descText, imageAsset, modelSource)
-			else
-				if self.Title and titleText then
-					self.Title.Text = titleText
-				end
-				if self.Desc and descText then
-					self.Desc.Text = descText
-				end
-				if self.Icon and imageAsset and imageAsset ~= "" then
-					self.Icon.Image = imageAsset
-				end
-			end
-		end
-	end
 	MainPredictorGroup:AddButton("Hold egg", function()
 		if CurrentSelectedUid and Remotes.RemoteWearTool then
 			pcall(function()
@@ -14140,13 +14119,16 @@ function Tasks.BuildMainInterface()
 						end
 					end
 					if focus and Spotlight and Spotlight.SetData then
-						local hexRarity = ColorToHex(
-							focus.Color or DefaultRarityColors[focus.Rarity] or Color3.fromRGB(255, 255, 255)
-						)
-						local livePetAnimal3D = GetPet3DModel(focus.Category) or GetPet3DModel(focus.Name)
-						local titleStr = InstanUtility.FormatEggLabel(focus.Name, focus.Rarity)
-						local descStr = BuildPetDescription(focus)
-						Spotlight:SetData(titleStr, descStr, focus.Icon, livePetAnimal3D)
+						Spotlight:SetData(nil, nil, focus.Icon, nil)
+						if Spotlight.SetFields then
+							Spotlight:SetFields({
+								Name = focus.Name,
+								Rarity = focus.Rarity,
+								Mutation = focus.Mutation or "",
+								Rate = FormatCash(focus.Income or 0) .. "/s",
+								Meta = string.format("x%.2f  %s Kg", tonumber(focus.Scale) or 1, FormatCash(focus.Weight or 0)),
+							})
+						end
 					end
 					if SingleEggFeed and SingleEggFeed.Clear and SingleEggFeed.AddItem then
 						local sigParts = {
@@ -14167,18 +14149,11 @@ function Tasks.BuildMainInterface()
 								or 0
 							SingleEggFeed:Clear()
 							for _, egg in ipairs(filtered) do
-								local hexRarity = ColorToHex(
-									egg.Color or DefaultRarityColors[egg.Rarity] or Color3.fromRGB(255, 255, 255)
-								)
-								local mutTag = (egg.Mutation and egg.Mutation ~= "")
-										and (' · <font color="#FFAA00"><b>' .. egg.Mutation .. "</b></font>")
-									or ""
 								local detailLine = string.format(
-									'<font color="#57F287"><b>%s/s</b></font> · %.2fx · %s Kg%s',
+									"%s/s · %.2fx · %s Kg",
 									FormatCash(egg.Income),
 									egg.Scale or 1,
-									FormatCash(egg.Weight),
-									mutTag
+									FormatCash(egg.Weight)
 								)
 								local rightTagText = ""
 								if isGrowingCategory then
@@ -14188,33 +14163,24 @@ function Tasks.BuildMainInterface()
 										egg.Percent
 									)
 								end
-								local eggTitle = InstanUtility.FormatEggLabel(egg.Name, egg.Rarity)
 								SingleEggFeed:AddItem({
 									Icon = egg.Icon,
-									Title = eggTitle,
+									Title = egg.Name,
+									Rarity = egg.Rarity,
 									Detail = detailLine,
 									RightTag = rightTagText,
 									OnClick = function()
 										CurrentSelectedUid = egg.Uid
-										local rHex = ColorToHex(
-											egg.Color
-												or DefaultRarityColors[egg.Rarity]
-												or Color3.fromRGB(255, 255, 255)
-										)
-										local petModel3D = GetPet3DModel(egg.Category) or GetPet3DModel(egg.Name)
-										if Spotlight and Spotlight.SetData then
-											Spotlight:SetData(
-												string.format(
-													'<b>%s</b>  <font color="%s"><b>%s</b></font>',
-													egg.Name,
-													rHex,
-													string.upper(egg.Rarity)
-												),
-												BuildPetDescription(egg),
-												egg.Icon,
-												petModel3D
-											)
-										end
+										if Spotlight and Spotlight.SetFields then
+											Spotlight:SetData(nil, nil, egg.Icon, nil)
+											Spotlight:SetFields({
+												Name = egg.Name,
+												Rarity = egg.Rarity,
+												Mutation = egg.Mutation or "",
+												Rate = FormatCash(egg.Income or 0) .. "/s",
+												Meta = string.format("x%.2f  %s Kg", tonumber(egg.Scale) or 1, FormatCash(egg.Weight or 0)),
+											})
+										end										end
 									end,
 								})
 							end
@@ -26469,7 +26435,16 @@ end
 -- END HALLOWEEN CONTROLLER
 
 
-Tasks.BuildMainInterface()
+do
+	local buildOk, buildErr = pcall(Tasks.BuildMainInterface)
+	if not buildOk then
+		local errText = tostring(buildErr)
+		warn("[N3 SAE] BUILD CRASH: " .. errText)
+		Tasks.Loading:SetMessage("BUILD CRASH - lihat Output")
+		Tasks.Loading:SetDescription(string.sub(errText, 1, 90))
+		error(buildErr, 0)
+	end
+end
 Tasks.Loading:SetMessage("Verifying")
 Tasks.Loading:SetCurrentStep(5)
 Tasks.Loading:SetDescription("Verifying the engine, remotes & final configuration...")
