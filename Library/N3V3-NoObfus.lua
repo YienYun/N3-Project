@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.42.0 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.43.0 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6038,15 +6038,21 @@ do
 
 		local Title = New("TextLabel", {
 			BackgroundTransparency = 1,
-			Position = UDim2.new(0, BoxSize + 14, 0, 7),
+			Position = UDim2.new(0, BoxSize + 14, 0, 6),
 			Size = UDim2.new(1, -BoxSize - 116, 0, 16),
 			Text = Info.Title or "",
-			TextColor3 = "FontColor",
+			TextColor3 = Color3.new(1, 1, 1),
 			TextSize = 14,
 			Font = Enum.Font.GothamBold,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			Parent = Card,
+		})
+		New("UIStroke", {
+			Name = "N3GameStroke",
+			Color = Color3.new(0, 0, 0),
+			Thickness = 1.5,
+			Parent = Title,
 		})
 		local Rarity = New("TextLabel", {
 			BackgroundTransparency = 1,
@@ -6062,14 +6068,39 @@ do
 			Visible = false,
 			Parent = Card,
 		})
+		local Mutation = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, BoxSize + 14, 0, 24),
+			Size = UDim2.new(1, -BoxSize - 22, 0, 14),
+			Text = "",
+			TextColor3 = Color3.new(1, 1, 1),
+			TextSize = 12,
+			Font = Enum.Font.GothamBold,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Visible = false,
+			Parent = Card,
+		})
+		local Rate = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, BoxSize + 14, 0, 40),
+			Size = UDim2.new(1, -BoxSize - 22, 0, 15),
+			Text = "",
+			TextColor3 = Color3.new(1, 1, 1),
+			TextSize = 13,
+			Font = Enum.Font.GothamBold,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Parent = Card,
+		})
 		local Desc = New("TextLabel", {
 			BackgroundTransparency = 1,
-			Position = UDim2.new(0, BoxSize + 14, 0, 25),
-			Size = UDim2.new(1, -BoxSize - 22, 1, -33),
+			Position = UDim2.new(0, BoxSize + 14, 0, 57),
+			Size = UDim2.new(1, -BoxSize - 22, 1, -65),
 			Text = Info.Description or "",
 			TextColor3 = "FontColor",
 			TextTransparency = 0.25,
-			TextSize = 12,
+			TextSize = 11,
 			Font = Enum.Font.Gotham,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
@@ -6135,7 +6166,17 @@ do
 			if GradName then
 				Library:ApplyGameText(Rarity, GradName)
 			else
-				Library:ClearGameText(Rarity)
+				pcall(function()
+					Rarity:FindFirstChild("N3GameGradient"):Destroy()
+				end)
+				if not Rarity:FindFirstChild("N3GameStroke") then
+					New("UIStroke", {
+						Name = "N3GameStroke",
+						Color = Library.GameText.StrokeColor,
+						Thickness = 1.5,
+						Parent = Rarity,
+					})
+				end
 				Rarity.TextColor3 = Base
 				if Library.PanelStyle.AnimateText then
 					local Tw = TweenService:Create(Rarity, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
@@ -6144,6 +6185,37 @@ do
 					Tw:Play()
 					self.RarityTween = Tw
 				end
+			end
+		end
+
+		function CardObj:SetFields(Fields)
+			if self.Destroyed or type(Fields) ~= "table" then
+				return
+			end
+			if Fields.Name then
+				Title.Text = tostring(Fields.Name)
+			end
+			if Fields.Rarity then
+				self:SetRarity(Fields.Rarity, Fields.RarityColor)
+			end
+			if Fields.Mutation ~= nil then
+				local Mut = tostring(Fields.Mutation)
+				Mutation.Visible = Mut ~= ""
+				Mutation.Text = Mut
+				if not Library:ApplyGameText(Mutation, Mut) then
+					pcall(function()
+						Mutation:FindFirstChild("N3GameGradient"):Destroy()
+					end)
+					Mutation.TextColor3 = Color3.new(1, 1, 1)
+					Mutation.TextTransparency = 0.15
+				end
+			end
+			if Fields.Rate then
+				Rate.Text = tostring(Fields.Rate)
+				Library:ApplyGameText(Rate, "Cash")
+			end
+			if Fields.Meta then
+				Desc.Text = tostring(Fields.Meta)
 			end
 		end
 
@@ -6304,12 +6376,25 @@ do
 				Size = UDim2.new(1, -125, 0, 16),
 				Text = itemData.Title or "",
 				TextSize = 13,
-				RichText = true,
+				RichText = false,
 				Font = Enum.Font.GothamBold,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				Parent = RowBtn,
 			})
+			if itemData.Rarity then
+				RowTitle.Text = (itemData.Title or "") .. "  " .. string.upper(tostring(itemData.Rarity))
+				if not Library:ApplyGameText(RowTitle, itemData.Rarity) then
+					Library:ClearGameText(RowTitle)
+					New("UIStroke", {
+						Name = "N3GameStroke",
+						Color = Color3.new(0, 0, 0),
+						Thickness = 1.2,
+						Parent = RowTitle,
+					})
+					RowTitle.TextColor3 = Color3.new(1, 1, 1)
+				end
+			end
 
 			-- Baris 2: Rate $/s · Scale · Berat Kg · Mutasi (1 Baris Horizontal Rapi)
 			local RowDetail = New("TextLabel", {
@@ -6357,7 +6442,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.42.0"
+	Library.N3V4Version = "4.43.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11498,12 +11583,51 @@ Library.GameText = {
 			Rotation = 90,
 			Keypoints = { { 0, 0, 179, 229 }, { 1, 0, 80, 229 } },
 		},
+		Legendary = {
+			Rotation = -35,
+			Keypoints = {
+				{ 0, 255, 170, 1 }, { 0.26, 255, 255, 0 }, { 0.33, 255, 200, 0 }, { 0.42, 255, 255, 0 },
+				{ 0.52, 255, 255, 127 }, { 0.6, 255, 255, 0 }, { 0.66, 255, 217, 0 }, { 0.78, 255, 255, 0 },
+				{ 1, 255, 170, 0 },
+			},
+		},
+		Mythic = {
+			Rotation = -35,
+			Keypoints = {
+				{ 0, 170, 0, 0 }, { 0.23, 255, 0, 0 }, { 0.4, 255, 0, 0 }, { 0.63, 255, 0, 0 },
+				{ 0.8, 255, 0, 0 }, { 1, 170, 0, 0 },
+			},
+		},
+		Cosmic = {
+			Rotation = 0,
+			Keypoints = { { 0, 128, 0, 154 }, { 1, 116, 0, 217 } },
+		},
+		Secret = {
+			Rotation = 90,
+			Keypoints = {
+				{ 0, 255, 255, 255 }, { 0.03, 255, 255, 255 }, { 0.14, 255, 255, 255 }, { 0.54, 255, 255, 255 },
+				{ 0.55, 0, 0, 0 }, { 0.61, 97, 97, 97 }, { 0.65, 97, 97, 97 }, { 0.71, 97, 97, 97 },
+				{ 0.76, 97, 97, 97 }, { 0.87, 97, 97, 97 }, { 0.91, 255, 255, 255 }, { 0.91, 255, 255, 255 },
+				{ 0.93, 255, 255, 255 }, { 1, 255, 255, 255 },
+			},
+		},
+		Eternal = {
+			Rotation = -90,
+			Keypoints = {
+				{ 0, 16, 73, 124 }, { 0.02, 0, 16, 90 }, { 0.02, 0, 16, 90 }, { 0.09, 175, 201, 213 },
+				{ 0.2, 224, 240, 255 }, { 0.34, 255, 180, 255 }, { 0.49, 68, 0, 127 }, { 0.52, 5, 1, 9 },
+				{ 0.53, 255, 255, 255 }, { 0.74, 180, 255, 243 }, { 0.96, 39, 159, 175 }, { 1, 16, 73, 124 },
+			},
+		},
+		Cash = {
+			Rotation = 90,
+			Keypoints = { { 0, 255, 255, 0 }, { 1, 21, 255, 0 } },
+		},
 	},
 	Aliases = {
 		Rainbow = "Rainbow12",
 		Silver = "Silver14",
 		Mutant = "Silver14",
-		Cosmic = "Purple3",
 	},
 }
 

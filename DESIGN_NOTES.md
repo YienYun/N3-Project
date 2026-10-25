@@ -3401,3 +3401,45 @@ Fuse/Card/Popup/Preview: tree depth 4 style text+image).
 Round bake berikutnya (v4.43.0): rework layout kartu 4 baris spec
 user + font asset game + cash style game + rarity name text style +
 feed row restyle. JANGAN bake setengah-setengah lagi.
+
+## v4.43.0 — bake hasil [N3DUMP3] RARNAME + kartu 4 baris + feed game style
+
+Hasil dump3 yang dipakai: RARNAME nangkep gradient label nama rarity
+game VERBATIM (per nama, bukan per warna): Legendary gold Rot-35,
+Mythic merah Rot-35, Cosmic purple Rot0, Secret SILVER Rot90 (bukti
+"Secret hitam-putih" user bener: white→black→97,97,97→white),
+Eternal rainbow Rot-90; tier rendah (Common..Divine) = putih polos +
+stroke hitam 1.67 TANPA gradient (AutoSell) — SetRarity kita sekarang
+gitu juga: ada gradient nama → fill gradient + stroke hitam; gak ada
+→ putih + stroke.
+LIB: GameText.Gradients name-keyed nambah Legendary/Mythic/Cosmic/
+Secret/Eternal + Cash (INTERIM = Ready gradient 255,255,0→21,255,0,
+topbar hijau asli belum ketangkep — CASH2 cuma kena leaderboard hitam);
+Aliases Cosmic dihapus (nama asli sekarang ada). Kartu jadi 4 baris
+spec user: 1) Title putih bold + stroke hitam 1.5 + label Rarity kanan
+(style game per nama), 2) Mutation y24 (gradient nama mutasi kalo ada,
+mis. Rainbow→Rainbow12; hidden kalo kosong), 3) Rate y40 (Cash
+gradient) "26M/s", 4) Desc = meta y57 "x0.99 57,451 Kg" 11px. API baru
+CardObj:SetFields({Name,Rarity,RarityColor,Mutation,Rate,Meta});
+SetData tetep utk icon. Feed: AddItem terima Rarity → RowTitle
+"Nama  RARITY" RichText OFF + ApplyGameText (fill gradient + stroke
+hitam kaya row game), Detail polos "%s/s · %.2fx · %s Kg"; RightTag
+rich hex tetep (status doang).
+SAE: wrapper RawSetData do-block DIMATI (card sekarang selalu
+SetFields, gak butuh rich title); updater kategori + OnClick feed →
+SetData(nil,nil,icon,nil) + SetFields dari field egg (Name/Rarity/
+Mutation/Income→FormatCash/Scale/Weight); AddItem feed: Title=egg.Name
++ Rarity=egg.Rarity, eggTitle FormatEggLabel dropped. Numstat vs
+origin/main: 35/60 (pin check.sh diupdate).
+FIX mid-bake: insert Gradients kemarin nutup table Gradients duluan
+sebelum Legendary → Aliases nyangkut di luar table (2 SyntaxError,
+ketahuan pas gate karena cek kemarin pakai flag salah — binary repo
+pakai --mode=nonstrict, bukan --no-strict --config). Sudah dibenerin.
+tools/dump_font.lua [N3DUMP4]: FONT via d.FontFace.Family/Weight/Style
+(bug dump3: .Font = Enum lama) + legacy d.Font, kombinasi unik se-
+PlayerGui+CoreGui+Workspace; CASH3 = text angka size>=14 di tiga root
+itu (topbar hijau game kemungkinan di workspace/coregui, bukan
+PlayerGui). Read-only, hasil auto-clipboard.
+BELUM (nunggu [N3DUMP4]): asset id font game (Font.new) + verifikasi/
+ganti gradient Cash interim ke style topbar hijau asli → v4.44.0.
+Versi 4.43.0. Gates 105/105.
