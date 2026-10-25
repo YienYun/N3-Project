@@ -3166,3 +3166,18 @@ SetDescription loading screen jadi teks error (sub 90 char) + rethrow.
 Run berikutnya, satu baris warn itu nunjuk pelaku exact (LIB kartu vs
 SAE vs game). Numstat Games vs main jadi 17/2 → pin update + pin
 presence 'BUILD CRASH'.
+
+## v4.39.5 — ROOT CAUSE STUCK 4/5: Enum.ScaleType.Fill GAK ADA DI ROBLOX
+
+Crash catcher SAE (v4.39.4++) langsung ngonfirmasi: "Fill is not a valid
+member of Enum.ScaleType". Anggota Enum.ScaleType Roblox = Stretch,
+Slice, Tile, Fit, Crop — TIDAK ADA Fill. Gue salah bawa nama "cover"
+dari engine lain waktu v4.39.2; sejak itu SEMUA run mati persis di
+create card (makanya window ready ke-print tapi tab gak pernah kelar,
+dan gejala liarnya beda-beda per executor). Fix: ScaleType.Crop
+(perilaku cover: scale isi kotak, overflow ke-crop center → padding
+transparan asset kebuang, icon keliatan besar). Satu-satunya pemakaian
+= icon kartu (LIB:6012). Pin compat di-flip Fill→Crop. Versi 4.39.5.
+Pelajaran bake: enum Roblox diverifikasi lawan daftar member, bukan
+intuisi nama dari CSS/engine lain; crash catcher SAE tetep dipertahankan
+sebagai jaring pengaman permanen.
