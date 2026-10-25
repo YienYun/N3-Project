@@ -3326,3 +3326,25 @@ glow kartu luber sampe keluar groupbox karena Card Frame gak clip
 puji. Scale glow tetep 3.5 biar konsisten kartu vs row. Semua anak
 kartu (Icon/Glow/Title/Desc/Rarity) emang di dalam boundary → clip aman.
 Versi 4.41.3.
+
+## v4.41.3+ — tools/dump_game_text.lua: scan replica + text style game (request user)
+
+User puas v4.41.3 (sinar clip di kartu). Request berikutnya: LIB harus
+bisa "manggil langsung text dari gamenya" — rarity pakai warna+animasi
+ASLI game, bukan warna polos; nama pet + cash juga ikut style game.
+Langkah 1 = dump kedua (user run di executor): tools/dump_game_text.lua,
+prefix [N3DUMP2], read-only (pin: nol Instance.new), 4 seksi:
+1. MODULE SCAN: require ModuleScript di ReplicatedStorage.Shared/Data/
+   Client (cap 10 per root, 26 module), scan depth 3: ColorSequence
+   (SEQ), Color3 (COL), table ber-key rarity/tier/quality (RARTBL +
+   daftar keys) → mapa rarity→gradient dari SOURCE game.
+2. TEXT STYLE SCAN: TextLabel/TextButton di PlayerGui yang punya
+   UIGradient (langsung atau lewat UIStroke): text, warna, font, size,
+   OnStroke, Rotation, Offset, keypoints.
+3. ANIM SAMPLE: Offset+Rotation semua gradient tadi di-sample 2x
+   selang 0.4s → delta = bukti animasi game (arah+kecepatan).
+4. CASH TEXT SCAN: TextLabel ber-"$": warna/font/size + stroke/gradient
+   → resep text cash.
+Langkah 2 (turn setelah dump masuk): bake Library.GameText preset +
+upgrade SetRarity mode "game" (text putih + gradient outline + anim
+offset) + style cash, nilai verbatim dump.
