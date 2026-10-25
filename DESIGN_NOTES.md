@@ -3092,3 +3092,25 @@ live ke TextLabel + Display + Resize. Templates.SpotlightCard ditambah.
 Versi 4.39.1 (print handshake + N3V4Version + footer PRE). Pin: presence
 compat trio + absence sample lama di MOD/PRE tetep. 98 check: lolos semua,
 luau-analyze 0 SyntaxError.
+
+## v4.39.2 — spotlight card: 3D hapus, image Fill besar, rarity animasi dari game
+
+Report user (screenshot Egg Predictor jalan): kartu prediksi kepake tapi
+(1) viewport 3D model egg gak kepakai → hapus, (2) image icon kecil banget,
+(3) mau rarity text kartu bisa animasi kayak text rarity panel, di-feed
+dari game.
+Root cause image kecil: ScaleType.Fit + asset icon game punya padding
+transparan → letterbox di tengah kotak kelihatan mini. Fix: ScaleType.Fill
+(cover, crop padding) + box icon dibesarin (Height - 12, inset 6px).
+3D: ViewportFrame + WorldModel + Camera + clone model DICABUT dari card;
+SetData tetep terima arg modelSource (wrapper SAE aman) tapi di-ignore.
+Fitur baru: CardObj:SetRarity(Text, Color) — label rarity kanan-atas kartu,
+pulse animasi engine yang sama persis kayak row panel (TweenService Sine
+1.2s InOut autoreverse ke Library:GetBetterColor(Base, 18)), gate knob
+PanelStyle.AnimateText; Color opsional → fallback Library.PanelRarity[Text]
+(Common/Rare/Mythic/Money) lalu AccentColor; SetRarity(nil/"") = sembunyi +
+cancel tween. Destroy cancel RarityTween. Wiring di patch user: panggil
+Spotlight:SetRarity(namaRarity, warnaRarityGame) abis SetData.
+Versi 4.39.2 (handshake print + N3V4Version + footer PRE). Pin compat
+v4.39.1 di-update: WorldModel/CardCamera jadi absence, SetRarity + Fill
+presence. 98 check lolos semua, luau-analyze 0 SyntaxError.

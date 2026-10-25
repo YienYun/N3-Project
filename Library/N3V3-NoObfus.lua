@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.39.1 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.39.2 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6001,15 +6001,15 @@ do
 			Parent = Card,
 		})
 
-		local BoxSize = Height - 16
+		local BoxSize = Height - 12
 		local Icon = New("ImageLabel", {
 			BackgroundColor3 = "BackgroundColor",
 			BackgroundTransparency = 0.4,
 			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 8, 0.5, 0),
+			Position = UDim2.new(0, 6, 0.5, 0),
 			Size = UDim2.new(0, BoxSize, 0, BoxSize),
 			Image = Info.Image or "",
-			ScaleType = Enum.ScaleType.Fit,
+			ScaleType = Enum.ScaleType.Fill,
 			Parent = Card,
 		})
 		table.insert(
@@ -6020,33 +6020,10 @@ do
 			})
 		)
 
-		local Viewport = New("ViewportFrame", {
-			BackgroundColor3 = "BackgroundColor",
-			BackgroundTransparency = 0.4,
-			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 8, 0.5, 0),
-			Size = UDim2.new(0, BoxSize, 0, BoxSize),
-			Visible = false,
-			Parent = Card,
-		})
-		table.insert(
-			Library.Corners,
-			New("UICorner", {
-				CornerRadius = UDim.new(0, 6),
-				Parent = Viewport,
-			})
-		)
-		local World = New("WorldModel", {
-			Parent = Viewport,
-		})
-		local CardCamera = Instance.new("Camera")
-		CardCamera.Parent = Viewport
-		Viewport.CurrentCamera = CardCamera
-
 		local Title = New("TextLabel", {
 			BackgroundTransparency = 1,
-			Position = UDim2.new(0, BoxSize + 16, 0, 8),
-			Size = UDim2.new(1, -BoxSize - 24, 0, 16),
+			Position = UDim2.new(0, BoxSize + 14, 0, 7),
+			Size = UDim2.new(1, -BoxSize - 116, 0, 16),
 			Text = Info.Title or "",
 			TextColor3 = "FontColor",
 			TextSize = 14,
@@ -6055,10 +6032,24 @@ do
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			Parent = Card,
 		})
+		local Rarity = New("TextLabel", {
+			BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -8, 0, 7),
+			Size = UDim2.new(0, 96, 0, 16),
+			Text = "",
+			TextColor3 = "AccentColor",
+			TextSize = 13,
+			Font = Enum.Font.GothamBold,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Visible = false,
+			Parent = Card,
+		})
 		local Desc = New("TextLabel", {
 			BackgroundTransparency = 1,
-			Position = UDim2.new(0, BoxSize + 16, 0, 26),
-			Size = UDim2.new(1, -BoxSize - 24, 1, -34),
+			Position = UDim2.new(0, BoxSize + 14, 0, 25),
+			Size = UDim2.new(1, -BoxSize - 22, 1, -33),
 			Text = Info.Description or "",
 			TextColor3 = "FontColor",
 			TextTransparency = 0.25,
@@ -6075,11 +6066,42 @@ do
 			Title = Title,
 			Desc = Desc,
 			Icon = Icon,
-			Viewport = Viewport,
-			ModelSource = nil,
+			Rarity = Rarity,
+			RarityColor = nil,
+			RarityTween = nil,
 			Destroyed = false,
 			Type = "SpotlightCard",
 		}
+
+		function CardObj:SetRarity(Text, Color)
+			if self.Destroyed then
+				return
+			end
+			if self.RarityTween then
+				self.RarityTween:Cancel()
+				self.RarityTween = nil
+			end
+			if not Text or Text == "" then
+				Rarity.Visible = false
+				self.RarityColor = nil
+				return
+			end
+			local Base = Color
+			if typeof(Base) ~= "Color3" then
+				Base = Library.PanelRarity[Text] or Library.Scheme.AccentColor
+			end
+			self.RarityColor = Base
+			Rarity.Visible = true
+			Rarity.Text = Text
+			Rarity.TextColor3 = Base
+			if Library.PanelStyle.AnimateText then
+				local Tw = TweenService:Create(Rarity, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+					TextColor3 = Library:GetBetterColor(Base, 18),
+				})
+				Tw:Play()
+				self.RarityTween = Tw
+			end
+		end
 
 		function CardObj:SetData(TitleText, DescText, ImageAsset, ModelSource)
 			if self.Destroyed then
@@ -6094,28 +6116,13 @@ do
 			if ImageAsset and ImageAsset ~= "" then
 				Icon.Image = ImageAsset
 			end
-			if ModelSource == self.ModelSource then
-				return
-			end
-			self.ModelSource = ModelSource
-			World:ClearAllChildren()
-			if typeof(ModelSource) == "Instance" then
-				local Clone = ModelSource:Clone()
-				Clone.Parent = World
-				local CF, Size = World:GetBoundingBox()
-				local MaxDim = math.max(Size.X, Size.Y, Size.Z, 0.1)
-				local Dist = MaxDim * 2.4
-				CardCamera.CFrame = CFrame.lookAt(CF.Position + Vector3.new(Dist * 0.7, Dist * 0.5, Dist * 0.9), CF.Position)
-				Viewport.Visible = true
-				Icon.Visible = false
-			else
-				Viewport.Visible = false
-				Icon.Visible = true
-			end
 		end
 
 		function CardObj:Destroy()
 			self.Destroyed = true
+			if self.RarityTween then
+				self.RarityTween:Cancel()
+			end
 			Card:Destroy()
 			local ElemIdx = table.find(Groupbox.Elements, Card)
 			if ElemIdx then
@@ -6289,7 +6296,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.39.1"
+	Library.N3V4Version = "4.39.2"
 
 	Library.ButtonGradient = {
 		Enabled = true,
