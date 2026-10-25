@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.45.0 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.45.1 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6244,12 +6244,12 @@ do
 			end
 			if Fields.Rate then
 				Rate.Text = tostring(Fields.Rate)
-				Library:ApplyGameText(Rate, "Cash", { StrokeThickness = 1 })
+				Library:ApplyGameText(Rate, "Cash")
 			end
 			if Fields.Scale then
 				ScaleLbl.Visible = true
 				ScaleLbl.Text = tostring(Fields.Scale)
-				Library:ApplyGameText(ScaleLbl, "Scale", { StrokeThickness = 1 })
+				Library:ApplyGameText(ScaleLbl, "Scale")
 			else
 				ScaleLbl.Visible = false
 			end
@@ -6453,12 +6453,6 @@ do
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				Parent = RowBtn,
 			})
-			New("UIStroke", {
-				Name = "N3GameStroke",
-				Color = Color3.new(0, 0, 0),
-				Thickness = 1,
-				Parent = RowDetail,
-			})
 			Library:ApplyGameFont(RowTitle)
 			Library:ApplyGameFont(RowDetail)
 
@@ -6494,7 +6488,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.45.0"
+	Library.N3V4Version = "4.45.1"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11756,7 +11750,7 @@ function Library:ApplyGameText(Label, Name, Options)
 			})
 		end
 		Stroke.Color = Library.GameText.StrokeColor
-		Stroke.Thickness = Options.StrokeThickness or 1
+		Stroke.Thickness = Options.StrokeThickness or 0.07
 	end
 	return true
 end

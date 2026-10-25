@@ -3642,3 +3642,20 @@ Scale+Weight ganti Meta (Meta tetep fallback); LayoutWeight geser Desc
 nempel ScaleLbl; (7) feed row ga jelas/konsisten -> RowTitle autosize
 (gradient ngepas), RowDetail 12px + UIStroke hitam 1.
 Versi 4.45.0. Numstat Games 45/59.
+
+## v4.45.1 — blob hitam di text gradient = stroke 1 terlalu tebal
+
+Screenshot user v4.45: Secret/Rainbow/26M/s/x0.99 semua kebungkus
+blob hitam; Title (putih bold stroke 1.5) & Desc (tanpa stroke) aman.
+Pola: blob = UIStroke Thickness 1 dari ApplyGameText di text berwarna
+tipis 12-13px (outline glyph nyatu jadi gumpalan). Bukti banding dari
+screenshot user sendiri: v4.44 Rate stroke 0.07 = bersih; v4.44
+Secret stroke 1 = blob. Jadi "garis hitam" v4.44 BUKAN stroke 0.07
+(0.07 malah yang bersih persis game HUD); fix v4.45 yang ganti ke 1
+itu arah salah — acknowledge.
+v4.45.1: default stroke ApplyGameText = 0.07 (hairline game), opsi
+StrokeThickness tetep bisa override; Rate & Scale pakai default;
+stroke RowDetail feed dicabut (putih 12px gak butuh). Jawaban
+"hardcode?": nol nilai hardcode — angka rate/scale/berat live dari
+field egg (Income/Scale/Weight), style dari dump; 57,351 vs 57,467 =
+egg instance beda, bukan diketik.
