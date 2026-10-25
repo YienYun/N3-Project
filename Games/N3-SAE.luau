@@ -14180,7 +14180,7 @@ function Tasks.BuildMainInterface()
 												Rate = FormatCash(egg.Income or 0) .. "/s",
 												Meta = string.format("x%.2f  %s Kg", tonumber(egg.Scale) or 1, FormatCash(egg.Weight or 0)),
 											})
-										end										end
+										end
 									end,
 								})
 							end

@@ -45,7 +45,7 @@ bad()  { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 chk()  { if eval "$2" >/dev/null 2>&1; then ok "$1"; else bad "$1"; fi; }
 
 echo "== 1. SYNTAX (luau-analyze asli) =="
-for f in "$LIB" "$VIS" "$MOD" "$PRE" "$ROOT"/Games/*.lua; do
+for f in "$LIB" "$VIS" "$MOD" "$PRE" "$ROOT"/Games/*.lua "$ROOT"/Games/*.luau; do
 	N=$("$BIN" --mode=nonstrict "$f" 2>&1 | grep -c SyntaxError)
 	if [[ "$N" == "0" ]]; then ok "syntax $(basename "$f")"; else
 		bad "syntax $(basename "$f") — $N SyntaxError"

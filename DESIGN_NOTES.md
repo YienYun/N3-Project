@@ -3592,3 +3592,17 @@ ke 5 label kartu (Title/Rarity/Mutation/Rate/Desc) + RowTitle/RowDetail
 feed; ApplyGameText terima Options.StrokeThickness; Rate pakai 0.07
 persis game. Versi 4.44.0. Ronde text SELESAI: layout 4 baris + rarity
 name gradient + feed row + font + cash hijau semua dari game.
+
+## v4.44.0+ — hotfix SAE SyntaxError 14184 + gate .luau
+
+Bug: slice OnClick v4.43 cari 'end' penutup via index(t*10+'end\n') —
+match pertama malah baris end t*11 (substring), jadi blok baru kurang
+satu baris penutup vs sisa file: 'end' yatim nempel gabung di 14184,
+table AddItem gak ketutup. Executor user yang nangkep (error line
+14184 close '{' 14166).
+Lubang gate root: loop syntax check.sh glob Games/*.lua — SAE itu
+.luau jadi TIDAK PERNAH di-syntax-check gates; cek manual era v4.43
+pakai flag binary PATH yang salah (silent fail). Fix: glob ditambah
+Games/*.luau; SAE dibenerin (buang end yatim). Pelajaran: slice pakai
+anchor multiline eksplisit, jangan substring 'end'; dan pastikan glob
+gate nutup semua ekstensi yang dipush.
