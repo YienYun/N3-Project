@@ -3484,3 +3484,14 @@ ReplicatedStorage.Client, .Shared, .Packages. Ronde 2: gue tunjuk
 module theme/font/rarity persis dari list nama itu. v4.44.0 bake font
 UI + cash topbar asli nunggu ronde 2 selesai; interim Rate = gradient
 Ready hijau (dump2).
+
+## v4.43.0+ — [N3DUMP6] dump_tree: skema user "scan print nama, gue buka isi"
+
+User negasin skema tunjuk-buta: maunya snippet scan tapi yang di-print
+NAMA file/folder doang, dia yang buka isi via Dex. tools/dump_tree.lua
+[N3DUMP6]: root children ReplicatedStorage + tipe; FOLDERS semua
+Folder/Configuration (Packages max depth 1); CODE semua
+Module/Local/Script tag [M]/[L]/[S] path penuh (Packages max 2 level,
+cap 450 baris biar paste waras). Nol .Source, nol baca isi. Ronde
+berikutnya: gue tunjuk path persis dari list -> user paste isi -> bake
+v4.44.0 (font UI + cash topbar asli).
