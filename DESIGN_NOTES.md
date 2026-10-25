@@ -3718,3 +3718,23 @@ Beda arsitektur tetep: chili monolit 49k baris UI+logic jadi satu;
 kita LIB standalone + SAE wiring tipis — milik kita lebih mudah
 diaudit, milik dia lebih tahan update game soal warna.
 Versi 4.45.4. numstat SAE vs origin/main: 67/61.
+
+## RESET ARAH (post v4.45.4) — hub baru dari nol, referensi ChiliSourceV5
+
+User: abaikan N3-SAE sekarang; bikin hub baru step-by-step dari source
+chili. File baru Games/N3-Steal-An-Egg.luau (kerangka komentar-only,
+chk gate jaga banner KERANGKA). Mandat rewrite:
+- clean-room: alur logika chili dipelajari, ditulis ulang; DILARANG
+  copas mentah / identifier deobfus (cn3, f32, zr...); nama themed
+  Steal-An-Egg biar maintainable.
+- nol hardcode: data/warna live dari game (metode require katalog
+  chili), konstanta lewat tabel Config bernama.
+- satu file kitab utuh: section ber-index [0]Config [1]SafeBoot
+  [2]DataService [3]FormatService [4]UiBridge [5+]Controllers;
+  tiap feature satu controller table + registry feature.
+Keputusan DISKUSI (open): sumber UI (N3V4 LIB vs UI sendiri dalam
+file), urutan fase feature, sumber data game (live require + fallback
+vs kalkulasi sendiri), nasib N3-SAE.luau lama (freeze/delete).
+Asset proven yang layak migrasi sebagai referensi logika (bukan
+copas deobfus): kalkulasi income predictor (verified 5/5 vs game),
+FormatRate/FormatWeight metode chili (v4.45.4), crash-catcher.

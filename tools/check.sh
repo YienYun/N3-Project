@@ -244,6 +244,8 @@ chk "tools/dump_game_text.lua = snippet dump text/rarity/anim read-only (prefix 
 	"test -f '$ROOT/tools/dump_game_text.lua' && grep -qF '[N3DUMP2]' '$ROOT/tools/dump_game_text.lua' && ! grep -qF 'Instance.new' '$ROOT/tools/dump_game_text.lua'"
 chk "tools/dump_game_ui.lua = snippet dump read-only (prefix N3DUMP, nol Instance.new, nol Parent write)" \
 	"test -f '$ROOT/tools/dump_game_ui.lua' && grep -qF '[N3DUMP]' '$ROOT/tools/dump_game_ui.lua' && ! grep -qF 'Instance.new' '$ROOT/tools/dump_game_ui.lua' && ! grep -qE '\\.Parent\\s*=' '$ROOT/tools/dump_game_ui.lua'"
+chk "N3-Steal-An-Egg.luau = kerangka hub baru (banner KERANGKA ada, logika nyusul pasca-diskusi)" \
+	"test -f '$ROOT/Games/N3-Steal-An-Egg.luau' && grep -qF 'KERANGKA' '$ROOT/Games/N3-Steal-An-Egg.luau' && grep -qF 'ChiliSourceV5' '$ROOT/Games/N3-Steal-An-Egg.luau'"
 chk "v4.45.4: metode chili — FormatRate 2 desimal + FormatWeight koma verbatim + warna solidIncome/Weight + feed rich-text" \
 	"grep -qF 'local function FormatRate' '$ROOT/Games/N3-SAE.luau' && grep -qF '%.2fM/s' '$ROOT/Games/N3-SAE.luau' && grep -qF '#4DFF7A' '$ROOT/Games/N3-SAE.luau' && grep -qF '#4DFF7A' '$LIB' && grep -qF '#CDE7FF' '$LIB'"
 chk "v4.45.3: enum Outline NGAWUR dibuang + stroke text hairline 0.07 + baris naik kalau mutation kosong" \
