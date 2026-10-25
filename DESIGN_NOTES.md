@@ -3140,3 +3140,16 @@ function + rawset cache, __newindex rawset, __call noop) — wiring lama
 ViewportFrame tetep gak dibikin (3D tetep hapus, pin absence ViewportFrame).
 CardObj.ModelSource balik: SetData simpen arg modelSource ke self.ModelSource.
 Versi 4.39.4. Pin: presence ViewportStub + absence ViewportFrame.
+
+## v4.39.4+ — SAE DIPATCH JUGA (user: "jangan fokus UI doang, SAE gue harus update")
+
+User buka lock read-only Games untuk patch compat. Audit penuh panggilan
+API SAE→LIB: semua method LIB yang dipanggil ADA (SetStateEnabled/
+GetStateEnabled = method Roblox Humanoid bukan LIB; AddTabbox = local
+function + assign di LIB). Yang kurang cuma wiring rarity kartu: dua
+site SetData (updater predictor + OnClick row feed) sekarang panggil
+Spotlight:SetRarity(rarity, warna) pakai warna asli game
+(focus.Color/egg.Color fallback DefaultRarityColors[rarity]) — guard
+`if Spotlight.SetRarity then` biar SAE tetep jalan di LIB lama.
+Numstat Games vs origin/main jadi 7/1 → pin check.sh di-update + pin
+presence 'Spotlight:SetRarity('. Analisis SAE 0 SyntaxError.

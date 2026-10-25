@@ -14147,6 +14147,9 @@ function Tasks.BuildMainInterface()
 						local titleStr = InstanUtility.FormatEggLabel(focus.Name, focus.Rarity)
 						local descStr = BuildPetDescription(focus)
 						Spotlight:SetData(titleStr, descStr, focus.Icon, livePetAnimal3D)
+						if Spotlight.SetRarity then
+							Spotlight:SetRarity(focus.Rarity, focus.Color or DefaultRarityColors[focus.Rarity])
+						end
 					end
 					if SingleEggFeed and SingleEggFeed.Clear and SingleEggFeed.AddItem then
 						local sigParts = {
@@ -14214,6 +14217,9 @@ function Tasks.BuildMainInterface()
 												egg.Icon,
 												petModel3D
 											)
+											if Spotlight.SetRarity then
+												Spotlight:SetRarity(egg.Rarity, egg.Color or DefaultRarityColors[egg.Rarity])
+											end
 										end
 									end,
 								})
