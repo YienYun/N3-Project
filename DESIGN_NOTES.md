@@ -3620,3 +3620,25 @@ refs/heads/arena/86b8116d-n3-project — runner user WAJIB pakai URL
 branch baru: .../arena/86b8116d-n3-project/Games/N3-SAE.luau (error
 14184 yang dia lihat berulang = runner masih nembak branch lama yang
 berisi SAE pre-hotfix).
+
+## v4.45.0 — polish kartu dari protes user (round visual)
+
+Protes user v4.44: (1) garis hitam = UIStroke 0.07 di Rate (stroke
+fraksional = artefak executor, pelajaran lama kelewat) -> stroke Rate
+jadi 1; (2) "Mutant Shark   Secret" space kejauhan = Rarity right-
+anchored 96px -> Rarity anchor kiri + AutomaticSize X + Position
+dinamis nempel TextBounds Title (LayoutRarity, dipanggil dari
+SetFields+SetRarity); (3) "..." titik-titik = Title truncate kependekan
+(kotak 1,-BoxSize-116) -> Title selebar baris (1,-BoxSize-22), truncate
+cumah kalau nama beneran panjang; (4) Rainbow mutation putih =
+gradient spread di label lebar + kemungkinan case -> semua label
+gradient (Mutation/Rate/Rarity/RowTitle/Scale) AutomaticSize X biar
+UIGradient ngepas text + ResolveGameText fallback case-insensitive +
+Mutation.TextTransparency di-reset 0 pas gradient apply; (5) x0.99
+harus kuning gradient -> label ScaleLbl baru + preset Gradients.Scale
+Rot0 {255,255,0 -> 255,170,0} + ApplyGameText("Scale"); (6) "57K Kg"
+-> SAE FormatWeight: >99999 FormatCash else koma ("57,467 Kg"), field
+Scale+Weight ganti Meta (Meta tetep fallback); LayoutWeight geser Desc
+nempel ScaleLbl; (7) feed row ga jelas/konsisten -> RowTitle autosize
+(gradient ngepas), RowDetail 12px + UIStroke hitam 1.
+Versi 4.45.0. Numstat Games 45/59.

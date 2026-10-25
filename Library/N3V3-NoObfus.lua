@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.44.0 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.45.0 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6039,7 +6039,7 @@ do
 		local Title = New("TextLabel", {
 			BackgroundTransparency = 1,
 			Position = UDim2.new(0, BoxSize + 14, 0, 6),
-			Size = UDim2.new(1, -BoxSize - 116, 0, 16),
+			Size = UDim2.new(1, -BoxSize - 22, 0, 16),
 			Text = Info.Title or "",
 			TextColor3 = Color3.new(1, 1, 1),
 			TextSize = 14,
@@ -6056,57 +6056,81 @@ do
 		})
 		local Rarity = New("TextLabel", {
 			BackgroundTransparency = 1,
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -8, 0, 7),
-			Size = UDim2.new(0, 96, 0, 16),
+			AnchorPoint = Vector2.new(0, 0),
+			Position = UDim2.fromOffset(BoxSize + 14, 7),
+			Size = UDim2.new(0, 0, 0, 16),
+			AutomaticSize = Enum.AutomaticSize.X,
 			Text = "",
 			TextColor3 = "AccentColor",
 			TextSize = 13,
 			Font = Enum.Font.GothamBold,
-			TextXAlignment = Enum.TextXAlignment.Right,
-			TextTruncate = Enum.TextTruncate.AtEnd,
+			TextXAlignment = Enum.TextXAlignment.Left,
 			Visible = false,
 			Parent = Card,
 		})
 		local Mutation = New("TextLabel", {
 			BackgroundTransparency = 1,
 			Position = UDim2.new(0, BoxSize + 14, 0, 24),
-			Size = UDim2.new(1, -BoxSize - 22, 0, 14),
+			Size = UDim2.new(0, 0, 0, 14),
+			AutomaticSize = Enum.AutomaticSize.X,
 			Text = "",
 			TextColor3 = Color3.new(1, 1, 1),
 			TextSize = 12,
 			Font = Enum.Font.GothamBold,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			TextTruncate = Enum.TextTruncate.AtEnd,
 			Visible = false,
 			Parent = Card,
 		})
 		local Rate = New("TextLabel", {
 			BackgroundTransparency = 1,
 			Position = UDim2.new(0, BoxSize + 14, 0, 40),
-			Size = UDim2.new(1, -BoxSize - 22, 0, 15),
+			Size = UDim2.new(0, 0, 0, 15),
+			AutomaticSize = Enum.AutomaticSize.X,
 			Text = "",
 			TextColor3 = Color3.new(1, 1, 1),
-			TextSize = 13,
 			Font = Enum.Font.GothamBold,
+			TextSize = 13,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			TextTruncate = Enum.TextTruncate.AtEnd,
 			Parent = Card,
 		})
 		local Desc = New("TextLabel", {
 			BackgroundTransparency = 1,
 			Position = UDim2.new(0, BoxSize + 14, 0, 57),
-			Size = UDim2.new(1, -BoxSize - 22, 1, -65),
+			Size = UDim2.new(0, 0, 0, 14),
+			AutomaticSize = Enum.AutomaticSize.X,
 			Text = Info.Description or "",
 			TextColor3 = "FontColor",
 			TextTransparency = 0.25,
 			TextSize = 11,
 			Font = Enum.Font.Gotham,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			TextYAlignment = Enum.TextYAlignment.Top,
-			TextWrapped = true,
 			Parent = Card,
 		})
+		local ScaleLbl = New("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(BoxSize + 14, 57),
+			Size = UDim2.new(0, 0, 0, 14),
+			AutomaticSize = Enum.AutomaticSize.X,
+			Text = "",
+			TextColor3 = Color3.new(1, 1, 1),
+			TextSize = 11,
+			Font = Enum.Font.GothamBold,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Visible = false,
+			Parent = Card,
+		})
+		local function LayoutRarity()
+			if Rarity.Visible then
+				Rarity.Position = UDim2.fromOffset(BoxSize + 14 + Title.TextBounds.X + 6, 7)
+			end
+		end
+		local function LayoutWeight()
+			if ScaleLbl.Visible then
+				Desc.Position = UDim2.fromOffset(BoxSize + 14 + ScaleLbl.TextBounds.X + 6, 57)
+			else
+				Desc.Position = UDim2.fromOffset(BoxSize + 14, 57)
+			end
+		end
 
 		local ViewportStub = setmetatable({}, {
 			__index = function(t, k)
@@ -6120,7 +6144,7 @@ do
 			end,
 		})
 
-		for _, GameLbl in ipairs({ Title, Rarity, Mutation, Rate, Desc }) do
+		for _, GameLbl in ipairs({ Title, Rarity, Mutation, Rate, Desc, ScaleLbl }) do
 			Library:ApplyGameFont(GameLbl)
 		end
 
@@ -6190,6 +6214,7 @@ do
 					self.RarityTween = Tw
 				end
 			end
+			LayoutRarity()
 		end
 
 		function CardObj:SetFields(Fields)
@@ -6198,6 +6223,7 @@ do
 			end
 			if Fields.Name then
 				Title.Text = tostring(Fields.Name)
+				LayoutRarity()
 			end
 			if Fields.Rarity then
 				self:SetRarity(Fields.Rarity, Fields.RarityColor)
@@ -6206,7 +6232,9 @@ do
 				local Mut = tostring(Fields.Mutation)
 				Mutation.Visible = Mut ~= ""
 				Mutation.Text = Mut
-				if not Library:ApplyGameText(Mutation, Mut) then
+				if Library:ApplyGameText(Mutation, Mut) then
+					Mutation.TextTransparency = 0
+				else
 					pcall(function()
 						Mutation:FindFirstChild("N3GameGradient"):Destroy()
 					end)
@@ -6216,11 +6244,23 @@ do
 			end
 			if Fields.Rate then
 				Rate.Text = tostring(Fields.Rate)
-				Library:ApplyGameText(Rate, "Cash", { StrokeThickness = 0.07 })
+				Library:ApplyGameText(Rate, "Cash", { StrokeThickness = 1 })
 			end
-			if Fields.Meta then
+			if Fields.Scale then
+				ScaleLbl.Visible = true
+				ScaleLbl.Text = tostring(Fields.Scale)
+				Library:ApplyGameText(ScaleLbl, "Scale", { StrokeThickness = 1 })
+			else
+				ScaleLbl.Visible = false
+			end
+			if Fields.Weight then
+				Desc.Text = tostring(Fields.Weight)
+				Desc.TextTransparency = 0.25
+			elseif Fields.Meta then
+				ScaleLbl.Visible = false
 				Desc.Text = tostring(Fields.Meta)
 			end
+			LayoutWeight()
 		end
 
 		function CardObj:SetData(TitleText, DescText, ImageAsset, ModelSource)
@@ -6377,13 +6417,13 @@ do
 			local RowTitle = New("TextLabel", {
 				BackgroundTransparency = 1,
 				Position = UDim2.fromOffset(46, 4),
-				Size = UDim2.new(1, -125, 0, 16),
+				Size = UDim2.new(0, 0, 0, 16),
+				AutomaticSize = Enum.AutomaticSize.X,
 				Text = itemData.Title or "",
 				TextSize = 13,
 				RichText = false,
 				Font = Enum.Font.GothamBold,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				TextTruncate = Enum.TextTruncate.AtEnd,
 				Parent = RowBtn,
 			})
 			if itemData.Rarity then
@@ -6406,12 +6446,18 @@ do
 				Position = UDim2.fromOffset(46, 22),
 				Size = UDim2.new(1, -125, 0, 16),
 				Text = itemData.Detail or "",
-				TextSize = 11,
+				TextSize = 12,
 				RichText = true,
 				Font = Enum.Font.Gotham,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				Parent = RowBtn,
+			})
+			New("UIStroke", {
+				Name = "N3GameStroke",
+				Color = Color3.new(0, 0, 0),
+				Thickness = 1,
+				Parent = RowDetail,
 			})
 			Library:ApplyGameFont(RowTitle)
 			Library:ApplyGameFont(RowDetail)
@@ -6448,7 +6494,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.44.0"
+	Library.N3V4Version = "4.45.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11629,6 +11675,10 @@ Library.GameText = {
 			Rotation = 0,
 			Keypoints = { { 0, 26, 255, 0 }, { 1, 0, 255, 0 } },
 		},
+		Scale = {
+			Rotation = 0,
+			Keypoints = { { 0, 255, 255, 0 }, { 1, 255, 170, 0 } },
+		},
 	},
 	Aliases = {
 		Rainbow = "Rainbow12",
@@ -11646,7 +11696,21 @@ function Library:ResolveGameGradient(Name)
 		return G
 	end
 	local Alias = Library.GameText.Aliases[Name]
-	return Alias and Library.GameText.Gradients[Alias] or nil
+	if Alias then
+		return Library.GameText.Gradients[Alias]
+	end
+	local Low = Name:lower()
+	for Key, G2 in pairs(Library.GameText.Gradients) do
+		if Key:lower() == Low then
+			return G2
+		end
+	end
+	for Key, Al in pairs(Library.GameText.Aliases) do
+		if Key:lower() == Low then
+			return Library.GameText.Gradients[Al]
+		end
+	end
+	return nil
 end
 
 local GameFontOk, GameFontInstance = pcall(function()

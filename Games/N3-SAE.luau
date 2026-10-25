@@ -746,6 +746,15 @@ local function FormatCash(n: number): string
 	end
 	return tostring(math.floor(n))
 end
+local function FormatWeight(n: number): string
+	n = tonumber(n) or 0
+	if n > 99999 then
+		return FormatCash(n)
+	end
+	local s = ("%d"):format(math.floor(n + 0.5))
+	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	return out:gsub("^,", "")
+end
 local function ColorToHex(c: Color3): string
 	return string.format(
 		"#%02X%02X%02X",
@@ -14126,7 +14135,8 @@ function Tasks.BuildMainInterface()
 								Rarity = focus.Rarity,
 								Mutation = focus.Mutation or "",
 								Rate = FormatCash(focus.Income or 0) .. "/s",
-								Meta = string.format("x%.2f  %s Kg", tonumber(focus.Scale) or 1, FormatCash(focus.Weight or 0)),
+								Scale = string.format("x%.2f", tonumber(focus.Scale) or 1),
+								Weight = FormatWeight(focus.Weight or 0) .. " Kg",
 							})
 						end
 					end
@@ -14178,7 +14188,8 @@ function Tasks.BuildMainInterface()
 												Rarity = egg.Rarity,
 												Mutation = egg.Mutation or "",
 												Rate = FormatCash(egg.Income or 0) .. "/s",
-												Meta = string.format("x%.2f  %s Kg", tonumber(egg.Scale) or 1, FormatCash(egg.Weight or 0)),
+												Scale = string.format("x%.2f", tonumber(egg.Scale) or 1),
+												Weight = FormatWeight(egg.Weight or 0) .. " Kg",
 											})
 										end
 									end,
