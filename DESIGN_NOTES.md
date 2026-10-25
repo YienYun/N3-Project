@@ -3495,3 +3495,23 @@ Module/Local/Script tag [M]/[L]/[S] path penuh (Packages max 2 level,
 cap 450 baris biar paste waras). Nol .Source, nol baca isi. Ronde
 berikutnya: gue tunjuk path persis dari list -> user paste isi -> bake
 v4.44.0 (font UI + cash topbar asli).
+
+## v4.43.0+ — [N3DUMP6] masuk + lubang CAP + [N3DUMP7] scope sempit
+
+[N3DUMP6] hasil: peta ReplicatedStorage game lengkap. Penting:
+TopbarPlusReference = ObjectValue (pointer, bukan module); TopbarPlus
+asli di Packages/_Index/1foreverhd_topbarplus@3.2.5 + @3.4.0; package
+FormatNumber ada (format angka cash); zona kandidat font/cash/rarity
+= Client/Hud (ModuleScript), Client/UI(+BoxUI/VFX), Controllers/GUI
+(Backpack/Index/Shops/Shop/GuardAreas), Shared/Modules(+Utils/Util/
+Globals/Eggs/Types/Flags). Mutations folder = asset per mutation
+(Rainbow/Silver/Golden/Sakura/...). ClientObservers/GradientLoop =
+observer anim gradient (kandidat shine rarity).
+LUBANG GUE: CODE cap 450 global makan persis 4 folder kandidat
+(list berhenti di Client/ShrineFusionController). Fix desain: cap
+per-scope / scan tersempit.
+[N3DUMP7] tools/dump_tree2.lua: nama file code doang, scope cuma
+ReplicatedStorage/Client + /Controllers + /Shared + /Packages (2
+level), cap 700. Ronde berikutnya: tunjuk 2-4 file persis (theme/
+font, topbar cash controller, tabel rarity/egg config) -> user buka
+di Dex, paste isi -> bake v4.44.0.
