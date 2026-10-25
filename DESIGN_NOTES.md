@@ -3571,3 +3571,24 @@ transparency, FontFace family+weight + legacy Font, UIStroke (color/
 thickness/transparency + gradient stroke), UIGradient label. Cap 40/
 target, read-only, clipboard.
 v4.44.0 bake nunggu [N3DUMP8]: Font.new(asset) + ganti Cash interim.
+
+## v4.44.0 — font UI game + cash hijau topbar verbatim [N3DUMP8]
+
+Session branch baru (arena/86b8116d) mulai dari main @2801f64; kerjaan
+lama di-carry-over via git checkout origin/arena/c5a10c06-n3-project
+-- . (commit carry-over a109779), gates 109/109 dulu baru commit.
+[N3DUMP8] (dump tertarget HUD/TopbarStandard/SakuraCrystalCounter)
+hasil: font UI game = keluarga GothamSSm weight ExtraBold (semua value
+HUD: Money/Speed/timer/button); asset rbxassetid://12187365977 Bold
+cuma badge/boost/counter kecil. Cash topbar asli = GameHUD/BottomLeft/
+Money/Value: base putih + UIGradient Rot0 {0:26,255,0 1:0,255,0} +
+UIStroke hitam th0.07 (hairline). Pembanding BUKAN cash: Speed solid
+29,255,210; Souls Rot90 190,255,236->46,230,180. TopbarStandard cuma
+icon BuilderSans (menu Roblox), SakuraCrystalCounter font 12187365977.
+Bake: preset Cash diganti Rot0 {26,255,0 -> 0,255,0} (interim Ready
+Rot90 kuning-hijau MATI); Library.GameFont = Font.new(GothamSSm family,
+ExtraBold) + Library:ApplyGameFont (pcall, fallback nil aman) diaplikasi
+ke 5 label kartu (Title/Rarity/Mutation/Rate/Desc) + RowTitle/RowDetail
+feed; ApplyGameText terima Options.StrokeThickness; Rate pakai 0.07
+persis game. Versi 4.44.0. Ronde text SELESAI: layout 4 baris + rarity
+name gradient + feed row + font + cash hijau semua dari game.

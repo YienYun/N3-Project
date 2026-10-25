@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.43.0 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.44.0 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6120,6 +6120,10 @@ do
 			end,
 		})
 
+		for _, GameLbl in ipairs({ Title, Rarity, Mutation, Rate, Desc }) do
+			Library:ApplyGameFont(GameLbl)
+		end
+
 		local CardObj = {
 			Frame = Card,
 			Title = Title,
@@ -6212,7 +6216,7 @@ do
 			end
 			if Fields.Rate then
 				Rate.Text = tostring(Fields.Rate)
-				Library:ApplyGameText(Rate, "Cash")
+				Library:ApplyGameText(Rate, "Cash", { StrokeThickness = 0.07 })
 			end
 			if Fields.Meta then
 				Desc.Text = tostring(Fields.Meta)
@@ -6409,6 +6413,8 @@ do
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				Parent = RowBtn,
 			})
+			Library:ApplyGameFont(RowTitle)
+			Library:ApplyGameFont(RowDetail)
 
 			if itemData.RightTag and itemData.RightTag ~= "" then
 				local RowRight = New("TextLabel", {
@@ -6442,7 +6448,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.43.0"
+	Library.N3V4Version = "4.44.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11620,8 +11626,8 @@ Library.GameText = {
 			},
 		},
 		Cash = {
-			Rotation = 90,
-			Keypoints = { { 0, 255, 255, 0 }, { 1, 21, 255, 0 } },
+			Rotation = 0,
+			Keypoints = { { 0, 26, 255, 0 }, { 1, 0, 255, 0 } },
 		},
 	},
 	Aliases = {
@@ -11641,6 +11647,20 @@ function Library:ResolveGameGradient(Name)
 	end
 	local Alias = Library.GameText.Aliases[Name]
 	return Alias and Library.GameText.Gradients[Alias] or nil
+end
+
+local GameFontOk, GameFontInstance = pcall(function()
+	return Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.ExtraBold)
+end)
+Library.GameFont = GameFontOk and GameFontInstance or nil
+
+function Library:ApplyGameFont(Label)
+	if not Label or not Library.GameFont then
+		return false
+	end
+	return pcall(function()
+		Label.FontFace = Library.GameFont
+	end)
 end
 
 function Library:ApplyGameText(Label, Name, Options)
@@ -11672,7 +11692,7 @@ function Library:ApplyGameText(Label, Name, Options)
 			})
 		end
 		Stroke.Color = Library.GameText.StrokeColor
-		Stroke.Thickness = 1
+		Stroke.Thickness = Options.StrokeThickness or 1
 	end
 	return true
 end
