@@ -3199,3 +3199,48 @@ scan Color3 depth 2), TEXTLABEL SCAN ActivePets, HEADER/END.
 Read-only dibuktiin pin: nol Instance.new, nol write .Parent.
 Alur: user paste Output [N3DUMP] ke sini → nilai di-BAKE VERBATIM jadi
 preset theme/background permanen LIB (mandate dump-bake), knob tetep.
+
+## RESEP GAME PANEL Steal an Egg (parse dump [N3DUMP] 2025-10-25, bake verbatim pending OK user)
+
+SOURCE: PlayerGui.ActivePets (game 10563114921). Semua nilai di bawah
+verbatim dari dump user, belum di-bake ke LIB sampai dapat OK.
+
+PANEL UTAMA (Frame = ImageLabel):
+- Bg solid RGB(50,50,65) BgT 0 + overlay pattern Image=rbxassetid://90325592797235
+  ImgC putih ImgT 0.75 ScaleType=Tile TileSize={0,75},{0,75}
+- Double stroke: luar RGB(82,82,107), dalam RGB(21,21,21)
+- UIAspectRatioConstraint 1.250
+HEADER: pattern overlay sama (ImgT 0.75) + UIGradient emas Rot 0:
+  0:RGB(199,150,104) 0.53:RGB(255,202,149) 1:RGB(199,169,120)
+  + double stroke (82,82,107 / 21,21,21); Title putih GothamBlack 14
+  + stroke text hitam; image stroke pisah rbxassetid://98981360538955
+ROW (Spacer = ImageLabel): Bg RGB(49,49,49) BgT 0.25, stroke luar
+  RGB(21,21,21), InnerUIStroke putih + UIGradient metallic Rot 37:
+  0:RGB(149,149,149) 0.48:RGB(117,117,117) 1:RGB(140,140,140)
+GLOW icon: ImageLabel rbxassetid://109516122757226 ImgT 0.42 Stretch
+  Size ~ (0.675, 3.107) relative row
+RARITY = text PUTIH + UIGradient di UIStroke text (outline berwarna),
+  sampel dump:
+  - rainbow 12kp Rot -90: 0:RGB(16,73,124) 0.02:RGB(0,16,90) 0.02:RGB(0,16,90)
+    0.09:RGB(175,201,213) 0.20:RGB(224,240,255) 0.34:RGB(255,180,255)
+    0.49:RGB(68,0,127) 0.52:RGB(5,1,9) 0.53:RGB(255,255,255) 0.74:RGB(180,255,243)
+    0.96:RGB(39,159,175) 1:RGB(16,73,124)
+  - silver 14kp Rot 90: 0:RGB(255,255,255) 0.03:RGB(255,255,255) 0.14:RGB(255,255,255)
+    0.54:RGB(255,255,255) 0.55:RGB(0,0,0) 0.61:RGB(97,97,97) 0.65:RGB(97,97,97)
+    0.71:RGB(97,97,97) 0.76:RGB(97,97,97) 0.87:RGB(97,97,97) 0.91:RGB(255,255,255)
+    0.91:RGB(255,255,255) 0.93:RGB(255,255,255) 1:RGB(255,255,255)
+  - purple 3kp Rot 0: 0:RGB(183,0,255) 0.48:RGB(255,99,213) 1:RGB(149,0,255)
+TOMBOL CTA hijau: gradient Rot -90 0:RGB(60,255,0) 1:RGB(136,255,0)
+  + stroke RGB(11,72,0) + strokeclr RGB(190,255,180) + pattern overlay ImgT 0.75
+TOMBOL merah: gradient Rot -90 0:RGB(214,17,17) 1:RGB(253,20,20)
+  + stroke RGB(72,0,0) + strokeclr RGB(255,103,103)
+CLOSE: Bg RGB(255,20,20) + gradient Rot 90 putih→RGB(211,211,211)
+  + stroke hitam; label ">" GothamBlack 14 + stroke RGB(79,7,7)
+DECOR shine: CanvasGroup > Frame BgT 0.55 + gradient alpha 0→1 Rot -90 putih
+SCROLL: BgT 1, ScrollBarThickness 6, AutomaticCanvasSize Y,
+  UIListLayout pad 0, row height scale 0.3654, EmptyLast 0.1
+ANOMALI: semua UIStroke.Thickness dump fractional (0.01-0.12) — dicurigai
+  artefak refleksi executor / relatif UIScale; visual asli = hairline 1-2px.
+  Rencana bake: ketebalan diterjemahkan 1px di scale LIB, warna/transparansi/
+  gradient/texture bake verbatim. Font game = FontFace custom (Enum.Unknown);
+  LIB tetep Gotham sesuai lock lama kecuali user minta ganti.
