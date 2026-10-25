@@ -3515,3 +3515,28 @@ ReplicatedStorage/Client + /Controllers + /Shared + /Packages (2
 level), cap 700. Ronde berikutnya: tunjuk 2-4 file persis (theme/
 font, topbar cash controller, tabel rarity/egg config) -> user buka
 di Dex, paste isi -> bake v4.44.0.
+
+## v4.43.0+ — [N3DUMP7] masuk + tunjukan ronde 2 (5 file via Dex)
+
+[N3DUMP7]: Client 190 file, Controllers 444, Shared 66 (Packages 0 =
+kepake cap, irrelevant: _Index = library TopbarPlus, yang dibutuh
+code game yang manggil dia). Temuan peta penting:
+- Sistem gradient text game = Client/UI/VFX/EasyVisuals/*
+  (GradientTemplates: Rainbow/Silver/Gold/Chrome/... + Presets incl.
+  Presets/Secret, Presets/RainbowStroke, ChromeStroke, dll + Stroke/
+  Layers/StopRamp) → sumber nilai RARNAME dump3.
+- Cash counter: Controllers/GUI/MoneyUpdateController; TopbarPlus
+  setup: Controllers/Game/IconController + module Icons di dalemnya.
+- Kandidat font standar: Client/GUI (factory GUI), Shared/Globals/
+  Constants; odds/rarity display: Client/Util/AssetOddsDisplay.
+- Hud module: Client/Hud; hover card pet: Client/HoverCard;
+  GrowingEggListRow: Shared/Eggs/GrowingEggListRow (row list egg game).
+Tunjukan ronde 2 (user buka di Dex, paste source verbatim):
+1) Controllers/GUI/MoneyUpdateController (style cash topbar)
+2) Controllers/Game/IconController (setup TopbarPlus)
+3) Controllers/Game/IconController/Icons (definisi icon; kalau gede
+   paste bagian cash/money doang)
+4) Client/GUI (factory GUI = font standar)
+5) Shared/Globals/Constants (konstanta font/warna)
+Abis paste: bake v4.44.0 = Font.new(asset game) di label kartu/feed +
+ganti gradient Cash interim ke style topbar asli.
