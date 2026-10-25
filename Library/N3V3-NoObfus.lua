@@ -2364,7 +2364,7 @@ function Library:StartCursorGlowLoop()
 		end
 	end))
 end
-print("[N3V4 Library] v4.41.3 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
+print("[N3V4 Library] v4.42.0 loaded — STANDALONE SATU FILE: module visual eksternal DIPUTUS TOTAL, engine gradient (ticker bersama + blend + 18 preset + AttachGradient) sekarang INLINE di file ini, nol replica nol dependensi eksternal; ikon lucide 100% dari URL git (lucide-roblox-direct, gitlab + github fallback) — peta sheet offline era debugging Studio DIHAPUS, alias nama lama tetep dinormalkan, asset/URL kustom lewat GetCustomIcon; spotlight card + knob kartu media lama + viewport-tanpa-Object (fitur module era Studio) DICABUT; Games/N3-SAE.luau sekarang load LIB ini via URL raw project ini; (kalau baris ini NGGAK ada di Output, LIB yang ke-load masih lama)")
 
 function Library:GetCanvasColor(): Color3
 	if typeof(Library.Surface.CanvasColor) == "Color3" then
@@ -6124,13 +6124,26 @@ do
 			self.RarityColor = Base
 			Rarity.Visible = true
 			Rarity.Text = Text
-			Rarity.TextColor3 = Base
-			if Library.PanelStyle.AnimateText then
-				local Tw = TweenService:Create(Rarity, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-					TextColor3 = Library:GetBetterColor(Base, 18),
-				})
-				Tw:Play()
-				self.RarityTween = Tw
+			local GradName = nil
+			if Library.GameText.RarityMode == "gradient" then
+				if Library:ResolveGameGradient(Text) then
+					GradName = Text
+				elseif Library:ResolveGameGradient(Color) then
+					GradName = Color
+				end
+			end
+			if GradName then
+				Library:ApplyGameText(Rarity, GradName)
+			else
+				Library:ClearGameText(Rarity)
+				Rarity.TextColor3 = Base
+				if Library.PanelStyle.AnimateText then
+					local Tw = TweenService:Create(Rarity, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+						TextColor3 = Library:GetBetterColor(Base, 18),
+					})
+					Tw:Play()
+					self.RarityTween = Tw
+				end
 			end
 		end
 
@@ -6344,7 +6357,7 @@ do
 		return FeedObj
 	end
 
-	Library.N3V4Version = "4.41.3"
+	Library.N3V4Version = "4.42.0"
 
 	Library.ButtonGradient = {
 		Enabled = true,
@@ -11442,6 +11455,114 @@ function Library:SetIconGlow(Enabled, Options)
 		end)
 	end
 	return IG.Enabled
+end
+
+Library.GameText = {
+	RarityMode = "gradient",
+	StrokeColor = Color3.new(0, 0, 0),
+	Gradients = {
+		Rainbow12 = {
+			Rotation = -90,
+			Keypoints = {
+				{ 0, 16, 73, 124 }, { 0.02, 0, 16, 90 }, { 0.02, 0, 16, 90 }, { 0.09, 175, 201, 213 },
+				{ 0.2, 224, 240, 255 }, { 0.34, 255, 180, 255 }, { 0.49, 68, 0, 127 }, { 0.52, 5, 1, 9 },
+				{ 0.53, 255, 255, 255 }, { 0.74, 180, 255, 243 }, { 0.96, 39, 159, 175 }, { 1, 16, 73, 124 },
+			},
+		},
+		Silver14 = {
+			Rotation = 90,
+			Keypoints = {
+				{ 0, 255, 255, 255 }, { 0.03, 255, 255, 255 }, { 0.14, 255, 255, 255 }, { 0.54, 255, 255, 255 },
+				{ 0.55, 0, 0, 0 }, { 0.61, 97, 97, 97 }, { 0.65, 97, 97, 97 }, { 0.71, 97, 97, 97 },
+				{ 0.76, 97, 97, 97 }, { 0.87, 97, 97, 97 }, { 0.91, 255, 255, 255 }, { 0.91, 255, 255, 255 },
+				{ 0.93, 255, 255, 255 }, { 1, 255, 255, 255 },
+			},
+		},
+		Purple3 = {
+			Rotation = 0,
+			Keypoints = { { 0, 183, 0, 255 }, { 0.48, 255, 99, 213 }, { 1, 149, 0, 255 } },
+		},
+		NameShine = {
+			Rotation = 90,
+			Keypoints = { { 0, 255, 255, 255 }, { 0.53, 255, 255, 255 }, { 0.57, 202, 202, 202 }, { 1, 255, 255, 255 } },
+		},
+		Ready = {
+			Rotation = 90,
+			Keypoints = { { 0, 255, 255, 0 }, { 1, 21, 255, 0 } },
+		},
+		Missing = {
+			Rotation = 90,
+			Keypoints = { { 0, 245, 245, 245 }, { 1, 126, 132, 134 } },
+		},
+		HeaderBlue = {
+			Rotation = 90,
+			Keypoints = { { 0, 0, 179, 229 }, { 1, 0, 80, 229 } },
+		},
+	},
+	Aliases = {
+		Rainbow = "Rainbow12",
+		Silver = "Silver14",
+		Mutant = "Silver14",
+		Cosmic = "Purple3",
+	},
+}
+
+function Library:ResolveGameGradient(Name)
+	if type(Name) ~= "string" then
+		return nil
+	end
+	local G = Library.GameText.Gradients[Name]
+	if G then
+		return G
+	end
+	local Alias = Library.GameText.Aliases[Name]
+	return Alias and Library.GameText.Gradients[Alias] or nil
+end
+
+function Library:ApplyGameText(Label, Name, Options)
+	Options = Options or {}
+	local G = Library:ResolveGameGradient(Name)
+	if not Label or not G then
+		return false
+	end
+	local kps = {}
+	for _, kp in ipairs(G.Keypoints) do
+		table.insert(kps, ColorSequenceKeypoint.new(kp[1], Color3.fromRGB(kp[2], kp[3], kp[4])))
+	end
+	Label.TextColor3 = Color3.new(1, 1, 1)
+	local Grad = Label:FindFirstChild("N3GameGradient")
+	if not Grad then
+		Grad = New("UIGradient", {
+			Name = "N3GameGradient",
+			Parent = Label,
+		})
+	end
+	Grad.Color = ColorSequence.new(kps)
+	Grad.Rotation = G.Rotation
+	if Options.Stroke ~= false then
+		local Stroke = Label:FindFirstChild("N3GameStroke")
+		if not Stroke then
+			Stroke = New("UIStroke", {
+				Name = "N3GameStroke",
+				Parent = Label,
+			})
+		end
+		Stroke.Color = Library.GameText.StrokeColor
+		Stroke.Thickness = 1
+	end
+	return true
+end
+
+function Library:ClearGameText(Label)
+	if not Label then
+		return
+	end
+	pcall(function()
+		Label:FindFirstChild("N3GameGradient"):Destroy()
+	end)
+	pcall(function()
+		Label:FindFirstChild("N3GameStroke"):Destroy()
+	end)
 end
 
 function Library:CreateWindow(WindowInfo)

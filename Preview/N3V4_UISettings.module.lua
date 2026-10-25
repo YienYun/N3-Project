@@ -494,6 +494,12 @@ function Settings:Attach(Library, Window, Options)
 				Library:SetIconGlow(nil, { Scale = Value })
 			end,
 		})
+		Box:AddToggle("TB_RarMode", {
+			Text = "Rarity kartu gradient game", Default = (Library.GameText and Library.GameText.RarityMode or "gradient") == "gradient",
+			Callback = function(On)
+				Library.GameText.RarityMode = On and "gradient" or "pulse"
+			end,
+		})
 		Box:AddButton("Print resep tab", function()
 			print("[N3V4 RESEP TAB] paste ini balik:\n" .. BuildTab() .. string.format("\nIconGlow = { Enabled = %s, Image = %q, Transparency = %.2f, Scale = %d }", tostring(Library.IconGlow.Enabled), Library.IconGlow.Image, Library.IconGlow.Transparency, Library.IconGlow.Scale))
 			SafeNotify({ Title = "Resep tab", Description = "Cek Output.", Icon = "copy", Time = 3 })

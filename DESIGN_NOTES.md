@@ -3348,3 +3348,33 @@ prefix [N3DUMP2], read-only (pin: nol Instance.new), 4 seksi:
 Langkah 2 (turn setelah dump masuk): bake Library.GameText preset +
 upgrade SetRarity mode "game" (text putih + gradient outline + anim
 offset) + style cash, nilai verbatim dump.
+
+## v4.42.0 — Library.GameText: preset gradient text verbatim dump N3DUMP2
+
+Parse dump [N3DUMP2]: (1) module scan = mapa Rarity.Color per pet (9
+kelompok warna: 65,0,170 / 46,46,46 / 254,132,36 / 255,30,240 /
+251,255,0 / 254,44,102 / 196,2,255 / 151,151,151 / 0,255,0); (2) text
+row game = TextColor3 PUTIH + UIStroke HITAM + UIGradient DI FILL text:
+Rainbow12 Rot -90 (12 kp), Silver14 Rot 90 (14 kp, mutant/silver),
+Purple3 Rot 0 (cosmic/purple); style nama = NameShine (putih kilap
+Rot 90); status Ready/Missing; header biru di stroke; (3) ANIM SAMPLE
+nol delta Offset/Rotation dalam 0.4s = gradient game STATIS — kesan
+"animasi" = gradient multi-warna itu sendiri, pulse LIB tetep ada
+sebagai mode terpisah.
+Bake: Library.GameText = { RarityMode = "gradient", StrokeColor hitam,
+Gradients{Rainbow12,Silver14,Purple3,NameShine,Ready,Missing,HeaderBlue}
+keypoints+rotation VERBATIM, Aliases{Rainbow,Silver,Mutant,Cosmic} };
+Library:ResolveGameGradient(Name); Library:ApplyGameText(Label,Name,
+Options{Stroke}) = putih + gradient fill + stroke hitam 1px (child
+N3GameGradient/N3GameStroke, reuse kalau ada); Library:ClearGameText.
+SetRarity: kalau RarityMode "gradient" dan nama rarity / arg Color
+cocok preset → mode gradient (putih+gradient+stroke, pulse skip);
+selain itu path pulse lama (ClearGameText dulu biar gak nimpa).
+MOD knob: toggle TB_RarMode "Rarity kartu gradient game".
+SAE user gak perlu diubah (SetRarity call lama otomatis ikut mode).
+INSIDEN: rollback workspace .git KEDUA — HEAD/index/ref remote-tracking
+kembali ke base session ec0f3a1 mid-turn (Games jadi untracked-deleted,
+numstat 0/26637, pin merah). Recovery: cp 5 file edited ke /tmp, fetch
+origin (ref pulih), reset --hard origin/arena tip 1ef3719, restore cp,
+gates hijau, commit. Tidak ada konten hilang.
+Versi 4.42.0.
