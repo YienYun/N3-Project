@@ -3796,3 +3796,22 @@ dilebur ke V2 (V2 = fast tween itu sendiri); deliver tanpa DropAtSafe
 semantik). Lapisan file: [0]Config [1]SafeBoot [2]GAMEBRIDGE(kode game)
 [3]FARMCONTROLLER(logika) [4]UIBRIDGE(kode LIB, paling bawah).
 Versi hub 0.2.0; handshake "[N3-Steal-An-Egg] v0.2.0 loaded".
+
+## v0.2.1 — fix "ga work": pickup mechanism + logo hub
+
+Root cause ronde v0.2.0 (user: "ga work", "logo kok telur"):
+1. Pickup egg di game ini BUKAN sentuh/injak: egg field punya part
+   "SmartPromptPart" berisi ProximityPrompt "CarryAreaEgg"; chili fire
+   prompt itu via fireproximityprompt (baris 16075-16194, 16893-16894).
+   v0.2.0 cuma jalan ke egg lalu nunggu atribut carry -> gak pernah
+   pickup -> "ga ada perubahan". Fix: GameBridge.NearestPickupPrompt +
+   FirePickupPrompt (RequiresLineOfSight=false, HoldDuration=0, fire
+   pcall, 4 tries @0.2s) di cycle farm.
+2. Logo window: v0.2.0 pakai icon lucide "egg" (salah tafsir "icosnya
+   egg" yang seharusnya cuma tab+group). Logo hub asli =
+   rbxassetid://117688744510818 (dari CreateWindow SAE lama). Tab Farm
+   & group Farm Egg tetep icon egg sesuai titah.
+3. Instan Steal V2 emang di-hide sampai toggle Instan Steal on
+   (DependencyBox, pola SAE lama yang terbukti jalan in-game); chili
+   pakai ShowWhen/SubOf semantik sama (14582-14600). Bukan bug.
+Versi 0.2.1.

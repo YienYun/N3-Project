@@ -20,7 +20,7 @@
 ]]
 
 --[=[ [0] CONFIG ]=]
-local EggHub = { Version = "0.2.0", Name = "N3-Steal-An-Egg" }
+local EggHub = { Version = "0.2.1", Name = "N3-Steal-An-Egg" }
 
 local Config = {
 	LibraryUrl = "https://raw.githubusercontent.com/YienYun/N3-Project/refs/heads/arena/86b8116d-n3-project/Library/N3V3-NoObfus.lua",
@@ -37,6 +37,10 @@ local Config = {
 	SafeZone = { Inset = 6, PartName = "SafeZone" },
 	Guard = { Radius = 60, ScanInterval = 0.2, FolderName = "GuardAreas", ModelName = "Guard", StateAttribute = "GuardState", SleepingState = "Sleeping" },
 	Carry = { Attribute = "HalloweenCarrying", UidAttribute = "CarryUid" },
+	-- Mekanisme pickup game asli (chili 16075-16194): egg field punya
+	-- part "SmartPromptPart" berisi ProximityPrompt "CarryAreaEgg";
+	-- pickup = fire prompt itu, bukan sekadar injak egg.
+	Pickup = { PromptPartName = "SmartPromptPart", PromptName = "CarryAreaEgg", Tries = 4, RetryGap = 0.2 },
 	Egg = { UidAttribute = "HalloweenEggUid", SourceAttribute = "PreparedSourceName", ZoneAttribute = "Zone" },
 
 	Move = {
@@ -304,6 +308,41 @@ function GameBridge.ActiveGuardThreats()
 		end
 	end
 	return threats
+end
+
+-- Prompt pickup terdekat dari satu posisi (chili 16893-16894).
+function GameBridge.NearestPickupPrompt(nearPosition)
+	local bestPrompt, bestDistance = nil, math.huge
+	for _, child in ipairs(Workspace:GetChildren()) do
+		if child.Name == Config.Pickup.PromptPartName and child:IsA("BasePart") then
+			local prompt = child:FindFirstChild(Config.Pickup.PromptName)
+			if prompt and prompt:IsA("ProximityPrompt") then
+				local distance = (child.Position - nearPosition).Magnitude
+				if distance < bestDistance then
+					bestDistance = distance
+					bestPrompt = prompt
+				end
+			end
+		end
+	end
+	return bestPrompt
+end
+
+-- Fire prompt pickup (chili 16194): matikan line-of-sight & hold dulu.
+function GameBridge.FirePickupPrompt(prompt)
+	if not prompt then
+		return false
+	end
+	pcall(function()
+		prompt.RequiresLineOfSight = false
+		prompt.HoldDuration = 0
+	end)
+	if typeof(fireproximityprompt) == "function" then
+		return pcall(function()
+			fireproximityprompt(prompt)
+		end)
+	end
+	return false
 end
 
 function GameBridge.IsCarrying()
@@ -590,9 +629,12 @@ task.spawn(function()
 					return
 				end
 				FarmController.MoveTo(eggRoot.Position + Vector3.new(0, 1, 0))
-				local deadline = os.clock() + Config.Move.PickupTimeout
-				while not GameBridge.IsCarrying() and os.clock() < deadline do
-					task.wait(0.1)
+				for _ = 1, Config.Pickup.Tries do
+					if GameBridge.IsCarrying() then
+						break
+					end
+					GameBridge.FirePickupPrompt(GameBridge.NearestPickupPrompt(eggRoot.Position))
+					task.wait(Config.Pickup.RetryGap)
 				end
 			end)
 		end
@@ -604,7 +646,7 @@ local Library = loadstring(game:HttpGet(Config.LibraryUrl))()
 local MainWindow = Library:CreateWindow({
 	Title = "N3 Hub",
 	Footer = string.format("%s v%s", EggHub.Name, EggHub.Version),
-	Icon = "egg",
+	Icon = "rbxassetid://117688744510818",
 	AutoShow = true,
 	ToggleKeybind = Enum.KeyCode.RightControl,
 })
