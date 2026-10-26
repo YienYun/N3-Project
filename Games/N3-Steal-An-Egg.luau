@@ -20,7 +20,7 @@
 ]]
 
 --[=[ [0] CONFIG ]=]
-local EggHub = { Version = "0.2.6", Name = "N3-Steal-An-Egg" }
+local EggHub = { Version = "0.2.7", Name = "N3-Steal-An-Egg" }
 
 local Config = {
 	LibraryUrl = "https://raw.githubusercontent.com/YienYun/N3-Project/refs/heads/arena/86b8116d-n3-project/Library/N3V3-NoObfus.lua",
@@ -48,6 +48,7 @@ local Config = {
 		PullArrive = 8,         -- batas tiba pull velocity (chili 17951: <8 break)
 		WalkGap = 0.12,
 		PullGap = 0.03,
+		WrongEggRadius = 6,   -- radius guard salah-egg (adaptasi dari chili 16032-16049)
 		ArriveSnap = 6,          -- jarak dianggap sampai (chili: >6 = teleport ulang)
 		TeleportGap = 3,         -- gap sisa setelah PivotTo (chili: >3 = set CFrame root)
 		TeleportRetries = 3,
@@ -337,6 +338,38 @@ function GameBridge.FirePickupPrompt(prompt)
 	return false
 end
 
+-- Mekanisme pickup/drop ASLI game lewat module EggState (chili 16096/16060/
+-- 17583): CarryFieldEgg(uid) buat megang, DropFieldEgg("PlayerRequest") buat
+-- ngelepas. Prompt fire = jalur pertama, ini fallback/resmi.
+function GameBridge.CarryFieldEgg(uid)
+	local eggState = GameModules.EggState
+	if type(eggState) == "table" and type(eggState.CarryFieldEgg) == "function" and uid ~= nil then
+		return pcall(function()
+			eggState.CarryFieldEgg(uid)
+		end)
+	end
+	return false
+end
+
+function GameBridge.DropFieldEgg()
+	local eggState = GameModules.EggState
+	if type(eggState) == "table" and type(eggState.DropFieldEgg) == "function" then
+		return pcall(function()
+			eggState.DropFieldEgg("PlayerRequest")
+		end)
+	end
+	return false
+end
+
+-- Titik sisi aman buat deliver default (chili 16540: X > SeparationLine).
+function GameBridge.SafeSidePoint(fromPosition)
+	local worldRoot = Workspace:FindFirstChild("World") or Workspace:FindFirstChild("__OBJECTS")
+	local areasFolder = worldRoot and worldRoot:FindFirstChild("Areas")
+	local separationLine = areasFolder and areasFolder:FindFirstChild("SeparationLine")
+	local lineX = separationLine and separationLine:IsA("BasePart") and separationLine.Position.X or 552
+	return Vector3.new(lineX + 12, fromPosition.Y, fromPosition.Z)
+end
+
 function GameBridge.IsCarrying()
 	local character, _ = GameBridge.Character()
 	local holder = character or LocalPlayer
@@ -347,6 +380,23 @@ end
 local FarmController = {}
 EggHub.Farm = FarmController
 FarmController.State = FarmState
+
+-- Bookkeeping carry ala HubState.Steal chili (12981): Carrying + CarryUid.
+FarmController.StealState = { Carrying = false, CarryUid = nil }
+
+-- Guard salah-egg chili (16032-16049): kalau ada model egg lain (nama uid
+-- 32 karakter + Hitbox) terlalu dekat ke target, attempt dibatalin.
+function FarmController.WrongEggNear(targetPosition)
+	for _, child in ipairs(Workspace:GetChildren()) do
+		if child:IsA("Model") and #child.Name == 32 and child:FindFirstChild("Hitbox") then
+			local pivot = child:GetPivot().Position
+			if (pivot - targetPosition).Magnitude < Config.Move.WrongEggRadius then
+				return true
+			end
+		end
+	end
+	return false
+end
 
 -- Value egg = EarningRate * kurva scale (chili 30744-30747).
 function FarmController.EggValue(record)
@@ -501,6 +551,7 @@ local function WalkTo(point, speedPercent)
 		if flat.Magnitude > 0.01 then
 			pcall(function()
 				humanoid:MoveTo(root.Position + flat.Unit * math.min(flat.Magnitude, Config.Move.Chunk))
+				humanoid:Move(flat.Unit, false)
 			end)
 		end
 		task.wait(Config.Move.WalkGap)
@@ -534,6 +585,13 @@ local function PullTo(point, speed)
 	end
 	pcall(function()
 		root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+	end)
+	pcall(function()
+		local character2, _2 = GameBridge.Character()
+		local humanoid2 = character2 and character2:FindFirstChildOfClass("Humanoid")
+		if humanoid2 then
+			humanoid2:Move(Vector3.new(0, 0, 0), false)
+		end
 	end)
 	return arrived
 end
@@ -622,32 +680,55 @@ task.spawn(function()
 				if not root then
 					return
 				end
-				if GameBridge.IsCarrying() then
-					local dropPoint = GameBridge.SafeZoneDropPoint(root.Position)
-					local destination = dropPoint
-					if not FarmState.DropAtSafeZone and not FarmState.InstantSteal then
+				local state = FarmController.StealState
+				if GameBridge.IsCarrying() or state.Carrying then
+					state.Carrying = true
+					local destination
+					if FarmState.DropAtSafeZone or FarmState.InstantSteal then
+						destination = GameBridge.SafeZoneDropPoint(root.Position)
+					end
+					if not destination then
 						if GameBridge.IsSafeSide(root.Position) then
-							return -- udah sisi aman tanpa mode drop: tahan egg, cycle lanjut
+							destination = root.Position
+						else
+							destination = GameBridge.SafeSidePoint(root.Position)
 						end
 					end
-					if destination then
-						FarmController.DeliverCarry(destination)
+					FarmController.DeliverCarry(destination)
+					GameBridge.DropFieldEgg()
+					local deadline = os.clock() + 2
+					while GameBridge.IsCarrying() and os.clock() < deadline do
+						task.wait(0.1)
 					end
+					state.Carrying = false
+					state.CarryUid = nil
 					return
 				end
 				local target = FarmController.PickTarget()
 				if not target then
 					return
 				end
+				if FarmController.WrongEggNear(target.Position) then
+					return
+				end
 				FarmController.MoveTo(target.Position + Vector3.new(0, 1, 0))
 				FarmState.LastZone = target.Zone or ""
-				for _ = 1, Config.Pickup.Tries do
-					if GameBridge.IsCarrying() then
-						break
+				local misses = 0
+				local pickupDeadline = os.clock() + Config.Move.PickupTimeout
+				while not GameBridge.IsCarrying() and os.clock() < pickupDeadline do
+					if target.Prompt and target.Prompt.Parent then
+						GameBridge.FirePickupPrompt(target.Prompt)
+					else
+						misses = misses + 1
+						if misses >= Config.Pickup.Tries then
+							break
+						end
+						GameBridge.CarryFieldEgg(target.Uid)
 					end
-					GameBridge.FirePickupPrompt(target.Prompt)
 					task.wait(Config.Pickup.RetryGap)
 				end
+				state.Carrying = GameBridge.IsCarrying()
+				state.CarryUid = state.Carrying and target.Uid or nil
 			end)
 		end
 	end

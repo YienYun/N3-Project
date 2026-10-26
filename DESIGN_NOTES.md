@@ -3904,3 +3904,31 @@ v0.2.6: WalkTo (MoveTo chunk + boost + restore WalkSpeed), PullTo
 DeliverCarry sama, cuma mesin bawahnya ganti. TweenService dibuang
 total dari hub (gate nge-cek TweenService:Create gak boleh ada).
 Versi 0.2.6.
+
+## v0.2.7 — controller jadi state machine engine chili (audit jujur)
+
+User: "logika lu bukan chili 19909%". Audit gue sendiri: bener, cycle
+v0.2.x adaptasi sederhana (pick->move->fire->carry->drop) BUKAN engine
+chili. Yang gue temuin dan sekarang gue mirror baris-per-baris:
+- Pickup resmi game = module EggState.CarryFieldEgg(uid) (chili 16096,
+  16200, 16828-16831); prompt fire = jalur pertama, CarryFieldEgg =
+  fallback kalau prompt gak ketemu; 4 miss = abort (16194-16202).
+- Sebelum carry egg baru: kalau lagi bawa uid lain -> DropFieldEgg
+  ("PlayerRequest") dulu + tunggu 1 heartbeat (16055-16067).
+- Deliver = DropFieldEgg("PlayerRequest") di titik tujuan (16060,
+  16126, 17583-17584); tunggu atribut carry mati.
+- Bookkeeping HubState.Steal {Carrying, CarryUid} (12981) ->
+  FarmController.StealState.
+- Guard salah-egg: model nama 32 char + Hitbox deket target = attempt
+  batal (16032-16049) -> WrongEggNear, radius adaptasi 6 stud.
+- Deliver destination: DropAtSafeZone/instant -> clamp SafeZone;
+  default -> titik sisi aman SeparationLine +12 (16540), drop di situ.
+- Run loop: Walk style tambah hum:Move anim (17393-17396); pull style
+  zero velocity + hum:Move(0) setelah sampai (17398-17401).
+Adaptasi tercatat (BUKAN logika baru, subsistem chili yang belum
+direplika): lane clamp Z -425..-300 + Avoid() steer + human.Step
+factor (17368-17377) — anti-guard pause gue jadi simplifikasi bagian
+ini; snapshot remote RF/EggWorld/AskFieldEggSnapshot (15386/36042)
+belum dipakai, sumber record tetep EggState.ReadFieldEggs + scan
+SmartPromptPart.
+Versi 0.2.7.
