@@ -3869,3 +3869,20 @@ ScreenGui N3AntiGuardPanel (CoreGui fallback PlayerGui) + Frame 230x86
 hitam/0.5 radius 10 + title + label status live + TextButton enable.
 Toggle #16 show/hide ScreenGui. Groupbox Guard Status DIHAPUS total.
 Versi 0.2.4.
+
+## v0.2.5 — panel pakai UI LIB sendiri + guard IsLoaded (fix crash cloneref)
+
+Dua kesalahan v0.2.4 yang user marahin:
+1. Panel anti-guard gue bikin RAW Instance.new ScreenGui di file hub =
+   melanggar lapisan: LIB dia punya sistem panel sendiri
+   (Library:CreatePanel, floating kanan layar luar window, 15896;
+   AddChip 16291; SetHeaderButton 16151; SetVisible 16830). v0.2.5:
+   GuardPanel = Library:CreatePanel({Title="Anti Guard",...}), chip
+   "Anti Guard Enabled", status live lewat SetHeaderButton, toggle #16
+   = Panel:SetVisible. Nol Instance.new ScreenGui di hub.
+2. Crash `cloneref (userdata expected, got nil)` LIB baris 5: hub gue
+   load LIB tanpa nunggu game loaded; injector executor yang nyuntik
+   dini bikin game:GetService("CoreGui") nil -> cloneref nil -> crash.
+   Chili punya guard `repeat task.wait() until game:IsLoaded()`
+   (41174). Fix: game.Loaded:Wait() di SAFEBOOT sebelum semua.
+Versi 0.2.5.

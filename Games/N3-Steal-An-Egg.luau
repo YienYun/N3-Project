@@ -20,7 +20,7 @@
 ]]
 
 --[=[ [0] CONFIG ]=]
-local EggHub = { Version = "0.2.4", Name = "N3-Steal-An-Egg" }
+local EggHub = { Version = "0.2.5", Name = "N3-Steal-An-Egg" }
 
 local Config = {
 	LibraryUrl = "https://raw.githubusercontent.com/YienYun/N3-Project/refs/heads/arena/86b8116d-n3-project/Library/N3V3-NoObfus.lua",
@@ -98,6 +98,12 @@ local FarmState = {
 }
 
 --[=[ [1] SAFEBOOT ]=]
+-- Guard injeksi dini (pola chili 41174): tanpa ini CoreGui masih nil
+-- pas executor nyuntik sebelum game loaded -> cloneref LIB crash.
+if not game:IsLoaded() then
+	game.Loaded:Wait()
+end
+
 print(string.format("[%s] v%s loaded — tab Farm aktif", EggHub.Name, EggHub.Version))
 
 local function Protect(label, fn, ...)
@@ -803,90 +809,34 @@ FarmGroup:AddToggle("Farm_AntiGuardPanel", {
 	Default = true,
 	Callback = function(enabled)
 		FarmState.AntiGuardPanel = enabled == true
-		if GuardGui then
-			GuardGui.Enabled = FarmState.AntiGuardPanel
+		if GuardPanel then
+			GuardPanel:SetVisible(FarmState.AntiGuardPanel)
 		end
 	end,
 })
 
 -- Item 16: chili V5 45604 (ShowPanel = toggle F.Enabled) — panel anti-guard
 -- itu HUD TERAPUNG di luar window utama (tengah-atas layar), BUKAN groupbox.
-local GuardGui = Instance.new("ScreenGui")
-GuardGui.Name = "N3AntiGuardPanel"
-GuardGui.ResetOnSpawn = false
-GuardGui.Enabled = FarmState.AntiGuardPanel
-local guardParentOk = pcall(function()
-	GuardGui.Parent = game:GetService("CoreGui")
-end)
-if not guardParentOk then
-	GuardGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
-local GuardFrame = Instance.new("Frame")
-GuardFrame.Name = "GuardPanel"
-GuardFrame.AnchorPoint = Vector2.new(0.5, 0)
-GuardFrame.Position = UDim2.new(0.5, 0, 0, 8)
-GuardFrame.Size = UDim2.fromOffset(230, 86)
-GuardFrame.BackgroundColor3 = Color3.new(0, 0, 0)
-GuardFrame.BackgroundTransparency = 0.5
-GuardFrame.Parent = GuardGui
-local GuardCorner = Instance.new("UICorner")
-GuardCorner.CornerRadius = UDim.new(0, 10)
-GuardCorner.Parent = GuardFrame
-local GuardStroke = Instance.new("UIStroke")
-GuardStroke.Color = Color3.new(0, 0, 0)
-GuardStroke.Thickness = 1
-GuardStroke.Parent = GuardFrame
-
-local GuardTitle = Instance.new("TextLabel")
-GuardTitle.BackgroundTransparency = 1
-GuardTitle.Position = UDim2.fromOffset(10, 7)
-GuardTitle.Size = UDim2.new(1, -20, 0, 16)
-GuardTitle.Text = "Anti Guard"
-GuardTitle.Font = Enum.Font.GothamBold
-GuardTitle.TextSize = 13
-GuardTitle.TextColor3 = Color3.new(1, 1, 1)
-GuardTitle.TextXAlignment = Enum.TextXAlignment.Left
-GuardTitle.Parent = GuardFrame
-
-local GuardStatusLabel = Instance.new("TextLabel")
-GuardStatusLabel.BackgroundTransparency = 1
-GuardStatusLabel.Position = UDim2.fromOffset(10, 27)
-GuardStatusLabel.Size = UDim2.new(1, -20, 0, 14)
-GuardStatusLabel.Text = "Guard: aman (scan jalan)"
-GuardStatusLabel.Font = Enum.Font.Gotham
-GuardStatusLabel.TextSize = 12
-GuardStatusLabel.TextColor3 = Color3.new(1, 1, 1)
-GuardStatusLabel.TextTransparency = 0.2
-GuardStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-GuardStatusLabel.Parent = GuardFrame
-
-local GuardEnableButton = Instance.new("TextButton")
-GuardEnableButton.Position = UDim2.fromOffset(10, 48)
-GuardEnableButton.Size = UDim2.new(1, -20, 0, 28)
-GuardEnableButton.Text = "Anti Guard Enabled: OFF"
-GuardEnableButton.Font = Enum.Font.GothamBold
-GuardEnableButton.TextSize = 12
-GuardEnableButton.TextColor3 = Color3.new(1, 1, 1)
-GuardEnableButton.BackgroundColor3 = Color3.new(1, 1, 1)
-GuardEnableButton.BackgroundTransparency = 0.85
-GuardEnableButton.Parent = GuardFrame
-local GuardButtonCorner = Instance.new("UICorner")
-GuardButtonCorner.CornerRadius = UDim.new(0, 8)
-GuardButtonCorner.Parent = GuardEnableButton
-GuardEnableButton.MouseButton1Click:Connect(function()
-	FarmState.AntiGuardEnabled = not FarmState.AntiGuardEnabled
-	GuardEnableButton.Text = "Anti Guard Enabled: " .. (FarmState.AntiGuardEnabled and "ON" or "OFF")
-end)
+local GuardPanel = Library:CreatePanel({
+	Title = "Anti Guard",
+	Width = 250,
+	Height = 240,
+	HeaderButton = { Text = "Guard: aman", Callback = function() end },
+})
+GuardPanel:AddChip("Anti Guard Enabled", {
+	Default = false,
+	Callback = function(state)
+		FarmState.AntiGuardEnabled = state == true
+	end,
+})
+GuardPanel:SetVisible(FarmState.AntiGuardPanel)
 
 EggHub.GuardStatusHook = function(busy, closestDistance, guardState)
 	pcall(function()
 		if busy then
-			GuardStatusLabel.Text = string.format("Guard: %s · %.0f stud — cycle PAUSE", guardState, closestDistance)
-			GuardStatusLabel.TextColor3 = Color3.fromHex("#FF7A7A")
+			GuardPanel:SetHeaderButton(string.format("PAUSE · %s · %.0f st", guardState, closestDistance), function() end)
 		else
-			GuardStatusLabel.Text = "Guard: aman (scan jalan)"
-			GuardStatusLabel.TextColor3 = Color3.new(1, 1, 1)
+			GuardPanel:SetHeaderButton("Guard: aman", function() end)
 		end
 	end)
 end
