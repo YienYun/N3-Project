@@ -3815,3 +3815,24 @@ Root cause ronde v0.2.0 (user: "ga work", "logo kok telur"):
    (DependencyBox, pola SAE lama yang terbukti jalan in-game); chili
    pakai ShowWhen/SubOf semantik sama (14582-14600). Bukan bug.
 Versi 0.2.1.
+
+## v0.2.2 — rantai hide SALAH di v0.2.0/0.2.1, dibetulin sesuai chili V5
+
+User marah benar: baca chili V5 baris 14703-14745 — empat fitur bawa
+`SubOf` + `ShowWhen` = V2Handle: Teleport To Egg (toggle), Move To Egg
+(dropdown Teleport/Step), V2 Tween Speed (3000-4500 d3300 inc50,
+display "Tween Speed"), Instant Steal Zones (multi 3 zone). Jadi
+rantai hide yang bener:
+  Instant Steal on  -> muncul Instan Steal V2 (DepA)
+  Instan Steal V2 on -> muncul Teleport To Egg, Steal Method,
+                        Tween Speed (st/s), Target Zone (DepB)
+v0.2.0 gue cuma sembunyiin V2 dan biarin 11-14 tampil selalu = salah.
+Fix v0.2.2: DepA{V2}, DepB{11,12,13,14}; urutan main jadi
+...5 Steal Priority, 6 Tween Speed %, 7 Carry Speed %, 8 Auto Steal,
+9 Instan Steal, [DepA 10], [DepB 11-14], 15 Drop, 16 Panel.
+Controller ikut rantai: MoveTo = TeleportToEgg override > (V2 on:
+Steal Method Teleport/Step) > tween TweenSpeed%; DeliverCarry V2 fast
+tween cuma kalau zone egg bawaan (LastZone dari atribut Zone/AreaId)
+ada di TargetZones (chili V2ZonePick 14731-14745), sonst steps.
+Versi 0.2.2. Catatan: Output user ronde ini masih v0.2.0 (pre pickup
+fix 0.2.1) — handshake wajib nunjukin 0.2.2 biar fix pickup ikut.

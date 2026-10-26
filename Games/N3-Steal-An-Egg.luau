@@ -20,7 +20,7 @@
 ]]
 
 --[=[ [0] CONFIG ]=]
-local EggHub = { Version = "0.2.1", Name = "N3-Steal-An-Egg" }
+local EggHub = { Version = "0.2.2", Name = "N3-Steal-An-Egg" }
 
 local Config = {
 	LibraryUrl = "https://raw.githubusercontent.com/YienYun/N3-Project/refs/heads/arena/86b8116d-n3-project/Library/N3V3-NoObfus.lua",
@@ -91,6 +91,7 @@ local FarmState = {
 	TweenSpeed = Config.Ranges.TweenSpeedPercent.Default,
 	TargetZones = { ["Titan Temple"] = true, ["Light Dark"] = true, ["Enchanted Forest"] = true },
 	DropAtSafeZone = false,
+	LastZone = "",              -- zone egg yang lagi dibawa (atribut Zone / AreaId record)
 	AntiGuardPanel = true,
 	AntiGuardEnabled = false,
 	AntiGuardBusy = false,       -- diisi loop anti-guard; cycle farm nunggu kalau true
@@ -524,16 +525,22 @@ local function StepTo(point, steps)
 	return TeleportTo(point)
 end
 
+-- Rantai pendekatan persis rantai ShowWhen chili (14703-14730):
+-- Teleport To Egg (V3) override semua; kalau V2 on, Steal Method yang pakai;
+-- kalau V2 off (dropdown emang ke-hide) jalan tween pakai Tween Speed %.
 function FarmController.MoveTo(point, options)
 	options = options or {}
 	if FarmState.AntiGuardBusy then
 		return false
 	end
-	local method = options.Method or FarmState.StealMethod
-	if options.ForceTeleport or FarmState.TeleportToEgg or method == "Teleport" then
+	if options.ForceTeleport or FarmState.TeleportToEgg then
 		return TeleportTo(point)
-	elseif method == "Step" then
-		return StepTo(point, options.Steps or 3)
+	end
+	if FarmState.InstantSteal and FarmState.InstantStealV2 then
+		if FarmState.StealMethod == "Step" then
+			return StepTo(point, options.Steps or 3)
+		end
+		return TeleportTo(point)
 	end
 	return TweenTo(point, options.SpeedPercent or FarmState.TweenSpeed)
 end
@@ -541,7 +548,8 @@ end
 -- Kirim egg yang lagi dibawa: V2 = tween cepat studs/s, steps = hop pivot,
 -- biasa = tween carry speed (chili 14564-14730).
 function FarmController.DeliverCarry(destination)
-	if FarmState.InstantSteal and FarmState.InstantStealV2 then
+	local zonePicked = next(FarmState.TargetZones) == nil or FarmState.TargetZones[FarmState.LastZone] == true
+	if FarmState.InstantSteal and FarmState.InstantStealV2 and zonePicked then
 		local root = GameBridge.Root()
 		if not root then
 			return false
@@ -629,6 +637,8 @@ task.spawn(function()
 					return
 				end
 				FarmController.MoveTo(eggRoot.Position + Vector3.new(0, 1, 0))
+				local _, _, zoneName = GameBridge.EggIdentity(target.Instance)
+				FarmState.LastZone = tostring(zoneName or (target.Record and target.Record.AreaId) or "")
 				for _ = 1, Config.Pickup.Tries do
 					if GameBridge.IsCarrying() then
 						break
@@ -706,16 +716,16 @@ FarmGroup:AddDropdown("Farm_StealPriority", {
 	end,
 })
 
-FarmGroup:AddSlider("Farm_V2TweenSpeed", {
+FarmGroup:AddSlider("Farm_TweenSpeed", {
 	Text = "Tween Speed",
-	Default = Config.Ranges.V2TweenSpeed.Default,
-	Min = Config.Ranges.V2TweenSpeed.Min,
-	Max = Config.Ranges.V2TweenSpeed.Max,
+	Default = Config.Ranges.TweenSpeedPercent.Default,
+	Min = Config.Ranges.TweenSpeedPercent.Min,
+	Max = Config.Ranges.TweenSpeedPercent.Max,
 	Rounding = 0,
-	Suffix = " st/s",
-	Tooltip = "Kecepatan tween cepat buat Instant Steal V2",
+	Suffix = "%",
+	Tooltip = "Speed tween jalan/carry; di atas 100% bisa glitch (catatan chili)",
 	Callback = function(value)
-		FarmState.V2TweenSpeed = tonumber(value) or Config.Ranges.V2TweenSpeed.Default
+		FarmState.TweenSpeed = tonumber(value) or 100
 	end,
 })
 
@@ -748,9 +758,10 @@ local InstantStealToggle = FarmGroup:AddToggle("Farm_InstantSteal", {
 })
 
 -- Item 10: muncul cuma kalau Instan Steal aktif (DependencyBox).
+local V2Toggle = nil
 local InstantDepbox = FarmGroup:AddDependencyBox()
 InstantDepbox:SetupDependencies({ { InstantStealToggle, true } })
-InstantDepbox:AddToggle("Farm_InstantStealV2", {
+V2Toggle = InstantDepbox:AddToggle("Farm_InstantStealV2", {
 	Text = "Instan Steal V2",
 	Default = false,
 	Callback = function(enabled)
@@ -758,7 +769,11 @@ InstantDepbox:AddToggle("Farm_InstantStealV2", {
 	end,
 })
 
-FarmGroup:AddToggle("Farm_TeleportToEgg", {
+-- Item 11-14: rantai ShowWhen V2Handle chili (14703-14745) —
+-- muncul cuma kalau Instan Steal V2 on.
+local V2Depbox = FarmGroup:AddDependencyBox()
+V2Depbox:SetupDependencies({ { V2Toggle, true } })
+V2Depbox:AddToggle("Farm_TeleportToEgg", {
 	Text = "Teleport To Egg",
 	Default = false,
 	Callback = function(enabled)
@@ -766,7 +781,7 @@ FarmGroup:AddToggle("Farm_TeleportToEgg", {
 	end,
 })
 
-FarmGroup:AddDropdown("Farm_StealMethod", {
+V2Depbox:AddDropdown("Farm_StealMethod", {
 	Text = "Steal Method",
 	Values = { "Teleport", "Step" },
 	Default = FarmState.StealMethod,
@@ -775,20 +790,20 @@ FarmGroup:AddDropdown("Farm_StealMethod", {
 	end,
 })
 
-FarmGroup:AddSlider("Farm_TweenSpeed", {
+V2Depbox:AddSlider("Farm_V2TweenSpeed", {
 	Text = "Tween Speed",
-	Default = Config.Ranges.TweenSpeedPercent.Default,
-	Min = Config.Ranges.TweenSpeedPercent.Min,
-	Max = Config.Ranges.TweenSpeedPercent.Max,
+	Default = Config.Ranges.V2TweenSpeed.Default,
+	Min = Config.Ranges.V2TweenSpeed.Min,
+	Max = Config.Ranges.V2TweenSpeed.Max,
 	Rounding = 0,
-	Suffix = "%",
-	Tooltip = "Speed tween jalan/carry; di atas 100% bisa glitch (catatan chili)",
+	Suffix = " st/s",
+	Tooltip = "Kecepatan tween cepat buat Instant Steal V2",
 	Callback = function(value)
-		FarmState.TweenSpeed = tonumber(value) or 100
+		FarmState.V2TweenSpeed = tonumber(value) or Config.Ranges.V2TweenSpeed.Default
 	end,
 })
 
-FarmGroup:AddDropdown("Farm_TargetZones", {
+V2Depbox:AddDropdown("Farm_TargetZones", {
 	Text = "Target Zone",
 	Values = Config.InstantZones,
 	Multi = true,
