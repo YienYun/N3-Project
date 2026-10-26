@@ -20,7 +20,7 @@
 ]]
 
 --[=[ [0] CONFIG ]=]
-local EggHub = { Version = "0.2.5", Name = "N3-Steal-An-Egg" }
+local EggHub = { Version = "0.2.6", Name = "N3-Steal-An-Egg" }
 
 local Config = {
 	LibraryUrl = "https://raw.githubusercontent.com/YienYun/N3-Project/refs/heads/arena/86b8116d-n3-project/Library/N3V3-NoObfus.lua",
@@ -44,6 +44,10 @@ local Config = {
 	Egg = { UidAttribute = "HalloweenEggUid", SourceAttribute = "PreparedSourceName", ZoneAttribute = "Zone" },
 
 	Move = {
+		Chunk = 30,             -- chunk MoveTo jalan (chili 17382/18699: max 30 stud)
+		PullArrive = 8,         -- batas tiba pull velocity (chili 17951: <8 break)
+		WalkGap = 0.12,
+		PullGap = 0.03,
 		ArriveSnap = 6,          -- jarak dianggap sampai (chili: >6 = teleport ulang)
 		TeleportGap = 3,         -- gap sisa setelah PivotTo (chili: >3 = set CFrame root)
 		TeleportRetries = 3,
@@ -66,6 +70,7 @@ local Config = {
 	PriorityModes = { "Best Rarity", "Biggest Weight", "Best Mutation", "Highest Value", "Lowest Value" },
 	InstantZones = { "Titan Temple", "Light Dark", "Enchanted Forest" },
 
+	SpeedClamp = { Min = 100, Max = 450 },  -- clamp speed step/pull (chili 17957)
 	Ranges = {
 		TweenSpeedPercent = { Min = 50, Max = 120, Default = 100 },
 		CarrySpeedPercent = { Min = 80, Max = 120, Default = 100 },
@@ -117,7 +122,6 @@ end
 --[=[ [2] GAMEBRIDGE — kode game: services, character, module game, scan workspace ]=]
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
@@ -474,49 +478,76 @@ local function TeleportTo(point)
 	return false
 end
 
-local function TweenTo(point, speedPercent)
+-- Mesin jalan ala chili (17382/18699): Humanoid:MoveTo per chunk <=30 stud
+-- dengan WalkSpeed di-boost sesuai persen. Jalan asli game = patuh kolisi,
+-- gak nerobos tembok kayak tween CFrame buta.
+local function WalkTo(point, speedPercent)
 	local character, root = GameBridge.Character()
-	if not character or not root then
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not character or not root or not humanoid then
 		return false
 	end
-	local distance = (point - root.Position).Magnitude
-	if distance <= Config.Move.ArriveSnap then
-		return true
+	local originalSpeed = humanoid.WalkSpeed
+	humanoid.WalkSpeed = math.max(originalSpeed * (speedPercent / 100), 16)
+	local deadline = os.clock() + 30
+	local arrived = false
+	while os.clock() < deadline do
+		local delta = point - root.Position
+		if delta.Magnitude <= Config.Move.ArriveSnap then
+			arrived = true
+			break
+		end
+		local flat = Vector3.new(delta.X, 0, delta.Z)
+		if flat.Magnitude > 0.01 then
+			pcall(function()
+				humanoid:MoveTo(root.Position + flat.Unit * math.min(flat.Magnitude, Config.Move.Chunk))
+			end)
+		end
+		task.wait(Config.Move.WalkGap)
 	end
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	local walkSpeed = (humanoid and humanoid.WalkSpeed) or Config.Move.BaseWalkSpeed
-	local effectiveSpeed = math.max(walkSpeed * (speedPercent / 100), 1)
-	local tweenInfo = TweenInfo.new(distance / effectiveSpeed, Enum.EasingStyle.Linear)
-	local tween = TweenService:Create(root, tweenInfo, { CFrame = CFrame.new(point) * root.CFrame.Rotation })
-	tween:Play()
-	local deadline = os.clock() + (distance / effectiveSpeed) + 1
-	while tween.PlaybackState == Enum.PlaybackState.Playing and os.clock() < deadline do
-		task.wait(0.05)
-	end
-	tween:Cancel()
-	return (root.Position - point).Magnitude <= Config.Move.ArriveSnap
+	humanoid.WalkSpeed = originalSpeed
+	return arrived
 end
 
-local function StepTo(point, steps)
+-- Mesin pull ala chili (17949-17955): dorong AssemblyLinearVelocity ke arah
+-- target, magnitude min(speed, dist/0.05). Velocity = slide sepanjang dinding,
+-- bukan teleport nerobos geometri.
+local function PullTo(point, speed)
 	local character, root = GameBridge.Character()
 	if not character or not root then
 		return false
 	end
-	local origin = root.Position
-	for stepIndex = 1, steps do
-		local ratio = stepIndex / steps
-		local hopPoint = origin:Lerp(point, ratio)
+	local deadline = os.clock() + 30
+	local arrived = false
+	while os.clock() < deadline do
+		local delta = point - root.Position
+		local flat = Vector3.new(delta.X, 0, delta.Z)
+		if flat.Magnitude < Config.Move.PullArrive then
+			arrived = true
+			break
+		end
 		pcall(function()
-			character:PivotTo(CFrame.new(hopPoint + Vector3.new(0, 0.2, 0)) * root.CFrame.Rotation)
+			root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+				+ flat.Unit * math.min(speed, flat.Magnitude / 0.05)
 		end)
-		task.wait(0.05)
+		task.wait(Config.Move.PullGap)
 	end
-	return TeleportTo(point)
+	pcall(function()
+		root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+	end)
+	return arrived
+end
+
+local function StepSpeed()
+	local character, _ = GameBridge.Character()
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local base = (humanoid and humanoid.WalkSpeed) or Config.Move.BaseWalkSpeed
+	return math.clamp(base, Config.SpeedClamp.Min, Config.SpeedClamp.Max)
 end
 
 -- Rantai pendekatan persis rantai ShowWhen chili (14703-14730):
 -- Teleport To Egg (V3) override semua; kalau V2 on, Steal Method yang pakai;
--- kalau V2 off (dropdown emang ke-hide) jalan tween pakai Tween Speed %.
+-- kalau V2 off (dropdown emang ke-hide) jalan WalkTo pakai Tween Speed %.
 function FarmController.MoveTo(point, options)
 	options = options or {}
 	if FarmState.AntiGuardBusy then
@@ -527,36 +558,24 @@ function FarmController.MoveTo(point, options)
 	end
 	if FarmState.InstantSteal and FarmState.InstantStealV2 then
 		if FarmState.StealMethod == "Step" then
-			return StepTo(point, options.Steps or 3)
+			return PullTo(point, StepSpeed())
 		end
 		return TeleportTo(point)
 	end
-	return TweenTo(point, options.SpeedPercent or FarmState.TweenSpeed)
+	return WalkTo(point, options.SpeedPercent or FarmState.TweenSpeed)
 end
 
--- Kirim egg yang lagi dibawa: V2 = tween cepat studs/s, steps = hop pivot,
--- biasa = tween carry speed (chili 14564-14730).
+-- Kirim egg yang kebawa: V2 = pull cepat V2TweenSpeed (gate zone chili
+-- V2ZonePick 14731-14745); instant non-V2 = pull speed clamp 100-450
+-- (chili 17957); biasa = walk pakai Carry Speed %.
 function FarmController.DeliverCarry(destination)
 	local zonePicked = next(FarmState.TargetZones) == nil or FarmState.TargetZones[FarmState.LastZone] == true
 	if FarmState.InstantSteal and FarmState.InstantStealV2 and zonePicked then
-		local root = GameBridge.Root()
-		if not root then
-			return false
-		end
-		local distance = (destination - root.Position).Magnitude
-		local tweenInfo = TweenInfo.new(math.max(distance / FarmState.V2TweenSpeed, 0.05), Enum.EasingStyle.Linear)
-		local tween = TweenService:Create(root, tweenInfo, { CFrame = CFrame.new(destination) * root.CFrame.Rotation })
-		tween:Play()
-		local deadline = os.clock() + (distance / FarmState.V2TweenSpeed) + 1
-		while tween.PlaybackState == Enum.PlaybackState.Playing and os.clock() < deadline do
-			task.wait(0.05)
-		end
-		tween:Cancel()
-		return true
+		return PullTo(destination, FarmState.V2TweenSpeed)
 	elseif FarmState.InstantSteal then
-		return StepTo(destination, 3)
+		return PullTo(destination, StepSpeed())
 	end
-	return TweenTo(destination, FarmState.CarrySpeed)
+	return WalkTo(destination, FarmState.CarrySpeed)
 end
 
 -- Loop anti-guard (chili 12987 + 18295-18301): guard bangun & dekat = pause cycle.

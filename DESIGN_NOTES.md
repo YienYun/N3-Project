@@ -3886,3 +3886,21 @@ Dua kesalahan v0.2.4 yang user marahin:
    Chili punya guard `repeat task.wait() until game:IsLoaded()`
    (41174). Fix: game.Loaded:Wait() di SAFEBOOT sebelum semua.
 Versi 0.2.5.
+
+## v0.2.6 — mesin gerak ganti total: user nabrak tembok mati
+
+Root cause: v0.2.x pakai TweenService tween CFrame linear ke root =
+char diseret lurus nerobos konteks geometri -> nyangkut tembok / jatuh
+mati. Chili TIDAK pakai tween buat gerak:
+- jalan: Humanoid:MoveTo chunk <=30 stud + WalkSpeed boost persen
+  (17382, 18699; CarryStyle Walk 18729)
+- pull cepat: root.AssemblyLinearVelocity = flat.Unit *
+  min(speed, mag/0.05), loop Heartbeat, break <8 stud, zero X/Z setelah
+  sampai (17949-17955)
+- step: speed clamp 100-450 gap 0.1 (17957)
+- teleport: PivotTo executor (16548-16565) — tetep dipertahankan.
+v0.2.6: WalkTo (MoveTo chunk + boost + restore WalkSpeed), PullTo
+(velocity push + zero sesudah), StepSpeed clamp; routing MoveTo &
+DeliverCarry sama, cuma mesin bawahnya ganti. TweenService dibuang
+total dari hub (gate nge-cek TweenService:Create gak boleh ada).
+Versi 0.2.6.
