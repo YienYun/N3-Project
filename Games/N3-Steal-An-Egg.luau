@@ -20,7 +20,7 @@
 ]]
 
 --[=[ [0] CONFIG ]=]
-local EggHub = { Version = "0.2.2", Name = "N3-Steal-An-Egg" }
+local EggHub = { Version = "0.2.3", Name = "N3-Steal-An-Egg" }
 
 local Config = {
 	LibraryUrl = "https://raw.githubusercontent.com/YienYun/N3-Project/refs/heads/arena/86b8116d-n3-project/Library/N3V3-NoObfus.lua",
@@ -758,10 +758,11 @@ local InstantStealToggle = FarmGroup:AddToggle("Farm_InstantSteal", {
 })
 
 -- Item 10: muncul cuma kalau Instan Steal aktif (DependencyBox).
-local V2Toggle = nil
-local InstantDepbox = FarmGroup:AddDependencyBox()
-InstantDepbox:SetupDependencies({ { InstantStealToggle, true } })
-V2Toggle = InstantDepbox:AddToggle("Farm_InstantStealV2", {
+-- Item 10: chili V5 baris 14631 — toggle Instant Steal V2 dibikin INLINE
+-- tanpa SubOf/ShowWhen = SELALU kelihatan. Yang chili hide di bawah
+-- Instant Steal cuma Instant Steal Steps + Fast Delivery (14582/14596),
+-- dua-duanya gak ada di list user jadi gak ikut dibikin.
+local V2Toggle = FarmGroup:AddToggle("Farm_InstantStealV2", {
 	Text = "Instan Steal V2",
 	Default = false,
 	Callback = function(enabled)

@@ -3836,3 +3836,17 @@ tween cuma kalau zone egg bawaan (LastZone dari atribut Zone/AreaId)
 ada di TargetZones (chili V2ZonePick 14731-14745), sonst steps.
 Versi 0.2.2. Catatan: Output user ronde ini masih v0.2.0 (pre pickup
 fix 0.2.1) — handshake wajib nunjukin 0.2.2 biar fix pickup ikut.
+
+## v0.2.3 — DepA(Instant->V2) DICABUT: gue yang ngarang, user benar
+
+Chili V5 14631: toggle "Instant Steal V2" dibuat INLINE di
+AutoStealSection:CreateToggle({...}) TANPA SubOf/ShowWhen => selalu
+visible di chili. Yang bawa ShowWhen/SubOf=InstantHandle cuma
+"Instant Steal Steps" (14582-14584) dan "Fast Delivery" (14596-14600)
+— keduanya tidak ada di list 16 item user, jadi tidak dibuat.
+Maka rantai hide FINAL (semua terbukti baris chili):
+  V2 toggle      : selalu visible (14631)
+  V2 on          -> Teleport To Egg / Steal Method / Tween Speed st/s /
+                    Target Zone muncul (ShowWhen=V2Handle, 14703-14745)
+v0.2.2 punya DepA = karangan gue; user protes keras dan benar.
+Depbox tinggal satu (V2Depbox). Versi 0.2.3.
