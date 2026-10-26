@@ -3850,3 +3850,22 @@ Maka rantai hide FINAL (semua terbukti baris chili):
                     Target Zone muncul (ShowWhen=V2Handle, 14703-14745)
 v0.2.2 punya DepA = karangan gue; user protes keras dan benar.
 Depbox tinggal satu (V2Depbox). Versi 0.2.3.
+
+## v0.2.4 — logika farm beneran jalan + panel anti-guard floating
+
+User: UI v0.2.3 udah sesuai; yang mati = logika (gak ngesteal sama
+sekali) + panel anti-guard harusnya di LUAR window, dan group
+"Guard Status" = tambahan yang gak diminta (dicabut).
+Root cause gak ngesteal: FieldEggs v0.2.x scan folder World/Areas —
+salah tempat. Chili scan ANAK LANGSUNG Workspace bernama
+"SmartPromptPart" yang bawa ProximityPrompt "CarryAreaEgg"
+(16075/16893/28785; old SAE 2746-2757 baca attribute Uid/UID prompt).
+Fix: FieldEggs return entry {Instance,Prompt,Uid,SourceName,Zone,
+Position}; PickTarget record opsional (module game boleh gagal, egg
+tetep ke-list); cycle fire prompt MILIK target (bukan nearest).
+Panel anti-guard: chili 45604 ShowPanel = toggle Enabled frame HUD
+terapung tengah-atas layar (bukan bagian window). Implementasi:
+ScreenGui N3AntiGuardPanel (CoreGui fallback PlayerGui) + Frame 230x86
+hitam/0.5 radius 10 + title + label status live + TextButton enable.
+Toggle #16 show/hide ScreenGui. Groupbox Guard Status DIHAPUS total.
+Versi 0.2.4.

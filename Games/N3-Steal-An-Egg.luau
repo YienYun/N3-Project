@@ -20,7 +20,7 @@
 ]]
 
 --[=[ [0] CONFIG ]=]
-local EggHub = { Version = "0.2.3", Name = "N3-Steal-An-Egg" }
+local EggHub = { Version = "0.2.4", Name = "N3-Steal-An-Egg" }
 
 local Config = {
 	LibraryUrl = "https://raw.githubusercontent.com/YienYun/N3-Project/refs/heads/arena/86b8116d-n3-project/Library/N3V3-NoObfus.lua",
@@ -243,29 +243,28 @@ end
 
 -- Instance egg di field: turunan folder Areas yang bawa atribut uid (chili 30722).
 function GameBridge.FieldEggs()
-	local worldRoot = Workspace:FindFirstChild("World") or Workspace:FindFirstChild("__OBJECTS")
-	local areasFolder = worldRoot and worldRoot:FindFirstChild("Areas")
 	local eggs = {}
-	if not areasFolder then
-		return eggs
-	end
-	for _, descendant in ipairs(areasFolder:GetDescendants()) do
-		if descendant:GetAttribute(Config.Egg.UidAttribute) ~= nil then
-			table.insert(eggs, descendant)
+	for _, child in ipairs(Workspace:GetChildren()) do
+		if child.Name == Config.Pickup.PromptPartName and child:IsA("BasePart") then
+			local prompt = child:FindFirstChild(Config.Pickup.PromptName)
+			if prompt and prompt:IsA("ProximityPrompt") then
+				local uid = child:GetAttribute(Config.Egg.UidAttribute)
+					or prompt:GetAttribute("Uid")
+					or prompt:GetAttribute("UID")
+				table.insert(eggs, {
+					Instance = child,
+					Prompt = prompt,
+					Uid = uid,
+					SourceName = child:GetAttribute(Config.Egg.SourceAttribute),
+					Zone = child:GetAttribute(Config.Egg.ZoneAttribute),
+					Position = child.Position,
+				})
+			end
 		end
 	end
 	return eggs
 end
 
-function GameBridge.EggIdentity(eggInstance)
-	local uid = eggInstance:GetAttribute(Config.Egg.UidAttribute)
-	local sourceName = eggInstance:GetAttribute(Config.Egg.SourceAttribute)
-	local zone = eggInstance:GetAttribute(Config.Egg.ZoneAttribute)
-	return uid, sourceName, zone
-end
-
--- Part SafeZone + titik drop di dalamnya (chili 30708-30716): clamp posisi egg
--- ke extents safezone minus inset, Y pakai Y egg.
 function GameBridge.SafeZoneDropPoint(fromPosition)
 	local safeZone = Workspace:FindFirstChild(Config.SafeZone.PartName, true)
 	if not safeZone or not safeZone:IsA("BasePart") then
@@ -311,24 +310,6 @@ function GameBridge.ActiveGuardThreats()
 	return threats
 end
 
--- Prompt pickup terdekat dari satu posisi (chili 16893-16894).
-function GameBridge.NearestPickupPrompt(nearPosition)
-	local bestPrompt, bestDistance = nil, math.huge
-	for _, child in ipairs(Workspace:GetChildren()) do
-		if child.Name == Config.Pickup.PromptPartName and child:IsA("BasePart") then
-			local prompt = child:FindFirstChild(Config.Pickup.PromptName)
-			if prompt and prompt:IsA("ProximityPrompt") then
-				local distance = (child.Position - nearPosition).Magnitude
-				if distance < bestDistance then
-					bestDistance = distance
-					bestPrompt = prompt
-				end
-			end
-		end
-	end
-	return bestPrompt
-end
-
 -- Fire prompt pickup (chili 16194): matikan line-of-sight & hold dulu.
 function GameBridge.FirePickupPrompt(prompt)
 	if not prompt then
@@ -358,9 +339,9 @@ EggHub.Farm = FarmController
 FarmController.State = FarmState
 
 -- Value egg = EarningRate * kurva scale (chili 30744-30747).
-function FarmController.EggValue(eggInstance, record)
+function FarmController.EggValue(record)
 	local earningRate = type(record) == "table" and tonumber(record.EarningRate) or 0
-	local scale = eggInstance:IsA("Model") and eggInstance:GetScale() or 1
+	local scale = type(record) == "table" and tonumber(record.AssetScale or record.Scale) or 1
 	local curve
 	if scale > Config.ValueCurve.BigBase then
 		curve = (scale / Config.ValueCurve.BigBase) ^ Config.ValueCurve.BigExponent * Config.ValueCurve.BigMultiplier
@@ -387,35 +368,37 @@ end
 function FarmController.PickTarget()
 	local records = GameBridge.EggRecords()
 	local candidates = {}
-	for _, eggInstance in ipairs(GameBridge.FieldEggs()) do
-		local uid, sourceName = GameBridge.EggIdentity(eggInstance)
-		local record = FarmController.RecordOf(uid, records)
+	for _, egg in ipairs(GameBridge.FieldEggs()) do
+		local record = FarmController.RecordOf(egg.Uid, records)
+		local areaName = tostring((type(record) == "table" and record.AreaId) or egg.Zone or "")
+		local areaOk = next(FarmState.TargetAreas) == nil or FarmState.TargetAreas[areaName] == true
+		local rarityName = "Any"
 		if type(record) == "table" then
-			local areaOk = next(FarmState.TargetAreas) == nil
-				or FarmState.TargetAreas[tostring(record.AreaId)] == true
-			local rarityName = "Any"
 			local catalogEntry = GameModules.Assets and GameModules.Assets.Directory
 				and GameModules.Assets.Directory[record.Category or record.AssetKey or ""]
 			local rarityInfo = type(catalogEntry) == "table" and catalogEntry.Rarity or nil
 			if type(rarityInfo) == "table" then
 				rarityName = tostring(rarityInfo.DisplayName or rarityInfo._id or "Any")
 			end
-			local rarityOk = FarmState.TargetRarity == "Any"
-				or (RarityRankByName[rarityName] or 0) >= (RarityRankByName[FarmState.TargetRarity] or 0)
-			local value = FarmController.EggValue(eggInstance, record)
-			local valueOk = value >= FarmState.MinStealValue
-			local eggLabel = tostring(sourceName or record.DisplayName or record.Category or "")
-			local specificOk = next(FarmState.TargetEggs) == nil or FarmState.TargetEggs[eggLabel] == true
-			if areaOk and rarityOk and valueOk and specificOk then
-				table.insert(candidates, {
-					Instance = eggInstance,
-					Record = record,
-					Value = value,
-					RarityRank = RarityRankByName[rarityName] or 0,
-					Weight = tonumber(record.AssetScale or record.Scale) or 1,
-					MutationCount = type(record.Mutations) == "table" and #record.Mutations or 0,
-				})
-			end
+		end
+		local rarityOk = FarmState.TargetRarity == "Any"
+			or (RarityRankByName[rarityName] or 0) >= (RarityRankByName[FarmState.TargetRarity] or 0)
+		local value = FarmController.EggValue(record)
+		local valueOk = value >= FarmState.MinStealValue
+		local eggLabel = tostring(egg.SourceName or (type(record) == "table" and (record.DisplayName or record.Category)) or "")
+		local specificOk = next(FarmState.TargetEggs) == nil or FarmState.TargetEggs[eggLabel] == true
+		if areaOk and rarityOk and valueOk and specificOk then
+			table.insert(candidates, {
+				Instance = egg.Instance,
+				Prompt = egg.Prompt,
+				Position = egg.Position,
+				Zone = areaName,
+				Record = record,
+				Value = value,
+				RarityRank = RarityRankByName[rarityName] or 0,
+				Weight = type(record) == "table" and tonumber(record.AssetScale or record.Scale) or 1,
+				MutationCount = type(record) == "table" and type(record.Mutations) == "table" and #record.Mutations or 0,
+			})
 		end
 	end
 	if #candidates == 0 then
@@ -631,19 +614,13 @@ task.spawn(function()
 				if not target then
 					return
 				end
-				local eggRoot = target.Instance:IsA("Model") and target.Instance:FindFirstChild("HumanoidRootPart", true)
-					or (target.Instance:IsA("BasePart") and target.Instance or nil)
-				if not eggRoot then
-					return
-				end
-				FarmController.MoveTo(eggRoot.Position + Vector3.new(0, 1, 0))
-				local _, _, zoneName = GameBridge.EggIdentity(target.Instance)
-				FarmState.LastZone = tostring(zoneName or (target.Record and target.Record.AreaId) or "")
+				FarmController.MoveTo(target.Position + Vector3.new(0, 1, 0))
+				FarmState.LastZone = target.Zone or ""
 				for _ = 1, Config.Pickup.Tries do
 					if GameBridge.IsCarrying() then
 						break
 					end
-					GameBridge.FirePickupPrompt(GameBridge.NearestPickupPrompt(eggRoot.Position))
+					GameBridge.FirePickupPrompt(target.Prompt)
 					task.wait(Config.Pickup.RetryGap)
 				end
 			end)
@@ -662,7 +639,6 @@ local MainWindow = Library:CreateWindow({
 })
 
 local FarmTab = MainWindow:AddTab("Farm", "egg", "Auto steal egg field ala chili, nama komponen versi kita")
-local GuardStatusGroup = nil -- forward: diisi AddRightGroupbox di bawah, dibaca callback toggle panel
 local FarmGroup = FarmTab:AddLeftGroupbox("Farm Egg", "egg")
 
 FarmGroup:AddDropdown("Farm_TargetAreas", {
@@ -827,36 +803,92 @@ FarmGroup:AddToggle("Farm_AntiGuardPanel", {
 	Default = true,
 	Callback = function(enabled)
 		FarmState.AntiGuardPanel = enabled == true
-		if GuardStatusGroup then
-			if FarmState.AntiGuardPanel then
-				GuardStatusGroup:Show()
-			else
-				GuardStatusGroup:Hide()
-			end
+		if GuardGui then
+			GuardGui.Enabled = FarmState.AntiGuardPanel
 		end
 	end,
 })
 
--- Panel status guard (isi Anti Guard Panel): group kanan, toggle enable + label live.
-GuardStatusGroup = FarmTab:AddRightGroupbox("Guard Status", "shield")
-local GuardStatusLabel = GuardStatusGroup:AddLabel("Guard: aman (scan jalan)", true)
-local GuardEnableToggle = GuardStatusGroup:AddToggle("Farm_AntiGuardEnabled", {
-	Text = "Anti Guard Enabled",
-	Default = false,
-	Callback = function(enabled)
-		FarmState.AntiGuardEnabled = enabled == true
-	end,
-})
+-- Item 16: chili V5 45604 (ShowPanel = toggle F.Enabled) — panel anti-guard
+-- itu HUD TERAPUNG di luar window utama (tengah-atas layar), BUKAN groupbox.
+local GuardGui = Instance.new("ScreenGui")
+GuardGui.Name = "N3AntiGuardPanel"
+GuardGui.ResetOnSpawn = false
+GuardGui.Enabled = FarmState.AntiGuardPanel
+local guardParentOk = pcall(function()
+	GuardGui.Parent = game:GetService("CoreGui")
+end)
+if not guardParentOk then
+	GuardGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local GuardFrame = Instance.new("Frame")
+GuardFrame.Name = "GuardPanel"
+GuardFrame.AnchorPoint = Vector2.new(0.5, 0)
+GuardFrame.Position = UDim2.new(0.5, 0, 0, 8)
+GuardFrame.Size = UDim2.fromOffset(230, 86)
+GuardFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+GuardFrame.BackgroundTransparency = 0.5
+GuardFrame.Parent = GuardGui
+local GuardCorner = Instance.new("UICorner")
+GuardCorner.CornerRadius = UDim.new(0, 10)
+GuardCorner.Parent = GuardFrame
+local GuardStroke = Instance.new("UIStroke")
+GuardStroke.Color = Color3.new(0, 0, 0)
+GuardStroke.Thickness = 1
+GuardStroke.Parent = GuardFrame
+
+local GuardTitle = Instance.new("TextLabel")
+GuardTitle.BackgroundTransparency = 1
+GuardTitle.Position = UDim2.fromOffset(10, 7)
+GuardTitle.Size = UDim2.new(1, -20, 0, 16)
+GuardTitle.Text = "Anti Guard"
+GuardTitle.Font = Enum.Font.GothamBold
+GuardTitle.TextSize = 13
+GuardTitle.TextColor3 = Color3.new(1, 1, 1)
+GuardTitle.TextXAlignment = Enum.TextXAlignment.Left
+GuardTitle.Parent = GuardFrame
+
+local GuardStatusLabel = Instance.new("TextLabel")
+GuardStatusLabel.BackgroundTransparency = 1
+GuardStatusLabel.Position = UDim2.fromOffset(10, 27)
+GuardStatusLabel.Size = UDim2.new(1, -20, 0, 14)
+GuardStatusLabel.Text = "Guard: aman (scan jalan)"
+GuardStatusLabel.Font = Enum.Font.Gotham
+GuardStatusLabel.TextSize = 12
+GuardStatusLabel.TextColor3 = Color3.new(1, 1, 1)
+GuardStatusLabel.TextTransparency = 0.2
+GuardStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+GuardStatusLabel.Parent = GuardFrame
+
+local GuardEnableButton = Instance.new("TextButton")
+GuardEnableButton.Position = UDim2.fromOffset(10, 48)
+GuardEnableButton.Size = UDim2.new(1, -20, 0, 28)
+GuardEnableButton.Text = "Anti Guard Enabled: OFF"
+GuardEnableButton.Font = Enum.Font.GothamBold
+GuardEnableButton.TextSize = 12
+GuardEnableButton.TextColor3 = Color3.new(1, 1, 1)
+GuardEnableButton.BackgroundColor3 = Color3.new(1, 1, 1)
+GuardEnableButton.BackgroundTransparency = 0.85
+GuardEnableButton.Parent = GuardFrame
+local GuardButtonCorner = Instance.new("UICorner")
+GuardButtonCorner.CornerRadius = UDim.new(0, 8)
+GuardButtonCorner.Parent = GuardEnableButton
+GuardEnableButton.MouseButton1Click:Connect(function()
+	FarmState.AntiGuardEnabled = not FarmState.AntiGuardEnabled
+	GuardEnableButton.Text = "Anti Guard Enabled: " .. (FarmState.AntiGuardEnabled and "ON" or "OFF")
+end)
 
 EggHub.GuardStatusHook = function(busy, closestDistance, guardState)
-	if not FarmState.AntiGuardPanel or not GuardStatusLabel then
-		return
-	end
-	if busy then
-		GuardStatusLabel:SetText(string.format("Guard: %s · %.0f stud — cycle PAUSE", guardState, closestDistance))
-	else
-		GuardStatusLabel:SetText("Guard: aman (scan jalan)")
-	end
+	pcall(function()
+		if busy then
+			GuardStatusLabel.Text = string.format("Guard: %s · %.0f stud — cycle PAUSE", guardState, closestDistance)
+			GuardStatusLabel.TextColor3 = Color3.fromHex("#FF7A7A")
+		else
+			GuardStatusLabel.Text = "Guard: aman (scan jalan)"
+			GuardStatusLabel.TextColor3 = Color3.new(1, 1, 1)
+		end
+	end)
 end
 
 return EggHub
